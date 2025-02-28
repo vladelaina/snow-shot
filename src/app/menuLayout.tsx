@@ -1,7 +1,7 @@
 'use client';
 
-import React, { useCallback, useContext, useEffect, useMemo, useState } from 'react';
-import { CameraOutlined, CloseOutlined, MinusOutlined, SettingOutlined } from '@ant-design/icons';
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
+import { AppstoreOutlined, CloseOutlined, MinusOutlined, SettingOutlined } from '@ant-design/icons';
 import type { MenuProps } from 'antd';
 import { Button, Layout, Menu, Space, theme } from 'antd';
 import { useRouter } from 'next/navigation';
@@ -15,10 +15,20 @@ import '@ant-design/v5-patch-for-react-19';
 import { useAppSettingsLoad } from '@/hooks/useAppSettingsLoad';
 import { zhHans } from '@/messages/zhHans';
 import { useIntl } from 'react-intl';
+import { TrayIconLoader } from './trayIcon';
+import { EventListener } from '@/components/eventListener';
 
 type MenuItem = Required<MenuProps>['items'][number];
 
-export const MenuLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+export const MenuLayoutContext = createContext<{
+    noLayout: boolean;
+    pathname: string;
+}>({
+    noLayout: false,
+    pathname: '/',
+});
+
+const MenuLayoutCore: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     useEffect(() => {
         console.log('App zh-Hans messages: ', zhHans);
     }, []);
@@ -29,7 +39,7 @@ export const MenuLayout: React.FC<{ children: React.ReactNode }> = ({ children }
     const { darkMode } = appSettings[AppSettingsGroup.Common];
 
     const pathname = usePathname() || '/';
-    const [collapsed, setCollapsed] = useState(true);
+    const [collapsed, setCollapsed] = useState(false);
     useAppSettingsLoad(
         useCallback(
             (settings) => {
@@ -65,8 +75,8 @@ export const MenuLayout: React.FC<{ children: React.ReactNode }> = ({ children }
         const routes = [
             {
                 path: '/',
-                label: intl.formatMessage({ id: 'menu.screenshot' }),
-                icon: <CameraOutlined />,
+                label: intl.formatMessage({ id: 'menu.functions' }),
+                icon: <AppstoreOutlined />,
             },
             {
                 path: '/settings',
@@ -89,73 +99,92 @@ export const MenuLayout: React.FC<{ children: React.ReactNode }> = ({ children }
         return { menuItems, routes };
     }, [intl, router]);
 
-    const [appWindow, setAppWindow] = useState<AppWindow | null>(null);
+    const appWindowRef = useRef<AppWindow | null>(null);
     useEffect(() => {
-        setAppWindow(getCurrentWindow());
+        appWindowRef.current = getCurrentWindow();
     }, []);
+
     return (
-        <div className="menu-layout-wrap">
-            <Layout>
-                <Sider
-                    theme={darkMode ? 'dark' : 'light'}
-                    collapsible
-                    collapsed={collapsed}
-                    onCollapse={(value) => {
-                        setCollapsed(value);
-                        updateAppSettings(AppSettingsGroup.Cache, { menuCollapsed: value }, true);
-                    }}
-                >
-                    <div className="logo-wrap">
-                        <div className="logo-text">{collapsed ? 'SNT' : 'SonnetShot'}</div>
-                    </div>
-                    <Menu
-                        defaultSelectedKeys={[menuItems[0]!.key?.toString() ?? '/']}
-                        selectedKeys={[pathname]}
-                        mode="inline"
-                        items={menuItems}
-                    />
-                </Sider>
+        <>
+            <TrayIconLoader />
+            <div className="menu-layout-wrap">
                 <Layout>
-                    <Header data-tauri-drag-region>
-                        <Space>
-                            <Button
-                                type="text"
-                                size="small"
-                                icon={<MinusOutlined />}
-                                onClick={() => {
-                                    appWindow?.hide();
-                                }}
-                            />
-                            <Button
-                                type="text"
-                                size="small"
-                                icon={<CloseOutlined />}
-                                onClick={() => {
-                                    appWindow?.close();
-                                }}
-                            />
-                        </Space>
-                    </Header>
-                    <Content>
-                        <div className="content-wrap">
-                            <div data-tauri-drag-region></div>
-                            <div data-tauri-drag-region></div>
-                            <div data-tauri-drag-region></div>
-                            <div data-tauri-drag-region></div>
-                            <div className="center">
-                                <RSC>
-                                    <div className="content-container">{children}</div>
-                                </RSC>
+                    <Sider
+                        theme={darkMode ? 'dark' : 'light'}
+                        collapsible
+                        collapsed={collapsed}
+                        onCollapse={(value) => {
+                            setCollapsed(value);
+                            updateAppSettings(
+                                AppSettingsGroup.Cache,
+                                { menuCollapsed: value },
+                                true,
+                            );
+                        }}
+                    >
+                        <div className="logo-wrap">
+                            <div className="logo-text">
+                                {collapsed ? (
+                                    <>
+                                        <div className="logo-text-highlight">S</div>
+                                        <div>NT</div>
+                                    </>
+                                ) : (
+                                    <>
+                                        <div className="logo-text-highlight">Sonnet</div>
+                                        <div>Shot</div>
+                                    </>
+                                )}
                             </div>
-                            <div data-tauri-drag-region></div>
-                            <div data-tauri-drag-region></div>
-                            <div data-tauri-drag-region></div>
-                            <div data-tauri-drag-region></div>
                         </div>
-                    </Content>
+                        <Menu
+                            defaultSelectedKeys={[menuItems[0]!.key?.toString() ?? '/']}
+                            selectedKeys={[pathname]}
+                            mode="inline"
+                            items={menuItems}
+                        />
+                    </Sider>
+                    <Layout>
+                        <Header data-tauri-drag-region>
+                            <Space>
+                                <Button
+                                    type="text"
+                                    size="small"
+                                    icon={<MinusOutlined />}
+                                    onClick={() => {
+                                        appWindowRef.current?.hide();
+                                    }}
+                                />
+                                <Button
+                                    type="text"
+                                    size="small"
+                                    icon={<CloseOutlined />}
+                                    onClick={() => {
+                                        appWindowRef.current?.close();
+                                    }}
+                                />
+                            </Space>
+                        </Header>
+                        <Content>
+                            <div className="content-wrap">
+                                <div data-tauri-drag-region></div>
+                                <div data-tauri-drag-region></div>
+                                <div data-tauri-drag-region></div>
+                                <div data-tauri-drag-region></div>
+                                <div className="center">
+                                    <RSC>
+                                        <div className="content-container">{children}</div>
+                                    </RSC>
+                                </div>
+                                <div data-tauri-drag-region></div>
+                                <div data-tauri-drag-region></div>
+                                <div data-tauri-drag-region></div>
+                                <div data-tauri-drag-region></div>
+                            </div>
+                        </Content>
+                    </Layout>
                 </Layout>
-            </Layout>
-            <style jsx>{`
+                <style jsx>{`
                     .menu-layout-wrap {
                         box-shadow: 0 0 12px 0 rgba(0, 0, 0, 0.21);
                         overflow: hidden;
@@ -196,6 +225,14 @@ export const MenuLayout: React.FC<{ children: React.ReactNode }> = ({ children }
                         color: ${darkMode ? '#fff' : '#000'};
                         display: inline-block;
                         padding: 0px 12px;
+                    }
+
+                    .menu-layout-wrap .logo-wrap .logo-text .logo-text-highlight {
+                        color: ${darkMode ? token['purple-7'] : token['purple-5']};
+                    }
+
+                    .menu-layout-wrap .logo-wrap .logo-text div {
+                        display: inline;
                     }
 
                     .content-wrap {
@@ -240,6 +277,18 @@ export const MenuLayout: React.FC<{ children: React.ReactNode }> = ({ children }
                         overflow-x: hidden;
                     }
                 `}</style>
-        </div>
+            </div>
+        </>
+    );
+};
+
+export const MenuLayout = ({ children }: { children: React.ReactNode }) => {
+    const pathname = usePathname();
+    const noLayout = pathname === '/draw';
+    return (
+        <MenuLayoutContext.Provider value={{ noLayout, pathname }}>
+            <EventListener />
+            {noLayout ? children : <MenuLayoutCore>{children}</MenuLayoutCore>}
+        </MenuLayoutContext.Provider>
     );
 };

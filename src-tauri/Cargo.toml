@@ -20,7 +20,13 @@ tauri-build = { version = "2.0.4", features = [] }
 [dependencies]
 serde_json = "1.0"
 serde = { version = "1.0", features = ["derive"] }
+tauri = { version = "2.2.4", features = ["macos-private-api", "tray-icon", 'devtools'] }
+tauri-plugin-log = "2.2.3"
+tauri-plugin-fs = "2.2.0"
+xcap = "0.3.3"
+device_query = "3.0.0"
 log = "0.4"
-tauri = { version = "2.2.4", features = ["macos-private-api", "tray-icon"] }
-tauri-plugin-log = "2.0.0-rc"
-tauri-plugin-fs = "2"
+image = { version = "0.25.5", features = ["png", "webp"] }
+
+# [profile.dev]
+# opt-level = 3

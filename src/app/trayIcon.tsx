@@ -8,6 +8,10 @@ import React from 'react';
 
 const TrayIconLoaderComponent = () => {
     useEffect(() => {
+        if (process.env.NODE_ENV === 'development') {
+            return;
+        }
+
         let trayIcon: TrayIcon | null = null;
         const init = async () => {
             const appWindow = getCurrentWindow();

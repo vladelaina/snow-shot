@@ -9,6 +9,7 @@ import zhTW from 'antd/es/locale/zh_TW';
 import enUS from 'antd/es/locale/en_US';
 import { IntlProvider } from 'react-intl';
 import { messages } from '@/messages/map';
+import { ImageBuffer } from '@/commands';
 
 export enum AppSettingsGroup {
     Common = 'common',
@@ -60,8 +61,19 @@ export const AppSettingsContext = createContext<AppSettingsContextType>({
     updateAppSettings: () => {},
 });
 
+export type ScreenshotContextType = {
+    imageBuffer: ImageBuffer | undefined;
+    setImageBuffer: (imageBuffer: ImageBuffer) => void;
+};
+
+export const ScreenshotContext = createContext<ScreenshotContextType>({
+    imageBuffer: undefined,
+    setImageBuffer: () => {},
+});
+
+const configDir = 'configs';
 const getFileName = (group: AppSettingsGroup) => {
-    return `${group}.json`;
+    return `${configDir}\\${group}.json`;
 };
 
 export const ContextWrap: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -121,7 +133,10 @@ export const ContextWrap: React.FC<{ children: React.ReactNode }> = ({ children 
                 newSettings = newSettings as AppSettingsData[typeof group];
                 const prevSettings = appSettingsRef.current[group] as AppSettingsData[typeof group];
                 settings = {
-                    darkMode: typeof newSettings?.darkMode === 'boolean' ? newSettings.darkMode : prevSettings?.darkMode ?? false,
+                    darkMode:
+                        typeof newSettings?.darkMode === 'boolean'
+                            ? newSettings.darkMode
+                            : (prevSettings?.darkMode ?? false),
                     language: (() => {
                         switch (newSettings?.language) {
                             case 'zh-Hans':
@@ -134,13 +149,19 @@ export const ContextWrap: React.FC<{ children: React.ReactNode }> = ({ children 
                                 return prevSettings?.language ?? AppSettingsLanguage.EN;
                         }
                     })(),
-                    browserLanguage: typeof newSettings?.browserLanguage === 'string' ? newSettings.browserLanguage : prevSettings?.browserLanguage ?? '',
+                    browserLanguage:
+                        typeof newSettings?.browserLanguage === 'string'
+                            ? newSettings.browserLanguage
+                            : (prevSettings?.browserLanguage ?? ''),
                 };
             } else if (group === AppSettingsGroup.Cache) {
                 newSettings = newSettings as AppSettingsData[typeof group];
                 const prevSettings = appSettingsRef.current[group] as AppSettingsData[typeof group];
                 settings = {
-                    menuCollapsed: typeof newSettings?.menuCollapsed === 'boolean' ? newSettings.menuCollapsed : prevSettings?.menuCollapsed ?? false,
+                    menuCollapsed:
+                        typeof newSettings?.menuCollapsed === 'boolean'
+                            ? newSettings.menuCollapsed
+                            : (prevSettings?.menuCollapsed ?? false),
                 };
             } else {
                 return;
@@ -162,15 +183,22 @@ export const ContextWrap: React.FC<{ children: React.ReactNode }> = ({ children 
                 (group) => group in defaultAppSettingsData,
             );
 
-            const promiseList = groups.map(async (_group) => {
-                const group = _group as AppSettingsGroup;
-
+            for (const group of groups as AppSettingsGroup[]) {
                 // 启动时验证下目录是否存在
-                const isDirExists = await exists('', {
+                let isDirExists = await exists('', {
                     baseDir: BaseDirectory.AppConfig,
                 });
                 if (!isDirExists) {
                     await mkdir('', {
+                        baseDir: BaseDirectory.AppConfig,
+                    });
+                }
+
+                isDirExists = await exists(configDir, {
+                    baseDir: BaseDirectory.AppConfig,
+                });
+                if (!isDirExists) {
+                    await mkdir(configDir, {
                         baseDir: BaseDirectory.AppConfig,
                     });
                 }
@@ -189,9 +217,7 @@ export const ContextWrap: React.FC<{ children: React.ReactNode }> = ({ children 
                 });
 
                 updateAppSettings(group, content);
-            });
-
-            await Promise.all(promiseList);
+            }
 
             setIsDefaultData(false);
         })();
@@ -208,6 +234,8 @@ export const ContextWrap: React.FC<{ children: React.ReactNode }> = ({ children 
                 return ['en-US', enUS];
         }
     }, [appSettings]);
+
+    const [imageBuffer, setImageBuffer] = useState<ImageBuffer | undefined>(undefined);
     return (
         <AppSettingsContext.Provider
             value={{
@@ -228,7 +256,9 @@ export const ContextWrap: React.FC<{ children: React.ReactNode }> = ({ children 
                     locale={appSettings[AppSettingsGroup.Common].language}
                     messages={messages[appSettings[AppSettingsGroup.Common].language]}
                 >
-                    {children}
+                    <ScreenshotContext.Provider value={{ imageBuffer, setImageBuffer }}>
+                        {children}
+                    </ScreenshotContext.Provider>
                 </IntlProvider>
             </ConfigProvider>
         </AppSettingsContext.Provider>

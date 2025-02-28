@@ -6,11 +6,15 @@ import { AppSettingsContext, AppSettingsGroup, AppSettingsLanguage } from '../co
 import { useCallback, useContext } from 'react';
 import { useAppSettingsLoad } from '@/hooks/useAppSettingsLoad';
 import { useIntl } from 'react-intl';
+import { ContentWrap } from '@/components/contentWrap';
+import { DarkModeIcon, LanguageIcon } from '@/components/icons';
+import { IconLabel } from '@/components/iconLable';
 
 const { Option } = Select;
 
 export default function Settings() {
     const intl = useIntl();
+
     const { updateAppSettings, ...appSettings } = useContext(AppSettingsContext);
     const [form] = Form.useForm<{ language: AppSettingsLanguage; darkMode: boolean }>();
 
@@ -24,10 +28,11 @@ export default function Settings() {
     );
 
     return (
-        <div className="settings-wrap">
+        <ContentWrap className="settings-wrap">
             <GroupTitle>{intl.formatMessage({ id: 'settings.commonSettings' })}</GroupTitle>
 
             <Form
+                className="common-settings-form"
                 form={form}
                 initialValues={
                     appSettings.isDefaultData ? undefined : appSettings[AppSettingsGroup.Common]
@@ -37,7 +42,12 @@ export default function Settings() {
                 }}
             >
                 <Form.Item
-                    label={intl.formatMessage({ id: 'settings.darkMode' })}
+                    label={
+                        <IconLabel
+                            icon={<DarkModeIcon />}
+                            label={intl.formatMessage({ id: 'settings.darkMode' })}
+                        />
+                    }
                     name="darkMode"
                     valuePropName="checked"
                 >
@@ -46,7 +56,12 @@ export default function Settings() {
                 <Form.Item
                     className="settings-wrap-language"
                     name="language"
-                    label={intl.formatMessage({ id: 'settings.language' })}
+                    label={
+                        <IconLabel
+                            icon={<LanguageIcon />}
+                            label={intl.formatMessage({ id: 'settings.language' })}
+                        />
+                    }
                     required={false}
                     rules={[{ required: true }]}
                 >
@@ -59,11 +74,11 @@ export default function Settings() {
             </Form>
 
             <style jsx>{`
-                .settings-wrap :global(.settings-wrap-language) :global(.ant-form-item-control) {
+                :global(.common-settings-form) :global(.settings-wrap-language) :global(.ant-form-item-control) {
                     flex-grow: unset !important;
                     min-width: 128px;
                 }
             `}</style>
-        </div>
+        </ContentWrap>
     );
 }
