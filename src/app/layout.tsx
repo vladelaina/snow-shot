@@ -4,7 +4,6 @@ import { AntdRegistry } from '@ant-design/nextjs-registry';
 import StyledJsxRegistry from './registry';
 import { MenuLayout } from './menuLayout';
 import { ContextWrap } from './contextWrap';
-import { TrayIconLoader } from './trayIcon';
 
 export const metadata: Metadata = {
     title: 'SonnetShot',
@@ -19,11 +18,10 @@ export default function RootLayout({
     return (
         <html lang="zh-CN">
             <body>
-                <TrayIconLoader />
                 <StyledJsxRegistry>
                     <AntdRegistry>
                         <ContextWrap>
-                            <MenuLayout>{children}</MenuLayout>\
+                            <MenuLayout>{children}</MenuLayout>
                         </ContextWrap>
                     </AntdRegistry>
                 </StyledJsxRegistry>

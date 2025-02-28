@@ -1,6 +1,6 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
-  "productName": "sonnet-shot",
+  "productName": "Sonnet Shot",
   "version": "0.1.0",
   "identifier": "com.chao.sonnetshot",
   "build": {
@@ -12,13 +12,25 @@
   "app": {
     "windows": [
         {
+            "label": "main",
             "fullscreen": false,
             "height": 512,
             "resizable": false,
             "title": "Sonnet Shot",
             "width": 830,
             "center": true,
-            "decorations": false
+            "decorations": false,
+            "url": "/"
+        },
+        {
+            "label": "draw",
+            "fullscreen": false,
+            "title": "Draw",
+            "center": true,
+            "decorations": false,
+            "shadow": false,
+            "transparent": true,
+            "url": "/draw"
         }
     ],
     "macOSPrivateApi": true,

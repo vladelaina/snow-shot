@@ -14,7 +14,9 @@ const eslintConfig = [
     {
         rules: {
             '@typescript-eslint/no-duplicate-enum-values': 'off',
+            '@typescript-eslint/no-empty-object-type': 'off',
         },
+        ignores: ['./src/global.d.ts'],
     },
 ];
 

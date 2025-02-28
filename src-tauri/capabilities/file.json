@@ -3,7 +3,7 @@
     "identifier": "file-capability",
     "description": "Capability for the file",
     "windows": [
-        "main"
+        "*"
     ],
     "permissions": [
         "fs:default",
@@ -18,7 +18,7 @@
                     "path": "$APPCONFIG"
                 },
                 {
-                    "path": "$APPCONFIG/*"
+                    "path": "$APPCONFIG/**"
                 }
             ]
         }
