@@ -1,6 +1,14 @@
 'use client';
 
-import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
+import React, {
+    createContext,
+    useCallback,
+    useContext,
+    useEffect,
+    useMemo,
+    useRef,
+    useState,
+} from 'react';
 import { AppstoreOutlined, CloseOutlined, MinusOutlined, SettingOutlined } from '@ant-design/icons';
 import type { MenuProps } from 'antd';
 import { Button, Layout, Menu, Space, theme } from 'antd';
@@ -17,6 +25,8 @@ import { zhHans } from '@/messages/zhHans';
 import { useIntl } from 'react-intl';
 import { TrayIconLoader } from './trayIcon';
 import { EventListener } from '@/components/eventListener';
+import { zhHant } from '@/messages/zhHant';
+import { en } from '@/messages/en';
 
 type MenuItem = Required<MenuProps>['items'][number];
 
@@ -30,7 +40,26 @@ export const MenuLayoutContext = createContext<{
 
 const MenuLayoutCore: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     useEffect(() => {
-        console.log('App zh-Hans messages: ', zhHans);
+        const zhHansKeys = Object.keys(zhHans);
+        const zhHantKeys = new Set(Object.keys(zhHant));
+        const enKeys = new Set(Object.keys(en));
+
+        const zhHantMissingKeys: Record<string, string> = {};
+        zhHansKeys
+            .filter((key) => !zhHantKeys.has(key))
+            .forEach((key) => {
+                zhHantMissingKeys[key] = zhHans[key as keyof typeof zhHans];
+            });
+
+        const enMissingKeys: Record<string, string> = {};
+        zhHansKeys
+            .filter((key) => !enKeys.has(key))
+            .forEach((key) => {
+                enMissingKeys[key] = zhHans[key as keyof typeof zhHans];
+            });
+
+        console.log('App zh-Hant missing messages: ', zhHantMissingKeys);
+        console.log('App en missing messages: ', enMissingKeys);
     }, []);
 
     const intl = useIntl();
@@ -59,10 +88,16 @@ const MenuLayoutCore: React.FC<{ children: React.ReactNode }> = ({ children }) =
                         }
                     }
 
-                    updateAppSettings(AppSettingsGroup.Common, {
-                        browserLanguage: browserLanguage,
-                        language,
-                    });
+                    updateAppSettings(
+                        AppSettingsGroup.Common,
+                        {
+                            browserLanguage: browserLanguage,
+                            language,
+                        },
+                        false,
+                        true,
+                        true,
+                    );
                 }
             },
             [updateAppSettings],
@@ -119,6 +154,8 @@ const MenuLayoutCore: React.FC<{ children: React.ReactNode }> = ({ children }) =
                                 AppSettingsGroup.Cache,
                                 { menuCollapsed: value },
                                 true,
+                                true,
+                                false,
                             );
                         }}
                     >
@@ -152,7 +189,11 @@ const MenuLayoutCore: React.FC<{ children: React.ReactNode }> = ({ children }) =
                                     size="small"
                                     icon={<MinusOutlined />}
                                     onClick={() => {
-                                        appWindowRef.current?.hide();
+                                        if (process.env.NODE_ENV === 'development') {
+                                            appWindowRef.current?.minimize();
+                                        } else {
+                                            appWindowRef.current?.hide();
+                                        }
                                     }}
                                 />
                                 <Button
@@ -160,7 +201,11 @@ const MenuLayoutCore: React.FC<{ children: React.ReactNode }> = ({ children }) =
                                     size="small"
                                     icon={<CloseOutlined />}
                                     onClick={() => {
-                                        appWindowRef.current?.close();
+                                        if (process.env.NODE_ENV === 'development') {
+                                            // appWindowRef.current?.close();
+                                        } else {
+                                            appWindowRef.current?.close();
+                                        }
                                     }}
                                 />
                             </Space>
@@ -287,8 +332,9 @@ export const MenuLayout = ({ children }: { children: React.ReactNode }) => {
     const noLayout = pathname === '/draw';
     return (
         <MenuLayoutContext.Provider value={{ noLayout, pathname }}>
-            <EventListener />
-            {noLayout ? children : <MenuLayoutCore>{children}</MenuLayoutCore>}
+            <EventListener>
+                {noLayout ? children : <MenuLayoutCore>{children}</MenuLayoutCore>}
+            </EventListener>
         </MenuLayoutContext.Provider>
     );
 };

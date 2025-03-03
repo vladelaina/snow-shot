@@ -1,21 +1,24 @@
+use std::process;
+
 use device_query::{DeviceQuery, DeviceState, MouseState};
 use image::codecs::png::{CompressionType, FilterType, PngEncoder};
 use image::codecs::webp::WebPEncoder;
+use serde::Serialize;
 use tauri::command;
 use tauri::ipc::Response;
-use xcap::Monitor;
+use xcap::{Monitor, Window};
 
 #[command]
-pub fn capture_current_monitor(encoder: String) -> Response {
+pub async fn capture_current_monitor(encoder: String) -> Response {
     // 获取当前鼠标的位置
     let device_state = DeviceState::new();
     let mouse: MouseState = device_state.get_mouse();
     let (mouse_x, mouse_y) = mouse.coords;
 
     // 获取当前鼠标所在屏幕的截图图像
-    let screen = Monitor::from_point(mouse_x, mouse_y).unwrap();
+    let monitor = Monitor::from_point(mouse_x, mouse_y).unwrap();
 
-    let image_buffer = screen.capture_image().unwrap();
+    let image_buffer = monitor.capture_image().unwrap();
 
     // 前端处理渲染图片的方式有两种
     // 1. 接受 RGBA 数据通过 canvas 转为 base64 后显示
@@ -40,5 +43,84 @@ pub fn capture_current_monitor(encoder: String) -> Response {
             .unwrap();
     }
 
+    // 将屏幕信息也推送到前端
+    let monitor_x_bytes = monitor.x().to_le_bytes();
+    let monitor_y_bytes = monitor.y().to_le_bytes();
+    let monitor_width_bytes = monitor.width().to_le_bytes();
+    let monitor_height_bytes = monitor.height().to_le_bytes();
+    let monitor_scale_factor_bytes = monitor.scale_factor().to_le_bytes();
+
+    buf.push(monitor_x_bytes[0]);
+    buf.push(monitor_x_bytes[1]);
+    buf.push(monitor_x_bytes[2]);
+    buf.push(monitor_x_bytes[3]);
+
+    buf.push(monitor_y_bytes[0]);
+    buf.push(monitor_y_bytes[1]);
+    buf.push(monitor_y_bytes[2]);
+    buf.push(monitor_y_bytes[3]);
+
+    buf.push(monitor_width_bytes[0]);
+    buf.push(monitor_width_bytes[1]);
+    buf.push(monitor_width_bytes[2]);
+    buf.push(monitor_width_bytes[3]);
+
+    buf.push(monitor_height_bytes[0]);
+    buf.push(monitor_height_bytes[1]);
+    buf.push(monitor_height_bytes[2]);
+    buf.push(monitor_height_bytes[3]);
+
+    buf.push(monitor_scale_factor_bytes[0]);
+    buf.push(monitor_scale_factor_bytes[1]);
+    buf.push(monitor_scale_factor_bytes[2]);
+    buf.push(monitor_scale_factor_bytes[3]);
+
     return Response::new(buf);
+}
+
+#[derive(PartialEq, Eq, Serialize, Clone, Debug, Copy)]
+pub struct WindowInfo {
+    pub x: i32,
+    pub y: i32,
+    pub width: u32,
+    pub height: u32,
+}
+
+#[command]
+pub fn get_window_from_mouse_position() -> Option<WindowInfo> {
+    // 获取当前鼠标的位置
+    let device_state = DeviceState::new();
+    let mouse: MouseState = device_state.get_mouse();
+    let (mouse_x, mouse_y) = mouse.coords;
+
+    let mut windows = Window::all().unwrap_or_default();
+    windows.sort_by(|a, b| b.z().cmp(&a.z()));
+
+    for w in windows {
+        let window_title = w.title();
+        if window_title.starts_with("Shell Handwriting Canvas") {
+            continue;
+        }
+
+        let x = w.x();
+        let y = w.y();
+        let width = w.width();
+        let height = w.height();
+
+        let min_x: i32 = x;
+        let min_y: i32 = y;
+        let max_x: i32 = min_x + width as i32;
+        let max_y: i32 = min_y + height as i32;
+
+        if mouse_x >= min_x && mouse_x <= max_x && mouse_y >= min_y && mouse_y <= max_y {
+            return Some(WindowInfo {
+                x,
+                y,
+                width,
+                height,
+            });
+        }
+    }
+
+    None
 }

@@ -22,7 +22,8 @@ pub fn run() {
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
-            screenshot::capture_current_monitor
+            screenshot::capture_current_monitor,
+            screenshot::get_window_from_mouse_position,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

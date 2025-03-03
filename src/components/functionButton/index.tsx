@@ -2,6 +2,7 @@ import { Button, Flex, Input, theme } from 'antd';
 import React, { useState } from 'react';
 import { IconLabel } from '../iconLable';
 import { useIntl } from 'react-intl';
+import { zIndexs } from '@/utils/zIndex';
 
 export const FunctionButton: React.FC<{
     label: React.ReactNode;
@@ -32,7 +33,7 @@ export const FunctionButton: React.FC<{
                 style={{
                     position: 'absolute',
                     height: '100%',
-                    zIndex: 1,
+                    zIndex: zIndexs.Main_FunctionButtonInput,
                     right: 0,
                     top: 0,
                     display: 'flex',
