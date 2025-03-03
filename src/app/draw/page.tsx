@@ -1,27 +1,52 @@
 'use client';
 
 import { useContext, useRef, useEffect, useCallback, useState } from 'react';
-import { ScreenshotContext } from '../contextWrap';
-import { ImageBuffer } from '@/commands';
+import { AppSettingsContext, AppSettingsControlNode, ScreenshotContext } from '../contextWrap';
+import { getWindowFromMousePosition, ImageBuffer } from '@/commands';
 import * as fabric from 'fabric';
 import { getCurrentWindow, Window as AppWindow } from '@tauri-apps/api/window';
 import { PhysicalPosition } from '@tauri-apps/api/dpi';
+import { zIndexs } from '@/utils/zIndex';
+import { DrawToolbar } from './components/drawToolbar';
+import { EventListenerContext } from '@/components/eventListener';
+import React from 'react';
+import { CaptureStep, DrawState } from './types';
 
-export enum CaptureStep {
-    /** 选择截图区域 */
-    Select = 'select',
-    /** 绘制截图区域 */
-    Draw = 'draw',
-}
+type CanvasPosition = {
+    left: number;
+    top: number;
+};
 
-export enum DrawState {
-    /** 空闲 */
-    Idle = 'idle',
-    /** 调整截图区域 */
-    Resize = 'resize',
-}
+type CanvasSize = {
+    width: number;
+    height: number;
+};
 
-export default function Draw() {
+const DrawPage: React.FC = () => {
+    const {
+        common: { darkMode },
+        screenshot: { controlNode },
+        reloadAppSettings,
+    } = useContext(AppSettingsContext);
+    const { addListener, removeListener } = useContext(EventListenerContext);
+    useEffect(() => {
+        const listenerId = addListener('reload-app-settings', () => {
+            reloadAppSettings();
+        });
+
+        return () => {
+            removeListener(listenerId);
+        };
+    }, [addListener, reloadAppSettings, removeListener]);
+
+    const imageBufferRef = useRef<ImageBuffer | undefined>(undefined);
+    const { imageBuffer } = useContext(ScreenshotContext);
+    useEffect(() => {
+        if (imageBuffer) {
+            imageBufferRef.current = imageBuffer;
+        }
+    }, [imageBuffer]);
+
     const wrapRef = useRef<HTMLDivElement>(null);
     const fabricRef = useRef<fabric.Canvas | null>(null);
     const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -30,23 +55,97 @@ export default function Draw() {
 
     const appWindowRef = useRef<AppWindow | null>(null);
     const startPointRef = useRef<{ x: number; y: number } | null>(null);
+    const [captureStep, _setCaptureStep] = useState(CaptureStep.Select);
     const captureStepRef = useRef(CaptureStep.Select);
+    const setCaptureStep = useCallback((step: CaptureStep) => {
+        captureStepRef.current = step;
+        _setCaptureStep(step);
+    }, []);
+    const [drawState, _setDrawState] = useState(DrawState.Idle);
     const drawStateRef = useRef<DrawState>(DrawState.Idle);
+    const setDrawState = useCallback((state: DrawState) => {
+        drawStateRef.current = state;
+        _setDrawState(state);
+    }, []);
     const resizeModeRef = useRef<string>('default');
-    const moveOffsetRef = useRef<{ x: number; y: number }>({
-        x: 0,
-        y: 0,
+    const moveOffsetRef = useRef<CanvasPosition>({
+        left: 0,
+        top: 0,
     });
+
+    const limitPosition = useCallback(
+        (position: CanvasPosition, width: number, height: number): CanvasPosition => {
+            let left = position.left;
+            let top = position.top;
+
+            const maskRect = maskRectRef.current;
+            if (!maskRect) {
+                return { left, top };
+            }
+
+            const minLeft = 0;
+            const minTop = 0;
+            const maxLeft = maskRect.left + maskRect.width - width;
+            const maxTop = maskRect.top + maskRect.height - height;
+
+            if (left < minLeft) {
+                left = minLeft;
+            } else if (left > maxLeft) {
+                left = maxLeft;
+            }
+
+            if (top < minTop) {
+                top = minTop;
+            } else if (top > maxTop) {
+                top = maxTop;
+            }
+
+            return { left, top };
+        },
+        [],
+    );
+
+    const limitSize = useCallback((size: CanvasSize, left: number, top: number): CanvasSize => {
+        let width = size.width;
+        let height = size.height;
+
+        const maskRect = maskRectRef.current;
+        if (!maskRect) {
+            return { width, height };
+        }
+
+        // 定义截图区域的最小宽高
+        const minWidth = 0;
+        const minHeight = 0;
+
+        // 计算截图区域的最大宽高
+        // 该计算基于 `maskRect` (遮罩区域)，确保截图区域不会超出它的边界
+        const maxWidth = maskRect.left + maskRect.width - left;
+        const maxHeight = maskRect.top + maskRect.height - top;
+
+        // 最小值和最大值构建成了一个矩形，该矩形表示截图的约束区域
+        // 这个矩形的左上角固定在 (left, top)，但宽高受限于 min/max 约束
+        width = Math.max(minWidth, Math.min(width, maxWidth));
+        height = Math.max(minHeight, Math.min(height, maxHeight));
+
+        return { width, height };
+    }, []);
 
     const resizeClipPathControlRef = useRef<() => void>(() => {});
 
     useEffect(() => {
         const appWindow = getCurrentWindow();
         appWindowRef.current = appWindow;
-        // appWindow.hide();
+        appWindow.hide();
     }, []);
 
-    const changeCursor = useCallback((event: fabric.TEvent): string => {
+    const onCancel = useCallback(() => {
+        // 隐藏窗口后刷新窗口
+        getCurrentWindow().hide();
+        window.location.reload();
+    }, []);
+
+    const changeCursor = useCallback((mousePoint: fabric.Point): string => {
         let cursor = 'default';
 
         const canvas = fabricRef.current;
@@ -65,7 +164,6 @@ export default function Draw() {
             // 下侧为 s-resize，左侧为 w-resize，右侧为 e-resize
             // 左上为 nw-resize，右上为ne-resize，左下为 sw-resize，右下为 se-resize
 
-            const pointer = canvas.getScenePoint(event.e);
             const tolerance = 8; // 边缘检测的容差范围
 
             const left = rect.left || 0;
@@ -73,10 +171,10 @@ export default function Draw() {
             const right = left + (rect.width || 0) * (rect.scaleX || 1);
             const bottom = top + (rect.height || 0) * (rect.scaleY || 1);
 
-            const nearTop = pointer.y <= top + tolerance;
-            const nearBottom = pointer.y >= bottom - tolerance;
-            const nearLeft = pointer.x <= left + tolerance;
-            const nearRight = pointer.x >= right - tolerance;
+            const nearTop = mousePoint.y <= top + tolerance;
+            const nearBottom = mousePoint.y >= bottom - tolerance;
+            const nearLeft = mousePoint.x <= left + tolerance;
+            const nearRight = mousePoint.x >= right - tolerance;
 
             // 设置光标样式
             if (nearTop && nearLeft) {
@@ -96,10 +194,10 @@ export default function Draw() {
             } else if (nearRight) {
                 cursor = 'e-resize';
             } else if (
-                pointer.x >= left &&
-                pointer.x <= right &&
-                pointer.y >= top &&
-                pointer.y <= bottom
+                mousePoint.x >= left &&
+                mousePoint.x <= right &&
+                mousePoint.y >= top &&
+                mousePoint.y <= bottom
             ) {
                 cursor = 'move';
             } else {
@@ -113,8 +211,8 @@ export default function Draw() {
 
     // 处理鼠标按下事件
     const onMouseDown = useCallback(
-        (event: fabric.TEvent) => {
-            const currentCursor = changeCursor(event);
+        (point: fabric.Point) => {
+            const currentCursor = changeCursor(point);
 
             const rect = maskRectClipPathRef.current;
             if (!fabricRef.current || !rect) {
@@ -123,7 +221,6 @@ export default function Draw() {
 
             let needRender = false;
 
-            const cursorPoint = fabricRef.current.getScenePoint(event.e);
             if (captureStepRef.current === CaptureStep.Select) {
                 if (!wrapRef.current || !maskRectRef.current) {
                     return;
@@ -131,26 +228,16 @@ export default function Draw() {
 
                 rect.set('active', true);
 
-                startPointRef.current = { x: cursorPoint.x, y: cursorPoint.y };
+                startPointRef.current = { x: point.x, y: point.y };
 
-                rect.set({
-                    left: cursorPoint.x,
-                    top: cursorPoint.y,
-                    width: 0,
-                    height: 0,
-                    scaleX: 1,
-                    scaleY: 1,
-                });
-                maskRectRef.current.set('dirty', true);
-
-                needRender = true;
+                needRender = false;
             } else if (captureStepRef.current === CaptureStep.Draw) {
                 if (drawStateRef.current === DrawState.Idle) {
-                    drawStateRef.current = DrawState.Resize;
+                    setDrawState(DrawState.Resize);
                     resizeModeRef.current = currentCursor;
                     moveOffsetRef.current = {
-                        x: cursorPoint.x - rect.left,
-                        y: cursorPoint.y - rect.top,
+                        left: point.x - rect.left,
+                        top: point.y - rect.top,
                     };
                 } else if (drawStateRef.current === DrawState.Resize) {
                 }
@@ -162,14 +249,59 @@ export default function Draw() {
                 fabricRef.current.renderAll();
             }
         },
-        [changeCursor],
+        [changeCursor, setDrawState],
     );
 
     // 处理鼠标移动事件
-    const onMouseMove = useCallback(
-        (event: fabric.TEvent) => {
-            changeCursor(event);
+    const lastWindowInfoRef = useRef<{
+        x: number;
+        y: number;
+        width: number;
+        height: number;
+    }>({
+        x: 0,
+        y: 0,
+        width: 0,
+        height: 0,
+    });
 
+    const selectWindowFromMousePosition = useCallback(async (image: ImageBuffer) => {
+        const monitorX = image.monitorX;
+        const monitorY = image.monitorY;
+        const monitorScaleFactor = image.monitorScaleFactor;
+        const monitorWidth = image.monitorWidth;
+        const monitorHeight = image.monitorHeight;
+
+        const windowInfo = (await getWindowFromMousePosition()) ?? {
+            x: 0,
+            y: 0,
+            width: monitorWidth,
+            height: monitorHeight,
+        };
+
+        const lastWindowInfo = lastWindowInfoRef.current;
+        if (
+            lastWindowInfo.x === windowInfo.x &&
+            lastWindowInfo.y === windowInfo.y &&
+            lastWindowInfo.width === windowInfo.width &&
+            lastWindowInfo.height === windowInfo.height
+        ) {
+            return;
+        }
+
+        const left = windowInfo.x / monitorScaleFactor - monitorX;
+        const top = windowInfo.y / monitorScaleFactor - monitorY;
+        const width = windowInfo.width / monitorScaleFactor;
+        const height = windowInfo.height / monitorScaleFactor;
+
+        lastWindowInfoRef.current = windowInfo;
+
+        return { left, top, width, height };
+    }, []);
+
+    const onMouseMove = useCallback(
+        async (point: fabric.Point) => {
+            changeCursor(point);
             if (!fabricRef.current || !maskRectClipPathRef.current) {
                 return;
             }
@@ -180,24 +312,46 @@ export default function Draw() {
                 if (
                     !wrapRef.current ||
                     !maskRectRef.current?.clipPath ||
-                    !startPointRef.current ||
                     !maskRectClipPathRef.current
                 ) {
                     return;
                 }
 
-                const pointer = fabricRef.current.getScenePoint(event.e);
+                let left = 0;
+                let top = 0;
+                let width = 0;
+                let height = 0;
 
-                const x = Math.min(startPointRef.current.x, pointer.x);
-                const y = Math.min(startPointRef.current.y, pointer.y);
-                const width = Math.abs(pointer.x - startPointRef.current.x);
-                const height = Math.abs(pointer.y - startPointRef.current.y);
+                if (startPointRef.current) {
+                    left = Math.min(startPointRef.current.x, point.x);
+                    top = Math.min(startPointRef.current.y, point.y);
+                    width = Math.abs(point.x - startPointRef.current.x);
+                    height = Math.abs(point.y - startPointRef.current.y);
+
+                    if (width + height < 3) {
+                        return;
+                    }
+                } else {
+                    const imageBuffer = imageBufferRef.current;
+                    if (!imageBuffer) {
+                        return;
+                    }
+
+                    const res = await selectWindowFromMousePosition(imageBuffer);
+                    if (!res) {
+                        return;
+                    }
+
+                    left = res.left;
+                    top = res.top;
+                    width = res.width;
+                    height = res.height;
+                }
 
                 maskRectClipPathRef.current.set({
-                    left: x,
-                    top: y,
-                    width,
-                    height,
+                    ...limitSize({ width, height }, left, top),
+                    left,
+                    top,
                 });
                 maskRectRef.current!.set('dirty', true);
                 needRender = true;
@@ -221,7 +375,7 @@ export default function Draw() {
                     if (resizeMode === 'nw-resize') {
                         // 左上角缩放
                         // 当前指针位置作为第一点，选取右下角位置作为第二点
-                        firstPoint = fabricRef.current.getScenePoint(event.e);
+                        firstPoint = point;
                         secondPoint = new fabric.Point(
                             rect.left + rect.width,
                             rect.top + rect.height,
@@ -229,8 +383,7 @@ export default function Draw() {
                     } else if (resizeMode === 'n-resize') {
                         // 上侧缩放
                         // 此时只影响高度，选取左上角的 x 和光标所在位置的 y 作为第一点，选取右下角位置作为第二点
-                        const cursorPoint = fabricRef.current.getScenePoint(event.e);
-                        firstPoint = new fabric.Point(rect.left, cursorPoint.y);
+                        firstPoint = new fabric.Point(rect.left, point.y);
                         secondPoint = new fabric.Point(
                             rect.left + rect.width,
                             rect.top + rect.height,
@@ -238,63 +391,69 @@ export default function Draw() {
                     } else if (resizeMode === 'ne-resize') {
                         // 右上角缩放
                         // 当前光标位置的 y 和左上角的 x 作为第一点，选取右下角的 y 和光标所在位置的 x 作为第二点
-                        const cursorPoint = fabricRef.current.getScenePoint(event.e);
-                        firstPoint = new fabric.Point(rect.left, cursorPoint.y);
-                        secondPoint = new fabric.Point(cursorPoint.x, rect.top + rect.height);
+                        firstPoint = new fabric.Point(rect.left, point.y);
+                        secondPoint = new fabric.Point(
+                            rect.left + rect.width,
+                            rect.top + rect.height,
+                        );
                     } else if (resizeMode === 'e-resize') {
                         // 右侧缩放
                         // 只影响宽度，选取左上角的 x 和 y 作为第一点，光标所在位置的 x 和右下角的 y 作为第二点
-                        const cursorPoint = fabricRef.current.getScenePoint(event.e);
                         firstPoint = new fabric.Point(rect.left, rect.top);
-                        secondPoint = new fabric.Point(cursorPoint.x, rect.top + rect.height);
+                        secondPoint = new fabric.Point(point.x, rect.top + rect.height);
                     } else if (resizeMode === 'se-resize') {
                         // 右下角缩放
                         // 直接取左上角坐标作为第一点，光标所在位置作为第二点
                         firstPoint = new fabric.Point(rect.left, rect.top);
-                        secondPoint = fabricRef.current.getScenePoint(event.e);
+                        secondPoint = point;
                     } else if (resizeMode === 's-resize') {
                         // 下侧缩放
                         // 只影响高度，左上角的 x 和 y 作为第一点，右下角的 x 和鼠标所在 y 作为第二点
-                        const cursorPoint = fabricRef.current.getScenePoint(event.e);
                         firstPoint = new fabric.Point(rect.left, rect.top);
-                        secondPoint = new fabric.Point(rect.left + rect.width, cursorPoint.y);
+                        secondPoint = new fabric.Point(rect.left + rect.width, point.y);
                     } else if (resizeMode === 'sw-resize') {
                         // 左下角缩放
                         // 左上角的 y 和鼠标所在的 x 作为第一点，右下角的 x 和 y 作为第二点
-                        const cursorPoint = fabricRef.current.getScenePoint(event.e);
-                        firstPoint = new fabric.Point(cursorPoint.x, rect.top);
-                        secondPoint = new fabric.Point(rect.left + rect.width, cursorPoint.y);
+                        firstPoint = new fabric.Point(point.x, rect.top);
+                        secondPoint = new fabric.Point(rect.left + rect.width, point.y);
                     } else if (resizeMode === 'w-resize') {
                         // 左侧缩放
                         // 只影响宽度，鼠标所在位置的 x 和左上角的 y 作为第一点，右下角的 x 和 y 作为第二点
-                        const cursorPoint = fabricRef.current.getScenePoint(event.e);
-                        firstPoint = new fabric.Point(cursorPoint.x, rect.top);
+                        firstPoint = new fabric.Point(point.x, rect.top);
                         secondPoint = new fabric.Point(
                             rect.left + rect.width,
                             rect.top + rect.height,
                         );
                     } else if (resizeMode === 'move') {
                         // 移动模式
-                        // 获取当前鼠标位置
-                        const cursorPoint = fabricRef.current.getScenePoint(event.e);
 
                         // 计算鼠标初始点击点相对矩形左上角的偏移量
                         if (!moveOffsetRef.current) {
                             moveOffsetRef.current = {
-                                x: cursorPoint.x - rect.left,
-                                y: cursorPoint.y - rect.top,
+                                left: point.x - rect.left,
+                                top: point.y - rect.top,
                             };
                         }
 
-                        // 计算新的左上角位置（保持鼠标点击点相对于矩形的偏移量不变）
+                        // 计算新的左上角位置（保持鼠标点击点相对于矩形的偏移量不变
+                        const firstPointPosition = limitPosition(
+                            {
+                                left: point.x - moveOffsetRef.current.left,
+                                top: point.y - moveOffsetRef.current.top,
+                            },
+                            rect.width,
+                            rect.height,
+                        );
                         firstPoint = new fabric.Point(
-                            cursorPoint.x - moveOffsetRef.current.x,
-                            cursorPoint.y - moveOffsetRef.current.y,
+                            firstPointPosition.left,
+                            firstPointPosition.top,
                         );
                         secondPoint = new fabric.Point(
                             firstPoint.x + rect.width,
                             firstPoint.y + rect.height,
                         );
+                    } else {
+                        return;
                     }
 
                     maskRectClipPathRef.current.set({
@@ -314,7 +473,7 @@ export default function Draw() {
                 fabricRef.current.renderAll();
             }
         },
-        [changeCursor],
+        [changeCursor, limitPosition, limitSize, selectWindowFromMousePosition],
     );
 
     // 处理鼠标松开事件
@@ -325,15 +484,45 @@ export default function Draw() {
             }
 
             startPointRef.current = null;
-            captureStepRef.current = CaptureStep.Draw;
+            setCaptureStep(CaptureStep.Draw);
         } else if (captureStepRef.current === CaptureStep.Draw) {
             if (drawStateRef.current === DrawState.Idle) {
             } else if (drawStateRef.current === DrawState.Resize) {
-                drawStateRef.current = DrawState.Idle;
-                resizeModeRef.current = '';
+                setDrawState(DrawState.Idle);
+                resizeModeRef.current = 'default';
+
+                // 将矩形的宽高可能变成负数了，纠正成正数
+                const rect = maskRectClipPathRef.current;
+                if (!rect) {
+                    return;
+                }
+
+                let left = rect.left;
+                let top = rect.top;
+                let width = rect.width;
+                let height = rect.height;
+
+                if (width < 0) {
+                    left += width;
+                    width = -width;
+                }
+
+                if (height < 0) {
+                    top += height;
+                    height = -height;
+                }
+
+                rect.set({
+                    left,
+                    top,
+                    width,
+                    height,
+                });
+
+                // 矩形渲染位置和面积不变，不用重新渲染
             }
         }
-    }, []);
+    }, [setCaptureStep, setDrawState]);
 
     useEffect(() => {
         const appWindow = appWindowRef.current;
@@ -341,6 +530,9 @@ export default function Draw() {
             return;
         }
 
+        let mouseDownUnlisten: VoidFunction;
+        let mouseMoveUnlisten: VoidFunction;
+        let mouseUpUnlisten: VoidFunction;
         const initFabric = async () => {
             if (!canvasRef.current || !wrapRef.current) {
                 return;
@@ -357,9 +549,17 @@ export default function Draw() {
             });
 
             // 监听鼠标事件
-            fabricRef.current.on('mouse:down', onMouseDown);
-            fabricRef.current.on('mouse:move', onMouseMove);
-            fabricRef.current.on('mouse:up', onMouseUp);
+            mouseDownUnlisten = fabricRef.current.on('mouse:down', (e) => {
+                const point = fabricRef.current!.getScenePoint(e.e);
+                onMouseDown(point);
+            });
+            mouseMoveUnlisten = fabricRef.current.on('mouse:move', (e) => {
+                const point = fabricRef.current!.getScenePoint(e.e);
+                onMouseMove(point);
+            });
+            mouseUpUnlisten = fabricRef.current.on('mouse:up', () => {
+                onMouseUp();
+            });
         };
 
         const disposeFabric = () => {
@@ -367,14 +567,14 @@ export default function Draw() {
                 return;
             }
 
-            fabricRef.current.off('mouse:down', onMouseDown);
-            fabricRef.current.off('mouse:move', onMouseMove);
-            fabricRef.current.off('mouse:up', onMouseUp);
+            mouseDownUnlisten?.();
+            mouseMoveUnlisten?.();
+            mouseUpUnlisten?.();
             fabricRef.current.dispose();
         };
 
         Promise.all([
-            appWindow.setAlwaysOnTop(process.env.NODE_ENV === 'development' ? false : true),
+            appWindow.setAlwaysOnTop(process.env.NODE_ENV !== 'development'),
             appWindow.setPosition(new PhysicalPosition(0, 0)),
             appWindow.setFullscreen(true),
         ]).then(() => {
@@ -386,9 +586,6 @@ export default function Draw() {
         };
     }, [onMouseDown, onMouseMove, onMouseUp]);
 
-    const imageBufferRef = useRef<ImageBuffer | undefined>(undefined);
-    const { imageBuffer } = useContext(ScreenshotContext);
-
     useEffect(() => {
         const initImage = async () => {
             const appWindow = appWindowRef.current;
@@ -399,7 +596,7 @@ export default function Draw() {
             const canvasWidth = wrapRef.current.clientWidth;
             const canvasHeight = wrapRef.current.clientHeight;
 
-            if (imageBufferRef.current || !imageBuffer) {
+            if (!imageBuffer) {
                 return;
             }
 
@@ -418,11 +615,13 @@ export default function Draw() {
             fabricRef.current.add(imgLayer);
 
             // 添加遮罩
+            const selectWindow = await selectWindowFromMousePosition(imageBuffer);
             maskRectClipPathRef.current = new fabric.Rect({
                 width: 0,
                 height: 0,
                 left: 0,
                 top: 0,
+                ...selectWindow,
                 objectCaching: false,
                 originX: 'left',
                 originY: 'top',
@@ -434,28 +633,29 @@ export default function Draw() {
                 opacity: 0,
             });
             maskRectRef.current = new fabric.Rect({
-                dirty: true,
                 width: canvasWidth,
                 height: canvasHeight,
                 left: 0,
                 top: 0,
-                fill: 'rgba(0, 0, 0, 0.5)',
+                fill: darkMode ? '#434343' : '#000000',
+                opacity: 0.5,
                 selectable: false,
                 clipPath: maskRectClipPathRef.current,
             });
             fabricRef.current.add(maskRectRef.current);
-            fabricRef.current.add(maskRectClipPathRef.current);
-
             // 设置边框
-            const borderOptiopns = {
+            const borderOptiopns: fabric.TOptions<fabric.FabricObjectProps> = {
                 stroke: '#4096ff',
                 strokeWidth: 2,
+                selectable: false,
+                opacity: 0,
             };
             const topBorder = new fabric.Line([0, 0, 0, 0], borderOptiopns);
             const rightBorder = new fabric.Line([0, 0, 0, 0], borderOptiopns);
             const bottomBorder = new fabric.Line([0, 0, 0, 0], borderOptiopns);
             const leftBorder = new fabric.Line([0, 0, 0, 0], borderOptiopns);
-            const circleOptions = {
+
+            const circleOptions: fabric.TOptions<fabric.FabricObjectProps> = {
                 radius: 4,
                 left: 0,
                 top: 0,
@@ -463,7 +663,110 @@ export default function Draw() {
                 stroke: 'white',
                 strokeWidth: 1,
                 opacity: 0,
+                selectable: false,
             };
+
+            const polylineWidth = 33;
+            const polylineWidthCenter = polylineWidth / 3;
+            const polylineHeight = 0;
+            const polylineStrokeWidth = 6;
+            const polylineOptions: fabric.TOptions<fabric.FabricObjectProps> = {
+                fill: 'transparent',
+                stroke: 'white',
+                strokeWidth: polylineStrokeWidth,
+                strokeLineJoin: 'round',
+                strokeLineCap: 'round',
+                shadow: new fabric.Shadow({
+                    color: '#4096ff',
+                    blur: 3,
+                    offsetX: 0,
+                    offsetY: 0,
+                    affectStroke: true,
+                }),
+                selectable: false,
+                opacity: 0,
+            };
+            const topLeftPolyline = new fabric.Polyline(
+                [
+                    { x: 0, y: 0 },
+                    { x: polylineWidth, y: 0 },
+                    { x: polylineWidth, y: polylineHeight },
+                    { x: polylineHeight, y: polylineHeight },
+                    { x: polylineHeight, y: polylineWidth },
+                    { x: 0, y: polylineWidth },
+                ],
+                polylineOptions,
+            );
+            const topPolyline = new fabric.Polyline(
+                [
+                    { x: 0, y: 0 },
+                    { x: polylineWidthCenter, y: 0 },
+                    { x: polylineWidthCenter, y: polylineHeight },
+                    { x: 0, y: polylineHeight },
+                ],
+                polylineOptions,
+            );
+            const topRightPolyline = new fabric.Polyline(
+                [
+                    { x: 0, y: 0 },
+                    { x: -polylineWidth, y: 0 },
+                    { x: -polylineWidth, y: polylineHeight },
+                    { x: polylineHeight, y: polylineHeight },
+                    { x: polylineHeight, y: polylineWidth },
+                    { x: 0, y: polylineWidth },
+                ],
+                polylineOptions,
+            );
+            const rightPolyline = new fabric.Polyline(
+                [
+                    { x: 0, y: 0 },
+                    { x: polylineHeight, y: 0 },
+                    { x: polylineHeight, y: polylineWidthCenter },
+                    { x: 0, y: polylineWidthCenter },
+                ],
+                polylineOptions,
+            );
+            const bottomRightPolyline = new fabric.Polyline(
+                [
+                    { x: 0, y: 0 },
+                    { x: -polylineWidth, y: 0 },
+                    { x: -polylineWidth, y: polylineHeight },
+                    { x: polylineHeight, y: polylineHeight },
+                    { x: polylineHeight, y: -polylineWidth },
+                    { x: 0, y: -polylineWidth },
+                ],
+                polylineOptions,
+            );
+            const bottomPolyline = new fabric.Polyline(
+                [
+                    { x: 0, y: 0 },
+                    { x: polylineWidthCenter, y: 0 },
+                    { x: polylineWidthCenter, y: polylineHeight },
+                    { x: 0, y: polylineHeight },
+                ],
+                polylineOptions,
+            );
+            const bottomLeftPolyline = new fabric.Polyline(
+                [
+                    { x: 0, y: 0 },
+                    { x: polylineWidth, y: 0 },
+                    { x: polylineWidth, y: polylineHeight },
+                    { x: polylineHeight, y: polylineHeight },
+                    { x: polylineHeight, y: -polylineWidth },
+                    { x: 0, y: -polylineWidth },
+                ],
+                polylineOptions,
+            );
+            const leftPolyline = new fabric.Polyline(
+                [
+                    { x: 0, y: 0 },
+                    { x: polylineHeight, y: 0 },
+                    { x: polylineHeight, y: polylineWidthCenter },
+                    { x: 0, y: polylineWidthCenter },
+                ],
+                polylineOptions,
+            );
+
             const topLeftCircle = new fabric.Circle(circleOptions);
             const topCircle = new fabric.Circle(circleOptions);
             const topRightCircle = new fabric.Circle(circleOptions);
@@ -472,20 +775,31 @@ export default function Draw() {
             const bottomCircle = new fabric.Circle(circleOptions);
             const bottomLeftCircle = new fabric.Circle(circleOptions);
             const leftCircle = new fabric.Circle(circleOptions);
-            fabricRef.current.add(
-                topBorder,
-                rightBorder,
-                bottomBorder,
-                leftBorder,
-                topLeftCircle,
-                topCircle,
-                topRightCircle,
-                rightCircle,
-                bottomRightCircle,
-                bottomCircle,
-                bottomLeftCircle,
-                leftCircle,
-            );
+
+            fabricRef.current.add(topBorder, rightBorder, bottomBorder, leftBorder);
+            if (controlNode === AppSettingsControlNode.Circle) {
+                fabricRef.current.add(
+                    topLeftCircle,
+                    topCircle,
+                    topRightCircle,
+                    rightCircle,
+                    bottomRightCircle,
+                    bottomCircle,
+                    bottomLeftCircle,
+                    leftCircle,
+                );
+            } else if (controlNode === AppSettingsControlNode.Polyline) {
+                fabricRef.current.add(
+                    topLeftPolyline,
+                    topPolyline,
+                    topRightPolyline,
+                    rightPolyline,
+                    bottomRightPolyline,
+                    bottomPolyline,
+                    bottomLeftPolyline,
+                    leftPolyline,
+                );
+            }
 
             let previousLeft: number | null = null;
             let previousTop: number | null = null;
@@ -497,10 +811,21 @@ export default function Draw() {
                     return;
                 }
 
-                const left = rect.left;
-                const top = rect.top;
-                const width = rect.width;
-                const height = rect.height;
+                let left = rect.left;
+                let top = rect.top;
+                let width = rect.width;
+                let height = rect.height;
+
+                // 矩形的宽高可能是负数，转换回来
+                if (width < 0) {
+                    left += width;
+                    width = -width;
+                }
+
+                if (height < 0) {
+                    top += height;
+                    height = -height;
+                }
 
                 if (
                     previousLeft === left &&
@@ -516,90 +841,169 @@ export default function Draw() {
                     y1: top,
                     x2: left + width,
                     y2: top,
+                    opacity: 1,
                 });
                 rightBorder.set({
                     x1: left + width,
                     y1: top,
                     x2: left + width,
                     y2: top + height,
+                    opacity: 1,
                 });
                 bottomBorder.set({
                     x1: left,
                     y1: top + height,
                     x2: left + width,
                     y2: top + height,
+                    opacity: 1,
                 });
                 leftBorder.set({
                     x1: left,
                     y1: top,
                     x2: left,
                     y2: top + height,
+                    opacity: 1,
                 });
 
-                // 每个圆点的间距为 5 个圆点大小时，显示圆点
-                const showCircleSpace = circleOptions.radius * 5 * 2;
-                const showCircle = width / 2 > showCircleSpace && height / 2 > showCircleSpace;
-                const circleOpacity = showCircle ? 1 : 0;
-                if (showCircle) {
-                    topLeftCircle.set({
-                        left: left - circleOptions.radius,
-                        top: top - circleOptions.radius,
-                    });
-                    topCircle.set({
-                        left: left + width / 2 - circleOptions.radius,
-                        top: top - circleOptions.radius,
-                    });
-                    topRightCircle.set({
-                        left: left + width - circleOptions.radius,
-                        top: top - circleOptions.radius,
-                    });
-                    rightCircle.set({
-                        left: left + width - circleOptions.radius,
-                        top: top + height / 2 - circleOptions.radius,
-                    });
-                    bottomRightCircle.set({
-                        left: left + width - circleOptions.radius,
-                        top: top + height - circleOptions.radius,
-                    });
-                    bottomCircle.set({
-                        left: left + width / 2 - circleOptions.radius,
-                        top: top + height - circleOptions.radius,
-                    });
-                    bottomLeftCircle.set({
-                        left: left - circleOptions.radius,
-                        top: top + height - circleOptions.radius,
-                    });
-                    leftCircle.set({
-                        left: left - circleOptions.radius,
-                        top: top + height / 2 - circleOptions.radius,
-                    });
+                if (controlNode === AppSettingsControlNode.Circle) {
+                    // 每个圆点的间距为 5 个圆点大小时，显示圆点
+                    const showCircleSpace = circleOptions.radius * 5 * 2;
+                    const showCircle = width / 2 > showCircleSpace && height / 2 > showCircleSpace;
+                    const circleOpacity = showCircle ? 1 : 0;
+                    if (showCircle) {
+                        topLeftCircle.set({
+                            left: left - circleOptions.radius,
+                            top: top - circleOptions.radius,
+                        });
+                        topCircle.set({
+                            left: left + width / 2 - circleOptions.radius,
+                            top: top - circleOptions.radius,
+                        });
+                        topRightCircle.set({
+                            left: left + width - circleOptions.radius,
+                            top: top - circleOptions.radius,
+                        });
+                        rightCircle.set({
+                            left: left + width - circleOptions.radius,
+                            top: top + height / 2 - circleOptions.radius,
+                        });
+                        bottomRightCircle.set({
+                            left: left + width - circleOptions.radius,
+                            top: top + height - circleOptions.radius,
+                        });
+                        bottomCircle.set({
+                            left: left + width / 2 - circleOptions.radius,
+                            top: top + height - circleOptions.radius,
+                        });
+                        bottomLeftCircle.set({
+                            left: left - circleOptions.radius,
+                            top: top + height - circleOptions.radius,
+                        });
+                        leftCircle.set({
+                            left: left - circleOptions.radius,
+                            top: top + height / 2 - circleOptions.radius,
+                        });
+                    }
+                    topLeftCircle.set('opacity', circleOpacity);
+                    topCircle.set('opacity', circleOpacity);
+                    topRightCircle.set('opacity', circleOpacity);
+                    rightCircle.set('opacity', circleOpacity);
+                    bottomRightCircle.set('opacity', circleOpacity);
+                    bottomCircle.set('opacity', circleOpacity);
+                    bottomLeftCircle.set('opacity', circleOpacity);
+                    leftCircle.set('opacity', circleOpacity);
+                } else if (controlNode === AppSettingsControlNode.Polyline) {
+                    // 显示边角
+                    const showCornerSpace = polylineWidth * 3;
+                    const showCorner = width > showCornerSpace && height > showCornerSpace;
+                    const cornerOpacity = showCorner ? 1 : 0;
+                    const showCenterSpace = showCornerSpace + polylineWidthCenter * 3;
+                    const showCenter = width > showCenterSpace && height > showCenterSpace;
+                    const centerOpacity = showCenter ? 1 : 0;
+                    const halfPolylineStrokeWidth = polylineStrokeWidth / 2;
+                    if (showCorner) {
+                        topLeftPolyline.set({
+                            left: left - halfPolylineStrokeWidth,
+                            top: top - halfPolylineStrokeWidth,
+                        });
+                        topRightPolyline.set({
+                            left: left + width - polylineWidth - halfPolylineStrokeWidth,
+                            top: top - halfPolylineStrokeWidth,
+                        });
+                        bottomRightPolyline.set({
+                            left: left + width - halfPolylineStrokeWidth - polylineWidth,
+                            top: top + height - halfPolylineStrokeWidth - polylineWidth,
+                        });
+                        bottomLeftPolyline.set({
+                            left: left - halfPolylineStrokeWidth,
+                            top: top + height - halfPolylineStrokeWidth - polylineWidth,
+                        });
+                    }
+
+                    if (showCenter) {
+                        const halfWidth = width / 2;
+                        const halfHeight = height / 2;
+                        const strokeOffset = polylineStrokeWidth / 2;
+                        topPolyline.set({
+                            left: left + halfWidth - polylineWidthCenter + strokeOffset,
+                            top: top - halfPolylineStrokeWidth,
+                        });
+                        bottomPolyline.set({
+                            left: left + halfWidth - polylineWidthCenter + strokeOffset,
+                            top: top + height - halfPolylineStrokeWidth,
+                        });
+                        rightPolyline.set({
+                            left: left + width - halfPolylineStrokeWidth,
+                            top: top + halfHeight - polylineWidthCenter + strokeOffset,
+                        });
+                        leftPolyline.set({
+                            left: left - halfPolylineStrokeWidth,
+                            top: top + halfHeight - polylineWidthCenter + strokeOffset,
+                        });
+                    }
+
+                    topLeftPolyline.set('opacity', cornerOpacity);
+                    topRightPolyline.set('opacity', cornerOpacity);
+                    bottomRightPolyline.set('opacity', cornerOpacity);
+                    bottomLeftPolyline.set('opacity', cornerOpacity);
+
+                    topPolyline.set('opacity', centerOpacity);
+                    rightPolyline.set('opacity', centerOpacity);
+                    bottomPolyline.set('opacity', centerOpacity);
+                    leftPolyline.set('opacity', centerOpacity);
                 }
-                topLeftCircle.set('opacity', circleOpacity);
-                topCircle.set('opacity', circleOpacity);
-                topRightCircle.set('opacity', circleOpacity);
-                rightCircle.set('opacity', circleOpacity);
-                bottomRightCircle.set('opacity', circleOpacity);
-                bottomCircle.set('opacity', circleOpacity);
-                bottomLeftCircle.set('opacity', circleOpacity);
-                leftCircle.set('opacity', circleOpacity);
 
                 previousLeft = left;
                 previousTop = top;
                 previousWidth = width;
                 previousHeight = height;
             };
-
+            resizeClipPathControlRef.current();
             await appWindow.show();
         };
 
         initImage();
 
-        return () => {};
-    }, [imageBuffer]);
+        return () => {
+            fabricRef.current?.clear();
+        };
+    }, [controlNode, darkMode, imageBuffer, selectWindowFromMousePosition]);
 
     return (
         <div className="draw-wrap" data-tauri-drag-region ref={wrapRef}>
-            <canvas className="draw-canvas" ref={canvasRef} />
+            <canvas
+                className="draw-canvas"
+                ref={canvasRef}
+                style={{ zIndex: zIndexs.Draw_Canvas }}
+            />
+            <DrawToolbar
+                step={captureStep}
+                drawState={drawState}
+                maskRectClipPathRef={maskRectClipPathRef}
+                maskRectRef={maskRectRef}
+                setDrawState={setDrawState}
+                onCancel={onCancel}
+            />
             <style jsx>{`
                 .draw-wrap {
                     height: 100vh;
@@ -613,4 +1017,6 @@ export default function Draw() {
             `}</style>
         </div>
     );
-}
+};
+
+export default React.memo(DrawPage);
