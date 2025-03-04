@@ -5,6 +5,8 @@ export const zIndexs = {
     Main_FunctionButtonInput: 1,
     /** 截图绘制画布 */
     Draw_Canvas: 0,
+    /** 截图绘制光标 */
+    Draw_Cursor: 1,
     /** 截图绘制工具栏 */
-    Draw_Toolbar: 1,
+    Draw_Toolbar: 2,
 };

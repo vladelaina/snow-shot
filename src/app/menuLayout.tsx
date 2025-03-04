@@ -32,9 +32,11 @@ type MenuItem = Required<MenuProps>['items'][number];
 
 export const MenuLayoutContext = createContext<{
     noLayout: boolean;
+    mainWindow: boolean;
     pathname: string;
 }>({
     noLayout: false,
+    mainWindow: false,
     pathname: '/',
 });
 
@@ -330,8 +332,9 @@ const MenuLayoutCore: React.FC<{ children: React.ReactNode }> = ({ children }) =
 export const MenuLayout = ({ children }: { children: React.ReactNode }) => {
     const pathname = usePathname();
     const noLayout = pathname === '/draw';
+    const mainWindow = !noLayout;
     return (
-        <MenuLayoutContext.Provider value={{ noLayout, pathname }}>
+        <MenuLayoutContext.Provider value={{ noLayout, pathname, mainWindow }}>
             <EventListener>
                 {noLayout ? children : <MenuLayoutCore>{children}</MenuLayoutCore>}
             </EventListener>

@@ -21,7 +21,7 @@ const { Option } = Select;
 export default function Settings() {
     const intl = useIntl();
 
-    const { updateAppSettings, ...appSettings } = useContext(AppSettingsContext);
+    const { updateAppSettings } = useContext(AppSettingsContext);
     const [commonForm] = Form.useForm<AppSettingsData[AppSettingsGroup.Common]>();
     const [screenshotForm] = Form.useForm<AppSettingsData[AppSettingsGroup.Screenshot]>();
 
@@ -42,9 +42,6 @@ export default function Settings() {
             <Form
                 className="settings-form common-settings-form"
                 form={commonForm}
-                initialValues={
-                    appSettings.isDefaultData ? undefined : appSettings[AppSettingsGroup.Common]
-                }
                 onValuesChange={(_, values) => {
                     updateAppSettings(AppSettingsGroup.Common, values, true, true, true);
                 }}
@@ -90,9 +87,6 @@ export default function Settings() {
             <Form
                 className="settings-form screenshot-settings-form"
                 form={screenshotForm}
-                initialValues={
-                    appSettings.isDefaultData ? undefined : appSettings[AppSettingsGroup.Screenshot]
-                }
                 onValuesChange={(_, values) => {
                     updateAppSettings(AppSettingsGroup.Screenshot, values, true, true, true);
                 }}

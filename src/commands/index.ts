@@ -42,7 +42,7 @@ export const captureCurrentMonitor = async (encoder: ImageEncoder): Promise<Imag
         monitorWidth,
         monitorHeight,
         monitorScaleFactor,
-        data: new Blob([result.slice(0, imageDataLength)]),
+        data: new Blob([result]),
     };
 };
 

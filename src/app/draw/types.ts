@@ -6,4 +6,9 @@ export enum CaptureStep {
 export enum DrawState {
     Idle = 'idle',
     Resize = 'resize',
+    Select = 'select',
+    Pen = 'pen',
+    Rect = 'rect',
+    Ellipse = 'ellipse',
+    Mosaic = 'mosaic',
 }

@@ -1,8 +1,21 @@
 'use client';
 
-import { useContext, useRef, useEffect, useCallback, useState } from 'react';
-import { AppSettingsContext, AppSettingsControlNode, ScreenshotContext } from '../contextWrap';
-import { getWindowFromMousePosition, ImageBuffer } from '@/commands';
+import {
+    useContext,
+    useRef,
+    useEffect,
+    useCallback,
+    useState,
+    RefObject,
+    createContext,
+} from 'react';
+import { AppSettingsContext, AppSettingsControlNode } from '../contextWrap';
+import {
+    captureCurrentMonitor,
+    getWindowFromMousePosition,
+    ImageBuffer,
+    ImageEncoder,
+} from '@/commands';
 import * as fabric from 'fabric';
 import { getCurrentWindow, Window as AppWindow } from '@tauri-apps/api/window';
 import { PhysicalPosition } from '@tauri-apps/api/dpi';
@@ -22,25 +35,34 @@ type CanvasSize = {
     height: number;
 };
 
-const DrawPage: React.FC = () => {
+export const DrawContext = createContext<{
+    fabricRef: RefObject<fabric.Canvas | null>;
+    canvasRef: RefObject<HTMLCanvasElement | null>;
+    maskRectObjectListRef: RefObject<fabric.Object[]>;
+    maskRectRef: RefObject<fabric.Rect | null>;
+    maskRectClipPathRef: RefObject<fabric.Rect | null>;
+    circleCursorRef: RefObject<HTMLDivElement | null>;
+    imageBufferRef: RefObject<ImageBuffer | undefined>;
+}>({
+    fabricRef: { current: null },
+    canvasRef: { current: null },
+    maskRectObjectListRef: { current: [] },
+    maskRectRef: { current: null },
+    maskRectClipPathRef: { current: null },
+    circleCursorRef: { current: null },
+    imageBufferRef: { current: undefined },
+});
+
+const DrawContent: React.FC<{ onCancel: () => void; imageBuffer: ImageBuffer | undefined }> = ({
+    onCancel,
+    imageBuffer,
+}) => {
     const {
         common: { darkMode },
         screenshot: { controlNode },
-        reloadAppSettings,
     } = useContext(AppSettingsContext);
-    const { addListener, removeListener } = useContext(EventListenerContext);
-    useEffect(() => {
-        const listenerId = addListener('reload-app-settings', () => {
-            reloadAppSettings();
-        });
-
-        return () => {
-            removeListener(listenerId);
-        };
-    }, [addListener, reloadAppSettings, removeListener]);
 
     const imageBufferRef = useRef<ImageBuffer | undefined>(undefined);
-    const { imageBuffer } = useContext(ScreenshotContext);
     useEffect(() => {
         if (imageBuffer) {
             imageBufferRef.current = imageBuffer;
@@ -50,8 +72,10 @@ const DrawPage: React.FC = () => {
     const wrapRef = useRef<HTMLDivElement>(null);
     const fabricRef = useRef<fabric.Canvas | null>(null);
     const canvasRef = useRef<HTMLCanvasElement>(null);
+    const maskRectObjectListRef = useRef<fabric.Object[]>([]);
     const maskRectRef = useRef<fabric.Rect | null>(null);
     const maskRectClipPathRef = useRef<fabric.Rect | null>(null);
+    const circleCursorRef = useRef<HTMLDivElement>(null);
 
     const appWindowRef = useRef<AppWindow | null>(null);
     const startPointRef = useRef<{ x: number; y: number } | null>(null);
@@ -67,7 +91,7 @@ const DrawPage: React.FC = () => {
         drawStateRef.current = state;
         _setDrawState(state);
     }, []);
-    const resizeModeRef = useRef<string>('default');
+    const resizeModeRef = useRef<string>('auto');
     const moveOffsetRef = useRef<CanvasPosition>({
         left: 0,
         top: 0,
@@ -136,17 +160,10 @@ const DrawPage: React.FC = () => {
     useEffect(() => {
         const appWindow = getCurrentWindow();
         appWindowRef.current = appWindow;
-        appWindow.hide();
-    }, []);
-
-    const onCancel = useCallback(() => {
-        // 隐藏窗口后刷新窗口
-        getCurrentWindow().hide();
-        window.location.reload();
     }, []);
 
     const changeCursor = useCallback((mousePoint: fabric.Point): string => {
-        let cursor = 'default';
+        let cursor = 'auto';
 
         const canvas = fabricRef.current;
         const rect = maskRectClipPathRef.current;
@@ -160,52 +177,67 @@ const DrawPage: React.FC = () => {
                 cursor = 'crosshair';
             }
         } else if (captureStepRef.current === CaptureStep.Draw) {
-            // 获取当前指针位置，如果指针在选定区域（maskRectClipPathRef）的上则设置为 n-resize
-            // 下侧为 s-resize，左侧为 w-resize，右侧为 e-resize
-            // 左上为 nw-resize，右上为ne-resize，左下为 sw-resize，右下为 se-resize
+            if (drawStateRef.current === DrawState.Idle) {
+                // 获取当前指针位置，如果指针在选定区域（maskRectClipPathRef）的上则设置为 n-resize
+                // 下侧为 s-resize，左侧为 w-resize，右侧为 e-resize
+                // 左上为 nw-resize，右上为ne-resize，左下为 sw-resize，右下为 se-resize
 
-            const tolerance = 8; // 边缘检测的容差范围
+                const tolerance = 8; // 边缘检测的容差范围
 
-            const left = rect.left || 0;
-            const top = rect.top || 0;
-            const right = left + (rect.width || 0) * (rect.scaleX || 1);
-            const bottom = top + (rect.height || 0) * (rect.scaleY || 1);
+                const left = rect.left || 0;
+                const top = rect.top || 0;
+                const right = left + (rect.width || 0) * (rect.scaleX || 1);
+                const bottom = top + (rect.height || 0) * (rect.scaleY || 1);
 
-            const nearTop = mousePoint.y <= top + tolerance;
-            const nearBottom = mousePoint.y >= bottom - tolerance;
-            const nearLeft = mousePoint.x <= left + tolerance;
-            const nearRight = mousePoint.x >= right - tolerance;
+                const nearTop = mousePoint.y <= top + tolerance;
+                const nearBottom = mousePoint.y >= bottom - tolerance;
+                const nearLeft = mousePoint.x <= left + tolerance;
+                const nearRight = mousePoint.x >= right - tolerance;
 
-            // 设置光标样式
-            if (nearTop && nearLeft) {
-                cursor = 'nw-resize';
-            } else if (nearTop && nearRight) {
-                cursor = 'ne-resize';
-            } else if (nearBottom && nearLeft) {
-                cursor = 'sw-resize';
-            } else if (nearBottom && nearRight) {
-                cursor = 'se-resize';
-            } else if (nearTop) {
-                cursor = 'n-resize';
-            } else if (nearBottom) {
-                cursor = 's-resize';
-            } else if (nearLeft) {
-                cursor = 'w-resize';
-            } else if (nearRight) {
-                cursor = 'e-resize';
+                // 设置光标样式
+                if (nearTop && nearLeft) {
+                    cursor = 'nw-resize';
+                } else if (nearTop && nearRight) {
+                    cursor = 'ne-resize';
+                } else if (nearBottom && nearLeft) {
+                    cursor = 'sw-resize';
+                } else if (nearBottom && nearRight) {
+                    cursor = 'se-resize';
+                } else if (nearTop) {
+                    cursor = 'n-resize';
+                } else if (nearBottom) {
+                    cursor = 's-resize';
+                } else if (nearLeft) {
+                    cursor = 'w-resize';
+                } else if (nearRight) {
+                    cursor = 'e-resize';
+                } else if (
+                    mousePoint.x >= left &&
+                    mousePoint.x <= right &&
+                    mousePoint.y >= top &&
+                    mousePoint.y <= bottom
+                ) {
+                    cursor = 'move';
+                } else {
+                    cursor = 'auto';
+                }
             } else if (
-                mousePoint.x >= left &&
-                mousePoint.x <= right &&
-                mousePoint.y >= top &&
-                mousePoint.y <= bottom
+                drawStateRef.current === DrawState.Pen ||
+                drawStateRef.current === DrawState.Mosaic
             ) {
-                cursor = 'move';
-            } else {
-                cursor = 'default';
+                cursor = 'none';
+            } else if (
+                drawStateRef.current === DrawState.Ellipse ||
+                drawStateRef.current === DrawState.Rect
+            ) {
+                cursor = 'crosshair';
             }
         }
 
-        canvas.setCursor(cursor);
+        if (cursor === 'auto') {
+        } else {
+            canvas.setCursor(cursor);
+        }
         return cursor;
     }, []);
 
@@ -240,6 +272,7 @@ const DrawPage: React.FC = () => {
                         top: point.y - rect.top,
                     };
                 } else if (drawStateRef.current === DrawState.Resize) {
+                } else if (drawStateRef.current === DrawState.Pen) {
                 }
             }
 
@@ -258,12 +291,7 @@ const DrawPage: React.FC = () => {
         y: number;
         width: number;
         height: number;
-    }>({
-        x: 0,
-        y: 0,
-        width: 0,
-        height: 0,
-    });
+    }>(undefined);
 
     const selectWindowFromMousePosition = useCallback(async (image: ImageBuffer) => {
         const monitorX = image.monitorX;
@@ -281,6 +309,7 @@ const DrawPage: React.FC = () => {
 
         const lastWindowInfo = lastWindowInfoRef.current;
         if (
+            lastWindowInfo &&
             lastWindowInfo.x === windowInfo.x &&
             lastWindowInfo.y === windowInfo.y &&
             lastWindowInfo.width === windowInfo.width &&
@@ -299,9 +328,10 @@ const DrawPage: React.FC = () => {
         return { left, top, width, height };
     }, []);
 
+    const waitSelectWindowFromMousePositionRef = useRef<boolean>(false);
+    const waitSelectWindowFromMousePositionPointRef = useRef<fabric.Point | null>(null);
     const onMouseMove = useCallback(
         async (point: fabric.Point) => {
-            changeCursor(point);
             if (!fabricRef.current || !maskRectClipPathRef.current) {
                 return;
             }
@@ -337,7 +367,14 @@ const DrawPage: React.FC = () => {
                         return;
                     }
 
+                    if (waitSelectWindowFromMousePositionRef.current) {
+                        waitSelectWindowFromMousePositionPointRef.current = point;
+                        return;
+                    }
+
+                    waitSelectWindowFromMousePositionRef.current = true;
                     const res = await selectWindowFromMousePosition(imageBuffer);
+                    waitSelectWindowFromMousePositionRef.current = false;
                     if (!res) {
                         return;
                     }
@@ -366,7 +403,7 @@ const DrawPage: React.FC = () => {
                     // 根据不同的缩放模式，进行缩放
                     const resizeMode = resizeModeRef.current;
 
-                    if (resizeMode === 'default') {
+                    if (resizeMode === 'auto') {
                         return;
                     }
 
@@ -472,8 +509,15 @@ const DrawPage: React.FC = () => {
             if (needRender) {
                 fabricRef.current.renderAll();
             }
+
+            if (waitSelectWindowFromMousePositionPointRef.current) {
+                waitSelectWindowFromMousePositionRef.current = false;
+                const tempPoint = waitSelectWindowFromMousePositionPointRef.current;
+                waitSelectWindowFromMousePositionPointRef.current = null;
+                onMouseMove(tempPoint);
+            }
         },
-        [changeCursor, limitPosition, limitSize, selectWindowFromMousePosition],
+        [limitPosition, limitSize, selectWindowFromMousePosition],
     );
 
     // 处理鼠标松开事件
@@ -489,7 +533,7 @@ const DrawPage: React.FC = () => {
             if (drawStateRef.current === DrawState.Idle) {
             } else if (drawStateRef.current === DrawState.Resize) {
                 setDrawState(DrawState.Idle);
-                resizeModeRef.current = 'default';
+                resizeModeRef.current = 'auto';
 
                 // 将矩形的宽高可能变成负数了，纠正成正数
                 const rect = maskRectClipPathRef.current;
@@ -541,11 +585,22 @@ const DrawPage: React.FC = () => {
             const canvasWidth = wrapRef.current.clientWidth;
             const canvasHeight = wrapRef.current.clientHeight;
 
+            fabric.InteractiveFabricObject.ownDefaults = {
+                ...fabric.InteractiveFabricObject.ownDefaults,
+                cornerStyle: 'circle',
+                cornerSize: 9,
+                cornerColor: 'white',
+                cornerStrokeColor: '#4096ff',
+                borderColor: '#69b1ff',
+                transparentCorners: false,
+                borderScaleFactor: 2,
+            };
+
             // 初始化 Fabric 画布
             fabricRef.current = new fabric.Canvas(canvasRef.current, {
                 width: canvasWidth,
                 height: canvasHeight,
-                selection: false, // 禁用默认选择框
+                selection: false,
             });
 
             // 监听鼠标事件
@@ -553,12 +608,27 @@ const DrawPage: React.FC = () => {
                 const point = fabricRef.current!.getScenePoint(e.e);
                 onMouseDown(point);
             });
+
+            let rendered = true;
+            let currentPoint = new fabric.Point(0, 0);
             mouseMoveUnlisten = fabricRef.current.on('mouse:move', (e) => {
-                const point = fabricRef.current!.getScenePoint(e.e);
-                onMouseMove(point);
+                currentPoint = fabricRef.current!.getScenePoint(e.e);
+                changeCursor(currentPoint);
+                if (!rendered) {
+                    return;
+                }
+
+                rendered = false;
+                requestAnimationFrame(() => {
+                    rendered = true;
+                    onMouseMove(currentPoint);
+                });
             });
             mouseUpUnlisten = fabricRef.current.on('mouse:up', () => {
                 onMouseUp();
+                maskRectObjectListRef.current.forEach((object) => {
+                    fabricRef.current!.bringObjectToFront(object);
+                });
             });
         };
 
@@ -584,7 +654,7 @@ const DrawPage: React.FC = () => {
         return () => {
             disposeFabric();
         };
-    }, [onMouseDown, onMouseMove, onMouseUp]);
+    }, [changeCursor, onMouseDown, onMouseMove, onMouseUp]);
 
     useEffect(() => {
         const initImage = async () => {
@@ -593,12 +663,12 @@ const DrawPage: React.FC = () => {
                 return;
             }
 
-            const canvasWidth = wrapRef.current.clientWidth;
-            const canvasHeight = wrapRef.current.clientHeight;
-
             if (!imageBuffer) {
                 return;
             }
+
+            const canvasWidth = wrapRef.current.clientWidth;
+            const canvasHeight = wrapRef.current.clientHeight;
 
             // 设置截图图层
             const imgLayer = await fabric.FabricImage.fromURL(
@@ -640,15 +710,18 @@ const DrawPage: React.FC = () => {
                 fill: darkMode ? '#434343' : '#000000',
                 opacity: 0.5,
                 selectable: false,
+                absolutePositioned: true,
                 clipPath: maskRectClipPathRef.current,
+                evented: false,
             });
-            fabricRef.current.add(maskRectRef.current);
+            maskRectObjectListRef.current.push(maskRectRef.current);
             // 设置边框
             const borderOptiopns: fabric.TOptions<fabric.FabricObjectProps> = {
                 stroke: '#4096ff',
                 strokeWidth: 2,
                 selectable: false,
                 opacity: 0,
+                absolutePositioned: true,
             };
             const topBorder = new fabric.Line([0, 0, 0, 0], borderOptiopns);
             const rightBorder = new fabric.Line([0, 0, 0, 0], borderOptiopns);
@@ -663,6 +736,7 @@ const DrawPage: React.FC = () => {
                 stroke: 'white',
                 strokeWidth: 1,
                 opacity: 0,
+                absolutePositioned: true,
                 selectable: false,
             };
 
@@ -683,6 +757,7 @@ const DrawPage: React.FC = () => {
                     offsetY: 0,
                     affectStroke: true,
                 }),
+                absolutePositioned: true,
                 selectable: false,
                 opacity: 0,
             };
@@ -776,9 +851,9 @@ const DrawPage: React.FC = () => {
             const bottomLeftCircle = new fabric.Circle(circleOptions);
             const leftCircle = new fabric.Circle(circleOptions);
 
-            fabricRef.current.add(topBorder, rightBorder, bottomBorder, leftBorder);
+            maskRectObjectListRef.current.push(topBorder, rightBorder, bottomBorder, leftBorder);
             if (controlNode === AppSettingsControlNode.Circle) {
-                fabricRef.current.add(
+                maskRectObjectListRef.current.push(
                     topLeftCircle,
                     topCircle,
                     topRightCircle,
@@ -789,7 +864,7 @@ const DrawPage: React.FC = () => {
                     leftCircle,
                 );
             } else if (controlNode === AppSettingsControlNode.Polyline) {
-                fabricRef.current.add(
+                maskRectObjectListRef.current.push(
                     topLeftPolyline,
                     topPolyline,
                     topRightPolyline,
@@ -800,6 +875,9 @@ const DrawPage: React.FC = () => {
                     leftPolyline,
                 );
             }
+            maskRectObjectListRef.current.forEach((object) => {
+                fabricRef.current!.add(object);
+            });
 
             let previousLeft: number | null = null;
             let previousTop: number | null = null;
@@ -985,38 +1063,132 @@ const DrawPage: React.FC = () => {
         initImage();
 
         return () => {
-            fabricRef.current?.clear();
+            fabricRef.current?.remove(...fabricRef.current.getObjects());
+            maskRectObjectListRef.current = [];
         };
-    }, [controlNode, darkMode, imageBuffer, selectWindowFromMousePosition]);
+    }, [
+        controlNode,
+        darkMode,
+        imageBuffer,
+        selectWindowFromMousePosition,
+        setCaptureStep,
+        setDrawState,
+    ]);
+
+    const initState = useCallback(() => {
+        setCaptureStep(CaptureStep.Select);
+        setDrawState(DrawState.Idle);
+        resizeModeRef.current = 'auto';
+        lastWindowInfoRef.current = undefined;
+        moveOffsetRef.current = {
+            left: 0,
+            top: 0,
+        };
+        startPointRef.current = null;
+    }, [setCaptureStep, setDrawState]);
+
+    useEffect(() => {
+        if (imageBuffer) {
+        } else {
+            initState();
+            appWindowRef.current?.hide();
+        }
+    }, [imageBuffer, initState]);
+
+    useEffect(() => {
+        const mouseRightClick = (e: MouseEvent) => {
+            e.preventDefault();
+            if (captureStepRef.current === CaptureStep.Draw) {
+                initState();
+                onMouseMove(new fabric.Point(0, 0));
+            }
+        };
+
+        document.addEventListener('contextmenu', mouseRightClick);
+
+        return () => {
+            document.removeEventListener('contextmenu', mouseRightClick);
+        };
+    }, [initState, onMouseMove]);
+
+    useEffect(() => {
+        changeCursor(new fabric.Point(0, 0));
+    }, [changeCursor, drawState, captureStep]);
 
     return (
-        <div className="draw-wrap" data-tauri-drag-region ref={wrapRef}>
-            <canvas
-                className="draw-canvas"
-                ref={canvasRef}
-                style={{ zIndex: zIndexs.Draw_Canvas }}
-            />
-            <DrawToolbar
-                step={captureStep}
-                drawState={drawState}
-                maskRectClipPathRef={maskRectClipPathRef}
-                maskRectRef={maskRectRef}
-                setDrawState={setDrawState}
-                onCancel={onCancel}
-            />
-            <style jsx>{`
-                .draw-wrap {
-                    height: 100vh;
-                    width: 100vw;
-                }
+        <DrawContext.Provider
+            value={{
+                fabricRef,
+                canvasRef,
+                maskRectObjectListRef,
+                maskRectRef,
+                maskRectClipPathRef,
+                circleCursorRef,
+                imageBufferRef,
+            }}
+        >
+            <div className="draw-wrap" data-tauri-drag-region ref={wrapRef}>
+                <canvas
+                    className="draw-canvas"
+                    ref={canvasRef}
+                    style={{ zIndex: zIndexs.Draw_Canvas }}
+                />
+                <DrawToolbar
+                    step={captureStep}
+                    drawState={drawState}
+                    setDrawState={setDrawState}
+                    onCancel={onCancel}
+                />
+                <style jsx>{`
+                    .draw-wrap {
+                        height: 100vh;
+                        width: 100vw;
+                    }
 
-                .draw-canvas {
-                    width: 100vh;
-                    height: 100vw;
+                    .draw-canvas {
+                        width: 100vh;
+                        height: 100vw;
+                    }
+                `}</style>
+            </div>
+
+            <div ref={circleCursorRef} className="draw-toolbar-cursor">
+            <style jsx>{`
+                .draw-toolbar-cursor {
+                    left: 0;
+                    top: 0;
+                    position: absolute;
+                    z-index: ${zIndexs.Draw_Cursor};
+                    width: 0px;
+                    height: 0px;
+                    background-color: transparent;
+                    border: 1px solid #0000008d;
+                    border-radius: 50%;
+                    cursor: none;
+                    pointer-events: none;
                 }
             `}</style>
         </div>
+        </DrawContext.Provider>
     );
+};
+
+const DrawPage: React.FC = () => {
+    const [imageBuffer, setImageBuffer] = useState<ImageBuffer | undefined>(undefined);
+    const { addListener, removeListener } = useContext(EventListenerContext);
+    useEffect(() => {
+        const listenerId = addListener('execute-screenshot', async () => {
+            setImageBuffer(await captureCurrentMonitor(ImageEncoder.WebP));
+        });
+        return () => {
+            removeListener(listenerId);
+        };
+    }, [addListener, removeListener]);
+
+    const reload = useCallback(() => {
+        setImageBuffer(undefined);
+    }, []);
+    return <DrawContent onCancel={reload} imageBuffer={imageBuffer} />;
 };
 
 export default React.memo(DrawPage);
