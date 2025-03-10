@@ -28,7 +28,7 @@ const SliderPickerComponent: React.FC<{
                 onChangeComplete={(value) => setValue({ value })}
                 value={tempValue}
                 step={1}
-                style={{ width: '100px', margin: `0 ${token.marginSM}px` }}
+                style={{ width: '100px', margin: `0 ${token.marginXXS}px` }}
             />
         </>
     );

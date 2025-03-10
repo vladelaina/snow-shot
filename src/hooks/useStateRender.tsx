@@ -26,6 +26,8 @@ export function useStateRender<ValueType>(val: ValueType): [ValueType, (value: V
     }, []);
 
     useEffect(() => {
+        valueRef.current = value;
+
         if (!reactRenderedRef.current) {
             return;
         }

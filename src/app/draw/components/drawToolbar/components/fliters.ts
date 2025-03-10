@@ -7,7 +7,7 @@ type MosaicOwnProps = {
 /**
  * Fragment source for the Mosaic program (WebGL 1.0 Compatible)
  */
-const fragmentSource = `
+const mosaicFragmentSource = `
  precision highp float;
  uniform sampler2D uTexture;
  uniform float uBlockSize;
@@ -24,7 +24,7 @@ const fragmentSource = `
 /**
  * Mosaic filter class
  */
-export class Mosaic extends filters.BaseFilter<'Mosaic', MosaicOwnProps> {
+export class MosaicFilter extends filters.BaseFilter<'Mosaic', MosaicOwnProps> {
     static type = 'Mosaic';
 
     static defaults = {
@@ -36,7 +36,7 @@ export class Mosaic extends filters.BaseFilter<'Mosaic', MosaicOwnProps> {
     static uniformLocations = ['uBlockSize', 'uTextureSize'];
 
     protected getFragmentSource(): string {
-        return fragmentSource;
+        return mosaicFragmentSource;
     }
 
     /**
@@ -80,5 +80,79 @@ export class Mosaic extends filters.BaseFilter<'Mosaic', MosaicOwnProps> {
 
     isNeutralState(): boolean {
         return this.blockSize <= 1;
+    }
+}
+
+type HighlightOwnProps = {
+    highlightColor: [number, number, number]; // RGB 颜色
+    threshold: number; // 颜色匹配的阈值（0 - 255）
+};
+
+/**
+ * Fragment shader source for the Highlight program (WebGL 1.0 Compatible)
+ */
+const highlightFragmentSource = `
+ precision highp float;
+ uniform sampler2D uTexture;
+ uniform vec3 uHighlightColor;
+ uniform float uOpacity;
+ varying vec2 vTexCoord;
+
+ void main() {
+   vec4 originalColor = texture2D(uTexture, vTexCoord);
+   vec4 highlightOverlay = vec4(uHighlightColor / 255.0, uOpacity);
+   
+   // 进行颜色混合 (Multiply Blending)
+   vec3 blendedColor = mix(originalColor.rgb, highlightOverlay.rgb, highlightOverlay.a);
+   
+   gl_FragColor = vec4(blendedColor, originalColor.a);
+ }`;
+
+/**
+ * Highlight filter class (Mimics a highlighter effect)
+ */
+export class HighlightFilter extends filters.BaseFilter<'Highlight', HighlightOwnProps> {
+    static type = 'Highlight';
+
+    static defaults = {
+        highlightColor: [255, 255, 0], // 默认是亮黄色（类似荧光笔颜色）
+        opacity: 0.5, // 半透明
+    };
+
+    declare highlightColor: [number, number, number];
+    declare opacity: number;
+
+    static uniformLocations = ['uHighlightColor', 'uOpacity'];
+
+    protected getFragmentSource(): string {
+        return highlightFragmentSource;
+    }
+
+    /**
+     * Apply the highlight effect (Canvas 2D)
+     */
+    applyTo2d({ imageData: { data } }: T2DPipelineState) {
+        const [rHighlight, gHighlight, bHighlight] = this.highlightColor;
+        const opacity = this.opacity;
+
+        for (let i = 0; i < data.length; i += 4) {
+            const r = data[i];
+            const g = data[i + 1];
+            const b = data[i + 2];
+
+            // 进行颜色叠加：新颜色 = 原色 * (1 - 透明度) + 高亮色 * 透明度
+            data[i] = r * (1 - opacity) + rHighlight * opacity;
+            data[i + 1] = g * (1 - opacity) + gHighlight * opacity;
+            data[i + 2] = b * (1 - opacity) + bHighlight * opacity;
+        }
+    }
+
+    /**
+     * Send uniform data for WebGL
+     */
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    sendUniformData(gl: any, uniformLocations: any) {
+        gl.uniform3fv(uniformLocations.uHighlightColor, this.highlightColor);
+        gl.uniform1f(uniformLocations.uOpacity, this.opacity);
     }
 }

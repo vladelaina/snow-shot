@@ -6,7 +6,7 @@ import {
     LineColorPickerValue,
 } from './pickers/lineColorPicker';
 import * as fabric from 'fabric';
-import { defaultLockWidthHeightValue, LockWidthHeight } from './pickers/lockWidthHeight';
+import { defaultLockWidthHeightValue, LockWidthHeightPicker } from './pickers/lockWidthHeightPicker';
 import { defaultFillShapePickerValue, FillShapePicker } from './pickers/fillShapePicker';
 import { defaultRadiusPickerValue, RadiusPicker } from './pickers/radiusPicker';
 import React from 'react';
@@ -119,7 +119,7 @@ const ShapeToolbar: React.FC<{
                     ry,
                 });
             }
-            canvas.renderAll();
+            canvas.requestRenderAll();
         };
         let rendered = true;
         let currentPoint: fabric.Point | null = null;
@@ -193,7 +193,7 @@ const ShapeToolbar: React.FC<{
                     toolbarLocation={toolbarLocation}
                 />
             )}
-            <LockWidthHeight
+            <LockWidthHeightPicker
                 onChange={(lockWidthHeight) => (lockWidthHeightRef.current = lockWidthHeight)}
                 toolbarLocation={toolbarLocation}
             />

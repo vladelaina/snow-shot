@@ -24,6 +24,7 @@ import { DrawToolbar } from './components/drawToolbar';
 import { EventListenerContext } from '@/components/eventListener';
 import React from 'react';
 import { CaptureStep, DrawState } from './types';
+import { theme } from 'antd';
 
 type CanvasPosition = {
     left: number;
@@ -43,6 +44,9 @@ export const DrawContext = createContext<{
     maskRectClipPathRef: RefObject<fabric.Rect | null>;
     circleCursorRef: RefObject<HTMLDivElement | null>;
     imageBufferRef: RefObject<ImageBuffer | undefined>;
+    canvasCursorRef: RefObject<string>;
+    canvasUnlistenListRef: RefObject<VoidFunction[]>;
+    activeObjectListRef: RefObject<Set<fabric.Object>>;
 }>({
     fabricRef: { current: null },
     canvasRef: { current: null },
@@ -51,12 +55,17 @@ export const DrawContext = createContext<{
     maskRectClipPathRef: { current: null },
     circleCursorRef: { current: null },
     imageBufferRef: { current: undefined },
+    canvasCursorRef: { current: 'auto' },
+    canvasUnlistenListRef: { current: [] },
+    activeObjectListRef: { current: new Set() },
 });
 
 const DrawContent: React.FC<{ onCancel: () => void; imageBuffer: ImageBuffer | undefined }> = ({
     onCancel,
     imageBuffer,
 }) => {
+    const { token } = theme.useToken();
+
     const {
         common: { darkMode },
         screenshot: { controlNode },
@@ -76,6 +85,12 @@ const DrawContent: React.FC<{ onCancel: () => void; imageBuffer: ImageBuffer | u
     const maskRectRef = useRef<fabric.Rect | null>(null);
     const maskRectClipPathRef = useRef<fabric.Rect | null>(null);
     const circleCursorRef = useRef<HTMLDivElement>(null);
+    const canvasUnlistenListRef = useRef<VoidFunction[]>([]);
+    /**
+     * 创建矩形模糊图层时，创建后无法再次选中对象，发现可以通过 setActiveObject 来选中对象
+     * 这里特殊处理下
+     */
+    const activeObjectListRef = useRef<Set<fabric.Object>>(new Set());
 
     const appWindowRef = useRef<AppWindow | null>(null);
     const startPointRef = useRef<{ x: number; y: number } | null>(null);
@@ -162,6 +177,7 @@ const DrawContent: React.FC<{ onCancel: () => void; imageBuffer: ImageBuffer | u
         appWindowRef.current = appWindow;
     }, []);
 
+    const canvasCursorRef = useRef<string>('auto');
     const changeCursor = useCallback((mousePoint: fabric.Point): string => {
         let cursor = 'auto';
 
@@ -223,7 +239,8 @@ const DrawContent: React.FC<{ onCancel: () => void; imageBuffer: ImageBuffer | u
                 }
             } else if (
                 drawStateRef.current === DrawState.Pen ||
-                drawStateRef.current === DrawState.Mosaic
+                drawStateRef.current === DrawState.Mosaic ||
+                drawStateRef.current === DrawState.Highlight
             ) {
                 cursor = 'none';
             } else if (
@@ -231,7 +248,13 @@ const DrawContent: React.FC<{ onCancel: () => void; imageBuffer: ImageBuffer | u
                 drawStateRef.current === DrawState.Rect
             ) {
                 cursor = 'crosshair';
+            } else if (drawStateRef.current === DrawState.Text) {
+                cursor = 'text';
             }
+        }
+
+        if (canvasCursorRef.current !== 'auto') {
+            cursor = canvasCursorRef.current;
         }
 
         if (cursor === 'auto') {
@@ -240,50 +263,6 @@ const DrawContent: React.FC<{ onCancel: () => void; imageBuffer: ImageBuffer | u
         }
         return cursor;
     }, []);
-
-    // 处理鼠标按下事件
-    const onMouseDown = useCallback(
-        (point: fabric.Point) => {
-            const currentCursor = changeCursor(point);
-
-            const rect = maskRectClipPathRef.current;
-            if (!fabricRef.current || !rect) {
-                return;
-            }
-
-            let needRender = false;
-
-            if (captureStepRef.current === CaptureStep.Select) {
-                if (!wrapRef.current || !maskRectRef.current) {
-                    return;
-                }
-
-                rect.set('active', true);
-
-                startPointRef.current = { x: point.x, y: point.y };
-
-                needRender = false;
-            } else if (captureStepRef.current === CaptureStep.Draw) {
-                if (drawStateRef.current === DrawState.Idle) {
-                    setDrawState(DrawState.Resize);
-                    resizeModeRef.current = currentCursor;
-                    moveOffsetRef.current = {
-                        left: point.x - rect.left,
-                        top: point.y - rect.top,
-                    };
-                } else if (drawStateRef.current === DrawState.Resize) {
-                } else if (drawStateRef.current === DrawState.Pen) {
-                }
-            }
-
-            resizeClipPathControlRef.current();
-
-            if (needRender) {
-                fabricRef.current.renderAll();
-            }
-        },
-        [changeCursor, setDrawState],
-    );
 
     // 处理鼠标移动事件
     const lastWindowInfoRef = useRef<{
@@ -507,7 +486,7 @@ const DrawContent: React.FC<{ onCancel: () => void; imageBuffer: ImageBuffer | u
             resizeClipPathControlRef.current();
 
             if (needRender) {
-                fabricRef.current.renderAll();
+                fabricRef.current.requestRenderAll();
             }
 
             if (waitSelectWindowFromMousePositionPointRef.current) {
@@ -518,6 +497,52 @@ const DrawContent: React.FC<{ onCancel: () => void; imageBuffer: ImageBuffer | u
             }
         },
         [limitPosition, limitSize, selectWindowFromMousePosition],
+    );
+
+    // 处理鼠标按下事件
+    const onMouseDown = useCallback(
+        (point: fabric.Point) => {
+            const currentCursor = changeCursor(point);
+
+            const rect = maskRectClipPathRef.current;
+            if (!fabricRef.current || !rect) {
+                return;
+            }
+
+            let needRender = false;
+
+            if (captureStepRef.current === CaptureStep.Select) {
+                if (!wrapRef.current || !maskRectRef.current) {
+                    return;
+                }
+
+                rect.set('active', true);
+
+                startPointRef.current = { x: point.x, y: point.y };
+
+                needRender = false;
+            } else if (captureStepRef.current === CaptureStep.Draw) {
+                if (drawStateRef.current === DrawState.Idle) {
+                    setDrawState(DrawState.Resize);
+                    resizeModeRef.current = currentCursor;
+                    moveOffsetRef.current = {
+                        left: point.x - rect.left,
+                        top: point.y - rect.top,
+                    };
+                    // 直接触发一次 onmousemove 事件
+                    onMouseMove(point);
+                } else if (drawStateRef.current === DrawState.Resize) {
+                } else if (drawStateRef.current === DrawState.Pen) {
+                }
+            }
+
+            resizeClipPathControlRef.current();
+
+            if (needRender) {
+                fabricRef.current.requestRenderAll();
+            }
+        },
+        [changeCursor, onMouseMove, setDrawState],
     );
 
     // 处理鼠标松开事件
@@ -577,6 +602,7 @@ const DrawContent: React.FC<{ onCancel: () => void; imageBuffer: ImageBuffer | u
         let mouseDownUnlisten: VoidFunction;
         let mouseMoveUnlisten: VoidFunction;
         let mouseUpUnlisten: VoidFunction;
+        let canvas: fabric.Canvas;
         const initFabric = async () => {
             if (!canvasRef.current || !wrapRef.current) {
                 return;
@@ -597,22 +623,23 @@ const DrawContent: React.FC<{ onCancel: () => void; imageBuffer: ImageBuffer | u
             };
 
             // 初始化 Fabric 画布
-            fabricRef.current = new fabric.Canvas(canvasRef.current, {
+            canvas = new fabric.Canvas(canvasRef.current, {
                 width: canvasWidth,
                 height: canvasHeight,
                 selection: false,
             });
+            fabricRef.current = canvas;
 
             // 监听鼠标事件
-            mouseDownUnlisten = fabricRef.current.on('mouse:down', (e) => {
-                const point = fabricRef.current!.getScenePoint(e.e);
+            mouseDownUnlisten = canvas.on('mouse:down', (e) => {
+                const point = canvas.getScenePoint(e.e);
                 onMouseDown(point);
             });
 
             let rendered = true;
             let currentPoint = new fabric.Point(0, 0);
-            mouseMoveUnlisten = fabricRef.current.on('mouse:move', (e) => {
-                currentPoint = fabricRef.current!.getScenePoint(e.e);
+            mouseMoveUnlisten = canvas.on('mouse:move', (e) => {
+                currentPoint = canvas.getScenePoint(e.e);
                 changeCursor(currentPoint);
                 if (!rendered) {
                     return;
@@ -624,7 +651,7 @@ const DrawContent: React.FC<{ onCancel: () => void; imageBuffer: ImageBuffer | u
                     onMouseMove(currentPoint);
                 });
             });
-            mouseUpUnlisten = fabricRef.current.on('mouse:up', () => {
+            mouseUpUnlisten = canvas.on('mouse:up', () => {
                 onMouseUp();
                 maskRectObjectListRef.current.forEach((object) => {
                     fabricRef.current!.bringObjectToFront(object);
@@ -633,14 +660,10 @@ const DrawContent: React.FC<{ onCancel: () => void; imageBuffer: ImageBuffer | u
         };
 
         const disposeFabric = () => {
-            if (!fabricRef.current) {
-                return;
-            }
-
             mouseDownUnlisten?.();
             mouseMoveUnlisten?.();
             mouseUpUnlisten?.();
-            fabricRef.current.dispose();
+            canvas?.dispose();
         };
 
         Promise.all([
@@ -751,7 +774,7 @@ const DrawContent: React.FC<{ onCancel: () => void; imageBuffer: ImageBuffer | u
                 strokeLineJoin: 'round',
                 strokeLineCap: 'round',
                 shadow: new fabric.Shadow({
-                    color: '#4096ff',
+                    color: token.colorPrimaryHover,
                     blur: 3,
                     offsetX: 0,
                     offsetY: 0,
@@ -1062,9 +1085,30 @@ const DrawContent: React.FC<{ onCancel: () => void; imageBuffer: ImageBuffer | u
 
         initImage();
 
+        fabricRef.current?.on('selection:cleared', (e) => {
+            e.deselected.forEach((object) => {
+                if (e.deselected.length === 0) {
+                    return;
+                }
+
+                if (e.deselected.length === 1) {
+                    return;
+                }
+
+                if (activeObjectListRef.current.has(object)) {
+                    fabricRef.current!.setActiveObject(object);
+                }
+
+                fabricRef.current!.discardActiveObject();
+            });
+        });
+
         return () => {
             fabricRef.current?.remove(...fabricRef.current.getObjects());
             maskRectObjectListRef.current = [];
+            canvasUnlistenListRef.current.forEach((unlisten) => unlisten());
+            canvasUnlistenListRef.current = [];
+            activeObjectListRef.current = new Set();
         };
     }, [
         controlNode,
@@ -1125,6 +1169,9 @@ const DrawContent: React.FC<{ onCancel: () => void; imageBuffer: ImageBuffer | u
                 maskRectClipPathRef,
                 circleCursorRef,
                 imageBufferRef,
+                canvasCursorRef,
+                canvasUnlistenListRef,
+                activeObjectListRef,
             }}
         >
             <div className="draw-wrap" data-tauri-drag-region ref={wrapRef}>
@@ -1153,22 +1200,22 @@ const DrawContent: React.FC<{ onCancel: () => void; imageBuffer: ImageBuffer | u
             </div>
 
             <div ref={circleCursorRef} className="draw-toolbar-cursor">
-            <style jsx>{`
-                .draw-toolbar-cursor {
-                    left: 0;
-                    top: 0;
-                    position: absolute;
-                    z-index: ${zIndexs.Draw_Cursor};
-                    width: 0px;
-                    height: 0px;
-                    background-color: transparent;
-                    border: 1px solid #0000008d;
-                    border-radius: 50%;
-                    cursor: none;
-                    pointer-events: none;
-                }
-            `}</style>
-        </div>
+                <style jsx>{`
+                    .draw-toolbar-cursor {
+                        left: 0;
+                        top: 0;
+                        position: absolute;
+                        z-index: ${zIndexs.Draw_Cursor};
+                        width: 0px;
+                        height: 0px;
+                        background-color: transparent;
+                        border: 1px solid #0000008d;
+                        border-radius: 50%;
+                        cursor: none;
+                        pointer-events: none;
+                    }
+                `}</style>
+            </div>
         </DrawContext.Provider>
     );
 };
@@ -1188,6 +1235,7 @@ const DrawPage: React.FC = () => {
     const reload = useCallback(() => {
         setImageBuffer(undefined);
     }, []);
+
     return <DrawContent onCancel={reload} imageBuffer={imageBuffer} />;
 };
 

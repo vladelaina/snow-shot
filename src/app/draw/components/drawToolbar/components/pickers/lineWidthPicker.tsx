@@ -2,9 +2,8 @@ import { Button, Tooltip } from 'antd';
 import { useCallback, useEffect, useRef } from 'react';
 import { withPickerBase } from './pickerBase';
 
-const WidthIcon: React.FC<{ width: number }> = ({ width }) => {
-    const maxShapeWidth = 20;
-    const showWidth = width > maxShapeWidth ? 0 : width;
+export const WidthIcon: React.FC<{ width: number; maxWidth: number }> = ({ width, maxWidth }) => {
+    const showWidth = width > maxWidth ? 0 : width;
     return (
         <div
             style={{
@@ -62,11 +61,12 @@ const LineWidthPickerComponent: React.FC<{
         },
         [setValue],
     );
+
     return (
         <>
             <Tooltip title={`${value.width}px`}>
                 <Button
-                    icon={<WidthIcon width={value.width} />}
+                    icon={<WidthIcon width={value.width} maxWidth={21} />}
                     type="dashed"
                     onMouseEnter={() => (isHoveredRef.current = true)}
                     onMouseLeave={() => (isHoveredRef.current = false)}
@@ -75,7 +75,7 @@ const LineWidthPickerComponent: React.FC<{
             </Tooltip>
             <Tooltip title={`${smallWidth}px`}>
                 <Button
-                    icon={<WidthIcon width={5} />}
+                    icon={<WidthIcon width={5} maxWidth={maxWidth} />}
                     type="text"
                     onClick={() => {
                         setValue({ width: smallWidth });
@@ -84,7 +84,7 @@ const LineWidthPickerComponent: React.FC<{
             </Tooltip>
             <Tooltip title={`${mediumWidth}px`}>
                 <Button
-                    icon={<WidthIcon width={10} />}
+                    icon={<WidthIcon width={10} maxWidth={maxWidth} />}
                     type="text"
                     onClick={() => {
                         setValue({ width: mediumWidth });
@@ -93,7 +93,7 @@ const LineWidthPickerComponent: React.FC<{
             </Tooltip>
             <Tooltip title={`${largeWidth}px`}>
                 <Button
-                    icon={<WidthIcon width={20} />}
+                    icon={<WidthIcon width={20} maxWidth={maxWidth} />}
                     type="text"
                     onClick={() => {
                         setValue({ width: largeWidth });
@@ -108,4 +108,5 @@ export const LineWidthPicker = withPickerBase(
     LineWidthPickerComponent,
     'lineWidthPicker',
     defaultLineWidthPickerValue,
+    1000,
 );

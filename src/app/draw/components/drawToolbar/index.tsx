@@ -3,13 +3,22 @@ import { CaptureStep, DrawState } from '../../types';
 import { useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { Button, Flex, theme, Tooltip } from 'antd';
 import { FormattedMessage } from 'react-intl';
-import { CloseOutlined, DragOutlined, HolderOutlined } from '@ant-design/icons';
-import { ArrowSelectIcon, CircleIcon, MosaicIcon, PenIcon, RectIcon } from '@/components/icons';
+import { CloseOutlined, DragOutlined, HighlightOutlined, HolderOutlined } from '@ant-design/icons';
+import {
+    ArrowSelectIcon,
+    CircleIcon,
+    MosaicIcon,
+    PenIcon,
+    RectIcon,
+    TextIcon,
+} from '@/components/icons';
 import { PenToolbar } from './components/penToolbar';
 import { EllipseToolbar, RectToolbar } from './components/shapeToolbar';
 import React from 'react';
 import { DrawContext } from '../../page';
 import { MosaicToolbar } from './components/mosaicToolbar';
+import { TextToolbar } from './components/textToolbar';
+import { HighlightToolbar } from './components/highlightToolbar';
 
 export type DrawToolbarProps = {
     step: CaptureStep;
@@ -231,7 +240,9 @@ const DrawToolbarCore: React.FC<DrawToolbarProps> = ({
             drawState === DrawState.Pen ||
             drawState === DrawState.Rect ||
             drawState === DrawState.Ellipse ||
-            drawState === DrawState.Mosaic
+            drawState === DrawState.Mosaic ||
+            drawState === DrawState.Highlight ||
+            drawState === DrawState.Text
         ) {
             hideSubToolbar = false;
         }
@@ -259,7 +270,7 @@ const DrawToolbarCore: React.FC<DrawToolbarProps> = ({
             }}
         >
             <div className="draw-toolbar" ref={drawToolbarRef}>
-                <Flex align="center" gap={token.paddingXXS}>
+                <Flex align="center" gap={token.paddingXS}>
                     {/* 拖动按钮 */}
                     <Tooltip title={dragging ? '' : <FormattedMessage id="draw.drag" />}>
                         <div className="draw-toolbar-drag" onMouseDown={handleMouseDown}>
@@ -329,6 +340,17 @@ const DrawToolbarCore: React.FC<DrawToolbarProps> = ({
                         />
                     </Tooltip>
 
+                    {/* 高亮 */}
+                    <Tooltip title={<FormattedMessage id="draw.highlight" />}>
+                        <Button
+                            icon={<HighlightOutlined />}
+                            type={getButtonTypeByState(drawState === DrawState.Highlight)}
+                            onClick={() => {
+                                setDrawState(DrawState.Highlight);
+                            }}
+                        />
+                    </Tooltip>
+
                     {/* 马赛克 */}
                     <Tooltip title={<FormattedMessage id="draw.mosaic" />}>
                         <Button
@@ -336,6 +358,17 @@ const DrawToolbarCore: React.FC<DrawToolbarProps> = ({
                             type={getButtonTypeByState(drawState === DrawState.Mosaic)}
                             onClick={() => {
                                 setDrawState(DrawState.Mosaic);
+                            }}
+                        />
+                    </Tooltip>
+
+                    {/* 文字 */}
+                    <Tooltip title={<FormattedMessage id="draw.text" />}>
+                        <Button
+                            icon={<TextIcon />}
+                            type={getButtonTypeByState(drawState === DrawState.Text)}
+                            onClick={() => {
+                                setDrawState(DrawState.Text);
                             }}
                         />
                     </Tooltip>
@@ -359,11 +392,13 @@ const DrawToolbarCore: React.FC<DrawToolbarProps> = ({
                 </Flex>
             </div>
             <div className="draw-subtoolbar" ref={drawSubToolbarRef}>
-                <Flex align="center" gap={token.paddingXXS}>
+                <Flex align="center" gap={token.paddingXS}>
                     {drawState === DrawState.Pen && <PenToolbar />}
                     {drawState === DrawState.Rect && <RectToolbar />}
                     {drawState === DrawState.Ellipse && <EllipseToolbar />}
                     {drawState === DrawState.Mosaic && <MosaicToolbar />}
+                    {drawState === DrawState.Highlight && <HighlightToolbar />}
+                    {drawState === DrawState.Text && <TextToolbar />}
                 </Flex>
             </div>
             <style jsx>{`
@@ -383,6 +418,7 @@ const DrawToolbarCore: React.FC<DrawToolbarProps> = ({
                     border-radius: ${token.borderRadiusLG}px;
                     cursor: default; /* 防止非拖动区域也变成可拖动状态 */
                     color: ${token.colorText};
+                    box-shadow: 0 0 3px 0px ${token.colorPrimaryHover};
                 }
 
                 .draw-subtoolbar {
@@ -390,9 +426,11 @@ const DrawToolbarCore: React.FC<DrawToolbarProps> = ({
                 }
 
                 .draw-toolbar-drag {
-                    font-size: 21px;
+                    font-size: 18px;
+                    color: ${token.colorTextQuaternary};
                     cursor: move;
-                    margin-right: 3px;
+                    margin-right: -3px;
+                    margin-left: -3px;
                 }
 
                 .draw-toolbar-container :global(.ant-btn) :global(.ant-btn-icon) {
@@ -409,7 +447,7 @@ const DrawToolbarCore: React.FC<DrawToolbarProps> = ({
                     width: 1px;
                     height: 0.83em;
                     background-color: ${token.colorBorder};
-                    margin: 0 ${token.marginXS}px;
+                    margin: 0 ${token.marginXXS}px;
                 }
             `}</style>
         </div>

@@ -13,7 +13,7 @@ export const defaultLockWidthHeightValue: LockWidthHeightValue = {
     lock: false,
 };
 
-const LockWidthHeightComponent: React.FC<{
+const LockWidthHeightPickerComponent: React.FC<{
     value: LockWidthHeightValue;
     tempValue: LockWidthHeightValue | undefined;
     setValue: React.Dispatch<React.SetStateAction<LockWidthHeightValue>>;
@@ -56,8 +56,8 @@ const LockWidthHeightComponent: React.FC<{
     );
 };
 
-export const LockWidthHeight = withPickerBase(
-    LockWidthHeightComponent,
-    'lockWidthHeight',
+export const LockWidthHeightPicker = withPickerBase(
+    LockWidthHeightPickerComponent,
+    'lockWidthHeightPicker',
     defaultLockWidthHeightValue,
 );

@@ -12,7 +12,7 @@ export const defaultEnableBlurValue: EnableBlurValue = {
     blur: false,
 };
 
-const EnableBlurComponent: React.FC<{
+const EnableBlurPickerComponent: React.FC<{
     value: EnableBlurValue;
     setValue: React.Dispatch<React.SetStateAction<EnableBlurValue>>;
 }> = ({ value, setValue }) => {
@@ -29,4 +29,8 @@ const EnableBlurComponent: React.FC<{
     );
 };
 
-export const EnableBlur = withPickerBase(EnableBlurComponent, 'enableBlur', defaultEnableBlurValue);
+export const EnableBlurPicker = withPickerBase(
+    EnableBlurPickerComponent,
+    'enableBlurPicker',
+    defaultEnableBlurValue,
+);

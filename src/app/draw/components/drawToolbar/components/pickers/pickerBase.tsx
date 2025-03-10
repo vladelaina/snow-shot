@@ -5,6 +5,7 @@ import _, { debounce } from 'lodash';
 export type PickerProps<ValueType> = {
     onChange: (value: ValueType) => void;
     toolbarLocation: string;
+    hidden?: boolean;
 };
 
 export type WithPickerBaseProps<T extends object> = T & {
@@ -12,6 +13,7 @@ export type WithPickerBaseProps<T extends object> = T & {
     setValue: React.Dispatch<React.SetStateAction<T>>;
     tempValue: T | undefined;
     setTempValue: React.Dispatch<React.SetStateAction<T | undefined>>;
+    updateDebounce?: number;
 };
 
 const getSettingsKey = (toolbarLocation: string) => {
@@ -28,9 +30,10 @@ export function withPickerBase<T extends object>(
     WrappedComponent: ComponentType<T & WithPickerBaseProps<T>>,
     settingsKey: keyof AppSettingsData[AppSettingsGroup.DrawToolbarPicker],
     defaultValue: T,
+    updateDebounce: number = 0,
 ) {
     return React.memo(function PickerBase(props: PickerProps<T>) {
-        const { onChange, toolbarLocation } = props;
+        const { onChange, toolbarLocation, hidden } = props;
 
         const appSettings = useContext(AppSettingsContext);
         const { updateAppSettings } = appSettings;
@@ -85,13 +88,17 @@ export function withPickerBase<T extends object>(
                 },
                 false,
                 true,
-                true,
+                false,
             );
         }, [updateAppSettings, toolbarLocation]);
         const updateSettingsDebounce = useCallback(() => {
-            debounce(() => {
+            if (updateDebounce === 0) {
                 updateSettings();
-            }, 1000)();
+            } else {
+                debounce(() => {
+                    updateSettings();
+                }, updateDebounce)();
+            }
         }, [updateSettings]);
 
         useEffect(() => {
@@ -107,13 +114,15 @@ export function withPickerBase<T extends object>(
         }, [value, tempValue, onChange]);
 
         return (
-            <WrappedComponent
-                {...(props as T)}
-                value={value ?? defaultValue}
-                tempValue={tempValue}
-                setValue={setValue}
-                setTempValue={setTempValue}
-            />
+            <div style={{ display: hidden ? 'none' : 'flex' }}>
+                <WrappedComponent
+                    {...(props as T)}
+                    value={value ?? defaultValue}
+                    tempValue={tempValue}
+                    setValue={setValue}
+                    setTempValue={setTempValue}
+                />
+            </div>
         );
     });
 }

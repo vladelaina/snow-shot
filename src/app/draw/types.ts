@@ -11,4 +11,6 @@ export enum DrawState {
     Rect = 'rect',
     Ellipse = 'ellipse',
     Mosaic = 'mosaic',
+    Highlight = 'highlight',
+    Text = 'text',
 }
