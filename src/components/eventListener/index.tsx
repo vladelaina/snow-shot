@@ -7,8 +7,7 @@ import { appLog, LogMessageEvent } from '@/utils/appLog';
 import React from 'react';
 import { MenuLayoutContext } from '@/app/menuLayout';
 import { getCurrentWindow, Window as AppWindow } from '@tauri-apps/api/window';
-import { ScreenshotContext } from '@/app/contextWrap';
-import { captureCurrentMonitor, ImageEncoder } from '@/commands';
+import { AppSettingsContext } from '@/app/contextWrap';
 
 type Listener = {
     event: string;
@@ -29,9 +28,8 @@ export const EventListenerContext = createContext<EventListenerContextType>({
  * 监听 tauri 的消息
  */
 const EventListenerCore: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-    const { noLayout, pathname } = useContext(MenuLayoutContext);
-    const appWindowRef = useRef<AppWindow | null>(null);
-    const { setImageBuffer } = useContext(ScreenshotContext);
+    const { pathname, mainWindow } = useContext(MenuLayoutContext);
+    const appWindowRef = useRef<AppWindow | undefined>(undefined);
     useEffect(() => {
         appWindowRef.current = getCurrentWindow();
     }, []);
@@ -66,7 +64,15 @@ const EventListenerCore: React.FC<{ children: React.ReactNode }> = ({ children }
         return res;
     }, []);
 
+    const { reloadAppSettings } = useContext(AppSettingsContext);
+
+    const inited = useRef(false);
     useEffect(() => {
+        if (inited.current) {
+            return;
+        }
+        inited.current = true;
+
         let detach: UnlistenFn;
         attachConsole().then((d) => {
             detach = d;
@@ -75,28 +81,27 @@ const EventListenerCore: React.FC<{ children: React.ReactNode }> = ({ children }
         const unlistenList: UnlistenFn[] = [];
         const defaultListener: Listener[] = [];
 
-        if (noLayout) {
-            if (pathname === '/draw') {
-                defaultListener.push({
-                    event: 'execute-screenshot',
-                    callback: async () => {
-                        const buffer = await captureCurrentMonitor(ImageEncoder.WebP);
-                        setImageBuffer(buffer);
-                    },
-                });
-                defaultListener.push({
-                    event: 'reload-app-settings',
-                    callback: async () => {
-                    },
-                });
-            }
-        } else {
+        if (mainWindow) {
             defaultListener.push({
                 event: 'log-message',
                 callback: ({ payload }: { payload: LogMessageEvent }) => {
                     appLog(payload, undefined, 'APP_TAURI');
                 },
             });
+        } else {
+            defaultListener.push({
+                event: 'reload-app-settings',
+                callback: async () => {
+                    reloadAppSettings();
+                },
+            });
+
+            if (pathname === '/draw') {
+                defaultListener.push({
+                    event: 'execute-screenshot',
+                    callback: async () => {},
+                });
+            }
         }
 
         defaultListener
@@ -129,7 +134,7 @@ const EventListenerCore: React.FC<{ children: React.ReactNode }> = ({ children }
                 unlisten();
             });
         };
-    }, [noLayout, pathname, setImageBuffer]);
+    }, [mainWindow, pathname, reloadAppSettings]);
     return (
         <EventListenerContext.Provider value={{ addListener, removeListener }}>
             {children}

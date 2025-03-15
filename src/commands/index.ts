@@ -42,7 +42,7 @@ export const captureCurrentMonitor = async (encoder: ImageEncoder): Promise<Imag
         monitorWidth,
         monitorHeight,
         monitorScaleFactor,
-        data: new Blob([result.slice(0, imageDataLength)]),
+        data: new Blob([result]),
     };
 };
 
@@ -57,7 +57,7 @@ export type WindowInfo = {
  * 获取鼠标所在位置的窗口信息
  */
 export const getWindowFromMousePosition = async () => {
-    const result = await invoke<WindowInfo | undefined | null>('get_window_from_mouse_position');
+    const result = await invoke<WindowInfo | undefined>('get_window_from_mouse_position');
 
     return result;
 };

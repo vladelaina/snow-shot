@@ -14,10 +14,10 @@
         {
             "label": "main",
             "fullscreen": false,
-            "height": 512,
+            "height": 450,
             "resizable": false,
             "title": "Sonnet Shot",
-            "width": 830,
+            "width": 728,
             "center": true,
             "decorations": false,
             "url": "/"
@@ -30,6 +30,7 @@
             "decorations": false,
             "shadow": false,
             "transparent": true,
+            "skipTaskbar": true,
             "url": "/draw"
         }
     ],

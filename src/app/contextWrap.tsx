@@ -12,11 +12,74 @@ import { messages } from '@/messages/map';
 import { ImageBuffer } from '@/commands';
 import { emit } from '@tauri-apps/api/event';
 import { getCurrentWindow } from '@tauri-apps/api/window';
+import Color from 'color';
+import {
+    defaultFillShapePickerValue,
+    FillShapePickerValue,
+} from './draw/components/drawToolbar/components/pickers/fillShapePicker';
+import {
+    defaultLockWidthHeightValue,
+    LockWidthHeightValue,
+} from './draw/components/drawToolbar/components/pickers/lockWidthHeightPicker';
+import {
+    defaultRadiusPickerValue,
+    RadiusPickerValue,
+} from './draw/components/drawToolbar/components/pickers/radiusPicker';
+import {
+    defaultLineColorPickerValue,
+    LineColorPickerValue,
+} from './draw/components/drawToolbar/components/pickers/lineColorPicker';
+import {
+    defaultLineWidthPickerValue,
+    LineWidthPickerValue,
+} from './draw/components/drawToolbar/components/pickers/lineWidthPicker';
+import {
+    defaultSliderPickerValue,
+    SliderPickerValue,
+} from './draw/components/drawToolbar/components/pickers/sliderPicker';
+import {
+    defaultEnableBlurValue,
+    EnableBlurValue,
+} from './draw/components/drawToolbar/components/pickers/enableBlurPicker';
+import {
+    defaultDrawRectValue,
+    DrawRectValue,
+} from './draw/components/drawToolbar/components/pickers/drawRectPicker';
+import {
+    defaultFontSizePickerValue,
+    FontSizePickerValue,
+} from './draw/components/drawToolbar/components/pickers/fontSizePicker';
+import {
+    defaultEnableBoldValue,
+    EnableBoldValue,
+} from './draw/components/drawToolbar/components/pickers/enableBoldPicker';
+import {
+    defaultEnableItalicValue,
+    EnableItalicValue,
+} from './draw/components/drawToolbar/components/pickers/enableItalicPicker';
+import {
+    defaultEnableUnderlineValue,
+    EnableUnderlineValue,
+} from './draw/components/drawToolbar/components/pickers/enableUnderlinePicker';
+import {
+    defaultEnableStrikethroughValue,
+    EnableStrikethroughValue,
+} from './draw/components/drawToolbar/components/pickers/enableStrikethroughPicker';
+import {
+    defaultFontFamilyPickerValue,
+    FontFamilyPickerValue,
+} from './draw/components/drawToolbar/components/pickers/fontFamilyPicker';
+import {
+    ArrowConfigValue,
+    defaultArrowConfigValue,
+} from './draw/components/drawToolbar/components/pickers/arrowConfigPicker';
+import { defaultEnableRadiusValue, EnableRadiusValue } from './draw/components/drawToolbar/components/pickers/enableRadiusPicker';
 
 export enum AppSettingsGroup {
     Common = 'common',
     Cache = 'cache',
     Screenshot = 'screenshot',
+    DrawToolbarPicker = 'drawToolbarPicker',
 }
 
 export enum AppSettingsLanguage {
@@ -44,6 +107,24 @@ export type AppSettingsData = {
     [AppSettingsGroup.Cache]: {
         menuCollapsed: boolean;
     };
+    [AppSettingsGroup.DrawToolbarPicker]: {
+        fillShapePicker: Record<string, FillShapePickerValue>;
+        lockWidthHeightPicker: Record<string, LockWidthHeightValue>;
+        radiusPicker: Record<string, RadiusPickerValue>;
+        lineColorPicker: Record<string, LineColorPickerValue>;
+        lineWidthPicker: Record<string, LineWidthPickerValue>;
+        sliderPicker: Record<string, SliderPickerValue>;
+        enableBlurPicker: Record<string, EnableBlurValue>;
+        drawRectPicker: Record<string, DrawRectValue>;
+        fontSizePicker: Record<string, FontSizePickerValue>;
+        enableBoldPicker: Record<string, EnableBoldValue>;
+        enableItalicPicker: Record<string, EnableItalicValue>;
+        enableUnderlinePicker: Record<string, EnableUnderlineValue>;
+        enableStrikethroughPicker: Record<string, EnableStrikethroughValue>;
+        fontFamilyPicker: Record<string, FontFamilyPickerValue>;
+        arrowConfigPicker: Record<string, ArrowConfigValue>;
+        enableRadiusPicker: Record<string, EnableRadiusValue>;
+    };
 };
 
 const defaultAppSettingsData: AppSettingsData = {
@@ -58,6 +139,24 @@ const defaultAppSettingsData: AppSettingsData = {
     [AppSettingsGroup.Cache]: {
         menuCollapsed: false,
     },
+    [AppSettingsGroup.DrawToolbarPicker]: {
+        fillShapePicker: {},
+        lockWidthHeightPicker: {},
+        radiusPicker: {},
+        lineColorPicker: {},
+        lineWidthPicker: {},
+        sliderPicker: {},
+        enableBlurPicker: {},
+        drawRectPicker: {},
+        fontSizePicker: {},
+        enableBoldPicker: {},
+        enableItalicPicker: {},
+        enableUnderlinePicker: {},
+        enableStrikethroughPicker: {},
+        fontFamilyPicker: {},
+        arrowConfigPicker: {},
+        enableRadiusPicker: {},
+    },
 };
 
 export type AppSettingsContextType = AppSettingsData & {
@@ -71,6 +170,8 @@ export type AppSettingsContextType = AppSettingsData & {
         saveToFile: boolean,
         /** 是否同步到所有窗口 */
         syncAllWindow: boolean,
+        /** 是否忽略状态更新 */
+        ignoreState?: boolean,
     ) => void;
     reloadAppSettings: () => void;
 };
@@ -84,13 +185,8 @@ export const AppSettingsContext = createContext<AppSettingsContextType>({
 
 export type ScreenshotContextType = {
     imageBuffer: ImageBuffer | undefined;
-    setImageBuffer: (imageBuffer: ImageBuffer) => void;
+    setImageBuffer: (imageBuffer: ImageBuffer | undefined) => void;
 };
-
-export const ScreenshotContext = createContext<ScreenshotContextType>({
-    imageBuffer: undefined,
-    setImageBuffer: () => {},
-});
 
 const configDir = 'configs';
 const getFileName = (group: AppSettingsGroup) => {
@@ -101,16 +197,14 @@ export const ContextWrap: React.FC<{ children: React.ReactNode }> = ({ children 
     const [isDefaultData, setIsDefaultData] = useState(true);
     const [appSettings, _setAppSettings] = useState<AppSettingsData>(defaultAppSettingsData);
     const appSettingsRef = useRef<AppSettingsData>(defaultAppSettingsData);
-    useEffect(() => {
-        appSettingsRef.current = appSettings;
-    }, [appSettings]);
+    const setAppSettings = useCallback<React.Dispatch<React.SetStateAction<AppSettingsData>>>(
+        (newSettings) => {
+            if (typeof newSettings === 'function') {
+                newSettings = newSettings(appSettingsRef.current);
+            }
 
-    const setAppSettings = useCallback(
-        (group: AppSettingsGroup, settings: AppSettingsData[typeof group]) => {
-            _setAppSettings((prev) => ({
-                ...prev,
-                [group]: settings,
-            }));
+            appSettingsRef.current = newSettings;
+            _setAppSettings(newSettings);
         },
         [_setAppSettings],
     );
@@ -138,7 +232,7 @@ export const ContextWrap: React.FC<{ children: React.ReactNode }> = ({ children 
     );
 
     const updateAppSettings = useCallback(
-        async (
+        (
             group: AppSettingsGroup,
             val: Partial<AppSettingsData[typeof group]> | string,
             debounce: boolean,
@@ -146,7 +240,9 @@ export const ContextWrap: React.FC<{ children: React.ReactNode }> = ({ children 
             saveToFile: boolean,
             /** 是否同步到所有窗口 */
             syncAllWindow: boolean,
-        ) => {
+            /** 是否忽略状态更新 */
+            ignoreState?: boolean,
+        ): AppSettingsData[typeof group] => {
             let newSettings: Partial<AppSettingsData[typeof group]>;
             if (typeof val === 'string') {
                 try {
@@ -161,6 +257,7 @@ export const ContextWrap: React.FC<{ children: React.ReactNode }> = ({ children 
             }
 
             let settings: AppSettingsData[typeof group];
+
             if (group === AppSettingsGroup.Common) {
                 newSettings = newSettings as AppSettingsData[typeof group];
                 const prevSettings = appSettingsRef.current[group] as AppSettingsData[typeof group];
@@ -210,11 +307,274 @@ export const ContextWrap: React.FC<{ children: React.ReactNode }> = ({ children 
                 settings = {
                     controlNode,
                 };
+            } else if (group === AppSettingsGroup.DrawToolbarPicker) {
+                newSettings = newSettings as AppSettingsData[typeof group];
+                const prevSettings = appSettingsRef.current[group] as AppSettingsData[typeof group];
+
+                const fillShapePickerSettings = newSettings.fillShapePicker ?? {};
+                const lockWidthHeightPickerSettings = newSettings.lockWidthHeightPicker ?? {};
+                const radiusPickerSettings = newSettings.radiusPicker ?? {};
+                const lineColorPickerSettings = newSettings.lineColorPicker ?? {};
+                const lineWidthPickerSettings = newSettings.lineWidthPicker ?? {};
+                const sliderPickerSettings = newSettings.sliderPicker ?? {};
+                const enableBlurPickerSettings = newSettings.enableBlurPicker ?? {};
+                const drawRectPickerSettings = newSettings.drawRectPicker ?? {};
+                const fontSizePickerSettings = newSettings.fontSizePicker ?? {};
+                const enableBoldPickerSettings = newSettings.enableBoldPicker ?? {};
+                const enableItalicPickerSettings = newSettings.enableItalicPicker ?? {};
+                const enableUnderlinePickerSettings = newSettings.enableUnderlinePicker ?? {};
+                const enableStrikethroughPickerSettings =
+                    newSettings.enableStrikethroughPicker ?? {};
+                const fontFamilyPickerSettings = newSettings.fontFamilyPicker ?? {};
+                const arrowConfigPickerSettings = newSettings.arrowConfigPicker ?? {};
+                const enableRadiusPickerSettings = newSettings.enableRadiusPicker ?? {};
+
+
+                Object.keys(fillShapePickerSettings).forEach((key) => {
+                    fillShapePickerSettings[key] = {
+                        fill:
+                            typeof fillShapePickerSettings[key]?.fill === 'boolean'
+                                ? fillShapePickerSettings[key]?.fill
+                                : (prevSettings.fillShapePicker[key]?.fill ??
+                                  defaultFillShapePickerValue.fill),
+                    };
+                });
+
+                Object.keys(lockWidthHeightPickerSettings).forEach((key) => {
+                    lockWidthHeightPickerSettings[key] = {
+                        lock:
+                            typeof lockWidthHeightPickerSettings[key]?.lock === 'boolean'
+                                ? lockWidthHeightPickerSettings[key]?.lock
+                                : (prevSettings.lockWidthHeightPicker[key]?.lock ??
+                                  defaultLockWidthHeightValue.lock),
+                    };
+                });
+
+                Object.keys(radiusPickerSettings).forEach((key) => {
+                    radiusPickerSettings[key] = {
+                        radius:
+                            typeof radiusPickerSettings[key]?.radius === 'number'
+                                ? radiusPickerSettings[key]?.radius
+                                : (prevSettings.radiusPicker[key]?.radius ??
+                                  defaultRadiusPickerValue.radius),
+                    };
+                });
+
+                Object.keys(lineColorPickerSettings).forEach((key) => {
+                    const prevLineColor =
+                        prevSettings.lineColorPicker[key]?.color ??
+                        defaultLineColorPickerValue.color;
+                    let lineColor =
+                        typeof lineColorPickerSettings[key]?.color === 'string'
+                            ? lineColorPickerSettings[key]?.color
+                            : prevLineColor;
+
+                    try {
+                        lineColor = Color(lineColor).hexa();
+                    } catch {
+                        lineColor = prevLineColor;
+                    }
+
+                    lineColorPickerSettings[key] = {
+                        color: lineColor,
+                    };
+                });
+
+                Object.keys(lineWidthPickerSettings).forEach((key) => {
+                    lineWidthPickerSettings[key] = {
+                        width:
+                            typeof lineWidthPickerSettings[key]?.width === 'number'
+                                ? lineWidthPickerSettings[key]?.width
+                                : (prevSettings.lineWidthPicker[key]?.width ??
+                                  defaultLineWidthPickerValue.width),
+                    };
+                });
+
+                Object.keys(sliderPickerSettings).forEach((key) => {
+                    sliderPickerSettings[key] = {
+                        value: sliderPickerSettings[key]?.value ?? defaultSliderPickerValue.value,
+                    };
+                });
+
+                Object.keys(enableBlurPickerSettings).forEach((key) => {
+                    enableBlurPickerSettings[key] = {
+                        blur:
+                            typeof enableBlurPickerSettings[key]?.blur === 'boolean'
+                                ? enableBlurPickerSettings[key].blur
+                                : (prevSettings.enableBlurPicker[key]?.blur ??
+                                  defaultEnableBlurValue.blur),
+                    };
+                });
+
+                Object.keys(drawRectPickerSettings).forEach((key) => {
+                    drawRectPickerSettings[key] = {
+                        enable:
+                            typeof drawRectPickerSettings[key]?.enable === 'boolean'
+                                ? drawRectPickerSettings[key].enable
+                                : (prevSettings.drawRectPicker[key]?.enable ??
+                                  defaultDrawRectValue.enable),
+                    };
+                });
+
+                Object.keys(fontSizePickerSettings).forEach((key) => {
+                    fontSizePickerSettings[key] = {
+                        size:
+                            typeof fontSizePickerSettings[key]?.size === 'number'
+                                ? fontSizePickerSettings[key].size
+                                : (prevSettings.fontSizePicker[key]?.size ??
+                                  defaultFontSizePickerValue.size),
+                    };
+                });
+
+                Object.keys(enableBoldPickerSettings).forEach((key) => {
+                    enableBoldPickerSettings[key] = {
+                        enable:
+                            typeof enableBoldPickerSettings[key]?.enable === 'boolean'
+                                ? enableBoldPickerSettings[key].enable
+                                : (prevSettings.enableBoldPicker[key]?.enable ??
+                                  defaultEnableBoldValue.enable),
+                    };
+                });
+
+                Object.keys(enableItalicPickerSettings).forEach((key) => {
+                    enableItalicPickerSettings[key] = {
+                        enable:
+                            typeof enableItalicPickerSettings[key]?.enable === 'boolean'
+                                ? enableItalicPickerSettings[key].enable
+                                : (prevSettings.enableItalicPicker[key]?.enable ??
+                                  defaultEnableItalicValue.enable),
+                    };
+                });
+
+                Object.keys(enableUnderlinePickerSettings).forEach((key) => {
+                    enableUnderlinePickerSettings[key] = {
+                        enable:
+                            typeof enableUnderlinePickerSettings[key]?.enable === 'boolean'
+                                ? enableUnderlinePickerSettings[key].enable
+                                : (prevSettings.enableUnderlinePicker[key]?.enable ??
+                                  defaultEnableUnderlineValue.enable),
+                    };
+                });
+
+                Object.keys(enableStrikethroughPickerSettings).forEach((key) => {
+                    enableStrikethroughPickerSettings[key] = {
+                        enable:
+                            typeof enableStrikethroughPickerSettings[key]?.enable === 'boolean'
+                                ? enableStrikethroughPickerSettings[key].enable
+                                : (prevSettings.enableStrikethroughPicker[key]?.enable ??
+                                  defaultEnableStrikethroughValue.enable),
+                    };
+                });
+
+                Object.keys(fontFamilyPickerSettings).forEach((key) => {
+                    fontFamilyPickerSettings[key] = {
+                        value:
+                            typeof fontFamilyPickerSettings[key]?.value === 'string'
+                                ? fontFamilyPickerSettings[key].value
+                                : (prevSettings.fontFamilyPicker[key]?.value ??
+                                  defaultFontFamilyPickerValue.value),
+                    };
+                });
+
+                Object.keys(arrowConfigPickerSettings).forEach((key) => {
+                    arrowConfigPickerSettings[key] = {
+                        configId:
+                            typeof arrowConfigPickerSettings[key]?.configId === 'string'
+                                ? arrowConfigPickerSettings[key].configId
+                                : (prevSettings.arrowConfigPicker[key]?.configId ??
+                                  defaultArrowConfigValue.configId),
+                    };
+                });
+
+                Object.keys(enableRadiusPickerSettings).forEach((key) => {
+                    enableRadiusPickerSettings[key] = {
+                        enable:
+                            typeof enableRadiusPickerSettings[key]?.enable === 'boolean'
+                                ? enableRadiusPickerSettings[key].enable
+                                : (prevSettings.enableRadiusPicker[key]?.enable ??
+                                  defaultEnableRadiusValue.enable),
+                    };
+                });
+
+                settings = {
+                    fillShapePicker: {
+                        ...prevSettings.fillShapePicker,
+                        ...fillShapePickerSettings,
+                    },
+                    lockWidthHeightPicker: {
+                        ...prevSettings.lockWidthHeightPicker,
+                        ...lockWidthHeightPickerSettings,
+                    },
+                    radiusPicker: {
+                        ...prevSettings.radiusPicker,
+                        ...radiusPickerSettings,
+                    },
+                    lineColorPicker: {
+                        ...prevSettings.lineColorPicker,
+                        ...lineColorPickerSettings,
+                    },
+                    lineWidthPicker: {
+                        ...prevSettings.lineWidthPicker,
+                        ...lineWidthPickerSettings,
+                    },
+                    sliderPicker: {
+                        ...prevSettings.sliderPicker,
+                        ...sliderPickerSettings,
+                    },
+                    enableBlurPicker: {
+                        ...prevSettings.enableBlurPicker,
+                        ...enableBlurPickerSettings,
+                    },
+                    drawRectPicker: {
+                        ...prevSettings.drawRectPicker,
+                        ...drawRectPickerSettings,
+                    },
+                    fontSizePicker: {
+                        ...prevSettings.fontSizePicker,
+                        ...fontSizePickerSettings,
+                    },
+                    enableBoldPicker: {
+                        ...prevSettings.enableBoldPicker,
+                        ...enableBoldPickerSettings,
+                    },
+                    enableItalicPicker: {
+                        ...prevSettings.enableItalicPicker,
+                        ...enableItalicPickerSettings,
+                    },
+                    enableUnderlinePicker: {
+                        ...prevSettings.enableUnderlinePicker,
+                        ...enableUnderlinePickerSettings,
+                    },
+                    enableStrikethroughPicker: {
+                        ...prevSettings.enableStrikethroughPicker,
+                        ...enableStrikethroughPickerSettings,
+                    },
+                    fontFamilyPicker: {
+                        ...prevSettings.fontFamilyPicker,
+                        ...fontFamilyPickerSettings,
+                    },
+                    arrowConfigPicker: {
+                        ...prevSettings.arrowConfigPicker,
+                        ...arrowConfigPickerSettings,
+                    },
+                    enableRadiusPicker: {
+                        ...prevSettings.enableRadiusPicker,
+                        ...enableRadiusPickerSettings,
+                    },
+                };
             } else {
-                return;
+                return defaultAppSettingsData[group];
             }
 
-            setAppSettings(group, settings);
+            if (!ignoreState) {
+                setAppSettings((prev) => {
+                    return {
+                        ...prev,
+                        [group]: settings,
+                    };
+                });
+            }
+
             if (saveToFile) {
                 if (debounce) {
                     writeAppSettingsDebounce(group, settings, syncAllWindow);
@@ -222,6 +582,8 @@ export const ContextWrap: React.FC<{ children: React.ReactNode }> = ({ children 
                     writeAppSettings(group, settings, syncAllWindow);
                 }
             }
+
+            return settings;
         },
         [writeAppSettings, writeAppSettingsDebounce, setAppSettings],
     );
@@ -231,6 +593,7 @@ export const ContextWrap: React.FC<{ children: React.ReactNode }> = ({ children 
             (group) => group in defaultAppSettingsData,
         );
 
+        const settings: AppSettingsData = {} as AppSettingsData;
         for (const group of groups as AppSettingsGroup[]) {
             // 启动时验证下目录是否存在
             let isDirExists = await exists('', {
@@ -258,7 +621,15 @@ export const ContextWrap: React.FC<{ children: React.ReactNode }> = ({ children 
             const saveToFile = getCurrentWindow().label === 'main';
 
             if (!isFileExists) {
-                updateAppSettings(group, defaultAppSettingsData[group], false, saveToFile, false);
+                settings[group] = updateAppSettings(
+                    group,
+                    defaultAppSettingsData[group],
+                    false,
+                    saveToFile,
+                    false,
+                    true,
+                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                ) as any;
                 return;
             }
 
@@ -266,11 +637,26 @@ export const ContextWrap: React.FC<{ children: React.ReactNode }> = ({ children 
                 baseDir: BaseDirectory.AppConfig,
             });
 
-            updateAppSettings(group, content, false, saveToFile, false);
+            settings[group] = updateAppSettings(
+                group,
+                content,
+                false,
+                saveToFile,
+                false,
+                true,
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            ) as any;
         }
 
+        setAppSettings((prev) => {
+            if (_.isEqual(prev, settings)) {
+                return prev;
+            }
+
+            return settings;
+        });
         setIsDefaultData(false);
-    }, [updateAppSettings]);
+    }, [setAppSettings, updateAppSettings]);
     useEffect(() => {
         reloadAppSettings();
     }, [reloadAppSettings]);
@@ -287,7 +673,6 @@ export const ContextWrap: React.FC<{ children: React.ReactNode }> = ({ children 
         }
     }, [appSettings]);
 
-    const [imageBuffer, setImageBuffer] = useState<ImageBuffer | undefined>(undefined);
     return (
         <AppSettingsContext.Provider
             value={{
@@ -309,9 +694,7 @@ export const ContextWrap: React.FC<{ children: React.ReactNode }> = ({ children 
                     locale={appSettings[AppSettingsGroup.Common].language}
                     messages={messages[appSettings[AppSettingsGroup.Common].language]}
                 >
-                    <ScreenshotContext.Provider value={{ imageBuffer, setImageBuffer }}>
-                        {children}
-                    </ScreenshotContext.Provider>
+                    {children}
                 </IntlProvider>
             </ConfigProvider>
         </AppSettingsContext.Provider>

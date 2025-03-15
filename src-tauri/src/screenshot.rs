@@ -1,5 +1,3 @@
-use std::process;
-
 use device_query::{DeviceQuery, DeviceState, MouseState};
 use image::codecs::png::{CompressionType, FilterType, PngEncoder};
 use image::codecs::webp::WebPEncoder;
@@ -44,11 +42,11 @@ pub async fn capture_current_monitor(encoder: String) -> Response {
     }
 
     // 将屏幕信息也推送到前端
-    let monitor_x_bytes = monitor.x().to_le_bytes();
-    let monitor_y_bytes = monitor.y().to_le_bytes();
-    let monitor_width_bytes = monitor.width().to_le_bytes();
-    let monitor_height_bytes = monitor.height().to_le_bytes();
-    let monitor_scale_factor_bytes = monitor.scale_factor().to_le_bytes();
+    let monitor_x_bytes = monitor.x().unwrap_or(0).to_le_bytes();
+    let monitor_y_bytes = monitor.y().unwrap_or(0).to_le_bytes();
+    let monitor_width_bytes = monitor.width().unwrap_or(0).to_le_bytes();
+    let monitor_height_bytes = monitor.height().unwrap_or(0).to_le_bytes();
+    let monitor_scale_factor_bytes = monitor.scale_factor().unwrap_or(0.0).to_le_bytes();
 
     buf.push(monitor_x_bytes[0]);
     buf.push(monitor_x_bytes[1]);
@@ -94,18 +92,37 @@ pub fn get_window_from_mouse_position() -> Option<WindowInfo> {
     let (mouse_x, mouse_y) = mouse.coords;
 
     let mut windows = Window::all().unwrap_or_default();
-    windows.sort_by(|a, b| b.z().cmp(&a.z()));
+    windows.sort_by(|a, b| {
+        let a_z_val = match a.z() {
+            Ok(z_val) => z_val,
+            Err(_) => 0,
+        };
+
+        let b_z_val = match b.z() {
+            Ok(z_val) => z_val,
+            Err(_) => 0,
+        };
+
+        b_z_val.cmp(&a_z_val)
+    });
 
     for w in windows {
-        let window_title = w.title();
-        if window_title.starts_with("Shell Handwriting Canvas") {
-            continue;
-        }
-
-        let x = w.x();
-        let y = w.y();
-        let width = w.width();
-        let height = w.height();
+        let x = match w.x() {
+            Ok(x) => x,
+            Err(_) => continue,
+        };
+        let y = match w.y() {
+            Ok(y) => y,
+            Err(_) => continue,
+        };
+        let width = match w.width() {
+            Ok(width) => width,
+            Err(_) => continue,
+        };
+        let height = match w.height() {
+            Ok(height) => height,
+            Err(_) => continue,
+        };
 
         let min_x: i32 = x;
         let min_y: i32 = y;
