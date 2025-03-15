@@ -29,7 +29,7 @@ export const EventListenerContext = createContext<EventListenerContextType>({
  */
 const EventListenerCore: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     const { pathname, mainWindow } = useContext(MenuLayoutContext);
-    const appWindowRef = useRef<AppWindow | null>(null);
+    const appWindowRef = useRef<AppWindow | undefined>(undefined);
     useEffect(() => {
         appWindowRef.current = getCurrentWindow();
     }, []);

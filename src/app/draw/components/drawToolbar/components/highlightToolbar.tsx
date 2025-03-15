@@ -13,8 +13,55 @@ import * as fabric from 'fabric';
 import { DrawContext } from '@/app/draw/page';
 import { CircleCursor } from './pickers/components/circleCursor';
 import { useStateRef } from '@/hooks/useStateRef';
-import Color from 'color';
 import { defaultDrawRectValue, DrawRectPicker, DrawRectValue } from './pickers/drawRectPicker';
+import Color from 'color';
+export class HighlightBrush extends fabric.PencilBrush {
+    constructor(canvas: fabric.Canvas) {
+        super(canvas);
+    }
+
+    needsFullRender() {
+        return true;
+    }
+
+    _setBrushStyles(ctx: CanvasRenderingContext2D) {
+        // 受限于画笔的实现方式，无法在绘制时加上混合模式，暂时用透明替代
+        ctx.strokeStyle = Color(this.color).alpha(0.5).hexa();
+        ctx.lineWidth = this.width;
+        ctx.lineCap = this.strokeLineCap;
+        ctx.miterLimit = this.strokeMiterLimit;
+        ctx.lineJoin = this.strokeLineJoin;
+        ctx.setLineDash(this.strokeDashArray || []);
+    }
+
+    onMouseMove(pointer: fabric.Point, event: fabric.TEvent): void {
+        super.onMouseMove(pointer, event);
+    }
+
+    /**
+     * Creates a Path object to add on canvas
+     * @param {TSimplePathData} pathData Path data
+     * @return {Path} Path to add on canvas
+     */
+    createPath(pathData: fabric.TSimplePathData): fabric.Path {
+        const path = new fabric.Path(pathData, {
+            fill: null,
+            stroke: this.color,
+            strokeWidth: this.width,
+            strokeLineCap: this.strokeLineCap,
+            strokeMiterLimit: this.strokeMiterLimit,
+            strokeLineJoin: this.strokeLineJoin,
+            strokeDashArray: this.strokeDashArray,
+            globalCompositeOperation: 'multiply',
+        });
+        if (this.shadow) {
+            this.shadow.affectStroke = true;
+            path.shadow = new fabric.Shadow(this.shadow);
+        }
+
+        return path;
+    }
+}
 
 export const HighlightToolbar: React.FC = () => {
     const { fabricRef, canvasCursorRef } = useContext(DrawContext);
@@ -34,7 +81,7 @@ export const HighlightToolbar: React.FC = () => {
             canvasCursorRef.current = 'crosshair';
         } else {
             canvas.isDrawingMode = true;
-            canvas.freeDrawingBrush = new fabric.PencilBrush(canvas);
+            canvas.freeDrawingBrush = new HighlightBrush(canvas);
             canvasCursorRef.current = 'auto';
         }
 
@@ -51,32 +98,13 @@ export const HighlightToolbar: React.FC = () => {
             return;
         }
 
-        canvas.freeDrawingBrush.color = Color(color.color).alpha(0.5).hexa();
+        canvas.freeDrawingBrush.color = color.color;
         canvas.freeDrawingBrush.width = width.width;
     }, [color, fabricRef, width, drawRect.enable]);
 
     useEffect(() => {
-        const canvas = fabricRef.current;
-        if (!canvas || !canvas.freeDrawingBrush) {
-            return;
-        }
-
-        const unlisten = canvas.on('path:created', function (opt) {
-            opt.path.globalCompositeOperation = 'multiply';
-            opt.path.set({
-                stroke: colorRef.current.color,
-            });
-            canvas.renderAll();
-        });
-
-        return () => {
-            unlisten();
-        };
-    }, [colorRef, fabricRef]);
-
-    useEffect(() => {
         let isDrawing = false;
-        let shape: fabric.Rect | fabric.Ellipse | null = null;
+        let shape: fabric.Rect | fabric.Ellipse | undefined = undefined;
         let startX = 0;
         let startY = 0;
 
@@ -125,10 +153,10 @@ export const HighlightToolbar: React.FC = () => {
             const height = Math.abs(point.y - startY);
 
             shape.set({ left, top, width, height });
-            canvas.requestRenderAll();
+            canvas.renderAll();
         };
         let rendered = true;
-        let currentPoint: fabric.Point | null = null;
+        let currentPoint: fabric.Point | undefined = undefined;
         const onMouseMove = (e: fabric.TPointerEventInfo<fabric.TPointerEvent>) => {
             const canvas = fabricRef.current;
             if (!canvas) return;
@@ -148,7 +176,7 @@ export const HighlightToolbar: React.FC = () => {
 
                 onMouseMoveCore(currentPoint);
 
-                currentPoint = null;
+                currentPoint = undefined;
             });
         };
 
@@ -160,7 +188,7 @@ export const HighlightToolbar: React.FC = () => {
                 canvas.setActiveObject(shape);
             }
             isDrawing = false;
-            shape = null;
+            shape = undefined;
         };
 
         const canvas = fabricRef.current;

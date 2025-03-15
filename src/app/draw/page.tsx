@@ -25,6 +25,7 @@ import { EventListenerContext } from '@/components/eventListener';
 import React from 'react';
 import { CaptureStep, DrawState } from './types';
 import { theme } from 'antd';
+import { FabricHistory } from '@/utils/fabricjsHistory';
 
 type CanvasPosition = {
     left: number;
@@ -37,27 +38,29 @@ type CanvasSize = {
 };
 
 export const DrawContext = createContext<{
-    fabricRef: RefObject<fabric.Canvas | null>;
+    fabricRef: RefObject<fabric.Canvas | undefined>;
     canvasRef: RefObject<HTMLCanvasElement | null>;
     maskRectObjectListRef: RefObject<fabric.Object[]>;
-    maskRectRef: RefObject<fabric.Rect | null>;
-    maskRectClipPathRef: RefObject<fabric.Rect | null>;
+    maskRectRef: RefObject<fabric.Rect | undefined>;
+    maskRectClipPathRef: RefObject<fabric.Rect | undefined>;
     circleCursorRef: RefObject<HTMLDivElement | null>;
     imageBufferRef: RefObject<ImageBuffer | undefined>;
     canvasCursorRef: RefObject<string>;
     canvasUnlistenListRef: RefObject<VoidFunction[]>;
-    activeObjectListRef: RefObject<Set<fabric.Object>>;
+    imageLayerRef: RefObject<fabric.Image | undefined>;
+    canvasHistoryRef: RefObject<FabricHistory | undefined>;
 }>({
-    fabricRef: { current: null },
+    fabricRef: { current: undefined },
     canvasRef: { current: null },
     maskRectObjectListRef: { current: [] },
-    maskRectRef: { current: null },
-    maskRectClipPathRef: { current: null },
+    maskRectRef: { current: undefined },
+    maskRectClipPathRef: { current: undefined },
     circleCursorRef: { current: null },
     imageBufferRef: { current: undefined },
     canvasCursorRef: { current: 'auto' },
     canvasUnlistenListRef: { current: [] },
-    activeObjectListRef: { current: new Set() },
+    imageLayerRef: { current: undefined },
+    canvasHistoryRef: { current: undefined },
 });
 
 const DrawContent: React.FC<{ onCancel: () => void; imageBuffer: ImageBuffer | undefined }> = ({
@@ -79,21 +82,23 @@ const DrawContent: React.FC<{ onCancel: () => void; imageBuffer: ImageBuffer | u
     }, [imageBuffer]);
 
     const wrapRef = useRef<HTMLDivElement>(null);
-    const fabricRef = useRef<fabric.Canvas | null>(null);
+    const fabricRef = useRef<fabric.Canvas | undefined>(undefined);
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const maskRectObjectListRef = useRef<fabric.Object[]>([]);
-    const maskRectRef = useRef<fabric.Rect | null>(null);
-    const maskRectClipPathRef = useRef<fabric.Rect | null>(null);
+    const maskRectRef = useRef<fabric.Rect | undefined>(undefined);
+    const maskRectClipPathRef = useRef<fabric.Rect | undefined>(undefined);
     const circleCursorRef = useRef<HTMLDivElement>(null);
     const canvasUnlistenListRef = useRef<VoidFunction[]>([]);
+    const imageLayerRef = useRef<fabric.Image | undefined>(undefined);
+    const canvasHistoryRef = useRef<FabricHistory | undefined>(undefined);
     /**
      * 创建矩形模糊图层时，创建后无法再次选中对象，发现可以通过 setActiveObject 来选中对象
      * 这里特殊处理下
      */
     const activeObjectListRef = useRef<Set<fabric.Object>>(new Set());
 
-    const appWindowRef = useRef<AppWindow | null>(null);
-    const startPointRef = useRef<{ x: number; y: number } | null>(null);
+    const appWindowRef = useRef<AppWindow | undefined>(undefined);
+    const startPointRef = useRef<{ x: number; y: number } | undefined>(undefined);
     const [captureStep, _setCaptureStep] = useState(CaptureStep.Select);
     const captureStepRef = useRef(CaptureStep.Select);
     const setCaptureStep = useCallback((step: CaptureStep) => {
@@ -189,7 +194,7 @@ const DrawContent: React.FC<{ onCancel: () => void; imageBuffer: ImageBuffer | u
 
         // 处理不同情况下的鼠标指针状态
         if (captureStepRef.current === CaptureStep.Select) {
-            if (startPointRef.current === null) {
+            if (startPointRef.current === undefined) {
                 cursor = 'crosshair';
             }
         } else if (captureStepRef.current === CaptureStep.Draw) {
@@ -240,12 +245,14 @@ const DrawContent: React.FC<{ onCancel: () => void; imageBuffer: ImageBuffer | u
             } else if (
                 drawStateRef.current === DrawState.Pen ||
                 drawStateRef.current === DrawState.Mosaic ||
+                drawStateRef.current === DrawState.Eraser ||
                 drawStateRef.current === DrawState.Highlight
             ) {
                 cursor = 'none';
             } else if (
                 drawStateRef.current === DrawState.Ellipse ||
-                drawStateRef.current === DrawState.Rect
+                drawStateRef.current === DrawState.Rect ||
+                drawStateRef.current === DrawState.Arrow
             ) {
                 cursor = 'crosshair';
             } else if (drawStateRef.current === DrawState.Text) {
@@ -308,7 +315,7 @@ const DrawContent: React.FC<{ onCancel: () => void; imageBuffer: ImageBuffer | u
     }, []);
 
     const waitSelectWindowFromMousePositionRef = useRef<boolean>(false);
-    const waitSelectWindowFromMousePositionPointRef = useRef<fabric.Point | null>(null);
+    const waitSelectWindowFromMousePositionPointRef = useRef<fabric.Point | undefined>(undefined);
     const onMouseMove = useCallback(
         async (point: fabric.Point) => {
             if (!fabricRef.current || !maskRectClipPathRef.current) {
@@ -337,7 +344,7 @@ const DrawContent: React.FC<{ onCancel: () => void; imageBuffer: ImageBuffer | u
                     width = Math.abs(point.x - startPointRef.current.x);
                     height = Math.abs(point.y - startPointRef.current.y);
 
-                    if (width + height < 3) {
+                    if (width <= 1 || height <= 1 || width + height <= 3) {
                         return;
                     }
                 } else {
@@ -486,13 +493,13 @@ const DrawContent: React.FC<{ onCancel: () => void; imageBuffer: ImageBuffer | u
             resizeClipPathControlRef.current();
 
             if (needRender) {
-                fabricRef.current.requestRenderAll();
+                fabricRef.current.renderAll();
             }
 
             if (waitSelectWindowFromMousePositionPointRef.current) {
                 waitSelectWindowFromMousePositionRef.current = false;
                 const tempPoint = waitSelectWindowFromMousePositionPointRef.current;
-                waitSelectWindowFromMousePositionPointRef.current = null;
+                waitSelectWindowFromMousePositionPointRef.current = undefined;
                 onMouseMove(tempPoint);
             }
         },
@@ -539,7 +546,7 @@ const DrawContent: React.FC<{ onCancel: () => void; imageBuffer: ImageBuffer | u
             resizeClipPathControlRef.current();
 
             if (needRender) {
-                fabricRef.current.requestRenderAll();
+                fabricRef.current.renderAll();
             }
         },
         [changeCursor, onMouseMove, setDrawState],
@@ -552,7 +559,7 @@ const DrawContent: React.FC<{ onCancel: () => void; imageBuffer: ImageBuffer | u
                 return;
             }
 
-            startPointRef.current = null;
+            startPointRef.current = undefined;
             setCaptureStep(CaptureStep.Draw);
         } else if (captureStepRef.current === CaptureStep.Draw) {
             if (drawStateRef.current === DrawState.Idle) {
@@ -627,6 +634,8 @@ const DrawContent: React.FC<{ onCancel: () => void; imageBuffer: ImageBuffer | u
                 width: canvasWidth,
                 height: canvasHeight,
                 selection: false,
+                imageSmoothingEnabled: false,
+                enableRetinaScaling: true,
             });
             fabricRef.current = canvas;
 
@@ -690,6 +699,18 @@ const DrawContent: React.FC<{ onCancel: () => void; imageBuffer: ImageBuffer | u
                 return;
             }
 
+            fabric.config.perfLimitSizeTotal =
+                imageBuffer.monitorWidth *
+                imageBuffer.monitorHeight *
+                imageBuffer.monitorScaleFactor;
+            fabric.config.maxCacheSideLimit =
+                Math.max(imageBuffer.monitorWidth, imageBuffer.monitorHeight) *
+                imageBuffer.monitorScaleFactor;
+            fabric.config.textureSize =
+                imageBuffer.monitorWidth *
+                imageBuffer.monitorHeight *
+                imageBuffer.monitorScaleFactor;
+
             const canvasWidth = wrapRef.current.clientWidth;
             const canvasHeight = wrapRef.current.clientHeight;
 
@@ -706,6 +727,7 @@ const DrawContent: React.FC<{ onCancel: () => void; imageBuffer: ImageBuffer | u
             imgLayer.scaleToHeight(canvasHeight);
             imgLayer.scaleToWidth(canvasWidth);
             fabricRef.current.add(imgLayer);
+            imageLayerRef.current = imgLayer;
 
             // 添加遮罩
             const selectWindow = await selectWindowFromMousePosition(imageBuffer);
@@ -715,7 +737,6 @@ const DrawContent: React.FC<{ onCancel: () => void; imageBuffer: ImageBuffer | u
                 left: 0,
                 top: 0,
                 ...selectWindow,
-                objectCaching: false,
                 originX: 'left',
                 originY: 'top',
                 inverted: true,
@@ -902,10 +923,10 @@ const DrawContent: React.FC<{ onCancel: () => void; imageBuffer: ImageBuffer | u
                 fabricRef.current!.add(object);
             });
 
-            let previousLeft: number | null = null;
-            let previousTop: number | null = null;
-            let previousWidth: number | null = null;
-            let previousHeight: number | null = null;
+            let previousLeft: number | undefined = undefined;
+            let previousTop: number | undefined = undefined;
+            let previousWidth: number | undefined = undefined;
+            let previousHeight: number | undefined = undefined;
             resizeClipPathControlRef.current = () => {
                 const rect = maskRectClipPathRef.current;
                 if (!rect) {
@@ -1080,28 +1101,12 @@ const DrawContent: React.FC<{ onCancel: () => void; imageBuffer: ImageBuffer | u
                 previousHeight = height;
             };
             resizeClipPathControlRef.current();
+
+            canvasHistoryRef.current = new FabricHistory(fabricRef.current);
             await appWindow.show();
         };
 
         initImage();
-
-        fabricRef.current?.on('selection:cleared', (e) => {
-            e.deselected.forEach((object) => {
-                if (e.deselected.length === 0) {
-                    return;
-                }
-
-                if (e.deselected.length === 1) {
-                    return;
-                }
-
-                if (activeObjectListRef.current.has(object)) {
-                    fabricRef.current!.setActiveObject(object);
-                }
-
-                fabricRef.current!.discardActiveObject();
-            });
-        });
 
         return () => {
             fabricRef.current?.remove(...fabricRef.current.getObjects());
@@ -1109,6 +1114,7 @@ const DrawContent: React.FC<{ onCancel: () => void; imageBuffer: ImageBuffer | u
             canvasUnlistenListRef.current.forEach((unlisten) => unlisten());
             canvasUnlistenListRef.current = [];
             activeObjectListRef.current = new Set();
+            canvasHistoryRef.current = undefined;
         };
     }, [
         controlNode,
@@ -1117,6 +1123,7 @@ const DrawContent: React.FC<{ onCancel: () => void; imageBuffer: ImageBuffer | u
         selectWindowFromMousePosition,
         setCaptureStep,
         setDrawState,
+        token.colorPrimaryHover,
     ]);
 
     const initState = useCallback(() => {
@@ -1128,7 +1135,7 @@ const DrawContent: React.FC<{ onCancel: () => void; imageBuffer: ImageBuffer | u
             left: 0,
             top: 0,
         };
-        startPointRef.current = null;
+        startPointRef.current = undefined;
     }, [setCaptureStep, setDrawState]);
 
     useEffect(() => {
@@ -1171,7 +1178,8 @@ const DrawContent: React.FC<{ onCancel: () => void; imageBuffer: ImageBuffer | u
                 imageBufferRef,
                 canvasCursorRef,
                 canvasUnlistenListRef,
-                activeObjectListRef,
+                imageLayerRef,
+                canvasHistoryRef,
             }}
         >
             <div className="draw-wrap" data-tauri-drag-region ref={wrapRef}>

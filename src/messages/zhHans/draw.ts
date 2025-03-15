@@ -21,6 +21,7 @@ export const draw = {
     'draw.mosaic': '马赛克',
     'draw.enableBlur': '模糊效果',
     'draw.regionBlur': '区域模糊',
+    'draw.selectRect': '选取矩形',
     'draw.text': '文字',
     'draw.fontSize': '字体大小',
     'draw.fontFamily': '字体',
@@ -31,4 +32,9 @@ export const draw = {
     'draw.stroke': '描边',
     'draw.fontFamily.default': '默认',
     'draw.highlight': '高亮',
+    'draw.arrow': '箭头',
+    'draw.enableRadius': '圆角',
+    'draw.eraser': '橡皮擦',
+    'draw.undo': '撤销',
+    'draw.redo': '重做',
 };

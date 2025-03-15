@@ -12,7 +12,7 @@ const TrayIconLoaderComponent = () => {
             return;
         }
 
-        let trayIcon: TrayIcon | null = null;
+        let trayIcon: TrayIcon | undefined = undefined;
         const init = async () => {
             const appWindow = getCurrentWindow();
 

@@ -1,12 +1,23 @@
+'use client';
+
 import { zIndexs } from '@/utils/zIndex';
 import { CaptureStep, DrawState } from '../../types';
 import { useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { Button, Flex, theme, Tooltip } from 'antd';
 import { FormattedMessage } from 'react-intl';
-import { CloseOutlined, DragOutlined, HighlightOutlined, HolderOutlined } from '@ant-design/icons';
 import {
+    CloseOutlined,
+    DragOutlined,
+    HighlightOutlined,
+    HolderOutlined,
+    RedoOutlined,
+    UndoOutlined,
+} from '@ant-design/icons';
+import {
+    ArrowIcon,
     ArrowSelectIcon,
     CircleIcon,
+    EraserIcon,
     MosaicIcon,
     PenIcon,
     RectIcon,
@@ -16,9 +27,10 @@ import { PenToolbar } from './components/penToolbar';
 import { EllipseToolbar, RectToolbar } from './components/shapeToolbar';
 import React from 'react';
 import { DrawContext } from '../../page';
-import { MosaicToolbar } from './components/mosaicToolbar';
+import { EraserToolbar, MosaicToolbar } from './components/mosaicToolbar';
 import { TextToolbar } from './components/textToolbar';
 import { HighlightToolbar } from './components/highlightToolbar';
+import { ArrowToolbar } from './components/arrowToolbar';
 
 export type DrawToolbarProps = {
     step: CaptureStep;
@@ -37,7 +49,8 @@ const DrawToolbarCore: React.FC<DrawToolbarProps> = ({
     setDrawState,
     onCancel,
 }) => {
-    const { fabricRef, maskRectRef, maskRectClipPathRef } = useContext(DrawContext);
+    const { fabricRef, maskRectRef, maskRectClipPathRef, canvasHistoryRef } =
+        useContext(DrawContext);
 
     const { token } = theme.useToken();
 
@@ -241,8 +254,10 @@ const DrawToolbarCore: React.FC<DrawToolbarProps> = ({
             drawState === DrawState.Rect ||
             drawState === DrawState.Ellipse ||
             drawState === DrawState.Mosaic ||
+            drawState === DrawState.Eraser ||
             drawState === DrawState.Highlight ||
-            drawState === DrawState.Text
+            drawState === DrawState.Text ||
+            drawState === DrawState.Arrow
         ) {
             hideSubToolbar = false;
         }
@@ -259,8 +274,60 @@ const DrawToolbarCore: React.FC<DrawToolbarProps> = ({
             selection: drawState === DrawState.Select,
         });
         fabricRef.current.discardActiveObject();
-        fabricRef.current.requestRenderAll();
+        fabricRef.current.renderAll();
     }, [drawState, fabricRef, maskRectRef]);
+
+    const [canRedo, setCanRedo] = useState(false);
+    const [canUndo, setCanUndo] = useState(false);
+    useEffect(() => {
+        if (!visible) {
+            return;
+        }
+
+        const canvas = fabricRef.current;
+
+        if (!canvas) {
+            return;
+        }
+
+        setCanUndo(canvasHistoryRef.current?.canUndo() ?? false);
+        setCanRedo(canvasHistoryRef.current?.canRedo() ?? false);
+
+        const historyUpdatedUnlisten = canvas.on('history:updated', () => {
+            const canvasHistory = canvasHistoryRef.current;
+            if (!canvasHistory) {
+                return;
+            }
+
+            setCanUndo(canvasHistory.canUndo());
+            setCanRedo(canvasHistory.canRedo());
+        });
+
+        const historyUndoUnlisten = canvas.on('history:undo', () => {
+            const canvasHistory = canvasHistoryRef.current;
+            if (!canvasHistory) {
+                return;
+            }
+
+            setCanUndo(canvasHistory.canUndo());
+            setCanRedo(canvasHistory.canRedo());
+        });
+        const historyRedoUnlisten = canvas.on('history:redo', () => {
+            const canvasHistory = canvasHistoryRef.current;
+            if (!canvasHistory) {
+                return;
+            }
+
+            setCanUndo(canvasHistory.canUndo());
+            setCanRedo(canvasHistory.canRedo());
+        });
+
+        return () => {
+            historyUpdatedUnlisten();
+            historyUndoUnlisten();
+            historyRedoUnlisten();
+        };
+    }, [canvasHistoryRef, fabricRef, visible]);
 
     return (
         <div
@@ -290,7 +357,7 @@ const DrawToolbarCore: React.FC<DrawToolbarProps> = ({
                         />
                     </Tooltip>
 
-                    {/* 移动物体 */}
+                    {/* 选择物体 */}
                     <Tooltip title={<FormattedMessage id="draw.select" />}>
                         <Button
                             icon={<ArrowSelectIcon />}
@@ -329,10 +396,21 @@ const DrawToolbarCore: React.FC<DrawToolbarProps> = ({
                         />
                     </Tooltip>
 
+                    {/* 箭头 */}
+                    <Tooltip title={<FormattedMessage id="draw.arrow" />}>
+                        <Button
+                            icon={<ArrowIcon style={{ fontSize: '0.83em' }} />}
+                            type={getButtonTypeByState(drawState === DrawState.Arrow)}
+                            onClick={() => {
+                                setDrawState(DrawState.Arrow);
+                            }}
+                        />
+                    </Tooltip>
+
                     {/* 画笔 */}
                     <Tooltip title={<FormattedMessage id="draw.pen" />}>
                         <Button
-                            icon={<PenIcon />}
+                            icon={<PenIcon style={{ fontSize: '1.08em' }} />}
                             type={getButtonTypeByState(drawState === DrawState.Pen)}
                             onClick={() => {
                                 setDrawState(DrawState.Pen);
@@ -365,10 +443,47 @@ const DrawToolbarCore: React.FC<DrawToolbarProps> = ({
                     {/* 文字 */}
                     <Tooltip title={<FormattedMessage id="draw.text" />}>
                         <Button
-                            icon={<TextIcon />}
+                            icon={<TextIcon style={{ fontSize: '1.08em' }} />}
                             type={getButtonTypeByState(drawState === DrawState.Text)}
                             onClick={() => {
                                 setDrawState(DrawState.Text);
+                            }}
+                        />
+                    </Tooltip>
+
+                    {/* 橡皮擦 */}
+                    <Tooltip title={<FormattedMessage id="draw.eraser" />}>
+                        <Button
+                            icon={<EraserIcon style={{ fontSize: '0.9em' }} />}
+                            type={getButtonTypeByState(drawState === DrawState.Eraser)}
+                            onClick={() => {
+                                setDrawState(DrawState.Eraser);
+                            }}
+                        />
+                    </Tooltip>
+
+                    <div className="draw-toolbar-splitter" />
+
+                    {/* 撤销 */}
+                    <Tooltip title={<FormattedMessage id="draw.undo" />}>
+                        <Button
+                            disabled={!canUndo}
+                            icon={<UndoOutlined />}
+                            type={getButtonTypeByState(false)}
+                            onClick={() => {
+                                canvasHistoryRef.current?.undo();
+                            }}
+                        />
+                    </Tooltip>
+
+                    {/* 重做 */}
+                    <Tooltip title={<FormattedMessage id="draw.redo" />}>
+                        <Button
+                            disabled={!canRedo}
+                            icon={<RedoOutlined />}
+                            type={getButtonTypeByState(false)}
+                            onClick={() => {
+                                canvasHistoryRef.current?.redo();
                             }}
                         />
                     </Tooltip>
@@ -394,9 +509,11 @@ const DrawToolbarCore: React.FC<DrawToolbarProps> = ({
             <div className="draw-subtoolbar" ref={drawSubToolbarRef}>
                 <Flex align="center" gap={token.paddingXS}>
                     {drawState === DrawState.Pen && <PenToolbar />}
+                    {drawState === DrawState.Arrow && <ArrowToolbar />}
                     {drawState === DrawState.Rect && <RectToolbar />}
                     {drawState === DrawState.Ellipse && <EllipseToolbar />}
                     {drawState === DrawState.Mosaic && <MosaicToolbar />}
+                    {drawState === DrawState.Eraser && <EraserToolbar />}
                     {drawState === DrawState.Highlight && <HighlightToolbar />}
                     {drawState === DrawState.Text && <TextToolbar />}
                 </Flex>

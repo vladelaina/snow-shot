@@ -61,6 +61,8 @@ export const TextToolbar: React.FC = () => {
         const handleCanvasClick = (event: fabric.TEvent<fabric.TPointerEvent>) => {
             if (!canvas) return;
 
+            canvas.discardActiveObject();
+
             const pointer = canvas.getScenePoint(event.e);
             const newText = new fabric.IText('', {
                 left: pointer.x,

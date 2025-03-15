@@ -69,6 +69,11 @@ import {
     defaultFontFamilyPickerValue,
     FontFamilyPickerValue,
 } from './draw/components/drawToolbar/components/pickers/fontFamilyPicker';
+import {
+    ArrowConfigValue,
+    defaultArrowConfigValue,
+} from './draw/components/drawToolbar/components/pickers/arrowConfigPicker';
+import { defaultEnableRadiusValue, EnableRadiusValue } from './draw/components/drawToolbar/components/pickers/enableRadiusPicker';
 
 export enum AppSettingsGroup {
     Common = 'common',
@@ -117,6 +122,8 @@ export type AppSettingsData = {
         enableUnderlinePicker: Record<string, EnableUnderlineValue>;
         enableStrikethroughPicker: Record<string, EnableStrikethroughValue>;
         fontFamilyPicker: Record<string, FontFamilyPickerValue>;
+        arrowConfigPicker: Record<string, ArrowConfigValue>;
+        enableRadiusPicker: Record<string, EnableRadiusValue>;
     };
 };
 
@@ -147,6 +154,8 @@ const defaultAppSettingsData: AppSettingsData = {
         enableUnderlinePicker: {},
         enableStrikethroughPicker: {},
         fontFamilyPicker: {},
+        arrowConfigPicker: {},
+        enableRadiusPicker: {},
     },
 };
 
@@ -317,6 +326,9 @@ export const ContextWrap: React.FC<{ children: React.ReactNode }> = ({ children 
                 const enableStrikethroughPickerSettings =
                     newSettings.enableStrikethroughPicker ?? {};
                 const fontFamilyPickerSettings = newSettings.fontFamilyPicker ?? {};
+                const arrowConfigPickerSettings = newSettings.arrowConfigPicker ?? {};
+                const enableRadiusPickerSettings = newSettings.enableRadiusPicker ?? {};
+
 
                 Object.keys(fillShapePickerSettings).forEach((key) => {
                     fillShapePickerSettings[key] = {
@@ -406,46 +418,81 @@ export const ContextWrap: React.FC<{ children: React.ReactNode }> = ({ children 
 
                 Object.keys(fontSizePickerSettings).forEach((key) => {
                     fontSizePickerSettings[key] = {
-                        size: fontSizePickerSettings[key]?.size ?? defaultFontSizePickerValue.size,
+                        size:
+                            typeof fontSizePickerSettings[key]?.size === 'number'
+                                ? fontSizePickerSettings[key].size
+                                : (prevSettings.fontSizePicker[key]?.size ??
+                                  defaultFontSizePickerValue.size),
                     };
                 });
 
                 Object.keys(enableBoldPickerSettings).forEach((key) => {
                     enableBoldPickerSettings[key] = {
                         enable:
-                            enableBoldPickerSettings[key]?.enable ?? defaultEnableBoldValue.enable,
+                            typeof enableBoldPickerSettings[key]?.enable === 'boolean'
+                                ? enableBoldPickerSettings[key].enable
+                                : (prevSettings.enableBoldPicker[key]?.enable ??
+                                  defaultEnableBoldValue.enable),
                     };
                 });
 
                 Object.keys(enableItalicPickerSettings).forEach((key) => {
                     enableItalicPickerSettings[key] = {
                         enable:
-                            enableItalicPickerSettings[key]?.enable ??
-                            defaultEnableItalicValue.enable,
+                            typeof enableItalicPickerSettings[key]?.enable === 'boolean'
+                                ? enableItalicPickerSettings[key].enable
+                                : (prevSettings.enableItalicPicker[key]?.enable ??
+                                  defaultEnableItalicValue.enable),
                     };
                 });
 
                 Object.keys(enableUnderlinePickerSettings).forEach((key) => {
                     enableUnderlinePickerSettings[key] = {
                         enable:
-                            enableUnderlinePickerSettings[key]?.enable ??
-                            defaultEnableUnderlineValue.enable,
+                            typeof enableUnderlinePickerSettings[key]?.enable === 'boolean'
+                                ? enableUnderlinePickerSettings[key].enable
+                                : (prevSettings.enableUnderlinePicker[key]?.enable ??
+                                  defaultEnableUnderlineValue.enable),
                     };
                 });
 
                 Object.keys(enableStrikethroughPickerSettings).forEach((key) => {
                     enableStrikethroughPickerSettings[key] = {
                         enable:
-                            enableStrikethroughPickerSettings[key]?.enable ??
-                            defaultEnableStrikethroughValue.enable,
+                            typeof enableStrikethroughPickerSettings[key]?.enable === 'boolean'
+                                ? enableStrikethroughPickerSettings[key].enable
+                                : (prevSettings.enableStrikethroughPicker[key]?.enable ??
+                                  defaultEnableStrikethroughValue.enable),
                     };
                 });
 
                 Object.keys(fontFamilyPickerSettings).forEach((key) => {
                     fontFamilyPickerSettings[key] = {
                         value:
-                            fontFamilyPickerSettings[key]?.value ??
-                            defaultFontFamilyPickerValue.value,
+                            typeof fontFamilyPickerSettings[key]?.value === 'string'
+                                ? fontFamilyPickerSettings[key].value
+                                : (prevSettings.fontFamilyPicker[key]?.value ??
+                                  defaultFontFamilyPickerValue.value),
+                    };
+                });
+
+                Object.keys(arrowConfigPickerSettings).forEach((key) => {
+                    arrowConfigPickerSettings[key] = {
+                        configId:
+                            typeof arrowConfigPickerSettings[key]?.configId === 'string'
+                                ? arrowConfigPickerSettings[key].configId
+                                : (prevSettings.arrowConfigPicker[key]?.configId ??
+                                  defaultArrowConfigValue.configId),
+                    };
+                });
+
+                Object.keys(enableRadiusPickerSettings).forEach((key) => {
+                    enableRadiusPickerSettings[key] = {
+                        enable:
+                            typeof enableRadiusPickerSettings[key]?.enable === 'boolean'
+                                ? enableRadiusPickerSettings[key].enable
+                                : (prevSettings.enableRadiusPicker[key]?.enable ??
+                                  defaultEnableRadiusValue.enable),
                     };
                 });
 
@@ -505,6 +552,14 @@ export const ContextWrap: React.FC<{ children: React.ReactNode }> = ({ children 
                     fontFamilyPicker: {
                         ...prevSettings.fontFamilyPicker,
                         ...fontFamilyPickerSettings,
+                    },
+                    arrowConfigPicker: {
+                        ...prevSettings.arrowConfigPicker,
+                        ...arrowConfigPickerSettings,
+                    },
+                    enableRadiusPicker: {
+                        ...prevSettings.enableRadiusPicker,
+                        ...enableRadiusPickerSettings,
                     },
                 };
             } else {

@@ -29,7 +29,7 @@ const ShapeToolbar: React.FC<{
 
     useEffect(() => {
         let isDrawing = false;
-        let shape: fabric.Rect | fabric.Ellipse | null = null;
+        let shape: fabric.Rect | fabric.Ellipse | undefined = undefined;
         let startX = 0;
         let startY = 0;
 
@@ -119,10 +119,10 @@ const ShapeToolbar: React.FC<{
                     ry,
                 });
             }
-            canvas.requestRenderAll();
+            canvas.renderAll();
         };
         let rendered = true;
-        let currentPoint: fabric.Point | null = null;
+        let currentPoint: fabric.Point | undefined = undefined;
         const onMouseMove = (e: fabric.TPointerEventInfo<fabric.TPointerEvent>) => {
             const canvas = fabricRef.current;
             if (!canvas) return;
@@ -142,7 +142,7 @@ const ShapeToolbar: React.FC<{
 
                 onMouseMoveCore(currentPoint);
 
-                currentPoint = null;
+                currentPoint = undefined;
             });
         };
 
@@ -154,7 +154,7 @@ const ShapeToolbar: React.FC<{
                 canvas.setActiveObject(shape);
             }
             isDrawing = false;
-            shape = null;
+            shape = undefined;
         };
 
         const canvas = fabricRef.current;
