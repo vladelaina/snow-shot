@@ -5,7 +5,7 @@ import {
     LineWidthPicker,
     LineWidthPickerValue,
 } from './pickers/lineWidthPicker';
-import { DrawContext } from '@/app/draw/page';
+import { DrawContext } from '@/app/draw/context';
 import { useStateRef } from '@/hooks/useStateRef';
 import { CircleCursor } from './pickers/components/circleCursor';
 import { defaultSliderPickerValue, SliderPicker, SliderPickerValue } from './pickers/sliderPicker';

@@ -10,7 +10,7 @@ import { defaultLockWidthHeightValue, LockWidthHeightPicker } from './pickers/lo
 import { defaultFillShapePickerValue, FillShapePicker } from './pickers/fillShapePicker';
 import { defaultRadiusPickerValue, RadiusPicker } from './pickers/radiusPicker';
 import React from 'react';
-import { DrawContext } from '@/app/draw/page';
+import { DrawContext } from '@/app/draw/context';
 
 enum ShapeType {
     Rect,

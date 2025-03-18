@@ -1,4 +1,4 @@
-import { DrawContext } from '@/app/draw/page';
+import { DrawContext } from '@/app/draw/context';
 import React, { useContext, useEffect } from 'react';
 
 const CircleCursorCore: React.FC<{

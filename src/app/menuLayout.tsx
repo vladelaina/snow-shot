@@ -166,11 +166,11 @@ const MenuLayoutCore: React.FC<{ children: React.ReactNode }> = ({ children }) =
                                 {collapsed ? (
                                     <>
                                         <div className="logo-text-highlight">S</div>
-                                        <div>NT</div>
+                                        <div>now</div>
                                     </>
                                 ) : (
                                     <>
-                                        <div className="logo-text-highlight">Sonnet</div>
+                                        <div className="logo-text-highlight">Snow</div>
                                         <div>Shot</div>
                                     </>
                                 )}

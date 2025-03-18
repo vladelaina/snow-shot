@@ -6,8 +6,8 @@ import { MenuLayout } from './menuLayout';
 import { ContextWrap } from './contextWrap';
 
 export const metadata: Metadata = {
-    title: 'SonnetShot',
-    description: '一款设计优良的截图软件，供优雅的你优雅地使用。',
+    title: 'SnowShot',
+    description: '简洁、优雅，Snow Shot',
 };
 
 export default function RootLayout({

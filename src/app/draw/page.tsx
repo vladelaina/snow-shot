@@ -1,18 +1,12 @@
 'use client';
 
-import {
-    useContext,
-    useRef,
-    useEffect,
-    useCallback,
-    useState,
-    RefObject,
-    createContext,
-} from 'react';
+import { useContext, useRef, useEffect, useCallback, useState } from 'react';
 import { AppSettingsContext, AppSettingsControlNode } from '../contextWrap';
 import {
     captureCurrentMonitor,
-    getWindowFromMousePosition,
+    ElementInfo,
+    ElementRect,
+    getElementInfo,
     ImageBuffer,
     ImageEncoder,
 } from '@/commands';
@@ -26,6 +20,8 @@ import React from 'react';
 import { CaptureStep, DrawState } from './types';
 import { theme } from 'antd';
 import { FabricHistory } from '@/utils/fabricjsHistory';
+import { DrawContext } from './context';
+import Flatbush from 'flatbush';
 
 type CanvasPosition = {
     left: number;
@@ -37,35 +33,26 @@ type CanvasSize = {
     height: number;
 };
 
-export const DrawContext = createContext<{
-    fabricRef: RefObject<fabric.Canvas | undefined>;
-    canvasRef: RefObject<HTMLCanvasElement | null>;
-    maskRectObjectListRef: RefObject<fabric.Object[]>;
-    maskRectRef: RefObject<fabric.Rect | undefined>;
-    maskRectClipPathRef: RefObject<fabric.Rect | undefined>;
-    circleCursorRef: RefObject<HTMLDivElement | null>;
-    imageBufferRef: RefObject<ImageBuffer | undefined>;
-    canvasCursorRef: RefObject<string>;
-    canvasUnlistenListRef: RefObject<VoidFunction[]>;
-    imageLayerRef: RefObject<fabric.Image | undefined>;
-    canvasHistoryRef: RefObject<FabricHistory | undefined>;
-}>({
-    fabricRef: { current: undefined },
-    canvasRef: { current: null },
-    maskRectObjectListRef: { current: [] },
-    maskRectRef: { current: undefined },
-    maskRectClipPathRef: { current: undefined },
-    circleCursorRef: { current: null },
-    imageBufferRef: { current: undefined },
-    canvasCursorRef: { current: 'auto' },
-    canvasUnlistenListRef: { current: [] },
-    imageLayerRef: { current: undefined },
-    canvasHistoryRef: { current: undefined },
-});
+type DrawContentProps = {
+    onCancel: () => void;
+    imageBuffer: ImageBuffer | undefined;
+    getElementRectFromMousePosition: (mouseX: number, mouseY: number) => ElementRect[];
+};
 
-const DrawContent: React.FC<{ onCancel: () => void; imageBuffer: ImageBuffer | undefined }> = ({
+type SelectWindowFromMousePositionCallback = (
+    image: ImageBuffer,
+    point: fabric.Point,
+) => {
+    left: number;
+    top: number;
+    width: number;
+    height: number;
+};
+
+const DrawContent: React.FC<DrawContentProps> = ({
     onCancel,
     imageBuffer,
+    getElementRectFromMousePosition,
 }) => {
     const { token } = theme.useToken();
 
@@ -175,6 +162,52 @@ const DrawContent: React.FC<{ onCancel: () => void; imageBuffer: ImageBuffer | u
         return { width, height };
     }, []);
 
+    const normalizePositionAndSize = useCallback(
+        (left: number, top: number, width: number, height: number) => {
+            const maskRect = maskRectRef.current;
+            if (!maskRect) {
+                return { left, top, width, height };
+            }
+
+            const minLeft = 0;
+            const minTop = 0;
+            const maxLeft = maskRect.left + maskRect.width;
+            const maxTop = maskRect.top + maskRect.height;
+
+            if (left < minLeft) {
+                left = minLeft;
+            } else if (left > maxLeft) {
+                left = maxLeft;
+            }
+
+            if (top < minTop) {
+                top = minTop;
+            } else if (top > maxTop) {
+                top = maxTop;
+            }
+
+            const minWidth = 0;
+            const minHeight = 0;
+            const maxWidth = maxLeft - left;
+            const maxHeight = maxTop - top;
+
+            if (width < minWidth) {
+                width = minWidth;
+            } else if (width > maxWidth) {
+                width = maxWidth;
+            }
+
+            if (height < minHeight) {
+                height = minHeight;
+            } else if (height > maxHeight) {
+                height = maxHeight;
+            }
+
+            return { left, top, width, height };
+        },
+        [],
+    );
+
     const resizeClipPathControlRef = useRef<() => void>(() => {});
 
     useEffect(() => {
@@ -271,53 +304,57 @@ const DrawContent: React.FC<{ onCancel: () => void; imageBuffer: ImageBuffer | u
         return cursor;
     }, []);
 
-    // 处理鼠标移动事件
-    const lastWindowInfoRef = useRef<{
-        x: number;
-        y: number;
-        width: number;
-        height: number;
-    }>(undefined);
+    const selectWindowFromMousePositionLevelRef = useRef(0);
+    const selectWindowFromMousePositionCallbackRef =
+        useRef<SelectWindowFromMousePositionCallback>(undefined);
+    useEffect(() => {
+        selectWindowFromMousePositionCallbackRef.current = (
+            image: ImageBuffer,
+            point: fabric.Point,
+        ) => {
+            const monitorX = image.monitorX;
+            const monitorY = image.monitorY;
+            const monitorScale = 1 / image.monitorScaleFactor;
+            const monitorWidth = image.monitorWidth;
+            const monitorHeight = image.monitorHeight;
 
-    const selectWindowFromMousePosition = useCallback(async (image: ImageBuffer) => {
-        const monitorX = image.monitorX;
-        const monitorY = image.monitorY;
-        const monitorScaleFactor = image.monitorScaleFactor;
-        const monitorWidth = image.monitorWidth;
-        const monitorHeight = image.monitorHeight;
+            const elementRectList = getElementRectFromMousePosition(
+                monitorX * monitorScale + point.x,
+                monitorY * monitorScale + point.y,
+            );
 
-        const windowInfo = (await getWindowFromMousePosition()) ?? {
-            x: 0,
-            y: 0,
-            width: monitorWidth,
-            height: monitorHeight,
+            const minLevel = 0;
+            const maxLevel = Math.max(elementRectList.length - 1, minLevel);
+            let currentLevel = selectWindowFromMousePositionLevelRef.current;
+            console.log("currentLevel", currentLevel);
+            if (currentLevel < minLevel) {
+                currentLevel = minLevel;
+            } else if (currentLevel > maxLevel) {
+                currentLevel = maxLevel;
+            }
+
+            const lastElementRect = elementRectList[elementRectList.length - currentLevel - 1] ?? {
+                min_x: 0,
+                min_y: 0,
+                max_x: monitorWidth * monitorScale,
+                max_y: monitorHeight * monitorScale,
+            };
+            console.log("index", elementRectList.length - currentLevel - 1);
+
+            return normalizePositionAndSize(
+                lastElementRect.min_x,
+                lastElementRect.min_y,
+                lastElementRect.max_x - lastElementRect.min_x,
+                lastElementRect.max_y - lastElementRect.min_y,
+            );
         };
+    }, [getElementRectFromMousePosition, normalizePositionAndSize]);
 
-        const lastWindowInfo = lastWindowInfoRef.current;
-        if (
-            lastWindowInfo &&
-            lastWindowInfo.x === windowInfo.x &&
-            lastWindowInfo.y === windowInfo.y &&
-            lastWindowInfo.width === windowInfo.width &&
-            lastWindowInfo.height === windowInfo.height
-        ) {
-            return;
-        }
-
-        const left = windowInfo.x / monitorScaleFactor - monitorX;
-        const top = windowInfo.y / monitorScaleFactor - monitorY;
-        const width = windowInfo.width / monitorScaleFactor;
-        const height = windowInfo.height / monitorScaleFactor;
-
-        lastWindowInfoRef.current = windowInfo;
-
-        return { left, top, width, height };
-    }, []);
-
-    const waitSelectWindowFromMousePositionRef = useRef<boolean>(false);
-    const waitSelectWindowFromMousePositionPointRef = useRef<fabric.Point | undefined>(undefined);
+    const lastMouseMovePointRef = useRef<fabric.Point | undefined>(undefined);
     const onMouseMove = useCallback(
         async (point: fabric.Point) => {
+            lastMouseMovePointRef.current = point;
+
             if (!fabricRef.current || !maskRectClipPathRef.current) {
                 return;
             }
@@ -353,14 +390,10 @@ const DrawContent: React.FC<{ onCancel: () => void; imageBuffer: ImageBuffer | u
                         return;
                     }
 
-                    if (waitSelectWindowFromMousePositionRef.current) {
-                        waitSelectWindowFromMousePositionPointRef.current = point;
-                        return;
-                    }
-
-                    waitSelectWindowFromMousePositionRef.current = true;
-                    const res = await selectWindowFromMousePosition(imageBuffer);
-                    waitSelectWindowFromMousePositionRef.current = false;
+                    const res = selectWindowFromMousePositionCallbackRef.current?.(
+                        imageBuffer,
+                        point,
+                    );
                     if (!res) {
                         return;
                     }
@@ -495,15 +528,43 @@ const DrawContent: React.FC<{ onCancel: () => void; imageBuffer: ImageBuffer | u
             if (needRender) {
                 fabricRef.current.renderAll();
             }
+        },
+        [limitPosition, limitSize],
+    );
 
-            if (waitSelectWindowFromMousePositionPointRef.current) {
-                waitSelectWindowFromMousePositionRef.current = false;
-                const tempPoint = waitSelectWindowFromMousePositionPointRef.current;
-                waitSelectWindowFromMousePositionPointRef.current = undefined;
-                onMouseMove(tempPoint);
+    const onMouseMoveRefresh = useCallback(() => {
+        if (!lastMouseMovePointRef.current) {
+            return;
+        }
+
+        onMouseMove(lastMouseMovePointRef.current);
+    }, [onMouseMove]);
+
+    // 选取更新时，自动选择下
+    useEffect(() => {
+        if (captureStepRef.current === CaptureStep.Select) {
+            if (startPointRef.current) {
+            } else {
+                onMouseMoveRefresh();
+            }
+        }
+    }, [getElementRectFromMousePosition, onMouseMoveRefresh]);
+
+    const onMouseWheel = useCallback(
+        (e: fabric.TPointerEventInfo<WheelEvent>) => {
+            if (captureStepRef.current === CaptureStep.Select) {
+                if (startPointRef.current) {
+                } else {
+                    const deltaLevel = e.e.deltaY > 0 ? 1 : -1;
+                    selectWindowFromMousePositionLevelRef.current = Math.max(
+                        selectWindowFromMousePositionLevelRef.current + deltaLevel,
+                        0,
+                    );
+                    onMouseMoveRefresh();
+                }
             }
         },
-        [limitPosition, limitSize, selectWindowFromMousePosition],
+        [onMouseMoveRefresh],
     );
 
     // 处理鼠标按下事件
@@ -609,6 +670,7 @@ const DrawContent: React.FC<{ onCancel: () => void; imageBuffer: ImageBuffer | u
         let mouseDownUnlisten: VoidFunction;
         let mouseMoveUnlisten: VoidFunction;
         let mouseUpUnlisten: VoidFunction;
+        let mouseWheelUnlisten: VoidFunction;
         let canvas: fabric.Canvas;
         const initFabric = async () => {
             if (!canvasRef.current || !wrapRef.current) {
@@ -666,12 +728,14 @@ const DrawContent: React.FC<{ onCancel: () => void; imageBuffer: ImageBuffer | u
                     fabricRef.current!.bringObjectToFront(object);
                 });
             });
+            mouseWheelUnlisten = canvas.on('mouse:wheel', onMouseWheel);
         };
 
         const disposeFabric = () => {
             mouseDownUnlisten?.();
             mouseMoveUnlisten?.();
             mouseUpUnlisten?.();
+            mouseWheelUnlisten?.();
             canvas?.dispose();
         };
 
@@ -686,7 +750,7 @@ const DrawContent: React.FC<{ onCancel: () => void; imageBuffer: ImageBuffer | u
         return () => {
             disposeFabric();
         };
-    }, [changeCursor, onMouseDown, onMouseMove, onMouseUp]);
+    }, [changeCursor, onMouseDown, onMouseMove, onMouseUp, onMouseWheel]);
 
     useEffect(() => {
         const initImage = async () => {
@@ -730,12 +794,11 @@ const DrawContent: React.FC<{ onCancel: () => void; imageBuffer: ImageBuffer | u
             imageLayerRef.current = imgLayer;
 
             // 添加遮罩
-            const selectWindow = await selectWindowFromMousePosition(imageBuffer);
+            const selectWindow = selectWindowFromMousePositionCallbackRef.current?.(
+                imageBuffer,
+                lastMouseMovePointRef.current ?? new fabric.Point(0, 0),
+            );
             maskRectClipPathRef.current = new fabric.Rect({
-                width: 0,
-                height: 0,
-                left: 0,
-                top: 0,
                 ...selectWindow,
                 originX: 'left',
                 originY: 'top',
@@ -1115,22 +1178,14 @@ const DrawContent: React.FC<{ onCancel: () => void; imageBuffer: ImageBuffer | u
             canvasUnlistenListRef.current = [];
             activeObjectListRef.current = new Set();
             canvasHistoryRef.current = undefined;
+            selectWindowFromMousePositionLevelRef.current = 0;
         };
-    }, [
-        controlNode,
-        darkMode,
-        imageBuffer,
-        selectWindowFromMousePosition,
-        setCaptureStep,
-        setDrawState,
-        token.colorPrimaryHover,
-    ]);
+    }, [controlNode, darkMode, imageBuffer, setCaptureStep, setDrawState, token.colorPrimaryHover]);
 
     const initState = useCallback(() => {
         setCaptureStep(CaptureStep.Select);
         setDrawState(DrawState.Idle);
         resizeModeRef.current = 'auto';
-        lastWindowInfoRef.current = undefined;
         moveOffsetRef.current = {
             left: 0,
             top: 0,
@@ -1230,10 +1285,31 @@ const DrawContent: React.FC<{ onCancel: () => void; imageBuffer: ImageBuffer | u
 
 const DrawPage: React.FC = () => {
     const [imageBuffer, setImageBuffer] = useState<ImageBuffer | undefined>(undefined);
+    const elementInfoRef = useRef<ElementInfo | undefined>(undefined);
+    const [elementsRTree, setElementsRTree] = useState<Flatbush | undefined>(undefined);
     const { addListener, removeListener } = useContext(EventListenerContext);
     useEffect(() => {
         const listenerId = addListener('execute-screenshot', async () => {
-            setImageBuffer(await captureCurrentMonitor(ImageEncoder.WebP));
+            captureCurrentMonitor(ImageEncoder.WebP).then((imageBuffer) => {
+                setImageBuffer(imageBuffer);
+            });
+
+            elementInfoRef.current = undefined;
+            getElementInfo().then((elementInfo) => {
+                elementInfoRef.current = elementInfo;
+                const rTree = new Flatbush(elementInfo.rect_list.length);
+                const scale = 1 / elementInfo.scale_factor;
+                elementInfo.rect_list.forEach((rect) => {
+                    rect.min_x *= scale;
+                    rect.min_y *= scale;
+                    rect.max_x *= scale;
+                    rect.max_y *= scale;
+                    rTree.add(rect.min_x, rect.min_y, rect.max_x, rect.max_y);
+                });
+                rTree.finish();
+
+                setElementsRTree(rTree);
+            });
         });
         return () => {
             removeListener(listenerId);
@@ -1244,7 +1320,29 @@ const DrawPage: React.FC = () => {
         setImageBuffer(undefined);
     }, []);
 
-    return <DrawContent onCancel={reload} imageBuffer={imageBuffer} />;
+    const getElementRectFromMousePosition = useCallback(
+        (mouseX: number, mouseY: number): ElementRect[] => {
+            if (!elementsRTree || !elementInfoRef.current) {
+                return [];
+            }
+
+            const rectIndexs = elementsRTree.search(mouseX, mouseY, mouseX, mouseY);
+            rectIndexs.sort((a, b) => a - b);
+
+            return rectIndexs.map((index) => {
+                return elementInfoRef.current!.rect_list[index];
+            });
+        },
+        [elementsRTree],
+    );
+
+    return (
+        <DrawContent
+            onCancel={reload}
+            imageBuffer={imageBuffer}
+            getElementRectFromMousePosition={getElementRectFromMousePosition}
+        />
+    );
 };
 
 export default React.memo(DrawPage);
