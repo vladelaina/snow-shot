@@ -1,10 +1,14 @@
+use std::sync::Mutex;
+
 use device_query::{DeviceQuery, DeviceState, MouseState};
 use image::codecs::png::{CompressionType, FilterType, PngEncoder};
 use image::codecs::webp::WebPEncoder;
-use serde::Serialize;
 use tauri::command;
 use tauri::ipc::Response;
-use xcap::{Monitor, Window};
+use xcap::Monitor;
+
+use crate::os::ui_automation::UIAutomation;
+use crate::os::ElementInfo;
 
 #[command]
 pub async fn capture_current_monitor(encoder: String) -> Response {
@@ -76,68 +80,18 @@ pub async fn capture_current_monitor(encoder: String) -> Response {
     return Response::new(buf);
 }
 
-#[derive(PartialEq, Eq, Serialize, Clone, Debug, Copy)]
-pub struct WindowInfo {
-    pub x: i32,
-    pub y: i32,
-    pub width: u32,
-    pub height: u32,
-}
-
 #[command]
-pub fn get_window_from_mouse_position() -> Option<WindowInfo> {
-    // 获取当前鼠标的位置
-    let device_state = DeviceState::new();
-    let mouse: MouseState = device_state.get_mouse();
-    let (mouse_x, mouse_y) = mouse.coords;
+pub async fn get_element_info(
+    ui_automation: tauri::State<'_, Mutex<UIAutomation>>,
+) -> Result<Option<ElementInfo>, ()> {
+    let ui_automation = match ui_automation.lock() {
+        Ok(ui_automation) => ui_automation,
+        Err(_) => return Ok(None),
+    };
+    let element_info = match ui_automation.get_element_info() {
+        Ok(element_info) => element_info,
+        Err(_) => return Ok(None),
+    };
 
-    let mut windows = Window::all().unwrap_or_default();
-    windows.sort_by(|a, b| {
-        let a_z_val = match a.z() {
-            Ok(z_val) => z_val,
-            Err(_) => 0,
-        };
-
-        let b_z_val = match b.z() {
-            Ok(z_val) => z_val,
-            Err(_) => 0,
-        };
-
-        b_z_val.cmp(&a_z_val)
-    });
-
-    for w in windows {
-        let x = match w.x() {
-            Ok(x) => x,
-            Err(_) => continue,
-        };
-        let y = match w.y() {
-            Ok(y) => y,
-            Err(_) => continue,
-        };
-        let width = match w.width() {
-            Ok(width) => width,
-            Err(_) => continue,
-        };
-        let height = match w.height() {
-            Ok(height) => height,
-            Err(_) => continue,
-        };
-
-        let min_x: i32 = x;
-        let min_y: i32 = y;
-        let max_x: i32 = min_x + width as i32;
-        let max_y: i32 = min_y + height as i32;
-
-        if mouse_x >= min_x && mouse_x <= max_x && mouse_y >= min_y && mouse_y <= max_y {
-            return Some(WindowInfo {
-                x,
-                y,
-                width,
-                height,
-            });
-        }
-    }
-
-    None
+    Ok(Some(element_info))
 }

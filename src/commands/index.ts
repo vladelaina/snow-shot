@@ -51,13 +51,22 @@ export type WindowInfo = {
     y: number;
     width: number;
     height: number;
+    element_info: ElementInfo | undefined;
 };
 
-/**
- * 获取鼠标所在位置的窗口信息
- */
-export const getWindowFromMousePosition = async () => {
-    const result = await invoke<WindowInfo | undefined>('get_window_from_mouse_position');
+export type ElementInfo = {
+    rect_list: ElementRect[];
+    scale_factor: number;
+};
 
+export type ElementRect = {
+    min_x: number;
+    min_y: number;
+    max_x: number;
+    max_y: number;
+};
+
+export const getElementInfo = async () => {
+    const result = await invoke<ElementInfo>('get_element_info');
     return result;
 };

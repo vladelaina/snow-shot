@@ -1,8 +1,8 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
-  "productName": "Sonnet Shot",
+  "productName": "Snow Shot",
   "version": "0.1.0",
-  "identifier": "com.chao.sonnetshot",
+  "identifier": "com.chao.snowshot",
   "build": {
     "frontendDist": "../out",
     "devUrl": "http://localhost:8301",
@@ -16,7 +16,7 @@
             "fullscreen": false,
             "height": 450,
             "resizable": false,
-            "title": "Sonnet Shot",
+            "title": "Snow Shot",
             "width": 728,
             "center": true,
             "decorations": false,

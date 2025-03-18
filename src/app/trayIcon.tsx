@@ -18,8 +18,8 @@ const TrayIconLoaderComponent = () => {
 
             const options: TrayIconOptions = {
                 icon: (await defaultWindowIcon()) ?? '',
-                title: 'Sonnet Shot',
-                tooltip: 'Sonnet Shot',
+                title: 'Snow Shot',
+                tooltip: 'Snow Shot',
                 action: (event) => {
                     switch (event.type) {
                         case 'Click':

@@ -1,10 +1,14 @@
-### SonnetShot
+<div align="center">
 
-一款设计优良的截图软件，供优雅的你优雅地使用。
+<a name="readme-top"></a>
 
-#### 名字由来
+<img height="180" src="./docs/imgs/snow_shot_logo.png">
 
-好吧，编写软件名字和软件介绍对我来说确实是个难题，万一软件火了，别人可能会捎带介绍下名字由来吧？过程也简单，我问 Claude-3-5-sonnet 帮我取个和 Screenshot、shot 相关的名字吧……一番折腾，倒不如就 sonnet + shot 吧。
+<h1>Snow Shot</h1>
+
+</div>
+
+简洁、优雅，Snow Shot<img src="./docs/imgs/snowflake.png" height="24px" />。
 
 #### 相关文档
 

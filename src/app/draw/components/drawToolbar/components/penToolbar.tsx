@@ -10,7 +10,7 @@ import {
     LineColorPickerValue,
 } from './pickers/lineColorPicker';
 import * as fabric from 'fabric';
-import { DrawContext } from '@/app/draw/page';
+import { DrawContext } from '@/app/draw/context';
 import { CircleCursor } from './pickers/components/circleCursor';
 
 export const PenToolbar: React.FC = () => {

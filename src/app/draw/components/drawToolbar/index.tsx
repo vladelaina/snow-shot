@@ -26,7 +26,7 @@ import {
 import { PenToolbar } from './components/penToolbar';
 import { EllipseToolbar, RectToolbar } from './components/shapeToolbar';
 import React from 'react';
-import { DrawContext } from '../../page';
+import { DrawContext } from '../../context';
 import { EraserToolbar, MosaicToolbar } from './components/mosaicToolbar';
 import { TextToolbar } from './components/textToolbar';
 import { HighlightToolbar } from './components/highlightToolbar';
@@ -74,7 +74,7 @@ const DrawToolbarCore: React.FC<DrawToolbarProps> = ({
     const renderedRef = useRef(true);
     const updateDrawToolbarStyle = useCallback(
         (hideSubToolbar: boolean = true) => {
-            if (!drawToolbarRef.current || !drawSubToolbarRef.current) {
+            if (!drawToolbarRef.current || !drawSubToolbarRef.current || !maskRectClipPathRef.current) {
                 return;
             }
 
