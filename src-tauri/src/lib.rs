@@ -5,12 +5,12 @@ mod screenshot;
 
 use std::sync::Mutex;
 
-use os::ui_automation::UIAutomation;
+use os::ui_automation::UIElements;
 use tauri_plugin_log::{Target, TargetKind};
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    let ui_automation = Mutex::new(UIAutomation::new());
+    let ui_elements = Mutex::new(UIElements::new());
 
     tauri::Builder::default()
         .plugin(tauri_plugin_fs::init())
@@ -29,10 +29,13 @@ pub fn run() {
             }
             Ok(())
         })
-        .manage(ui_automation)
+        .manage(ui_elements)
         .invoke_handler(tauri::generate_handler![
             screenshot::capture_current_monitor,
             screenshot::get_element_info,
+            screenshot::remove_draw_window_elements,
+            screenshot::init_ui_elements,
+            screenshot::get_element_from_position,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

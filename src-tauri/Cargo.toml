@@ -5,8 +5,8 @@ description = "A Tauri App"
 authors = ["mg-chao <chao@mgchao.top>"]
 license = "Apache-2.0"
 repository = "https://github.com/mg-chao/snow-shot"
-edition = "2021"
-rust-version = "1.77.2"
+edition = "2024"
+rust-version = "1.85.0"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
@@ -34,3 +34,5 @@ image = { version = "0.25.5", features = ["png", "webp"] }
 windows = { version = "0.60.0" }
 thiserror = "2.0.12"
 static_aabb2d_index = "2.0.0"
+uiautomation = "0.17.1"
+rtree_rs = "0.1.4"

@@ -1,43 +1,223 @@
-use std::cmp;
+use std::collections::HashMap;
 use std::collections::VecDeque;
 use std::mem;
 
 use crate::app_error::AutomationError;
-use device_query::DeviceQuery;
-use device_query::DeviceState;
-use device_query::MouseState;
-use static_aabb2d_index::*;
-use windows::Win32::System::Com::CoInitializeEx;
-use windows::Win32::System::Com::COINIT_APARTMENTTHREADED;
-use windows::Win32::UI::Accessibility::TreeScope_Children;
+use rtree_rs::{RTree, Rect};
+use uiautomation::UIAutomation;
+use uiautomation::UIElement;
+use uiautomation::UITreeWalker;
+use uiautomation::types::Point;
+use windows::Win32::Foundation::HWND;
 use windows::Win32::UI::WindowsAndMessaging::GetWindowInfo;
 use windows::Win32::UI::WindowsAndMessaging::WINDOWINFO;
-use windows::Win32::{
-    Foundation::HWND,
-    System::Com::{CoCreateInstance, CLSCTX_INPROC_SERVER},
-    UI::Accessibility::{CUIAutomation, IUIAutomation, IUIAutomationElement},
-};
-use xcap::Window;
 
-use super::ElementInfo;
 use super::ElementRect;
 
-pub struct UIAutomation {
-    automation: IUIAutomation,
+/**
+ * 元素层级
+ */
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct ElementLevel {
+    /**
+     * 遍历时，首先获得层级最高的元素
+     * 同级元素，index 越高，层级越低
+     */
+    pub element_index: i32,
+    /**
+     * 因为窗口很大概率重叠，用窗口索引做个细分
+     */
+    pub window_index: i32,
+    /**
+     * 元素层级
+     */
+    pub element_level: i32,
 }
 
-unsafe impl Send for UIAutomation {}
+pub struct UIElements {
+    automation: Option<UIAutomation>,
+    automation_walker: Option<UITreeWalker>,
+    root_element: Option<UIElement>,
+    element_cache: Option<RTree<2, i32, ElementLevel>>,
+    element_level_map: HashMap<ElementLevel, UIElement>,
+}
 
-impl UIAutomation {
+unsafe impl Send for UIElements {}
+unsafe impl Sync for UIElements {}
+
+impl UIElements {
     pub fn new() -> Self {
-        unsafe {
-            CoInitializeEx(None, COINIT_APARTMENTTHREADED).unwrap();
-
-            let automation: IUIAutomation =
-                CoCreateInstance(&CUIAutomation, None, CLSCTX_INPROC_SERVER).unwrap();
-
-            Self { automation }
+        Self {
+            automation: None,
+            automation_walker: None,
+            root_element: None,
+            element_cache: None,
+            element_level_map: HashMap::new(),
         }
+    }
+
+    pub fn init(&mut self) -> Result<(), AutomationError> {
+        if self.automation.is_some() && self.automation_walker.is_some() {
+            return Ok(());
+        }
+
+        let automation = UIAutomation::new()?;
+        let automation_walker = automation.get_raw_view_walker()?;
+        let root_element = automation.get_root_element()?;
+        self.automation = Some(automation);
+        self.automation_walker = Some(automation_walker);
+        self.root_element = Some(root_element);
+        Ok(())
+    }
+
+    pub fn convert_element_rect_to_rtree_rect(rect: uiautomation::types::Rect) -> Rect<2, i32> {
+        Rect::new(
+            [rect.get_left(), rect.get_top()],
+            [rect.get_right(), rect.get_bottom()],
+        )
+    }
+
+    /**
+     * 初始化窗口元素缓存
+     */
+    pub fn init_cache(&mut self) -> Result<(), AutomationError> {
+        let automation_walker = self.automation_walker.as_ref().unwrap();
+        let root_element = self.root_element.as_ref().unwrap();
+
+        let root_element_rect = root_element.get_bounding_rectangle()?;
+
+        let mut element_cache = RTree::new();
+        let mut element_level_map = HashMap::new();
+
+        let mut window_index = 0;
+        let root_element_level = ElementLevel {
+            window_index,
+            element_index: 0,
+            element_level: 0,
+        };
+        element_cache.insert(
+            Self::convert_element_rect_to_rtree_rect(root_element_rect),
+            root_element_level,
+        );
+        element_level_map.insert(root_element_level, root_element.clone());
+
+        let mut element_index = 0;
+        if let Ok(first_child) = automation_walker.get_first_child(root_element) {
+            window_index += 1;
+            element_index += 1;
+            element_cache.insert(
+                Self::convert_element_rect_to_rtree_rect(first_child.get_bounding_rectangle()?),
+                ElementLevel {
+                    window_index,
+                    element_index,
+                    element_level: 1,
+                },
+            );
+            element_level_map.insert(
+                ElementLevel {
+                    window_index,
+                    element_index,
+                    element_level: 1,
+                },
+                first_child.clone(),
+            );
+
+            while let Ok(sibling) = automation_walker.get_next_sibling(&first_child) {
+                window_index += 1;
+                element_index += 1;
+                element_cache.insert(
+                    Self::convert_element_rect_to_rtree_rect(sibling.get_bounding_rectangle()?),
+                    ElementLevel {
+                        window_index,
+                        element_index,
+                        element_level: 1,
+                    },
+                );
+                element_level_map.insert(
+                    ElementLevel {
+                        window_index,
+                        element_index,
+                        element_level: 1,
+                    },
+                    sibling.clone(),
+                );
+            }
+        }
+
+        self.element_cache = Some(element_cache);
+        self.element_level_map = element_level_map;
+        Ok(())
+    }
+
+    pub fn get_element_from_point(
+        &self,
+        mouse_x: i32,
+        mouse_y: i32,
+    ) -> Result<Option<ElementRect>, AutomationError> {
+        let automation = match self.automation.as_ref() {
+            Some(automation) => automation,
+            None => return Ok(None),
+        };
+
+        let element = automation.element_from_point(Point::new(mouse_x, mouse_y))?;
+        let rect = element.get_bounding_rectangle()?;
+
+        Ok(Some(ElementRect {
+            min_x: rect.get_left(),
+            min_y: rect.get_top(),
+            max_x: rect.get_right(),
+            max_y: rect.get_bottom(),
+        }))
+    }
+
+    /**
+     * 获取所有可选区域
+     */
+    pub fn get_element_from_point_walker(
+        &self,
+        mouse_x: i32,
+        mouse_y: i32,
+    ) -> Result<ElementRect, AutomationError> {
+        let automation_walker = self.automation_walker.as_ref().unwrap();
+        let root_element = self.root_element.as_ref().unwrap();
+        let mut rect = ElementRect {
+            min_x: 0,
+            min_y: 0,
+            max_x: 0,
+            max_y: 0,
+        };
+        let mut queue = VecDeque::with_capacity(128);
+        queue.push_back(root_element.clone());
+        while let Some(current_element) = queue.pop_front() {
+            let current_element_rect = match current_element.get_bounding_rectangle() {
+                Ok(rect) => rect,
+                Err(_) => continue,
+            };
+
+            let left = current_element_rect.get_left();
+            let right = current_element_rect.get_right();
+            let top = current_element_rect.get_top();
+            let bottom = current_element_rect.get_bottom();
+
+            if left <= mouse_x && right >= mouse_x && top <= mouse_y && bottom >= mouse_y {
+                rect.min_x = left;
+                rect.min_y = top;
+                rect.max_x = right;
+                rect.max_y = bottom;
+
+                let first_child = automation_walker.get_first_child(&current_element);
+                if let Ok(child) = first_child {
+                    queue.push_back(child);
+                }
+            }
+
+            let next_sibling = automation_walker.get_next_sibling(&current_element);
+            if let Ok(sibling) = next_sibling {
+                queue.push_back(sibling);
+            }
+        }
+
+        return Ok(rect);
     }
 
     fn get_window_info(hwnd: HWND) -> Result<WINDOWINFO, AutomationError> {
@@ -52,225 +232,47 @@ impl UIAutomation {
 
         Ok(window_info)
     }
-
-    /**
-     * 获取所有可选区域
-     */
-    pub fn get_element_info(&self) -> Result<ElementInfo, AutomationError> {
-        // 获取当前鼠标的位置
-        let device_state = DeviceState::new();
-        let mouse: MouseState = device_state.get_mouse();
-        let (mouse_x, mouse_y) = mouse.coords;
-
-        let mut element_rect_list = Vec::new();
-
-        let monitor = xcap::Monitor::from_point(mouse_x, mouse_y)?;
-        let monitor_min_x = monitor.x()?;
-        let monitor_min_y = monitor.y()?;
-        let monitor_max_x = monitor_min_x + monitor.width()? as i32;
-        let monitor_max_y = monitor_min_y + monitor.height()? as i32;
-
-        element_rect_list.push(ElementRect {
-            min_x: monitor_min_x,
-            min_y: monitor_min_y,
-            max_x: monitor_max_x,
-            max_y: monitor_max_y,
-        });
-
-        // 获取所有窗口，简单筛选下需要的窗口，然后获取窗口所有元素
-        let mut windows = Window::all().unwrap_or_default();
-        // 获取窗口是，是从最顶层的窗口依次遍历，这里反转下便于后续查找
-        windows.reverse();
-
-        let mut window_hwnd_list = Vec::new();
-        for window in windows {
-            // if window.title().unwrap() != "主文件夹 - 文件资源管理器" {
-            //     continue;
-            // }
-            // if !window.title().unwrap().ends_with("Mozilla Firefox") {
-            //     continue;
-            // }
-            // println!("window.title(): {:?}", window.title());
-
-            if window.is_minimized().unwrap_or(true) {
-                continue;
-            }
-
-            let hwnd = match window.hwnd() {
-                Ok(hwnd) => HWND(hwnd),
-                Err(_) => continue,
-            };
-
-            let window_info = match Self::get_window_info(hwnd) {
-                Ok(window_info) => window_info,
-                Err(_) => continue,
-            };
-
-            let window_min_x = window_info.rcClient.left;
-            let window_min_y = window_info.rcClient.top;
-            let window_max_x = window_info.rcClient.right;
-            let window_max_y = window_info.rcClient.bottom;
-
-            // 保留在屏幕内的窗口
-            if !(window_min_x >= monitor_min_x
-                && window_min_y >= monitor_min_y
-                && window_min_x <= monitor_max_x
-                && window_min_y <= monitor_max_y)
-            {
-                continue;
-            }
-
-            element_rect_list.push(ElementRect {
-                min_x: window_min_x,
-                min_y: window_min_y,
-                max_x: window_max_x,
-                max_y: window_max_y,
-            });
-            window_hwnd_list.push(hwnd);
-        }
-
-        let mut windows_rtree_builder: StaticAABB2DIndexBuilder<i32> =
-            StaticAABB2DIndexBuilder::new(element_rect_list.len() - 1);
-        for element_rect in element_rect_list[1..].iter() {
-            windows_rtree_builder.add(
-                element_rect.min_x,
-                element_rect.min_y,
-                element_rect.max_x,
-                element_rect.max_y,
-            );
-        }
-
-        let windows_rtree = windows_rtree_builder.build().unwrap();
-
-        let automation = &self.automation;
-        unsafe {
-            // let condition = automation.CreatePropertyCondition(
-            //     UIA_ControlTypePropertyId,
-            //     &windows::Win32::System::Variant::VARIANT::from(UIA_TextControlTypeId.0),
-            // )?;
-            let condition = automation.CreateTrueCondition()?;
-            for (index, hwnd) in window_hwnd_list.iter().enumerate() {
-                let window_rect_index = index;
-                let window_rect = element_rect_list[window_rect_index + 1];
-
-                let window_element = match automation.ElementFromHandle(*hwnd) {
-                    Ok(element) => element,
-                    Err(_) => continue,
-                };
-
-                let window_children_elements =
-                    match window_element.FindAll(TreeScope_Children, &condition) {
-                        Ok(elements) => elements,
-                        Err(_) => continue,
-                    };
-
-                let window_children_elements_count = match window_children_elements.Length() {
-                    Ok(count) => count,
-                    Err(_) => continue,
-                };
-
-                if window_children_elements_count == 0 {
-                    continue;
-                }
-
-                let mut queue: VecDeque<IUIAutomationElement> =
-                    VecDeque::with_capacity((window_children_elements_count * 4) as usize);
-
-                for i in 0..window_children_elements_count {
-                    let child_element = window_children_elements.GetElement(i)?;
-                    queue.push_back(child_element);
-                }
-
-                let mut element_count = 0;
-                while let Some(current_element) = queue.pop_front() {
-                    element_count += 1;
-
-                    let current_element_rect = match current_element.CurrentBoundingRectangle() {
-                        Ok(rect) => rect,
-                        Err(_) => continue,
-                    };
-
-                    if element_count <= window_children_elements_count {
-                        // 第一层级时判断元素的 4 个点是否有在窗口内的
-                        let mut has_hit = false;
-                        let point_list = [
-                            (current_element_rect.left, current_element_rect.top),
-                            (current_element_rect.right, current_element_rect.top),
-                            (current_element_rect.left, current_element_rect.bottom),
-                            (current_element_rect.right, current_element_rect.bottom),
-                        ];
-                        for point in point_list {
-                            match windows_rtree
-                                .query(point.0, point.1, point.0, point.1)
-                                .iter()
-                                .max()
-                            {
-                                Some(index) => {
-                                    has_hit = *index == window_rect_index;
-                                }
-                                None => {}
-                            };
-
-                            if has_hit {
-                                break;
-                            }
-                        }
-
-                        if !has_hit {
-                            continue;
-                        }
-                    }
-
-                    element_rect_list.push(ElementRect {
-                        min_x: cmp::max(current_element_rect.left, window_rect.min_x),
-                        min_y: cmp::max(current_element_rect.top, window_rect.min_y),
-                        max_x: cmp::min(current_element_rect.right, window_rect.max_x),
-                        max_y: cmp::min(current_element_rect.bottom, window_rect.max_y),
-                    });
-
-                    let children_elements =
-                        match current_element.FindAll(TreeScope_Children, &condition) {
-                            Ok(elements) => elements,
-                            Err(_) => continue,
-                        };
-
-                    let children_elements_count = children_elements.Length()?;
-
-                    // 预分配容量
-                    if children_elements_count == 0 {
-                        continue;
-                    }
-
-                    for i in 0..children_elements_count {
-                        let child_element = children_elements.GetElement(i)?;
-                        queue.push_back(child_element);
-                    }
-                }
-            }
-        }
-
-        Ok(ElementInfo {
-            rect_list: element_rect_list,
-            scale_factor: monitor.scale_factor()?,
-        })
-    }
 }
 
 #[cfg(test)]
 mod tests {
-    use std::time::Instant;
+    use std::time::Duration;
+
+    use device_query::{DeviceEvents, DeviceEventsHandler};
+    use uiautomation::types::Point;
 
     use super::*;
 
     #[test]
-    fn test_get_all_elements() {
-        let instant = Instant::now();
-        let ui_automation = UIAutomation::new();
-        let element_info = ui_automation.get_element_info().unwrap();
-        // element_info.rect_list.iter().for_each(|rect| {
-        //     println!("rect: {:?}", rect);
-        // });
-        println!("elapsed: {:?}", instant.elapsed());
-        println!("element_rect_list length {}", element_info.rect_list.len());
+    fn test_get_element_from_point() {
+        let device_state = DeviceEventsHandler::new(Duration::from_millis(1000 / 60))
+            .expect("Failed to start event loop");
+
+        // Register a key down event callback
+        // The guard is used to keep the callback alive
+        let _guard = device_state.on_mouse_move(|position| {
+            let (mouse_x, mouse_y) = position;
+
+            let automation = UIAutomation::new().unwrap();
+            let element = match automation.element_from_point(Point::new(*mouse_x, *mouse_y)) {
+                Ok(element) => element,
+                Err(_) => return,
+            };
+
+            let rect = match element.get_bounding_rectangle() {
+                Ok(rect) => rect,
+                Err(_) => return,
+            };
+
+            println!(
+                "element: left {}, top {}, width {}, height {}",
+                rect.get_left(),
+                rect.get_top(),
+                rect.get_width(),
+                rect.get_height()
+            );
+        });
+
+        loop {}
     }
 }

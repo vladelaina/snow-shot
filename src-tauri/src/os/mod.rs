@@ -2,13 +2,13 @@
 #[path = "./windows.rs"]
 pub mod ui_automation;
 
-#[cfg(target_os = "linux")]
-#[path = "./linux.rs"]
-pub mod ui_automation;
+// #[cfg(target_os = "linux")]
+// #[path = "./linux.rs"]
+// pub mod ui_automation;
 
-#[cfg(target_os = "macos")]
-#[path = "./macos.rs"]
-pub mod ui_automation;
+// #[cfg(target_os = "macos")]
+// #[path = "./macos.rs"]
+// pub mod ui_automation;
 
 use serde::Serialize;
 use std::hash::Hash;
