@@ -1,4 +1,6 @@
+use std::cmp::Ordering;
 use std::collections::HashMap;
+use std::collections::HashSet;
 use std::collections::VecDeque;
 use std::mem;
 
@@ -7,6 +9,7 @@ use rtree_rs::{RTree, Rect};
 use uiautomation::UIAutomation;
 use uiautomation::UIElement;
 use uiautomation::UITreeWalker;
+use uiautomation::types::Handle;
 use uiautomation::types::Point;
 use windows::Win32::Foundation::HWND;
 use windows::Win32::UI::WindowsAndMessaging::GetWindowInfo;
@@ -17,7 +20,7 @@ use super::ElementRect;
 /**
  * 元素层级
  */
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Copy, PartialOrd)]
 pub struct ElementLevel {
     /**
      * 遍历时，首先获得层级最高的元素
@@ -25,20 +28,67 @@ pub struct ElementLevel {
      */
     pub element_index: i32,
     /**
-     * 因为窗口很大概率重叠，用窗口索引做个细分
-     */
-    pub window_index: i32,
-    /**
      * 元素层级
      */
     pub element_level: i32,
+    /**
+     * 父元素索引
+     */
+    pub parent_index: i32,
+    /**
+     * 窗口索引
+     */
+    pub window_index: i32,
+}
+
+impl ElementLevel {
+    pub fn min() -> Self {
+        Self {
+            element_index: 0,
+            element_level: 0,
+            parent_index: 0,
+            window_index: i32::MAX,
+        }
+    }
+
+    pub fn next_level(&mut self) {
+        self.element_level += 1;
+        self.element_index = 0;
+        self.parent_index = 0;
+    }
+
+    pub fn next_element(&mut self) {
+        self.element_index += 1;
+    }
+}
+
+impl Ord for ElementLevel {
+    fn cmp(&self, other: &Self) -> Ordering {
+        // 先窗口索引排序，窗口索引小的优先级越高
+        if self.window_index != other.window_index {
+            return other.window_index.cmp(&self.window_index);
+        }
+
+        // 元素层级排序，层级高的优先级越高
+        if self.element_level != other.element_level {
+            return self.element_level.cmp(&other.element_level);
+        }
+
+        // 元素索引排序，索引小的优先级越高
+        if self.element_index != other.element_index {
+            return other.element_index.cmp(&self.element_index);
+        }
+
+        // 父元素索引排序，索引大的优先级越高
+        other.parent_index.cmp(&self.parent_index)
+    }
 }
 
 pub struct UIElements {
     automation: Option<UIAutomation>,
     automation_walker: Option<UITreeWalker>,
     root_element: Option<UIElement>,
-    element_cache: Option<RTree<2, i32, ElementLevel>>,
+    element_cache: RTree<2, i32, ElementLevel>,
     element_level_map: HashMap<ElementLevel, UIElement>,
 }
 
@@ -51,12 +101,12 @@ impl UIElements {
             automation: None,
             automation_walker: None,
             root_element: None,
-            element_cache: None,
+            element_cache: RTree::new(),
             element_level_map: HashMap::new(),
         }
     }
 
-    pub fn init(&mut self) -> Result<(), AutomationError> {
+    pub fn init(&mut self, hwnd: HWND) -> Result<(), AutomationError> {
         if self.automation.is_some() && self.automation_walker.is_some() {
             return Ok(());
         }
@@ -77,75 +127,63 @@ impl UIElements {
         )
     }
 
+    pub fn clip_rect(
+        rect: uiautomation::types::Rect,
+        parent_rect: uiautomation::types::Rect,
+    ) -> uiautomation::types::Rect {
+        uiautomation::types::Rect::new(
+            rect.get_left().max(parent_rect.get_left()),
+            rect.get_top().max(parent_rect.get_top()),
+            rect.get_right().min(parent_rect.get_right()),
+            rect.get_bottom().min(parent_rect.get_bottom()),
+        )
+    }
+
     /**
      * 初始化窗口元素缓存
      */
     pub fn init_cache(&mut self) -> Result<(), AutomationError> {
-        let automation_walker = self.automation_walker.as_ref().unwrap();
-        let root_element = self.root_element.as_ref().unwrap();
+        let automation_walker = self.automation_walker.clone().unwrap();
+        let root_element = self.root_element.clone().unwrap();
 
+        self.element_cache = RTree::new();
+        self.element_level_map = HashMap::new();
+
+        // 桌面的窗口索引应该是最高，因为其优先级最低
+        let mut current_level = ElementLevel::min();
         let root_element_rect = root_element.get_bounding_rectangle()?;
-
-        let mut element_cache = RTree::new();
-        let mut element_level_map = HashMap::new();
-
-        let mut window_index = 0;
-        let root_element_level = ElementLevel {
-            window_index,
-            element_index: 0,
-            element_level: 0,
-        };
-        element_cache.insert(
-            Self::convert_element_rect_to_rtree_rect(root_element_rect),
-            root_element_level,
+        let parent_rtree_rect = self.insert_element_cache(
+            root_element.clone(),
+            root_element_rect,
+            current_level,
+            root_element_rect,
         );
-        element_level_map.insert(root_element_level, root_element.clone());
 
-        let mut element_index = 0;
-        if let Ok(first_child) = automation_walker.get_first_child(root_element) {
-            window_index += 1;
-            element_index += 1;
-            element_cache.insert(
-                Self::convert_element_rect_to_rtree_rect(first_child.get_bounding_rectangle()?),
-                ElementLevel {
-                    window_index,
-                    element_index,
-                    element_level: 1,
-                },
-            );
-            element_level_map.insert(
-                ElementLevel {
-                    window_index,
-                    element_index,
-                    element_level: 1,
-                },
+        if let Ok(mut first_child) = automation_walker.get_first_child(&root_element) {
+            current_level.window_index = 0;
+            current_level.next_level();
+
+            self.insert_element_cache(
                 first_child.clone(),
+                first_child.get_bounding_rectangle()?,
+                current_level,
+                parent_rtree_rect,
             );
-
             while let Ok(sibling) = automation_walker.get_next_sibling(&first_child) {
-                window_index += 1;
-                element_index += 1;
-                element_cache.insert(
-                    Self::convert_element_rect_to_rtree_rect(sibling.get_bounding_rectangle()?),
-                    ElementLevel {
-                        window_index,
-                        element_index,
-                        element_level: 1,
-                    },
-                );
-                element_level_map.insert(
-                    ElementLevel {
-                        window_index,
-                        element_index,
-                        element_level: 1,
-                    },
+                current_level.window_index += 1;
+                current_level.next_element();
+
+                self.insert_element_cache(
                     sibling.clone(),
+                    sibling.get_bounding_rectangle()?,
+                    current_level,
+                    parent_rtree_rect,
                 );
+
+                first_child = sibling;
             }
         }
 
-        self.element_cache = Some(element_cache);
-        self.element_level_map = element_level_map;
         Ok(())
     }
 
@@ -170,54 +208,127 @@ impl UIElements {
         }))
     }
 
+    pub fn insert_element_cache(
+        &mut self,
+        element: UIElement,
+        element_rect: uiautomation::types::Rect,
+        element_level: ElementLevel,
+        parent_element_rect: uiautomation::types::Rect,
+    ) -> uiautomation::types::Rect {
+        let element_rect = Self::clip_rect(element_rect, parent_element_rect);
+        self.element_cache.insert(
+            Self::convert_element_rect_to_rtree_rect(element_rect),
+            element_level,
+        );
+        self.element_level_map.insert(element_level, element);
+
+        element_rect
+    }
+
+    fn get_element_from_cache(
+        &self,
+        mouse_x: i32,
+        mouse_y: i32,
+    ) -> Option<(UIElement, ElementLevel, uiautomation::types::Rect)> {
+        let element_rect = self
+            .element_cache
+            .search(Rect::new_point([mouse_x, mouse_y]));
+
+        // 获取层级最高的元素
+        let mut max_level = ElementLevel::min();
+        let mut max_level_rect = None;
+        for rect in element_rect {
+            if max_level.cmp(&rect.data) == Ordering::Less {
+                max_level = rect.data.clone();
+                max_level_rect = Some(rect.rect);
+            }
+        }
+        let element_rtree_rect = match max_level_rect {
+            Some(rect) => {
+                uiautomation::types::Rect::new(rect.min[0], rect.min[1], rect.max[0], rect.max[1])
+            }
+            None => return None,
+        };
+
+        match self.element_level_map.get(&max_level) {
+            Some(element) => Some((element.clone(), max_level, element_rtree_rect)),
+            None => None,
+        }
+    }
+
     /**
      * 获取所有可选区域
      */
     pub fn get_element_from_point_walker(
-        &self,
+        &mut self,
         mouse_x: i32,
         mouse_y: i32,
     ) -> Result<ElementRect, AutomationError> {
-        let automation_walker = self.automation_walker.as_ref().unwrap();
-        let root_element = self.root_element.as_ref().unwrap();
-        let mut rect = ElementRect {
-            min_x: 0,
-            min_y: 0,
-            max_x: 0,
-            max_y: 0,
-        };
+        let automation_walker = self.automation_walker.clone().unwrap();
+        let (parent_element, mut current_level, mut parent_rect) =
+            match self.get_element_from_cache(mouse_x, mouse_y) {
+                Some(element) => element,
+                None => (
+                    self.root_element.clone().unwrap(),
+                    ElementLevel::min(),
+                    uiautomation::types::Rect::new(0, 0, i32::MAX, i32::MAX),
+                ),
+            };
+
+        // 父元素必然命中了 mouse position，所以直接取第一个元素
         let mut queue = VecDeque::with_capacity(128);
-        queue.push_back(root_element.clone());
+        match automation_walker.get_first_child(&parent_element) {
+            Ok(element) => {
+                queue.push_back(element);
+                current_level.next_level();
+            }
+            Err(_) => {}
+        };
+
+        let mut current_element_rect = parent_rect;
+        let mut result_rect = current_element_rect;
+
         while let Some(current_element) = queue.pop_front() {
-            let current_element_rect = match current_element.get_bounding_rectangle() {
+            current_element_rect = match current_element.get_bounding_rectangle() {
                 Ok(rect) => rect,
                 Err(_) => continue,
             };
 
-            let left = current_element_rect.get_left();
-            let right = current_element_rect.get_right();
-            let top = current_element_rect.get_top();
-            let bottom = current_element_rect.get_bottom();
+            let current_element_left = current_element_rect.get_left();
+            let current_element_right = current_element_rect.get_right();
+            let current_element_top = current_element_rect.get_top();
+            let current_element_bottom = current_element_rect.get_bottom();
 
-            if left <= mouse_x && right >= mouse_x && top <= mouse_y && bottom >= mouse_y {
-                rect.min_x = left;
-                rect.min_y = top;
-                rect.max_x = right;
-                rect.max_y = bottom;
+            current_element_rect = self.insert_element_cache(
+                current_element.clone(),
+                current_element_rect,
+                current_level,
+                parent_rect,
+            );
+
+            if current_element_left <= mouse_x
+                && current_element_right >= mouse_x
+                && current_element_top <= mouse_y
+                && current_element_bottom >= mouse_y
+            {
+                result_rect = current_element_rect;
 
                 let first_child = automation_walker.get_first_child(&current_element);
                 if let Ok(child) = first_child {
                     queue.push_back(child);
+                    current_level.next_level();
+                    parent_rect = current_element_rect;
                 }
             }
 
             let next_sibling = automation_walker.get_next_sibling(&current_element);
             if let Ok(sibling) = next_sibling {
                 queue.push_back(sibling);
+                current_level.next_element();
             }
         }
 
-        return Ok(rect);
+        return Ok(ElementRect::from(result_rect));
     }
 
     fn get_window_info(hwnd: HWND) -> Result<WINDOWINFO, AutomationError> {
@@ -231,6 +342,15 @@ impl UIElements {
         };
 
         Ok(window_info)
+    }
+}
+
+impl Drop for UIElements {
+    fn drop(&mut self) {
+        // 清理资源
+        self.automation = None;
+        self.automation_walker = None;
+        self.root_element = None;
     }
 }
 

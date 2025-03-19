@@ -81,57 +81,31 @@ pub async fn capture_current_monitor(encoder: String) -> Response {
 }
 
 #[command]
-pub async fn remove_draw_window_elements(window: tauri::Window) -> Result<(), ()> {
-    let hwnd = match window.hwnd() {
-        Ok(hwnd) => hwnd,
-        Err(_) => return Ok(()),
-    };
-
-    #[cfg(target_os = "windows")]
-    {
-        unsafe {
-            windows::Win32::UI::WindowsAndMessaging::SetWindowDisplayAffinity(
-                hwnd,
-                windows::Win32::UI::WindowsAndMessaging::WDA_EXCLUDEFROMCAPTURE,
-            )
-            .unwrap();
-
-            windows::Win32::UI::WindowsAndMessaging::SetWindowLongPtrA(
-                hwnd,
-                windows::Win32::UI::WindowsAndMessaging::GWL_EXSTYLE,
-                524456 as isize | WS_EX_TRANSPARENT.0 as isize,
-            );
-            windows::Win32::UI::WindowsAndMessaging::SetWindowLongPtrA(
-                hwnd,
-                windows::Win32::UI::WindowsAndMessaging::GWL_STYLE,
-                2516582400,
-            );
-
-            let current_ex_style = windows::Win32::UI::WindowsAndMessaging::GetWindowLongPtrA(
-                hwnd,
-                windows::Win32::UI::WindowsAndMessaging::GWL_EXSTYLE,
-            );
-            let current_style = windows::Win32::UI::WindowsAndMessaging::GetWindowLongPtrA(
-                hwnd,
-                windows::Win32::UI::WindowsAndMessaging::GWL_STYLE,
-            );
-
-            println!("current_ex_style: {:X}", current_ex_style);
-            println!("current_style: {:X}", current_style);
-        }
-    }
-
-    Ok(())
-}
-
-#[command]
-pub async fn init_ui_elements(ui_elements: tauri::State<'_, Mutex<UIElements>>) -> Result<(), ()> {
+pub async fn init_ui_elements(
+    ui_elements: tauri::State<'_, Mutex<UIElements>>,
+    window: tauri::Window,
+) -> Result<(), ()> {
     let mut ui_elements = match ui_elements.lock() {
         Ok(ui_elements) => ui_elements,
         Err(_) => return Err(()),
     };
 
-    match ui_elements.init() {
+    match ui_elements.init(window.hwnd().unwrap()) {
+        Ok(_) => Ok(()),
+        Err(_) => Err(()),
+    }
+}
+
+#[command]
+pub async fn init_ui_elements_cache(
+    ui_elements: tauri::State<'_, Mutex<UIElements>>,
+) -> Result<(), ()> {
+    let mut ui_elements = match ui_elements.lock() {
+        Ok(ui_elements) => ui_elements,
+        Err(_) => return Err(()),
+    };
+
+    match ui_elements.init_cache() {
         Ok(_) => Ok(()),
         Err(_) => Err(()),
     }
@@ -200,55 +174,17 @@ pub async fn get_element_info() -> Result<ElementInfo, ()> {
 
 #[command]
 pub async fn get_element_from_position(
-    window: tauri::Window,
     ui_elements: tauri::State<'_, Mutex<UIElements>>,
     mouse_x: i32,
     mouse_y: i32,
 ) -> Result<Option<ElementRect>, ()> {
-    let hwnd = match window.hwnd() {
-        Ok(hwnd) => hwnd,
-        Err(_) => return Err(()),
-    };
-
-    let ui_elements = ui_elements.lock().unwrap();
-    // 移动窗口到屏幕外
-
-    let flag = windows::Win32::UI::WindowsAndMessaging::SWP_NOSIZE
-        | windows::Win32::UI::WindowsAndMessaging::SWP_NOMOVE;
-    unsafe {
-        windows::Win32::UI::WindowsAndMessaging::SetWindowPos(
-            hwnd,
-            Some(HWND_BOTTOM),
-            0,
-            0,
-            0,
-            0,
-            flag,
-        );
-    }
-    let element_rect = match ui_elements.get_element_from_point(mouse_x, mouse_y) {
+    let mut ui_elements = ui_elements.lock().unwrap();
+    let element_rect = match ui_elements.get_element_from_point_walker(mouse_x, mouse_y) {
         Ok(element_rect) => element_rect,
         Err(_) => {
-            // 恢复窗口位置
-            unsafe {
-                windows::Win32::UI::WindowsAndMessaging::SetWindowPos(
-                    hwnd,
-                    Some(HWND_TOP),
-                    0,
-                    0,
-                    0,
-                    0,
-                    flag,
-                );
-            }
             return Err(());
         }
     };
 
-    // 恢复窗口位置
-    unsafe {
-        windows::Win32::UI::WindowsAndMessaging::SetWindowPos(hwnd, Some(hwnd), 0, 0, 0, 0, flag);
-    }
-
-    Ok(element_rect)
+    Ok(Some(element_rect))
 }

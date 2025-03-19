@@ -6,9 +6,11 @@ import {
     captureCurrentMonitor,
     ElementInfo,
     ElementRect,
+    getElementFromPosition,
     getElementInfo,
     ImageBuffer,
     ImageEncoder,
+    initUiElementsCache,
 } from '@/commands';
 import * as fabric from 'fabric';
 import { getCurrentWindow, Window as AppWindow } from '@tauri-apps/api/window';
@@ -17,11 +19,12 @@ import { zIndexs } from '@/utils/zIndex';
 import { DrawToolbar } from './components/drawToolbar';
 import { EventListenerContext } from '@/components/eventListener';
 import React from 'react';
-import { CaptureStep, DrawState } from './types';
+import { CaptureStep, DrawState, getMaskBackgroundColor } from './types';
 import { theme } from 'antd';
 import { FabricHistory } from '@/utils/fabricjsHistory';
 import { DrawContext } from './context';
 import Flatbush from 'flatbush';
+import StatusBar from './components/statusBar';
 
 type CanvasPosition = {
     left: number;
@@ -36,30 +39,40 @@ type CanvasSize = {
 type DrawContentProps = {
     onCancel: () => void;
     imageBuffer: ImageBuffer | undefined;
-    getElementRectFromMousePosition: (mouseX: number, mouseY: number) => ElementRect[];
+    getElementRectFromMousePosition: (mouseX: number, mouseY: number) => Promise<ElementRect[]>;
+    getElementRectFromMousePositionLoading: boolean;
 };
 
 type SelectWindowFromMousePositionCallback = (
     image: ImageBuffer,
     point: fabric.Point,
-) => {
-    left: number;
-    top: number;
-    width: number;
-    height: number;
-};
+) => Promise<
+    | {
+          left: number;
+          top: number;
+          width: number;
+          height: number;
+      }
+    | undefined
+>;
 
 const DrawContent: React.FC<DrawContentProps> = ({
     onCancel,
     imageBuffer,
     getElementRectFromMousePosition,
+    getElementRectFromMousePositionLoading,
 }) => {
     const { token } = theme.useToken();
 
     const {
         common: { darkMode },
-        screenshot: { controlNode },
+        screenshot: { controlNode, findChildrenElements },
     } = useContext(AppSettingsContext);
+
+    const findChildrenElementsRef = useRef(findChildrenElements);
+    useEffect(() => {
+        findChildrenElementsRef.current = findChildrenElements;
+    }, [findChildrenElements]);
 
     const imageBufferRef = useRef<ImageBuffer | undefined>(undefined);
     useEffect(() => {
@@ -307,26 +320,29 @@ const DrawContent: React.FC<DrawContentProps> = ({
     const selectWindowFromMousePositionLevelRef = useRef(0);
     const selectWindowFromMousePositionCallbackRef =
         useRef<SelectWindowFromMousePositionCallback>(undefined);
+
     useEffect(() => {
-        selectWindowFromMousePositionCallbackRef.current = (
+        selectWindowFromMousePositionCallbackRef.current = async (
             image: ImageBuffer,
             point: fabric.Point,
         ) => {
             const monitorX = image.monitorX;
             const monitorY = image.monitorY;
-            const monitorScale = 1 / image.monitorScaleFactor;
+            const mouseScaleFactor = image.monitorScaleFactor;
+            const monitorScale = 1 / mouseScaleFactor;
             const monitorWidth = image.monitorWidth;
             const monitorHeight = image.monitorHeight;
 
-            const elementRectList = getElementRectFromMousePosition(
-                monitorX * monitorScale + point.x,
-                monitorY * monitorScale + point.y,
+            const mouseX = monitorX + point.x * mouseScaleFactor;
+            const mouseY = monitorY + point.y * mouseScaleFactor;
+            const elementRectList = await getElementRectFromMousePosition(
+                mouseX * monitorScale,
+                mouseY * monitorScale,
             );
 
             const minLevel = 0;
             const maxLevel = Math.max(elementRectList.length - 1, minLevel);
             let currentLevel = selectWindowFromMousePositionLevelRef.current;
-            console.log("currentLevel", currentLevel);
             if (currentLevel < minLevel) {
                 currentLevel = minLevel;
             } else if (currentLevel > maxLevel) {
@@ -339,7 +355,6 @@ const DrawContent: React.FC<DrawContentProps> = ({
                 max_x: monitorWidth * monitorScale,
                 max_y: monitorHeight * monitorScale,
             };
-            console.log("index", elementRectList.length - currentLevel - 1);
 
             return normalizePositionAndSize(
                 lastElementRect.min_x,
@@ -351,6 +366,7 @@ const DrawContent: React.FC<DrawContentProps> = ({
     }, [getElementRectFromMousePosition, normalizePositionAndSize]);
 
     const lastMouseMovePointRef = useRef<fabric.Point | undefined>(undefined);
+    const selectWindowFromMousePositionCallbackPendingRef = useRef(false);
     const onMouseMove = useCallback(
         async (point: fabric.Point) => {
             lastMouseMovePointRef.current = point;
@@ -390,10 +406,16 @@ const DrawContent: React.FC<DrawContentProps> = ({
                         return;
                     }
 
-                    const res = selectWindowFromMousePositionCallbackRef.current?.(
+                    if (selectWindowFromMousePositionCallbackPendingRef.current) {
+                        return;
+                    }
+
+                    selectWindowFromMousePositionCallbackPendingRef.current = true;
+                    const res = await selectWindowFromMousePositionCallbackRef.current?.(
                         imageBuffer,
                         point,
                     );
+                    selectWindowFromMousePositionCallbackPendingRef.current = false;
                     if (!res) {
                         return;
                     }
@@ -718,8 +740,9 @@ const DrawContent: React.FC<DrawContentProps> = ({
 
                 rendered = false;
                 requestAnimationFrame(() => {
-                    rendered = true;
-                    onMouseMove(currentPoint);
+                    onMouseMove(currentPoint).then(() => {
+                        rendered = true;
+                    });
                 });
             });
             mouseUpUnlisten = canvas.on('mouse:up', () => {
@@ -814,7 +837,7 @@ const DrawContent: React.FC<DrawContentProps> = ({
                 height: canvasHeight,
                 left: 0,
                 top: 0,
-                fill: darkMode ? '#434343' : '#000000',
+                fill: getMaskBackgroundColor(darkMode),
                 opacity: 0.5,
                 selectable: false,
                 absolutePositioned: true,
@@ -1243,6 +1266,14 @@ const DrawContent: React.FC<DrawContentProps> = ({
                     ref={canvasRef}
                     style={{ zIndex: zIndexs.Draw_Canvas }}
                 />
+                {imageBuffer && (
+                    <StatusBar
+                        loadingElements={getElementRectFromMousePositionLoading}
+                        captureStep={captureStep}
+                        drawState={drawState}
+                    />
+                )}
+
                 <DrawToolbar
                     step={captureStep}
                     drawState={drawState}
@@ -1288,27 +1319,45 @@ const DrawPage: React.FC = () => {
     const elementInfoRef = useRef<ElementInfo | undefined>(undefined);
     const [elementsRTree, setElementsRTree] = useState<Flatbush | undefined>(undefined);
     const { addListener, removeListener } = useContext(EventListenerContext);
+
+    const {
+        screenshot: { findChildrenElements },
+    } = useContext(AppSettingsContext);
+    const findChildrenElementsRef = useRef<boolean>(false);
+    useEffect(() => {
+        findChildrenElementsRef.current = findChildrenElements;
+    }, [findChildrenElements]);
+
+    const initUiElementsReadyRef = useRef(false);
     useEffect(() => {
         const listenerId = addListener('execute-screenshot', async () => {
+            elementInfoRef.current = undefined;
+            setElementsRTree(undefined);
+            getElementInfo()
+                .then((elementInfo) => {
+                    elementInfoRef.current = elementInfo;
+                    const rTree = new Flatbush(elementInfo.rect_list.length);
+                    const scale = 1 / elementInfo.scale_factor;
+                    elementInfo.rect_list.forEach((rect) => {
+                        rect.min_x *= scale;
+                        rect.min_y *= scale;
+                        rect.max_x *= scale;
+                        rect.max_y *= scale;
+                        rTree.add(rect.min_x, rect.min_y, rect.max_x, rect.max_y);
+                    });
+                    rTree.finish();
+
+                    setElementsRTree(rTree);
+                })
+                .finally(() => {
+                    initUiElementsReadyRef.current = false;
+                    initUiElementsCache().then(() => {
+                        initUiElementsReadyRef.current = true;
+                    });
+                });
+
             captureCurrentMonitor(ImageEncoder.WebP).then((imageBuffer) => {
                 setImageBuffer(imageBuffer);
-            });
-
-            elementInfoRef.current = undefined;
-            getElementInfo().then((elementInfo) => {
-                elementInfoRef.current = elementInfo;
-                const rTree = new Flatbush(elementInfo.rect_list.length);
-                const scale = 1 / elementInfo.scale_factor;
-                elementInfo.rect_list.forEach((rect) => {
-                    rect.min_x *= scale;
-                    rect.min_y *= scale;
-                    rect.max_x *= scale;
-                    rect.max_y *= scale;
-                    rTree.add(rect.min_x, rect.min_y, rect.max_x, rect.max_y);
-                });
-                rTree.finish();
-
-                setElementsRTree(rTree);
             });
         });
         return () => {
@@ -1321,17 +1370,41 @@ const DrawPage: React.FC = () => {
     }, []);
 
     const getElementRectFromMousePosition = useCallback(
-        (mouseX: number, mouseY: number): ElementRect[] => {
+        async (mouseX: number, mouseY: number): Promise<ElementRect[]> => {
             if (!elementsRTree || !elementInfoRef.current) {
                 return [];
+            }
+
+            const scale = 1 / elementInfoRef.current.scale_factor;
+
+            let childrenElementRect = undefined;
+            if (findChildrenElementsRef.current && initUiElementsReadyRef.current) {
+                try {
+                    childrenElementRect = await getElementFromPosition(
+                        Math.round(mouseX / scale),
+                        Math.round(mouseY / scale),
+                    );
+                } catch {
+                    // 获取元素失败，忽略
+                }
             }
 
             const rectIndexs = elementsRTree.search(mouseX, mouseY, mouseX, mouseY);
             rectIndexs.sort((a, b) => a - b);
 
-            return rectIndexs.map((index) => {
+            const result = rectIndexs.map((index) => {
                 return elementInfoRef.current!.rect_list[index];
             });
+
+            if (childrenElementRect) {
+                childrenElementRect.min_x *= scale;
+                childrenElementRect.min_y *= scale;
+                childrenElementRect.max_x *= scale;
+                childrenElementRect.max_y *= scale;
+                result.push(childrenElementRect);
+            }
+
+            return result;
         },
         [elementsRTree],
     );
@@ -1341,6 +1414,7 @@ const DrawPage: React.FC = () => {
             onCancel={reload}
             imageBuffer={imageBuffer}
             getElementRectFromMousePosition={getElementRectFromMousePosition}
+            getElementRectFromMousePositionLoading={elementsRTree === undefined}
         />
     );
 };

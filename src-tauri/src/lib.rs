@@ -1,5 +1,6 @@
 mod app_error;
 mod app_log;
+mod core;
 mod os;
 mod screenshot;
 
@@ -33,9 +34,10 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             screenshot::capture_current_monitor,
             screenshot::get_element_info,
-            screenshot::remove_draw_window_elements,
             screenshot::init_ui_elements,
             screenshot::get_element_from_position,
+            screenshot::init_ui_elements_cache,
+            core::exit_app,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

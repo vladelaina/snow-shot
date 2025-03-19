@@ -27,6 +27,7 @@ import { TrayIconLoader } from './trayIcon';
 import { EventListener } from '@/components/eventListener';
 import { zhHant } from '@/messages/zhHant';
 import { en } from '@/messages/en';
+import { exitApp } from '@/commands';
 
 type MenuItem = Required<MenuProps>['items'][number];
 
@@ -206,7 +207,7 @@ const MenuLayoutCore: React.FC<{ children: React.ReactNode }> = ({ children }) =
                                         if (process.env.NODE_ENV === 'development') {
                                             // appWindowRef.current?.close();
                                         } else {
-                                            appWindowRef.current?.close();
+                                            exitApp();
                                         }
                                     }}
                                 />

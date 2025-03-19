@@ -37,4 +37,7 @@ export const draw = {
     'draw.eraser': '橡皮擦',
     'draw.undo': '撤销',
     'draw.redo': '重做',
+    'draw.autoSelectWindowElement': '自动选取窗口元素',
+    'draw.autoSelectWindowElement.loading': '加载中',
+    'draw.autoSelectWindowElement.loaded': '加载完成',
 };

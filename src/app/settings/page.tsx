@@ -107,6 +107,26 @@ export default function Settings() {
                         </Option>
                     </Select>
                 </Form.Item>
+                <Form.Item
+                    name="findChildrenElements"
+                    label={
+                        <IconLabel
+                            label={<FormattedMessage id="settings.findChildrenElements" />}
+                        />
+                    }
+                    valuePropName="checked"
+                    required={false}
+                    rules={[{ required: true }]}
+                >
+                    <Switch />
+                </Form.Item>
+                <Form.Item
+                    name="performanceMode"
+                    label={<IconLabel label={<FormattedMessage id="settings.performanceMode" />} />}
+                    valuePropName="checked"
+                >
+                    <Switch />
+                </Form.Item>
             </Form>
 
             <style jsx>{`

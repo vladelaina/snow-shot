@@ -334,6 +334,7 @@ const DrawToolbarCore: React.FC<DrawToolbarProps> = ({
             className="draw-toolbar-container"
             style={{
                 opacity: visible ? 1 : 0,
+                pointerEvents: visible ? 'auto' : 'none',
             }}
         >
             <div className="draw-toolbar" ref={drawToolbarRef}>

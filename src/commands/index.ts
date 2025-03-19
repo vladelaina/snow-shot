@@ -67,6 +67,29 @@ export type ElementRect = {
 };
 
 export const getElementInfo = async () => {
-    const result = await invoke<ElementInfo>('get_element_info');
+    const result = await invoke<ElementInfo>('get_element_info', {});
+    return result;
+};
+
+export const initUiElementsCache = async () => {
+    const result = await invoke<void>('init_ui_elements_cache');
+    return result;
+};
+
+export const initUiElements = async () => {
+    const result = await invoke<void>('init_ui_elements');
+    return result;
+};
+
+export const getElementFromPosition = async (mouseX: number, mouseY: number) => {
+    const result = await invoke<ElementRect | undefined>('get_element_from_position', {
+        mouseX,
+        mouseY,
+    });
+    return result;
+};
+
+export const exitApp = async () => {
+    const result = await invoke<void>('exit_app');
     return result;
 };
