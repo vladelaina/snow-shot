@@ -25,7 +25,7 @@
         {
             "label": "draw",
             "fullscreen": false,
-            "title": "Draw",
+            "title": "Snow Shot - Draw",
             "center": true,
             "decorations": false,
             "shadow": false,

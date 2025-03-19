@@ -90,6 +90,8 @@ pub struct UIElements {
     root_element: Option<UIElement>,
     element_cache: RTree<2, i32, ElementLevel>,
     element_level_map: HashMap<ElementLevel, UIElement>,
+    init_window: Option<UIElement>,
+    init_window_runtime_id: Option<Vec<i32>>,
 }
 
 unsafe impl Send for UIElements {}
@@ -101,6 +103,8 @@ impl UIElements {
             automation: None,
             automation_walker: None,
             root_element: None,
+            init_window: None,
+            init_window_runtime_id: None,
             element_cache: RTree::new(),
             element_level_map: HashMap::new(),
         }
@@ -114,9 +118,14 @@ impl UIElements {
         let automation = UIAutomation::new()?;
         let automation_walker = automation.get_raw_view_walker()?;
         let root_element = automation.get_root_element()?;
+        let init_window = automation.element_from_handle(Handle::from(hwnd))?;
+        let init_window_runtime_id = init_window.get_runtime_id()?;
+
         self.automation = Some(automation);
         self.automation_walker = Some(automation_walker);
         self.root_element = Some(root_element);
+        self.init_window = Some(init_window);
+        self.init_window_runtime_id = Some(init_window_runtime_id);
         Ok(())
     }
 
@@ -160,6 +169,16 @@ impl UIElements {
         );
 
         if let Ok(mut first_child) = automation_walker.get_first_child(&root_element) {
+            if first_child
+                .get_runtime_id()?
+                .eq(self.init_window_runtime_id.as_ref().unwrap())
+            {
+                first_child = match automation_walker.get_next_sibling(&first_child) {
+                    Ok(sibling) => sibling,
+                    Err(_) => return Ok(()),
+                };
+            }
+
             current_level.window_index = 0;
             current_level.next_level();
 
@@ -170,6 +189,13 @@ impl UIElements {
                 parent_rtree_rect,
             );
             while let Ok(sibling) = automation_walker.get_next_sibling(&first_child) {
+                if sibling
+                    .get_runtime_id()?
+                    .eq(self.init_window_runtime_id.as_ref().unwrap())
+                {
+                    continue;
+                }
+
                 current_level.window_index += 1;
                 current_level.next_element();
 

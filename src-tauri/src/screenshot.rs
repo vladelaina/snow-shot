@@ -4,7 +4,9 @@ use image::codecs::webp::WebPEncoder;
 use std::sync::Mutex;
 use tauri::command;
 use tauri::ipc::Response;
-use windows::Win32::UI::WindowsAndMessaging::{HWND_BOTTOM, HWND_TOP, WS_EX_TRANSPARENT};
+use windows::Win32::UI::WindowsAndMessaging::{
+    GWL_EXSTYLE, HWND_BOTTOM, HWND_TOP, WS_EX_TRANSPARENT,
+};
 use xcap::{Monitor, Window};
 
 use crate::os::ui_automation::UIElements;
@@ -29,7 +31,7 @@ pub async fn capture_current_monitor(encoder: String) -> Response {
     // 前端也无需再转为 base64 显示
 
     // 编码为指定格式
-    let mut buf = Vec::new();
+    let mut buf = Vec::with_capacity(image_buffer.len() + 10 * 4);
 
     if encoder == "webp" {
         image_buffer
@@ -51,6 +53,8 @@ pub async fn capture_current_monitor(encoder: String) -> Response {
     let monitor_width_bytes = monitor.width().unwrap_or(0).to_le_bytes();
     let monitor_height_bytes = monitor.height().unwrap_or(0).to_le_bytes();
     let monitor_scale_factor_bytes = monitor.scale_factor().unwrap_or(0.0).to_le_bytes();
+    let mouse_x_bytes = mouse_x.to_le_bytes();
+    let mouse_y_bytes = mouse_y.to_le_bytes();
 
     buf.push(monitor_x_bytes[0]);
     buf.push(monitor_x_bytes[1]);
@@ -76,6 +80,16 @@ pub async fn capture_current_monitor(encoder: String) -> Response {
     buf.push(monitor_scale_factor_bytes[1]);
     buf.push(monitor_scale_factor_bytes[2]);
     buf.push(monitor_scale_factor_bytes[3]);
+
+    buf.push(mouse_x_bytes[0]);
+    buf.push(mouse_x_bytes[1]);
+    buf.push(mouse_x_bytes[2]);
+    buf.push(mouse_x_bytes[3]);
+
+    buf.push(mouse_y_bytes[0]);
+    buf.push(mouse_y_bytes[1]);
+    buf.push(mouse_y_bytes[2]);
+    buf.push(mouse_y_bytes[3]);
 
     return Response::new(buf);
 }
@@ -175,6 +189,7 @@ pub async fn get_element_info() -> Result<ElementInfo, ()> {
 #[command]
 pub async fn get_element_from_position(
     ui_elements: tauri::State<'_, Mutex<UIElements>>,
+    window: tauri::Window,
     mouse_x: i32,
     mouse_y: i32,
 ) -> Result<Option<ElementRect>, ()> {
@@ -185,6 +200,5 @@ pub async fn get_element_from_position(
             return Err(());
         }
     };
-
     Ok(Some(element_rect))
 }

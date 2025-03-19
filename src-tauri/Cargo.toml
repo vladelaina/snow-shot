@@ -36,3 +36,6 @@ thiserror = "2.0.12"
 static_aabb2d_index = "2.0.0"
 uiautomation = "0.17.1"
 rtree_rs = "0.1.4"
+
+[target.'cfg(not(any(target_os = "android", target_os = "ios")))'.dependencies]
+tauri-plugin-global-shortcut = "2"
