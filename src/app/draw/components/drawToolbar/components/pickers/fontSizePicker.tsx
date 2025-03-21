@@ -1,7 +1,8 @@
-import { Button, Flex, Select, theme, Tooltip } from 'antd';
+import { Button, Flex, Select, theme } from 'antd';
 import { useCallback, useEffect, useRef } from 'react';
 import { withPickerBase } from './pickerBase';
 import { WidthIcon } from './lineWidthPicker';
+import { ToolbarTip } from '../../../toolbarTip';
 
 export type FontSizePickerValue = {
     size: number;
@@ -46,7 +47,7 @@ const FontSizePickerComponent: React.FC<{
 
     return (
         <Flex align="center" gap={token.marginXXS}>
-            <Tooltip title={`${value.size}px`}>
+            <ToolbarTip destroyTooltipOnHide title={`${value.size}px`}>
                 <Button
                     icon={<WidthIcon width={value.size} maxWidth={0} />}
                     type="dashed"
@@ -54,7 +55,7 @@ const FontSizePickerComponent: React.FC<{
                     onMouseLeave={() => (isHoveredRef.current = false)}
                     onWheel={onWheel}
                 />
-            </Tooltip>
+            </ToolbarTip>
             <Select
                 size="small"
                 defaultValue={value.size}

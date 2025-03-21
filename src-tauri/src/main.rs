@@ -29,11 +29,11 @@ fn main() {
     // let device_state = DeviceEventsHandler::new(Duration::from_millis(1000 / 60))
     //     .expect("Failed to start event loop");
 
-    // // Register a key down event callback
-    // // The guard is used to keep the callback alive
+    // Register a key down event callback
+    // The guard is used to keep the callback alive
 
     // let mut ui_elements = os::ui_automation::UIElements::new();
-    // ui_elements.init().unwrap();
+    // ui_elements.init(None).unwrap();
     // ui_elements.init_cache().unwrap();
 
     // println!("init cache");
@@ -66,12 +66,16 @@ fn main() {
     //         Err(_) => return,
     //     };
 
+    //     println!("rect: {:?}", rect);
+
+    //     let last_rect = rect.first().unwrap();
+
     //     println!(
     //         "element: left {}, top {}, width {}, height {}",
-    //         rect.min_x,
-    //         rect.min_y,
-    //         rect.max_x - rect.min_x,
-    //         rect.max_y - rect.min_y
+    //         last_rect.min_x,
+    //         last_rect.min_y,
+    //         last_rect.max_x - last_rect.min_x,
+    //         last_rect.max_y - last_rect.min_y
     //     );
     // });
 

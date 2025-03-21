@@ -3,7 +3,7 @@
 import { createContext, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { BaseDirectory, exists, mkdir, readTextFile, writeTextFile } from '@tauri-apps/plugin-fs';
 import { ConfigProvider, theme } from 'antd';
-import _ from 'lodash';
+import _, { trim } from 'lodash';
 import zhCN from 'antd/es/locale/zh_CN';
 import zhTW from 'antd/es/locale/zh_TW';
 import enUS from 'antd/es/locale/en_US';
@@ -77,12 +77,18 @@ import {
     defaultEnableRadiusValue,
     EnableRadiusValue,
 } from './draw/components/drawToolbar/components/pickers/enableRadiusPicker';
+import {
+    defaultKeyEventSettings,
+    KeyEventKey,
+    KeyEventValue,
+} from './draw/components/drawToolbar/components/keyEventWrap';
 
 export enum AppSettingsGroup {
     Common = 'common',
     Cache = 'cache',
     Screenshot = 'screenshot',
     DrawToolbarPicker = 'drawToolbarPicker',
+    DrawToolbarKeyEvent = 'drawToolbarKeyEvent',
 }
 
 export enum AppSettingsLanguage {
@@ -132,9 +138,10 @@ export type AppSettingsData = {
         arrowConfigPicker: Record<string, ArrowConfigValue>;
         enableRadiusPicker: Record<string, EnableRadiusValue>;
     };
+    [AppSettingsGroup.DrawToolbarKeyEvent]: Record<KeyEventKey, KeyEventValue>;
 };
 
-const defaultAppSettingsData: AppSettingsData = {
+export const defaultAppSettingsData: AppSettingsData = {
     [AppSettingsGroup.Common]: {
         darkMode: false,
         language: AppSettingsLanguage.ZHHans,
@@ -142,7 +149,7 @@ const defaultAppSettingsData: AppSettingsData = {
     },
     [AppSettingsGroup.Screenshot]: {
         controlNode: AppSettingsControlNode.Polyline,
-        findChildrenElements: false,
+        findChildrenElements: true,
         performanceMode: false,
     },
     [AppSettingsGroup.Cache]: {
@@ -166,6 +173,7 @@ const defaultAppSettingsData: AppSettingsData = {
         arrowConfigPicker: {},
         enableRadiusPicker: {},
     },
+    [AppSettingsGroup.DrawToolbarKeyEvent]: defaultKeyEventSettings,
 };
 
 export type AppSettingsContextType = AppSettingsData & {
@@ -592,6 +600,54 @@ export const ContextWrap: React.FC<{ children: React.ReactNode }> = ({ children 
                         ...prevSettings?.enableRadiusPicker,
                         ...enableRadiusPickerSettings,
                     },
+                };
+            } else if (group === AppSettingsGroup.DrawToolbarKeyEvent) {
+                newSettings = newSettings as AppSettingsData[typeof group];
+                const prevSettings = appSettingsRef.current[group] as
+                    | AppSettingsData[typeof group]
+                    | undefined;
+
+                const settingsKeySet = new Set<string>();
+                const settingKeys: KeyEventKey[] = Object.keys(
+                    defaultKeyEventSettings,
+                ) as KeyEventKey[];
+                settingKeys.forEach((key) => {
+                    const keyEventSettings = newSettings as Record<KeyEventKey, KeyEventValue>;
+
+                    let keyEventSettingsKey =
+                        typeof keyEventSettings[key]?.key === 'string'
+                            ? keyEventSettings[key].key
+                            : (prevSettings?.[key]?.key ?? defaultKeyEventSettings[key].key);
+
+                    // 格式化处理下
+                    keyEventSettingsKey = keyEventSettingsKey
+                        .split(',')
+                        .map(trim)
+                        .filter((val) => {
+                            if (settingsKeySet.has(val)) {
+                                return false;
+                            }
+
+                            settingsKeySet.add(val);
+                            return true;
+                        })
+                        .join(', ');
+
+                    settingsKeySet.add(keyEventSettingsKey);
+
+                    keyEventSettings[key] = {
+                        messageId:
+                            typeof keyEventSettings[key]?.messageId === 'string'
+                                ? keyEventSettings[key].messageId
+                                : (prevSettings?.[key]?.messageId ??
+                                  defaultKeyEventSettings[key].messageId),
+                        key: keyEventSettingsKey,
+                    };
+                });
+
+                settings = {
+                    ...defaultKeyEventSettings,
+                    ...newSettings,
                 };
             } else {
                 return defaultAppSettingsData[group];

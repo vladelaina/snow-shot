@@ -1,14 +1,21 @@
-import { theme } from 'antd';
+import { InfoCircleOutlined } from '@ant-design/icons';
+import { theme, Tooltip } from 'antd';
 
-export const IconLabel: React.FC<{ icon?: React.ReactNode; label: React.ReactNode }> = ({
-    icon,
-    label,
-}) => {
+export const IconLabel: React.FC<{
+    icon?: React.ReactNode;
+    label: React.ReactNode;
+    tooltipTitle?: React.ReactNode;
+}> = ({ icon, label, tooltipTitle }) => {
     const { token } = theme.useToken();
     return (
         <div className="icon-label">
             <div className="icon-label-label">{label}</div>
             {icon && <div className="icon-label-icon">{icon}</div>}
+            {tooltipTitle && (
+                <Tooltip title={tooltipTitle}>
+                    <InfoCircleOutlined style={{ marginLeft: token.marginXXS }} />
+                </Tooltip>
+            )}
 
             <style jsx>{`
                 .icon-label {

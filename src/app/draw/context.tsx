@@ -14,6 +14,7 @@ export const DrawContext = createContext<{
     canvasCursorRef: RefObject<string>;
     canvasUnlistenListRef: RefObject<VoidFunction[]>;
     imageLayerRef: RefObject<fabric.Image | undefined>;
+    objectCacheRef: RefObject<Record<string, fabric.Object>>;
     canvasHistoryRef: RefObject<FabricHistory | undefined>;
 }>({
     fabricRef: { current: undefined },
@@ -26,5 +27,6 @@ export const DrawContext = createContext<{
     canvasCursorRef: { current: 'auto' },
     canvasUnlistenListRef: { current: [] },
     imageLayerRef: { current: undefined },
+    objectCacheRef: { current: {} },
     canvasHistoryRef: { current: undefined },
 });

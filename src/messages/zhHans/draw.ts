@@ -40,4 +40,6 @@ export const draw = {
     'draw.autoSelectWindowElement': '自动选取窗口元素',
     'draw.autoSelectWindowElement.loading': '加载中',
     'draw.autoSelectWindowElement.loaded': '加载完成',
+    'draw.keyEventTooltip': '{message}（快捷键：{key}）',
+    'draw.cancel.tip1': '确定取消截图吗？',
 };

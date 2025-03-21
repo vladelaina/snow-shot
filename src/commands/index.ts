@@ -12,6 +12,8 @@ export type ImageBuffer = {
     monitorWidth: number;
     monitorHeight: number;
     monitorScaleFactor: number;
+    mouseX: number;
+    mouseY: number;
     data: Blob;
 };
 
@@ -24,7 +26,7 @@ export const captureCurrentMonitor = async (encoder: ImageEncoder): Promise<Imag
     });
 
     // 将屏幕信息和图像数据分离
-    const monitorInfoLength = 20;
+    const monitorInfoLength = 28;
     const imageDataLength = result.byteLength - monitorInfoLength;
 
     // 提取屏幕信息
@@ -34,6 +36,8 @@ export const captureCurrentMonitor = async (encoder: ImageEncoder): Promise<Imag
     const monitorWidth = screenInfoView.getUint32(8, true); // u32
     const monitorHeight = screenInfoView.getUint32(12, true); // u32
     const monitorScaleFactor = screenInfoView.getFloat32(16, true); // f32
+    const mouseX = screenInfoView.getInt32(20, true); // i32
+    const mouseY = screenInfoView.getInt32(24, true); // i32
 
     return {
         encoder,
@@ -42,6 +46,8 @@ export const captureCurrentMonitor = async (encoder: ImageEncoder): Promise<Imag
         monitorWidth,
         monitorHeight,
         monitorScaleFactor,
+        mouseX,
+        mouseY,
         data: new Blob([result]),
     };
 };
@@ -82,7 +88,7 @@ export const initUiElements = async () => {
 };
 
 export const getElementFromPosition = async (mouseX: number, mouseY: number) => {
-    const result = await invoke<ElementRect | undefined>('get_element_from_position', {
+    const result = await invoke<ElementRect[]>('get_element_from_position', {
         mouseX,
         mouseY,
     });

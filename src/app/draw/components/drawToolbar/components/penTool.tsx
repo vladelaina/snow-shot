@@ -13,7 +13,7 @@ import * as fabric from 'fabric';
 import { DrawContext } from '@/app/draw/context';
 import { CircleCursor } from './pickers/components/circleCursor';
 
-export const PenToolbar: React.FC = () => {
+export const PenTool: React.FC = () => {
     const { fabricRef } = useContext(DrawContext);
     const [width, setWidth] = useState<LineWidthPickerValue>(defaultLineWidthPickerValue);
     const [color, setColor] = useState<LineColorPickerValue>(defaultLineColorPickerValue);

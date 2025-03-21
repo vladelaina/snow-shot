@@ -1,8 +1,9 @@
-import { Button, Tooltip } from 'antd';
+import { Button } from 'antd';
 import { getButtonTypeByState } from '../..';
 import { FormattedMessage } from 'react-intl';
 import { withPickerBase } from './pickerBase';
 import { RadiusSettingOutlined } from '@ant-design/icons';
+import { ToolbarTip } from '../../../toolbarTip';
 
 export type EnableRadiusValue = {
     enable: boolean;
@@ -17,7 +18,7 @@ const EnableRadiusPickerComponent: React.FC<{
     setValue: React.Dispatch<React.SetStateAction<EnableRadiusValue>>;
 }> = ({ value, setValue }) => {
     return (
-        <Tooltip title={<FormattedMessage id="draw.enableRadius" />}>
+        <ToolbarTip destroyTooltipOnHide title={<FormattedMessage id="draw.enableRadius" />}>
             <Button
                 icon={<RadiusSettingOutlined />}
                 type={getButtonTypeByState(value.enable)}
@@ -25,7 +26,7 @@ const EnableRadiusPickerComponent: React.FC<{
                     setValue((prev) => ({ enable: !prev.enable }));
                 }}
             />
-        </Tooltip>
+        </ToolbarTip>
     );
 };
 

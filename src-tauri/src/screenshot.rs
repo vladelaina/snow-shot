@@ -4,9 +4,6 @@ use image::codecs::webp::WebPEncoder;
 use std::sync::Mutex;
 use tauri::command;
 use tauri::ipc::Response;
-use windows::Win32::UI::WindowsAndMessaging::{
-    GWL_EXSTYLE, HWND_BOTTOM, HWND_TOP, WS_EX_TRANSPARENT,
-};
 use xcap::{Monitor, Window};
 
 use crate::os::ui_automation::UIElements;
@@ -104,7 +101,10 @@ pub async fn init_ui_elements(
         Err(_) => return Err(()),
     };
 
-    match ui_elements.init(window.hwnd().unwrap()) {
+    match ui_elements.init(match window.hwnd() {
+        Ok(hwnd) => Some(hwnd),
+        Err(_) => None,
+    }) {
         Ok(_) => Ok(()),
         Err(_) => Err(()),
     }
@@ -189,16 +189,16 @@ pub async fn get_element_info() -> Result<ElementInfo, ()> {
 #[command]
 pub async fn get_element_from_position(
     ui_elements: tauri::State<'_, Mutex<UIElements>>,
-    window: tauri::Window,
     mouse_x: i32,
     mouse_y: i32,
-) -> Result<Option<ElementRect>, ()> {
+) -> Result<Vec<ElementRect>, ()> {
     let mut ui_elements = ui_elements.lock().unwrap();
-    let element_rect = match ui_elements.get_element_from_point_walker(mouse_x, mouse_y) {
+    let element_rect_list = match ui_elements.get_element_from_point_walker(mouse_x, mouse_y) {
         Ok(element_rect) => element_rect,
         Err(_) => {
             return Err(());
         }
     };
-    Ok(Some(element_rect))
+
+    Ok(element_rect_list)
 }

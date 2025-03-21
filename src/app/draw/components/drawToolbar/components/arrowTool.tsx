@@ -27,7 +27,7 @@ export type ArrowStyleConfig = {
     bodyWidth: number;
 };
 
-export const ArrowToolbar: React.FC = () => {
+export const ArrowTool: React.FC = () => {
     const { fabricRef } = useContext(DrawContext);
     const [, setWidth, widthRef] = useStateRef<LineWidthPickerValue>(defaultLineWidthPickerValue);
     const [, setColor, colorRef] = useStateRef<LineColorPickerValue>(defaultLineColorPickerValue);
@@ -141,6 +141,7 @@ export const ArrowToolbar: React.FC = () => {
                     strokeLineJoin: enableRadiusRef.current.enable ? 'round' : 'miter',
                     strokeLineCap: enableRadiusRef.current.enable ? 'round' : 'square',
                 });
+                console.log(plineRef.current.toSVG());
                 canvas.add(plineRef.current);
             }
 

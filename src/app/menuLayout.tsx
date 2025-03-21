@@ -10,8 +10,7 @@ import React, {
     useState,
 } from 'react';
 import { AppstoreOutlined, CloseOutlined, MinusOutlined, SettingOutlined } from '@ant-design/icons';
-import type { MenuProps } from 'antd';
-import { Button, Layout, Menu, Space, theme } from 'antd';
+import { Button, Layout, Menu, Space, TabsProps, theme } from 'antd';
 import { useRouter } from 'next/navigation';
 const { Content, Sider } = Layout;
 import { usePathname } from 'next/navigation';
@@ -28,8 +27,10 @@ import { EventListener } from '@/components/eventListener';
 import { zhHant } from '@/messages/zhHant';
 import { en } from '@/messages/en';
 import { exitApp } from '@/commands';
+import { ItemType, MenuItemType } from 'antd/es/menu/interface';
+import { PageNav, PageNavActionType } from './components/pageNav';
 
-type MenuItem = Required<MenuProps>['items'][number];
+type MenuItem = ItemType<MenuItemType>;
 
 export const MenuLayoutContext = createContext<{
     noLayout: boolean;
@@ -41,8 +42,21 @@ export const MenuLayoutContext = createContext<{
     pathname: '/',
 });
 
+type RouteItem = {
+    key: string;
+    path: string | undefined;
+    label: string;
+    icon?: React.ReactNode;
+    children?: RouteItem[];
+    tabs?: TabsProps['items'];
+};
+
 const MenuLayoutCore: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     useEffect(() => {
+        if (process.env.NODE_ENV !== 'development') {
+            return;
+        }
+
         const zhHansKeys = Object.keys(zhHans);
         const zhHantKeys = new Set(Object.keys(zhHant));
         const enKeys = new Set(Object.keys(en));
@@ -108,40 +122,106 @@ const MenuLayoutCore: React.FC<{ children: React.ReactNode }> = ({ children }) =
     );
 
     const { token } = theme.useToken();
+
     const router = useRouter();
-    const { menuItems } = useMemo(() => {
-        const routes = [
+    const routes = useMemo(() => {
+        const routes: RouteItem[] = [
             {
+                key: '/',
                 path: '/',
                 label: intl.formatMessage({ id: 'menu.functions' }),
                 icon: <AppstoreOutlined />,
+                tabs: [
+                    {
+                        key: 'commonFunction',
+                        label: intl.formatMessage({ id: 'home.commonFunction' }),
+                    },
+                ],
             },
             {
-                path: '/settings',
+                key: '/settings',
+                path: undefined,
                 label: intl.formatMessage({ id: 'menu.settings' }),
                 icon: <SettingOutlined />,
+                tabs: [],
+                children: [
+                    {
+                        key: '/settings/generalSettings',
+                        path: '/settings/generalSettings',
+                        label: intl.formatMessage({ id: 'menu.settings.generalSettings' }),
+                        tabs: [
+                            {
+                                key: 'commonSettings',
+                                label: intl.formatMessage({ id: 'settings.commonSettings' }),
+                            },
+                            {
+                                key: 'screenshotSettings',
+                                label: intl.formatMessage({ id: 'settings.screenshotSettings' }),
+                            },
+                        ],
+                    },
+                    {
+                        key: '/settings/hotKeySettings',
+                        path: '/settings/hotKeySettings',
+                        label: intl.formatMessage({ id: 'menu.settings.hotKeySettings' }),
+                        tabs: [
+                            {
+                                key: 'drawToolbarKeyEvent',
+                                label: intl.formatMessage({ id: 'settings.drawingHotKey' }),
+                            },
+                        ],
+                    },
+                ],
             },
         ];
 
-        const menuItems = routes.map(
-            (route): MenuItem => ({
-                key: route.path,
+        return routes;
+    }, [intl]);
+    const { menuItems, routeTabsMap } = useMemo(() => {
+        const routeTabsMap: Record<string, TabsProps['items']> = {};
+
+        const convertToMenuItem = (route: RouteItem): MenuItem => {
+            const menuItem: MenuItem = {
+                key: route.key,
                 label: route.label,
                 icon: route.icon,
                 onClick: () => {
+                    if (!route.path) {
+                        return;
+                    }
+
                     router.push(route.path);
                 },
-            }),
-        );
+                children: undefined as unknown as MenuItem[],
+            };
 
-        return { menuItems, routes };
-    }, [intl, router]);
+            if (route.children?.length) {
+                menuItem.children = route.children.map((child) => convertToMenuItem(child));
+            }
+
+            if (route.path && route.tabs?.length) {
+                routeTabsMap[route.path] = route.tabs;
+            }
+
+            return menuItem;
+        };
+
+        const menuItems = Object.values(routes).map(convertToMenuItem);
+
+        return { menuItems, routeTabsMap };
+    }, [router, routes]);
 
     const appWindowRef = useRef<AppWindow | undefined>(undefined);
     useEffect(() => {
         appWindowRef.current = getCurrentWindow();
     }, []);
 
+    const tabItems = useMemo(() => {
+        return routeTabsMap[pathname] ?? routeTabsMap['/'] ?? [];
+    }, [pathname, routeTabsMap]);
+
+    const contentRef = useRef<HTMLDivElement>(null);
+    const pageNavActionRef = useRef<PageNavActionType | null>(null);
     return (
         <>
             <TrayIconLoader />
@@ -220,8 +300,22 @@ const MenuLayoutCore: React.FC<{ children: React.ReactNode }> = ({ children }) =
                                 <div data-tauri-drag-region></div>
                                 <div data-tauri-drag-region></div>
                                 <div className="center">
-                                    <RSC>
-                                        <div className="content-container">{children}</div>
+                                    <PageNav tabItems={tabItems} actionRef={pageNavActionRef} />
+                                    <RSC
+                                        onScroll={(e) => {
+                                            if (
+                                                'scrollTop' in e &&
+                                                typeof e.scrollTop === 'number'
+                                            ) {
+                                                pageNavActionRef.current?.updateActiveKey(
+                                                    e.scrollTop,
+                                                );
+                                            }
+                                        }}
+                                    >
+                                        <div ref={contentRef} className="content-container">
+                                            {children}
+                                        </div>
                                     </RSC>
                                 </div>
                                 <div data-tauri-drag-region></div>
@@ -293,12 +387,13 @@ const MenuLayoutCore: React.FC<{ children: React.ReactNode }> = ({ children }) =
                     .center {
                         grid-column: 2;
                         grid-row: 2;
-                        height: 100%;
-                        overflow-y: scroll;
+                        overflow-y: hidden;
                         overflow-x: hidden;
                         border-radius: ${token.borderRadiusLG}px;
                         background-color: ${token.colorBgContainer} !important;
                         padding: ${token.padding}px ${token.borderRadiusLG}px;
+                        display: flex;
+                        flex-direction: column;
                     }
 
                     .center::-webkit-scrollbar {

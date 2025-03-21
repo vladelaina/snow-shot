@@ -34,7 +34,7 @@ import {
     FontFamilyPickerValue,
 } from './pickers/fontFamilyPicker';
 
-export const TextToolbar: React.FC = () => {
+export const TextTool: React.FC = () => {
     const { fabricRef } = useContext(DrawContext);
     const [, setColor, colorRef] = useStateRef<LineColorPickerValue>(defaultLineColorPickerValue);
     const [, setFontSize, fontSizeRef] = useStateRef(defaultFontSizePickerValue);

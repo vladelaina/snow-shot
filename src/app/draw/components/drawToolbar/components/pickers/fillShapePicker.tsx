@@ -1,8 +1,9 @@
 import { FillIcon } from '@/components/icons';
-import { Button, Tooltip } from 'antd';
+import { Button } from 'antd';
 import { getButtonTypeByState } from '../..';
 import { FormattedMessage } from 'react-intl';
 import { withPickerBase, WithPickerBaseProps } from './pickerBase';
+import { ToolbarTip } from '../../../toolbarTip';
 
 export type FillShapePickerValue = {
     fill: boolean;
@@ -17,13 +18,13 @@ const FillShapePickerComponent: React.FC<WithPickerBaseProps<FillShapePickerValu
     setValue,
 }) => {
     return (
-        <Tooltip title={<FormattedMessage id="draw.fillShape" />}>
+        <ToolbarTip destroyTooltipOnHide title={<FormattedMessage id="draw.fillShape" />}>
             <Button
                 icon={<FillIcon style={{ fontSize: '0.83em' }} />}
                 type={getButtonTypeByState(value.fill)}
                 onClick={() => setValue((prev) => ({ fill: !prev.fill }))}
             />
-        </Tooltip>
+        </ToolbarTip>
     );
 };
 

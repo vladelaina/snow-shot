@@ -100,6 +100,7 @@ checksum = "6b964d184e89d9b6b67dd2715bc8e74cf3107fb2b529990c90cf517326150bf4"
 name = "app"
 version = "0.1.0"
 dependencies = [
+ "atree",
  "device_query",
  "image",
  "log",
@@ -163,6 +164,12 @@ dependencies = [
  "libc",
  "system-deps",
 ]
+
+[[package]]
+name = "atree"
+version = "0.5.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "132573478eb9ff973c6f75d0ed425ac12da77d266506483345f46743ecc83a98"
 
 [[package]]
 name = "autocfg"
