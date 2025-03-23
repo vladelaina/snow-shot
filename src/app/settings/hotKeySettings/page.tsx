@@ -2,6 +2,7 @@
 
 import { AppSettingsContext, AppSettingsData, AppSettingsGroup } from '@/app/contextWrap';
 import {
+    defaultKeyEventComponentConfig,
     defaultKeyEventSettings,
     KeyEventKey,
 } from '@/app/draw/components/drawToolbar/components/keyEventWrap';
@@ -34,20 +35,24 @@ export default function Settings() {
         return Object.keys(defaultKeyEventSettings).map((key) => {
             const span = 12;
             const config = drawToolbarKeyEvent[key as KeyEventKey];
+            const componentConfig = defaultKeyEventComponentConfig[key as KeyEventKey];
             return (
                 <Col key={`draw-toolbar-key-event_col-${key}`} span={span}>
-                    <Form.Item label={<FormattedMessage id={config.messageId} />} name={key}>
+                    <Form.Item
+                        label={<FormattedMessage id={componentConfig.messageId} />}
+                        name={key}
+                    >
                         <KeyButton
-                            title={<FormattedMessage key={key} id={config.messageId} />}
-                            keyValue={config.key}
+                            title={<FormattedMessage key={key} id={componentConfig.messageId} />}
+                            keyValue={config.hotKey}
                             maxWidth={100}
-                            onKeyChange={(value) => {
+                            onKeyChange={async (value) => {
                                 updateAppSettings(
                                     AppSettingsGroup.DrawToolbarKeyEvent,
                                     {
                                         [key]: {
                                             ...config,
-                                            key: value,
+                                            hotKey: value,
                                         },
                                     },
                                     false,
@@ -55,6 +60,7 @@ export default function Settings() {
                                     true,
                                 );
                             }}
+                            maxLength={2}
                         />
                     </Form.Item>
                 </Col>

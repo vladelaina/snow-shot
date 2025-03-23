@@ -7,6 +7,10 @@ export const zIndexs = {
     Draw_Canvas: 0,
     /** 截图绘制光标 */
     Draw_Cursor: 1,
+    /** 截图状态栏 */
+    Draw_StatusBar: 2,
+    /** 截图颜色选择器 */
+    Draw_ColorPicker: 3,
     /** 截图绘制工具栏 */
-    Draw_Toolbar: 2,
+    Draw_Toolbar: 4,
 };

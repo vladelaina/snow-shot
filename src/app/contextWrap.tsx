@@ -82,6 +82,7 @@ import {
     KeyEventKey,
     KeyEventValue,
 } from './draw/components/drawToolbar/components/keyEventWrap';
+import { AppFunction, AppFunctionConfig, defaultAppFunctionConfigs } from './page';
 
 export enum AppSettingsGroup {
     Common = 'common',
@@ -89,6 +90,7 @@ export enum AppSettingsGroup {
     Screenshot = 'screenshot',
     DrawToolbarPicker = 'drawToolbarPicker',
     DrawToolbarKeyEvent = 'drawToolbarKeyEvent',
+    AppFunction = 'appFunction',
 }
 
 export enum AppSettingsLanguage {
@@ -139,6 +141,7 @@ export type AppSettingsData = {
         enableRadiusPicker: Record<string, EnableRadiusValue>;
     };
     [AppSettingsGroup.DrawToolbarKeyEvent]: Record<KeyEventKey, KeyEventValue>;
+    [AppSettingsGroup.AppFunction]: Record<AppFunction, AppFunctionConfig>;
 };
 
 export const defaultAppSettingsData: AppSettingsData = {
@@ -174,6 +177,7 @@ export const defaultAppSettingsData: AppSettingsData = {
         enableRadiusPicker: {},
     },
     [AppSettingsGroup.DrawToolbarKeyEvent]: defaultKeyEventSettings,
+    [AppSettingsGroup.AppFunction]: defaultAppFunctionConfigs,
 };
 
 export type AppSettingsContextType = AppSettingsData & {
@@ -615,9 +619,9 @@ export const ContextWrap: React.FC<{ children: React.ReactNode }> = ({ children 
                     const keyEventSettings = newSettings as Record<KeyEventKey, KeyEventValue>;
 
                     let keyEventSettingsKey =
-                        typeof keyEventSettings[key]?.key === 'string'
-                            ? keyEventSettings[key].key
-                            : (prevSettings?.[key]?.key ?? defaultKeyEventSettings[key].key);
+                        typeof keyEventSettings[key]?.hotKey === 'string'
+                            ? keyEventSettings[key].hotKey
+                            : (prevSettings?.[key]?.hotKey ?? defaultKeyEventSettings[key].hotKey);
 
                     // 格式化处理下
                     keyEventSettingsKey = keyEventSettingsKey
@@ -636,17 +640,57 @@ export const ContextWrap: React.FC<{ children: React.ReactNode }> = ({ children 
                     settingsKeySet.add(keyEventSettingsKey);
 
                     keyEventSettings[key] = {
-                        messageId:
-                            typeof keyEventSettings[key]?.messageId === 'string'
-                                ? keyEventSettings[key].messageId
-                                : (prevSettings?.[key]?.messageId ??
-                                  defaultKeyEventSettings[key].messageId),
-                        key: keyEventSettingsKey,
+                        hotKey: keyEventSettingsKey,
                     };
                 });
 
                 settings = {
                     ...defaultKeyEventSettings,
+                    ...newSettings,
+                };
+            } else if (group === AppSettingsGroup.AppFunction) {
+                newSettings = newSettings as AppSettingsData[typeof group];
+                const prevSettings = appSettingsRef.current[group] as
+                    | AppSettingsData[typeof group]
+                    | undefined;
+
+                const settingsKeySet = new Set<string>();
+                const settingKeys: AppFunction[] = Object.keys(
+                    defaultAppFunctionConfigs,
+                ) as AppFunction[];
+                settingKeys.forEach((key) => {
+                    const keyEventSettings = newSettings as Record<AppFunction, AppFunctionConfig>;
+
+                    let keyEventSettingsKey =
+                        typeof keyEventSettings[key]?.shortcutKey === 'string'
+                            ? keyEventSettings[key].shortcutKey
+                            : (prevSettings?.[key]?.shortcutKey ??
+                              defaultAppFunctionConfigs[key].shortcutKey);
+
+                    // 格式化处理下
+                    keyEventSettingsKey = keyEventSettingsKey
+                        .split(',')
+                        .slice(0, 1) // 快捷键不支持多个键，这里也限制下
+                        .map(trim)
+                        .filter((val) => {
+                            if (settingsKeySet.has(val)) {
+                                return false;
+                            }
+
+                            settingsKeySet.add(val);
+                            return true;
+                        })
+                        .join(', ');
+
+                    settingsKeySet.add(keyEventSettingsKey);
+
+                    keyEventSettings[key] = {
+                        shortcutKey: keyEventSettingsKey,
+                    };
+                });
+
+                settings = {
+                    ...defaultAppFunctionConfigs,
                     ...newSettings,
                 };
             } else {

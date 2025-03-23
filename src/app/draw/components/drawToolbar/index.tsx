@@ -7,6 +7,7 @@ import { Button, Flex, theme } from 'antd';
 import { FormattedMessage, useIntl } from 'react-intl';
 import {
     CloseOutlined,
+    DeleteOutlined,
     DragOutlined,
     HighlightOutlined,
     HolderOutlined,
@@ -34,12 +35,14 @@ import { ArrowTool } from './components/arrowTool';
 import { EraserTool } from './components/eraserTool';
 import { KeyEventKey, KeyEventWrap } from './components/keyEventWrap';
 import { ToolbarTip } from '../toolbarTip';
+import * as fabric from 'fabric';
 
 export type DrawToolbarProps = {
     step: CaptureStep;
     drawState: DrawState;
     setDrawState: (val: DrawState | ((prev: DrawState) => DrawState)) => void;
     onCancel: () => void;
+    enable: boolean;
 };
 
 export const getButtonTypeByState = (active: boolean) => {
@@ -51,7 +54,13 @@ const DrawToolbarCore: React.FC<DrawToolbarProps> = ({
     drawState,
     setDrawState,
     onCancel,
+    enable,
 }) => {
+    const enableRef = useRef(enable);
+    useEffect(() => {
+        enableRef.current = enable;
+    }, [enable]);
+
     const intl = useIntl();
 
     const { fabricRef, maskRectRef, maskRectClipPathRef, canvasHistoryRef } =
@@ -163,10 +172,10 @@ const DrawToolbarCore: React.FC<DrawToolbarProps> = ({
             }
 
             renderedRef.current = false;
-            drawToolbar.style.willChange = 'transform';
-            drawSubToolbar.style.willChange = 'transform, opacity';
             requestAnimationFrame(() => {
                 renderedRef.current = true;
+                drawToolbar.style.willChange = 'transform';
+                drawSubToolbar.style.willChange = 'transform, opacity';
                 drawToolbar.style.transform = `translate(${drawToolbarStyleRef.current.left}px, ${drawToolbarStyleRef.current.top}px)`;
                 drawSubToolbar.style.transform = `translate(${drawSubToolbarStyleRef.current.left}px, ${drawSubToolbarStyleRef.current.top}px)`;
                 drawSubToolbar.style.opacity = drawSubToolbarStyleRef.current.opacity;
@@ -356,6 +365,28 @@ const DrawToolbarCore: React.FC<DrawToolbarProps> = ({
         },
         [setDrawState],
     );
+
+    const selectedObjectListRef = useRef<fabric.Object[]>([]);
+    useEffect(() => {
+        const canvas = fabricRef.current;
+        if (!canvas) {
+            return;
+        }
+
+        const selectionCreatedUnlisten = canvas.on('selection:created', (e) => {
+            selectedObjectListRef.current = e.selected;
+        });
+
+        const selectionClearedUnlisten = canvas.on('selection:cleared', () => {
+            selectedObjectListRef.current = [];
+        });
+
+        return () => {
+            selectionCreatedUnlisten();
+            selectionClearedUnlisten();
+        };
+    }, [fabricRef]);
+
     return (
         <div
             className="draw-toolbar-container"
@@ -398,7 +429,7 @@ const DrawToolbarCore: React.FC<DrawToolbarProps> = ({
                         enable={visible}
                     >
                         <Button
-                            icon={<ArrowSelectIcon />}
+                            icon={<ArrowSelectIcon style={{ fontSize: '1.08em' }} />}
                             type={getButtonTypeByState(drawState === DrawState.Select)}
                             onClick={() => {
                                 if (!maskRectRef.current) {
@@ -419,7 +450,7 @@ const DrawToolbarCore: React.FC<DrawToolbarProps> = ({
                         enable={visible}
                     >
                         <Button
-                            icon={<RectIcon style={{ fontSize: '0.9em' }} />}
+                            icon={<RectIcon style={{ fontSize: '1em' }} />}
                             type={getButtonTypeByState(drawState === DrawState.Rect)}
                             onClick={() => {
                                 onToolClick(DrawState.Rect);
@@ -434,7 +465,7 @@ const DrawToolbarCore: React.FC<DrawToolbarProps> = ({
                         enable={visible}
                     >
                         <Button
-                            icon={<CircleIcon style={{ fontSize: '0.9em' }} />}
+                            icon={<CircleIcon style={{ fontSize: '1em' }} />}
                             type={getButtonTypeByState(drawState === DrawState.Ellipse)}
                             onClick={() => {
                                 onToolClick(DrawState.Ellipse);
@@ -513,6 +544,23 @@ const DrawToolbarCore: React.FC<DrawToolbarProps> = ({
                             type={getButtonTypeByState(drawState === DrawState.Mosaic)}
                             onClick={() => {
                                 onToolClick(DrawState.Mosaic);
+                            }}
+                        />
+                    </KeyEventWrap>
+
+                    <KeyEventWrap
+                        onKeyDownEventPropName="onClick"
+                        componentKey={KeyEventKey.RemoveTool}
+                        enable={visible}
+                    >
+                        <Button
+                            icon={<DeleteOutlined style={{ fontSize: '0.96em' }} />}
+                            type="text"
+                            onClick={() => {
+                                selectedObjectListRef.current.forEach((obj) => {
+                                    fabricRef.current?.discardActiveObject();
+                                    fabricRef.current?.remove(obj);
+                                });
                             }}
                         />
                     </KeyEventWrap>

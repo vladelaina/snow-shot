@@ -58,7 +58,7 @@ export const en = {
     'draw.autoSelectWindowElement': 'Auto Select Window Element',
     'draw.autoSelectWindowElement.loading': 'Loading',
     'draw.autoSelectWindowElement.loaded': 'Loaded',
-    'draw.keyEventTooltip': '{message} (Shortcut: {key})',
+    'draw.keyEventTooltip': '{message} (Hot key: {key})',
     'draw.cancel.tip1': 'Are you sure you want to cancel the screenshot?',
     'settings.pleasePressTheKey': 'Waiting for press',
 };

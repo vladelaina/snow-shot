@@ -26,9 +26,15 @@ export const PenTool: React.FC = () => {
         canvas.isDrawingMode = true;
         canvas.freeDrawingBrush = new fabric.PencilBrush(canvas);
 
+        const pathCreatedUnlisten = canvas.on('path:created', (e) => {
+            canvas.setActiveObject(e.path);
+        });
+
         return () => {
             canvas.freeDrawingBrush = undefined;
             canvas.isDrawingMode = false;
+
+            pathCreatedUnlisten();
         };
     }, [fabricRef]);
 

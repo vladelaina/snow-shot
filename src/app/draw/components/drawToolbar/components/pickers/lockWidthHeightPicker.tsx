@@ -51,6 +51,7 @@ const LockWidthHeightPickerComponent: React.FC<{
             onKeyUp={() => {
                 setTempValue(undefined);
             }}
+            enable={true}
             componentKey={KeyEventKey.LockWidthHeightPicker}
         >
             <Button

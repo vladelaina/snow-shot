@@ -1,4 +1,4 @@
-import { Button, Modal, Space, theme } from 'antd';
+import { Button, ButtonProps, Modal, Space, theme } from 'antd';
 import { KeyboardGrayIcon } from '../icons';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { FormattedMessage } from 'react-intl';
@@ -28,10 +28,13 @@ const convertKeyConfigToString = (keyConfig: KeyConfig) => {
 export const KeyButton: React.FC<{
     title: React.ReactNode;
     keyValue: string;
-    onKeyChange: (value: string) => void;
+    onKeyChange: (value: string) => Promise<void>;
     width?: number;
     maxWidth?: number;
-}> = ({ title, keyValue, onKeyChange, width, maxWidth }) => {
+    buttonProps?: ButtonProps;
+    maxLength: number;
+    onCancel?: () => void;
+}> = ({ title, keyValue, onKeyChange, width, maxWidth, buttonProps, maxLength, onCancel }) => {
     const { token } = theme.useToken();
 
     const [open, setOpen] = useState(false);
@@ -56,9 +59,13 @@ export const KeyButton: React.FC<{
     }, []);
 
     useEffect(() => {
+        if (!open) {
+            return;
+        }
+
         const keyConfigValueList = keyValue.split(',').map(_.trim);
 
-        const configList = keyConfigValueList.map((value, index) => {
+        const configList = keyConfigValueList.slice(0, maxLength).map((value, index) => {
             let selectCtrl = false;
             let selectShift = false;
             let selectAlt = false;
@@ -90,7 +97,7 @@ export const KeyButton: React.FC<{
                 setInputAnyKeyConfigIndex(0);
             }, 0);
         }
-    }, [keyValue, setInputAnyKeyConfigIndex, setKeyConfigList]);
+    }, [keyValue, maxLength, setInputAnyKeyConfigIndex, setKeyConfigList, open]);
 
     const updateKeyConfig = useCallback(() => {
         setKeyConfigList((pre) => {
@@ -125,15 +132,26 @@ export const KeyButton: React.FC<{
         setInputAnyKeyConfigIndex(undefined);
     }, [open, setInputAnyKeyConfigIndex]);
 
+    const [confirmLoading, setConfirmLoading] = useState(false);
+
     return (
         <>
             <Modal
                 title={<FormattedMessage id="settings.keyConfig" values={{ title }} />}
                 open={open}
-                onCancel={() => setOpen(false)}
-                onOk={() => {
-                    onKeyChange(keyConfigList.map(convertKeyConfigToString).join(', '));
+                onCancel={() => {
+                    onCancel?.();
                     setOpen(false);
+                }}
+                confirmLoading={confirmLoading}
+                onOk={() => {
+                    setConfirmLoading(true);
+                    onKeyChange(keyConfigList.map(convertKeyConfigToString).join(', ')).finally(
+                        () => {
+                            setConfirmLoading(false);
+                            setOpen(false);
+                        },
+                    );
                 }}
             >
                 {keyConfigList.map((keyConfig) => {
@@ -222,41 +240,50 @@ export const KeyButton: React.FC<{
                         </Space>
                     );
                 })}
-                <Button
-                    block
-                    icon={<PlusOutlined />}
-                    type={'dashed'}
-                    disabled={inputAnyKeyConfigIndex !== undefined || keyConfigList.length > 1}
-                    hidden={keyConfigList.length > 1}
-                    onClick={() => {
-                        if (keyConfigList.length > 1) {
-                            return;
+                {maxLength > 1 && (
+                    <Button
+                        block
+                        icon={<PlusOutlined />}
+                        type={'dashed'}
+                        disabled={
+                            inputAnyKeyConfigIndex !== undefined ||
+                            keyConfigList.length >= maxLength
                         }
+                        hidden={keyConfigList.length >= maxLength}
+                        onClick={() => {
+                            if (keyConfigList.length >= maxLength) {
+                                return;
+                            }
 
-                        const index = keyConfigList.length;
-                        setKeyConfigList((pre) => {
-                            return [
-                                ...pre,
-                                {
-                                    anyKey: '',
-                                    selectCtrl: false,
-                                    selectShift: false,
-                                    selectAlt: false,
-                                    index,
-                                },
-                            ];
-                        });
-                        setInputAnyKeyConfigIndex(index);
-                    }}
-                >
-                    <FormattedMessage id="settings.addKeyConfig" />
-                </Button>
+                            const index = keyConfigList.length;
+                            setKeyConfigList((pre) => {
+                                return [
+                                    ...pre,
+                                    {
+                                        anyKey: '',
+                                        selectCtrl: false,
+                                        selectShift: false,
+                                        selectAlt: false,
+                                        index,
+                                    },
+                                ];
+                            });
+                            setInputAnyKeyConfigIndex(index);
+                        }}
+                    >
+                        <FormattedMessage id="settings.addKeyConfig" />
+                    </Button>
+                )}
             </Modal>
             <ToolbarTip title={keyValue}>
                 <Button
+                    {...buttonProps}
                     icon={<KeyboardGrayIcon />}
-                    danger={keyValue ? false : true}
-                    onClick={() => setOpen(true)}
+                    danger={keyValue ? undefined : true}
+                    onClick={(e) => {
+                        buttonProps?.onClick?.(e);
+                        setOpen(true);
+                    }}
                 >
                     <div
                         style={{
@@ -268,6 +295,7 @@ export const KeyButton: React.FC<{
                     >
                         {keyValue}
                     </div>
+                    {buttonProps?.children}
                 </Button>
             </ToolbarTip>
         </>

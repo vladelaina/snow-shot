@@ -198,10 +198,15 @@ export const HighlightTool: React.FC = () => {
         const moveListener = canvas.on('mouse:move', onMouseMove);
         const upListener = canvas.on('mouse:up', onMouseUp);
 
+        const pathCreatedUnlisten = canvas.on('path:created', (e) => {
+            canvas.setActiveObject(e.path);
+        });
+
         return () => {
             downListener();
             moveListener();
             upListener();
+            pathCreatedUnlisten();
         };
     }, [colorRef, drawRectRef, fabricRef]);
 

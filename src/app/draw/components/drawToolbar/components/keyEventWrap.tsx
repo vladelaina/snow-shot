@@ -8,8 +8,11 @@ import { FormattedMessage } from 'react-intl';
 import { ToolbarTip } from '../../toolbarTip';
 
 export type KeyEventValue = {
+    hotKey: string;
+};
+
+export type KeyEventComponentValue = KeyEventValue & {
     messageId: string;
-    key: KeyboardEvent['key'];
 };
 
 export enum KeyEventKey {
@@ -27,66 +30,93 @@ export enum KeyEventKey {
     RedoTool = 'redoTool',
     CancelTool = 'cancelTool',
     LockWidthHeightPicker = 'lockWidthHeightPicker',
+    RemoveTool = 'removeTool',
+    ColorPickerCopy = 'colorPickerCopy',
+    ColorPickerMoveUp = 'colorPickerMoveUp',
+    ColorPickerMoveDown = 'colorPickerMoveDown',
+    ColorPickerMoveLeft = 'colorPickerMoveLeft',
+    ColorPickerMoveRight = 'colorPickerMoveRight',
+    // PenDrawLine = 'penDrawLine',
 }
 
 export const defaultKeyEventSettings: Record<KeyEventKey, KeyEventValue> = {
     [KeyEventKey.MoveTool]: {
-        messageId: 'draw.move',
-        key: 'M',
+        hotKey: 'M',
     },
     [KeyEventKey.SelectTool]: {
-        messageId: 'draw.select',
-        key: 'S',
+        hotKey: 'S',
     },
     [KeyEventKey.RectTool]: {
-        messageId: 'draw.rect',
-        key: '1',
+        hotKey: '1',
     },
     [KeyEventKey.EllipseTool]: {
-        messageId: 'draw.ellipse',
-        key: '2',
+        hotKey: '2',
     },
     [KeyEventKey.ArrowTool]: {
-        messageId: 'draw.arrow',
-        key: '3',
+        hotKey: '3',
     },
     [KeyEventKey.PenTool]: {
-        messageId: 'draw.pen',
-        key: '4',
+        hotKey: '4',
     },
     [KeyEventKey.HighlightTool]: {
-        messageId: 'draw.highlight',
-        key: '5',
+        hotKey: '5',
     },
     [KeyEventKey.TextTool]: {
-        messageId: 'draw.text',
-        key: '6, T',
+        hotKey: '6, T',
     },
     [KeyEventKey.MosaicTool]: {
-        messageId: 'draw.mosaic',
-        key: '7',
+        hotKey: '7',
     },
     [KeyEventKey.EraserTool]: {
-        messageId: 'draw.eraser',
-        key: '8, E',
+        hotKey: '8, E',
     },
     [KeyEventKey.UndoTool]: {
-        messageId: 'draw.undo',
-        key: 'Ctrl+Z',
+        hotKey: 'Ctrl+Z',
     },
     [KeyEventKey.RedoTool]: {
-        messageId: 'draw.redo',
-        key: 'Ctrl+Y',
+        hotKey: 'Ctrl+Y',
     },
     [KeyEventKey.CancelTool]: {
-        messageId: 'draw.cancel',
-        key: 'Escape',
+        hotKey: 'Escape',
     },
     [KeyEventKey.LockWidthHeightPicker]: {
-        messageId: 'draw.lockWidthHeight',
-        key: 'Shift',
+        hotKey: 'Shift',
     },
+    [KeyEventKey.RemoveTool]: {
+        hotKey: 'Delete',
+    },
+    [KeyEventKey.ColorPickerCopy]: {
+        hotKey: 'Ctrl+C',
+    },
+    [KeyEventKey.ColorPickerMoveUp]: {
+        hotKey: 'Ctrl+W, ArrowUp',
+    },
+    [KeyEventKey.ColorPickerMoveDown]: {
+        hotKey: 'Ctrl+S, ArrowDown',
+    },
+    [KeyEventKey.ColorPickerMoveLeft]: {
+        hotKey: 'Ctrl+A, ArrowLeft',
+    },
+    [KeyEventKey.ColorPickerMoveRight]: {
+        hotKey: 'Ctrl+D, ArrowRight',
+    },
+    // [KeyEventKey.PenDrawLine]: {
+    //     hotKey: 'Shift',
+    // },
 };
+
+export const keyEventSettingsKeys = Object.keys(defaultKeyEventSettings);
+export const defaultKeyEventComponentConfig: Record<KeyEventKey, KeyEventComponentValue> =
+    keyEventSettingsKeys.reduce(
+        (acc, key) => {
+            acc[key as KeyEventKey] = {
+                ...defaultKeyEventSettings[key as KeyEventKey],
+                messageId: `draw.${key}`,
+            };
+            return acc;
+        },
+        {} as Record<KeyEventKey, KeyEventComponentValue>,
+    );
 
 export const KeyEventWrap: React.FC<{
     onKeyDownEventPropName?: string;
@@ -96,7 +126,7 @@ export const KeyEventWrap: React.FC<{
     children: JSX.Element;
     componentKey: KeyEventKey;
     confirmTip?: React.ReactNode;
-    enable?: boolean;
+    enable: boolean;
 }> = ({
     onKeyDownEventPropName,
     onKeyUpEventPropName,
@@ -177,16 +207,16 @@ export const KeyEventWrap: React.FC<{
         keyEvent(children, onKeyUpEventPropName, onKeyUp);
     }, [children, keyEvent, onKeyUp, onKeyUpEventPropName]);
 
-    useHotkeys(keyEventValue.key, onKeyDownChildren, {
+    useHotkeys(keyEventValue.hotKey, onKeyDownChildren, {
         keydown: true,
         keyup: false,
-        preventDefault: false,
+        preventDefault: true,
         enabled: enable,
     });
-    useHotkeys(keyEventValue.key, onKeyUpChildren, {
+    useHotkeys(keyEventValue.hotKey, onKeyUpChildren, {
         keydown: false,
         keyup: true,
-        preventDefault: false,
+        preventDefault: true,
         enabled: enable,
     });
     return (
@@ -194,20 +224,18 @@ export const KeyEventWrap: React.FC<{
             <ToolbarTip
                 destroyTooltipOnHide
                 title={
-                    enable ? (
-                        <FormattedMessage
-                            id="draw.keyEventTooltip"
-                            values={{
-                                message: (
-                                    <FormattedMessage
-                                        key={componentKey + keyEventValue.messageId}
-                                        id={keyEventValue.messageId}
-                                    />
-                                ),
-                                key: keyEventValue.key,
-                            }}
-                        />
-                    ) : null
+                    <FormattedMessage
+                        id="draw.keyEventTooltip"
+                        values={{
+                            message: (
+                                <FormattedMessage
+                                    key={componentKey + keyEventValue.hotKey}
+                                    id={defaultKeyEventComponentConfig[componentKey].messageId}
+                                />
+                            ),
+                            key: keyEventValue.hotKey,
+                        }}
+                    />
                 }
             >
                 {React.cloneElement(children, {

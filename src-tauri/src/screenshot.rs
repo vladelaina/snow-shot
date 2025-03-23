@@ -202,3 +202,12 @@ pub async fn get_element_from_position(
 
     Ok(element_rect_list)
 }
+
+#[command]
+pub async fn get_mouse_position() -> Result<(i32, i32), ()> {
+    let device_state = DeviceState::new();
+    let mouse: MouseState = device_state.get_mouse();
+    let (mouse_x, mouse_y) = mouse.coords;
+
+    Ok((mouse_x, mouse_y))
+}

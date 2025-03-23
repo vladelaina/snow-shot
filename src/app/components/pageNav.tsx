@@ -70,9 +70,13 @@ export const PageNav: React.FC<{
         updateActiveKeyDebounce(0);
     }, [tabItems, updateActiveKeyDebounce]);
 
-    useImperativeHandle(actionRef, () => ({
-        updateActiveKey: updateActiveKeyDebounce,
-    }));
+    useImperativeHandle(
+        actionRef,
+        () => ({
+            updateActiveKey: updateActiveKeyDebounce,
+        }),
+        [updateActiveKeyDebounce],
+    );
 
     return (
         <div className="page-nav">

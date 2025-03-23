@@ -99,3 +99,8 @@ export const exitApp = async () => {
     const result = await invoke<void>('exit_app');
     return result;
 };
+
+export const getMousePosition = async () => {
+    const result = await invoke<[number, number]>('get_mouse_position');
+    return result;
+};

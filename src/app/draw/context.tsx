@@ -3,6 +3,10 @@ import { FabricHistory } from '@/utils/fabricjsHistory';
 import * as fabric from 'fabric';
 import { createContext, RefObject } from 'react';
 
+export type DrawContentActionType = {
+    onMouseMoveRefresh: () => void;
+};
+
 export const DrawContext = createContext<{
     fabricRef: RefObject<fabric.Canvas | undefined>;
     canvasRef: RefObject<HTMLCanvasElement | null>;
@@ -16,6 +20,8 @@ export const DrawContext = createContext<{
     imageLayerRef: RefObject<fabric.Image | undefined>;
     objectCacheRef: RefObject<Record<string, fabric.Object>>;
     canvasHistoryRef: RefObject<FabricHistory | undefined>;
+    actionRef: RefObject<DrawContentActionType | undefined>;
+    setMaskVisible: (visible: boolean) => void;
 }>({
     fabricRef: { current: undefined },
     canvasRef: { current: null },
@@ -29,4 +35,6 @@ export const DrawContext = createContext<{
     imageLayerRef: { current: undefined },
     objectCacheRef: { current: {} },
     canvasHistoryRef: { current: undefined },
+    actionRef: { current: undefined },
+    setMaskVisible: () => {},
 });

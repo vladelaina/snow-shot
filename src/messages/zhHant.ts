@@ -57,6 +57,6 @@ export const zhHant = {
     'draw.autoSelectWindowElement': '自動選取視窗元素',
     'draw.autoSelectWindowElement.loading': '載入中',
     'draw.autoSelectWindowElement.loaded': '載入完成',
-    'draw.keyEventTooltip': '{message}（快速鍵：{key}）',
+    'draw.keyEventTooltip': '{message}（熱鍵：{key}）',
     'draw.cancel.tip1': '確定取消截圖嗎？',
 };

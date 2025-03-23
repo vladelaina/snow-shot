@@ -12,6 +12,7 @@ import { useAppSettingsLoad } from '@/hooks/useAppSettingsLoad';
 import { defaultDrawRectValue, DrawRectPicker, DrawRectValue } from './pickers/drawRectPicker';
 import { ignoreHistory } from '@/utils/fabricjsHistory';
 import { clearMosaicCache } from './mosaicTool/mosaicTool';
+import { setSelectOnClick } from '@/app/draw/page';
 
 class EraserBrush extends fabric.PatternBrush {
     clipPathGroup?: fabric.Group;
@@ -36,7 +37,9 @@ class EraserBrush extends fabric.PatternBrush {
             strokeLineJoin: this.strokeLineJoin,
             strokeDashArray: this.strokeDashArray,
             globalCompositeOperation: 'multiply',
+            selectable: false,
         });
+        setSelectOnClick(path);
         if (this.shadow) {
             this.shadow.affectStroke = true;
             path.shadow = new fabric.Shadow(this.shadow);
@@ -66,7 +69,6 @@ export const EraserTool: React.FC = () => {
 
     const eraserBrushRef = useRef<EraserBrush | undefined>(undefined);
 
-    const imgRef = useRef<fabric.Image | undefined>(undefined);
     const lastBlurRef = useRef<
         | {
               drawRect: boolean;
@@ -76,11 +78,6 @@ export const EraserTool: React.FC = () => {
     const blurLayerRef = useRef<fabric.FabricImage | undefined>(undefined);
     const blurLayerMaskGroupRef = useRef<fabric.Group>(undefined);
     const updateFilter = useCallback(async () => {
-        const img = imgRef.current;
-        if (!img) {
-            return;
-        }
-
         const canvas = fabricRef.current;
         if (!canvas) {
             return;
@@ -100,7 +97,7 @@ export const EraserTool: React.FC = () => {
             blurLayerMaskGroupRef.current.getObjects().length !== 0 ||
             !blurLayerRef.current
         ) {
-            blurLayer = await img.clone();
+            blurLayer = await imageLayerRef.current!.clone();
 
             // 设置遮罩
             const blurLayerMaskGroup = new fabric.Group([], {
@@ -151,7 +148,7 @@ export const EraserTool: React.FC = () => {
             eraserBrush.clipPathGroup = blurLayerMaskGroupRef.current;
 
             // 使用处理后的图像作为画笔源
-            const eraserBrushSource = await img.clone();
+            const eraserBrushSource = await imageLayerRef.current!.clone();
             eraserBrushSource.filters = [];
             eraserBrushSource.applyFilters();
             eraserBrush.source = eraserBrushSource.toCanvasElement({
@@ -162,7 +159,7 @@ export const EraserTool: React.FC = () => {
             });
             canvas.isDrawingMode = true;
         }
-    }, [drawRectRef, fabricRef]);
+    }, [drawRectRef, fabricRef, imageLayerRef]);
 
     useEffect(() => {
         const canvas = fabricRef.current;
@@ -186,9 +183,8 @@ export const EraserTool: React.FC = () => {
                 return;
             }
 
-            imgRef.current = await imageLayerRef.current!.clone();
             updateFilter();
-        }, [fabricRef, imageBufferRef, imageLayerRef, updateFilter]),
+        }, [fabricRef, imageBufferRef, updateFilter]),
     );
 
     useEffect(() => {
@@ -303,6 +299,7 @@ export const EraserTool: React.FC = () => {
             });
 
             canvas.add(shape);
+            setSelectOnClick(shape);
             canvas.add(shapeControls);
             blurLayerRef.current!.set('dirty', true);
         };
@@ -395,10 +392,15 @@ export const EraserTool: React.FC = () => {
         canvas.on('mouse:move', onMouseMove);
         canvas.on('mouse:up', onMouseUp);
 
+        const pathCreatedUnlisten = canvas.on('path:created', (e) => {
+            canvas.setActiveObject(e.path);
+        });
+
         return () => {
             canvas.off('mouse:down', onMouseDown);
             canvas.off('mouse:move', onMouseMove);
             canvas.off('mouse:up', onMouseUp);
+            pathCreatedUnlisten();
         };
     }, [drawRectRef, fabricRef, objectCacheRef]);
 

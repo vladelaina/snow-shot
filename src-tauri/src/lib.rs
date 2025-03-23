@@ -38,6 +38,7 @@ pub fn run() {
             screenshot::init_ui_elements,
             screenshot::get_element_from_position,
             screenshot::init_ui_elements_cache,
+            screenshot::get_mouse_position,
             core::exit_app,
         ])
         .run(tauri::generate_context!())

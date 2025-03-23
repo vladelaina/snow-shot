@@ -20,7 +20,7 @@ const EnableRadiusPickerComponent: React.FC<{
     return (
         <ToolbarTip destroyTooltipOnHide title={<FormattedMessage id="draw.enableRadius" />}>
             <Button
-                icon={<RadiusSettingOutlined />}
+                icon={<RadiusSettingOutlined style={{ fontSize: '0.9em' }} />}
                 type={getButtonTypeByState(value.enable)}
                 onClick={() => {
                     setValue((prev) => ({ enable: !prev.enable }));

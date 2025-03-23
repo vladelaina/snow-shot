@@ -18,7 +18,7 @@ import {
 } from '../pickers/enableBlurPicker';
 import { defaultDrawRectValue, DrawRectPicker, DrawRectValue } from '../pickers/drawRectPicker';
 import { ignoreHistory } from '@/utils/fabricjsHistory';
-import { AppSettingsContext } from '@/app/contextWrap';
+import { setSelectOnClick } from '@/app/draw/page';
 
 class MosaicBrush extends fabric.PatternBrush {
     clipPathGroup?: fabric.Group;
@@ -43,7 +43,9 @@ class MosaicBrush extends fabric.PatternBrush {
             strokeLineJoin: this.strokeLineJoin,
             strokeDashArray: this.strokeDashArray,
             globalCompositeOperation: 'multiply',
+            selectable: false,
         });
+        setSelectOnClick(path);
         if (this.shadow) {
             this.shadow.affectStroke = true;
             path.shadow = new fabric.Shadow(this.shadow);
@@ -73,24 +75,7 @@ export const clearMosaicCache = (objectCache: Record<string, fabric.Object>) => 
 };
 
 export const MosaicToolbarCore: React.FC = () => {
-    const appSettings = useContext(AppSettingsContext);
-    const {
-        screenshot: { performanceMode },
-    } = appSettings;
-    const performanceModeRef = useRef(performanceMode);
-    useEffect(() => {
-        performanceModeRef.current = performanceMode;
-    }, [performanceMode]);
-
-    const {
-        fabricRef,
-        maskRectRef,
-        maskRectObjectListRef,
-        imageBufferRef,
-        canvasCursorRef,
-        imageLayerRef,
-        objectCacheRef,
-    } = useContext(DrawContext);
+    const { fabricRef, setMaskVisible, imageBufferRef, canvasCursorRef } = useContext(DrawContext);
 
     const [width, setWidth] = useStateRef<LineWidthPickerValue>(defaultLineWidthPickerValue);
     const [blur, setBlur, blurRef] = useStateRef<SliderPickerValue>(defaultSliderPickerValue);
@@ -99,39 +84,6 @@ export const MosaicToolbarCore: React.FC = () => {
         useStateRef<EnableBlurValue>(defaultEnableBlurValue);
 
     const mosaicBrushRef = useRef<MosaicBrush | undefined>(undefined);
-
-    const maskOpacityMapRef = useRef(new Map<fabric.Object, number>());
-    useEffect(() => {
-        const maskRect = maskRectRef.current;
-        if (!maskRect) {
-            return;
-        }
-
-        maskOpacityMapRef.current.set(maskRect, maskRect.get('opacity'));
-        maskRectObjectListRef.current.forEach((object) => {
-            maskOpacityMapRef.current.set(object, object.get('opacity'));
-        });
-    }, [maskRectObjectListRef, maskRectRef]);
-
-    const setMaskVisible = useCallback(
-        (visible: boolean) => {
-            const maskRect = maskRectRef.current;
-            const maskRectObjectList = maskRectObjectListRef.current;
-            if (!maskRect || !maskRectObjectList) {
-                return;
-            }
-
-            maskRect.set({
-                opacity: visible ? maskOpacityMapRef.current.get(maskRect) : 0,
-            });
-            maskRectObjectList.forEach((object) => {
-                object.set({
-                    opacity: visible ? maskOpacityMapRef.current.get(object) : 0,
-                });
-            });
-        },
-        [maskRectObjectListRef, maskRectRef],
-    );
 
     const imgRef = useRef<fabric.Image | undefined>(undefined);
     const lastBlurRef = useRef<
@@ -144,20 +96,6 @@ export const MosaicToolbarCore: React.FC = () => {
     >(undefined);
     const blurLayerRef = useRef<fabric.FabricImage | undefined>(undefined);
     const blurLayerMaskGroupRef = useRef<fabric.Group>(undefined);
-    useEffect(() => {
-        if (!performanceModeRef.current) {
-            return;
-        }
-
-        const blurLayer = objectCacheRef.current[blurLayerCacheKey];
-        const blurLayerMaskGroup = objectCacheRef.current[blurLayerMaskGroupCacheKey];
-        if (!blurLayer || !blurLayerMaskGroup) {
-            return;
-        }
-
-        blurLayerRef.current = blurLayer as fabric.FabricImage;
-        blurLayerMaskGroupRef.current = blurLayerMaskGroup as fabric.Group;
-    }, [objectCacheRef, performanceModeRef]);
     const updateFilter = useCallback(async () => {
         const img = imgRef.current;
         if (!img) {
@@ -203,7 +141,7 @@ export const MosaicToolbarCore: React.FC = () => {
         if (
             !blurLayerMaskGroupRef.current ||
             !blurLayerRef.current ||
-            (blurLayerMaskGroupRef.current.getObjects().length !== 0 && !performanceModeRef.current)
+            blurLayerMaskGroupRef.current.getObjects().length !== 0
         ) {
             blurLayer = await img.clone();
 
@@ -238,11 +176,6 @@ export const MosaicToolbarCore: React.FC = () => {
 
             canvas.add(blurLayer);
             canvas.add(blurLayerMaskGroup);
-
-            if (performanceModeRef.current) {
-                objectCacheRef.current[blurLayerCacheKey] = blurLayer;
-                objectCacheRef.current[blurLayerMaskGroupCacheKey] = blurLayerMaskGroup;
-            }
         } else {
             blurLayer = blurLayerRef.current;
         }
@@ -274,7 +207,7 @@ export const MosaicToolbarCore: React.FC = () => {
         }
 
         canvas.renderAll();
-    }, [blurRef, drawRectRef, enableBlurRef, fabricRef, objectCacheRef]);
+    }, [blurRef, drawRectRef, enableBlurRef, fabricRef]);
 
     useEffect(() => {
         const canvas = fabricRef.current;
@@ -298,25 +231,26 @@ export const MosaicToolbarCore: React.FC = () => {
                 return;
             }
 
-            if (performanceModeRef.current) {
-                imgRef.current = await imageLayerRef.current!.clone();
+            setMaskVisible(false);
+
+            fabric.FabricImage.fromURL(
+                canvas.toDataURL({
+                    multiplier: 0.8,
+                    format: 'jpeg',
+                    quality: 1,
+                    enableRetinaScaling: false,
+                }),
+            ).then((img) => {
+                imgRef.current = img;
+
+                img.scaleToWidth(imageBuffer.monitorWidth / imageBuffer.monitorScaleFactor);
+                img.scaleToHeight(imageBuffer.monitorHeight / imageBuffer.monitorScaleFactor);
 
                 updateFilter();
-            } else {
-                setMaskVisible(false);
+            });
 
-                fabric.FabricImage.fromURL(canvas.toDataURL()).then((img) => {
-                    imgRef.current = img;
-
-                    img.scaleToWidth(imageBuffer.monitorWidth / imageBuffer.monitorScaleFactor);
-                    img.scaleToHeight(imageBuffer.monitorHeight / imageBuffer.monitorScaleFactor);
-
-                    updateFilter();
-                });
-
-                setMaskVisible(true);
-            }
-        }, [fabricRef, imageBufferRef, imageLayerRef, setMaskVisible, updateFilter]),
+            setMaskVisible(true);
+        }, [fabricRef, imageBufferRef, setMaskVisible, updateFilter]),
     );
 
     useEffect(() => {
@@ -369,8 +303,6 @@ export const MosaicToolbarCore: React.FC = () => {
             return;
         }
 
-        const objectCache = objectCacheRef.current;
-
         return () => {
             if (blurLayerMaskGroupRef.current?.getObjects().length !== 0) {
                 return;
@@ -378,9 +310,8 @@ export const MosaicToolbarCore: React.FC = () => {
 
             canvas.remove(blurLayerRef.current!);
             canvas.remove(blurLayerMaskGroupRef.current!);
-            clearMosaicCache(objectCache);
         };
-    }, [fabricRef, objectCacheRef]);
+    }, [fabricRef]);
 
     useEffect(() => {
         let isDrawing = false;
@@ -450,6 +381,7 @@ export const MosaicToolbarCore: React.FC = () => {
             });
 
             canvas.add(shape);
+            setSelectOnClick(shape);
             canvas.add(shapeControls);
             blurLayerRef.current!.set('dirty', true);
         };
@@ -537,10 +469,15 @@ export const MosaicToolbarCore: React.FC = () => {
         canvas.on('mouse:move', onMouseMove);
         canvas.on('mouse:up', onMouseUp);
 
+        const pathCreatedUnlisten = canvas.on('path:created', (e) => {
+            canvas.setActiveObject(e.path);
+        });
+
         return () => {
             canvas.off('mouse:down', onMouseDown);
             canvas.off('mouse:move', onMouseMove);
             canvas.off('mouse:up', onMouseUp);
+            pathCreatedUnlisten();
         };
     }, [drawRectRef, fabricRef]);
 
