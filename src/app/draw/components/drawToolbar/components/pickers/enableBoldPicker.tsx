@@ -1,8 +1,9 @@
-import { Button, Tooltip } from 'antd';
+import { Button } from 'antd';
 import { getButtonTypeByState } from '../..';
 import { FormattedMessage } from 'react-intl';
 import { withPickerBase } from './pickerBase';
 import { BoldOutlined } from '@ant-design/icons';
+import { ToolbarTip } from '../../../toolbarTip';
 
 export type EnableBoldValue = {
     enable: boolean;
@@ -17,7 +18,7 @@ const EnableBoldPickerComponent: React.FC<{
     setValue: React.Dispatch<React.SetStateAction<EnableBoldValue>>;
 }> = ({ value, setValue }) => {
     return (
-        <Tooltip title={<FormattedMessage id="draw.bold" />}>
+        <ToolbarTip destroyTooltipOnHide title={<FormattedMessage id="draw.bold" />}>
             <Button
                 icon={<BoldOutlined style={{ fontSize: '0.83em' }} />}
                 type={getButtonTypeByState(value.enable)}
@@ -25,7 +26,7 @@ const EnableBoldPickerComponent: React.FC<{
                     setValue((prev) => ({ enable: !prev.enable }));
                 }}
             />
-        </Tooltip>
+        </ToolbarTip>
     );
 };
 

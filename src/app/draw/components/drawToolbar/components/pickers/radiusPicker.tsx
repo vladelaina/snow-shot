@@ -1,9 +1,10 @@
-import { Button, Tooltip } from 'antd';
+import { Button } from 'antd';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { FormattedMessage } from 'react-intl';
 import { withPickerBase } from './pickerBase';
 import { RadiusSettingOutlined } from '@ant-design/icons';
 import { WidthIcon } from './lineWidthPicker';
+import { ToolbarTip } from '../../../toolbarTip';
 
 export type RadiusPickerValue = {
     radius: number;
@@ -56,7 +57,8 @@ const RadiusPickerComponent: React.FC<{
 
     return (
         <>
-            <Tooltip
+            <ToolbarTip
+                destroyTooltipOnHide
                 title={<FormattedMessage id="draw.radiusDesc" values={{ radius: value.radius }} />}
             >
                 <Button
@@ -73,7 +75,7 @@ const RadiusPickerComponent: React.FC<{
                     onMouseLeave={() => setIsHovered(false)}
                     onWheel={onWheel}
                 />
-            </Tooltip>
+            </ToolbarTip>
         </>
     );
 };

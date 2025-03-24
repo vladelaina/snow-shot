@@ -1,5 +1,6 @@
 import Icon from '@ant-design/icons';
 import { IconComponentProps } from '@ant-design/icons/lib/components/Icon';
+import { theme } from 'antd';
 import React from 'react';
 
 /**
@@ -404,3 +405,100 @@ const EraserSVG = () => (
 );
 
 export const EraserIcon = (props: IconComponentProps) => <Icon component={EraserSVG} {...props} />;
+
+export const DrawArrowSVG = () => (
+    <svg
+        viewBox="0 0 1024 1024"
+        version="1.1"
+        xmlns="http://www.w3.org/2000/svg"
+        width="1em"
+        height="1em"
+        fill="currentColor"
+    >
+        <path
+            d="M959.7 511.9c-8.7-3.7-213.7-91.8-309.1-151.6l49.2 117.5H64v68.5h635.8l-49.2 117.3c94.6-59.3 297-146.4 308.8-151.5l0.5-0.1s-0.1 0-0.2-0.1h0.2-0.2z"
+            p-id="18110"
+        ></path>
+    </svg>
+);
+
+export const DrawArrowIcon = (props: IconComponentProps) => (
+    <Icon component={DrawArrowSVG} {...props} />
+);
+
+export const DrawLineSVG = () => (
+    <svg
+        viewBox="0 0 1024 1024"
+        version="1.1"
+        xmlns="http://www.w3.org/2000/svg"
+        width="1em"
+        height="1em"
+        fill="currentColor"
+    >
+        <path
+            d="M904 476H120c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8h784c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8z"
+            p-id="19068"
+        ></path>
+    </svg>
+);
+
+export const DrawLineIcon = (props: IconComponentProps) => (
+    <Icon component={DrawLineSVG} {...props} />
+);
+
+export const KeyboardSVG = () => (
+    <svg
+        viewBox="0 0 1024 1024"
+        version="1.1"
+        xmlns="http://www.w3.org/2000/svg"
+        width="1em"
+        height="1em"
+        fill="currentColor"
+    >
+        <path
+            d="M42.666667 277.248A106.666667 106.666667 0 0 1 149.482667 170.666667h725.034666C933.44 170.666667 981.333333 218.496 981.333333 277.248v469.504A106.666667 106.666667 0 0 1 874.517333 853.333333H149.482667C90.56 853.333333 42.666667 805.504 42.666667 746.752V277.248z m85.333333 0v469.504c0 11.584 9.664 21.248 21.482667 21.248h725.034666A21.333333 21.333333 0 0 0 896 746.752V277.248c0-11.584-9.664-21.248-21.482667-21.248H149.482667A21.333333 21.333333 0 0 0 128 277.248zM384 682.666667a42.666667 42.666667 0 1 1 0-85.333334h256a42.666667 42.666667 0 1 1 0 85.333334H384z m-128 0a42.666667 42.666667 0 1 1 0-85.333334 42.666667 42.666667 0 0 1 0 85.333334z m192-128a42.666667 42.666667 0 1 1 0-85.333334 42.666667 42.666667 0 0 1 0 85.333334z m128 0a42.666667 42.666667 0 1 1 0-85.333334 42.666667 42.666667 0 0 1 0 85.333334z m128 0a42.666667 42.666667 0 1 1 0-85.333334 42.666667 42.666667 0 0 1 0 85.333334z m64 128a42.666667 42.666667 0 1 1 0-85.333334 42.666667 42.666667 0 0 1 0 85.333334z m-448-128a42.666667 42.666667 0 1 1 0-85.333334 42.666667 42.666667 0 0 1 0 85.333334z m64-128a42.666667 42.666667 0 1 1 0-85.333334 42.666667 42.666667 0 0 1 0 85.333334z m128 0a42.666667 42.666667 0 1 1 0-85.333334 42.666667 42.666667 0 0 1 0 85.333334z m128 0a42.666667 42.666667 0 1 1 0-85.333334 42.666667 42.666667 0 0 1 0 85.333334z m-384 0a42.666667 42.666667 0 1 1 0-85.333334 42.666667 42.666667 0 0 1 0 85.333334z m512 0a42.666667 42.666667 0 1 1 0-85.333334 42.666667 42.666667 0 0 1 0 85.333334z"
+            p-id="2598"
+        ></path>
+    </svg>
+);
+
+export const KeyboardIcon = (props: IconComponentProps) => (
+    <Icon component={KeyboardSVG} {...props} />
+);
+
+export const KeyboardGrayIcon = (props: IconComponentProps) => {
+    const { token } = theme.useToken();
+    return (
+        <div className="keyboard-icon-wrap">
+            <Icon component={KeyboardSVG} {...props} />
+            <style jsx>{`
+                .keyboard-icon-wrap {
+                    opacity: 0.42;
+                    transition: opacity ${token.motionDurationMid} ${token.motionEaseInOut};
+                }
+
+                :global(.ant-btn):hover .keyboard-icon-wrap {
+                    opacity: 1;
+                }
+            `}</style>
+        </div>
+    );
+};
+
+export const ResetSvg = () => (
+    <svg
+        viewBox="0 0 1024 1024"
+        version="1.1"
+        xmlns="http://www.w3.org/2000/svg"
+        width="1em"
+        height="1em"
+        fill="currentColor"
+    >
+        <path
+            d="M512 950.86c-210.65 0-386.92-149.21-429.35-347.43H190.9L74.61 486.4 8.78 420.57C2.92 449.83 0 480.55 0 512s2.92 62.17 8.78 91.43C51.2 842.6 260.39 1024 512 1024c208.46 0 386.92-123.61 466.65-302.08l-55.59-55.59C860.16 832.37 699.98 950.86 512 950.86zM1015.22 420.57C972.8 181.39 763.61 0 512 0 303.54 0 125.08 123.61 45.35 302.08l55.59 56.32C163.11 192.37 324.02 73.14 512 73.14c210.65 0 386.92 149.21 429.35 347.43H833.1l116.29 116.29 65.83 65.83c5.85-29.26 8.78-59.25 8.78-90.7s-2.92-62.16-8.78-91.42z"
+            p-id="4270"
+        ></path>
+    </svg>
+);
+
+export const ResetIcon = (props: IconComponentProps) => <Icon component={ResetSvg} {...props} />;

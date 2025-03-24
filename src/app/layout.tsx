@@ -1,14 +1,10 @@
-import type { Metadata } from 'next';
+'use client';
+
 import './globals.css';
 import { AntdRegistry } from '@ant-design/nextjs-registry';
 import StyledJsxRegistry from './registry';
-import { MenuLayout } from './menuLayout';
 import { ContextWrap } from './contextWrap';
-
-export const metadata: Metadata = {
-    title: 'SnowShot',
-    description: '简洁、优雅，Snow Shot',
-};
+import { MenuLayout } from './menuLayout';
 
 export default function RootLayout({
     children,

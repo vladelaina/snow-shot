@@ -3,10 +3,11 @@
 import { zIndexs } from '@/utils/zIndex';
 import { CaptureStep, DrawState } from '../../types';
 import { useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
-import { Button, Flex, theme, Tooltip } from 'antd';
-import { FormattedMessage } from 'react-intl';
+import { Button, Flex, theme } from 'antd';
+import { FormattedMessage, useIntl } from 'react-intl';
 import {
     CloseOutlined,
+    DeleteOutlined,
     DragOutlined,
     HighlightOutlined,
     HolderOutlined,
@@ -23,20 +24,25 @@ import {
     RectIcon,
     TextIcon,
 } from '@/components/icons';
-import { PenToolbar } from './components/penToolbar';
-import { EllipseToolbar, RectToolbar } from './components/shapeToolbar';
+import { PenTool } from './components/penTool';
+import { EllipseTool, RectTool } from './components/shapeTool';
 import React from 'react';
 import { DrawContext } from '../../context';
-import { EraserToolbar, MosaicToolbar } from './components/mosaicToolbar';
-import { TextToolbar } from './components/textToolbar';
-import { HighlightToolbar } from './components/highlightToolbar';
-import { ArrowToolbar } from './components/arrowToolbar';
+import { MosaicTool } from './components/mosaicTool/mosaicTool';
+import { TextTool } from './components/textTool';
+import { HighlightTool } from './components/highlightTool';
+import { ArrowTool } from './components/arrowTool';
+import { EraserTool } from './components/eraserTool';
+import { KeyEventKey, KeyEventWrap } from './components/keyEventWrap';
+import { ToolbarTip } from '../toolbarTip';
+import * as fabric from 'fabric';
 
 export type DrawToolbarProps = {
     step: CaptureStep;
     drawState: DrawState;
-    setDrawState: (drawState: DrawState) => void;
+    setDrawState: (val: DrawState | ((prev: DrawState) => DrawState)) => void;
     onCancel: () => void;
+    enable: boolean;
 };
 
 export const getButtonTypeByState = (active: boolean) => {
@@ -48,7 +54,15 @@ const DrawToolbarCore: React.FC<DrawToolbarProps> = ({
     drawState,
     setDrawState,
     onCancel,
+    enable,
 }) => {
+    const enableRef = useRef(enable);
+    useEffect(() => {
+        enableRef.current = enable;
+    }, [enable]);
+
+    const intl = useIntl();
+
     const { fabricRef, maskRectRef, maskRectClipPathRef, canvasHistoryRef } =
         useContext(DrawContext);
 
@@ -74,7 +88,11 @@ const DrawToolbarCore: React.FC<DrawToolbarProps> = ({
     const renderedRef = useRef(true);
     const updateDrawToolbarStyle = useCallback(
         (hideSubToolbar: boolean = true) => {
-            if (!drawToolbarRef.current || !drawSubToolbarRef.current || !maskRectClipPathRef.current) {
+            if (
+                !drawToolbarRef.current ||
+                !drawSubToolbarRef.current ||
+                !maskRectClipPathRef.current
+            ) {
                 return;
             }
 
@@ -154,10 +172,10 @@ const DrawToolbarCore: React.FC<DrawToolbarProps> = ({
             }
 
             renderedRef.current = false;
-            drawToolbar.style.willChange = 'transform';
-            drawSubToolbar.style.willChange = 'transform, opacity';
             requestAnimationFrame(() => {
                 renderedRef.current = true;
+                drawToolbar.style.willChange = 'transform';
+                drawSubToolbar.style.willChange = 'transform, opacity';
                 drawToolbar.style.transform = `translate(${drawToolbarStyleRef.current.left}px, ${drawToolbarStyleRef.current.top}px)`;
                 drawSubToolbar.style.transform = `translate(${drawSubToolbarStyleRef.current.left}px, ${drawSubToolbarStyleRef.current.top}px)`;
                 drawSubToolbar.style.opacity = drawSubToolbarStyleRef.current.opacity;
@@ -241,6 +259,12 @@ const DrawToolbarCore: React.FC<DrawToolbarProps> = ({
         draggedTopRef.current = 0;
         lastDraggedLeftRef.current = 0;
         lastDraggedTopRef.current = 0;
+        if (drawToolbarRef.current) {
+            drawToolbarRef.current.style.transform = `unset`;
+        }
+        if (drawSubToolbarRef.current) {
+            drawSubToolbarRef.current.style.transform = `unset`;
+        }
     }, [visible]);
 
     useEffect(() => {
@@ -329,143 +353,241 @@ const DrawToolbarCore: React.FC<DrawToolbarProps> = ({
         };
     }, [canvasHistoryRef, fabricRef, visible]);
 
+    const onToolClick = useCallback(
+        (tool: DrawState) => {
+            setDrawState((prev) => {
+                if (prev === tool) {
+                    return DrawState.Idle;
+                }
+
+                return tool;
+            });
+        },
+        [setDrawState],
+    );
+
+    const selectedObjectListRef = useRef<fabric.Object[]>([]);
+    useEffect(() => {
+        const canvas = fabricRef.current;
+        if (!canvas) {
+            return;
+        }
+
+        const selectionCreatedUnlisten = canvas.on('selection:created', (e) => {
+            selectedObjectListRef.current = e.selected;
+        });
+
+        const selectionClearedUnlisten = canvas.on('selection:cleared', () => {
+            selectedObjectListRef.current = [];
+        });
+
+        return () => {
+            selectionCreatedUnlisten();
+            selectionClearedUnlisten();
+        };
+    }, [fabricRef]);
+
     return (
         <div
             className="draw-toolbar-container"
             style={{
                 opacity: visible ? 1 : 0,
+                pointerEvents: visible ? 'auto' : 'none',
             }}
         >
             <div className="draw-toolbar" ref={drawToolbarRef}>
                 <Flex align="center" gap={token.paddingXS}>
                     {/* 拖动按钮 */}
-                    <Tooltip title={dragging ? '' : <FormattedMessage id="draw.drag" />}>
+                    <ToolbarTip
+                        destroyTooltipOnHide
+                        title={dragging ? '' : <FormattedMessage id="draw.drag" />}
+                    >
                         <div className="draw-toolbar-drag" onMouseDown={handleMouseDown}>
                             <HolderOutlined />
                         </div>
-                    </Tooltip>
+                    </ToolbarTip>
 
                     {/* 移动物体 */}
-                    <Tooltip title={<FormattedMessage id="draw.move" />}>
+                    <KeyEventWrap
+                        onKeyDownEventPropName="onClick"
+                        componentKey={KeyEventKey.MoveTool}
+                        enable={visible}
+                    >
                         <Button
                             icon={<DragOutlined />}
                             type={getButtonTypeByState(drawState === DrawState.Idle)}
                             onClick={() => {
-                                // 设为 idle 状态即可
-                                setDrawState(DrawState.Idle);
+                                onToolClick(DrawState.Idle);
                             }}
                         />
-                    </Tooltip>
+                    </KeyEventWrap>
 
                     {/* 选择物体 */}
-                    <Tooltip title={<FormattedMessage id="draw.select" />}>
+                    <KeyEventWrap
+                        onKeyDownEventPropName="onClick"
+                        componentKey={KeyEventKey.SelectTool}
+                        enable={visible}
+                    >
                         <Button
-                            icon={<ArrowSelectIcon />}
+                            icon={<ArrowSelectIcon style={{ fontSize: '1.08em' }} />}
                             type={getButtonTypeByState(drawState === DrawState.Select)}
                             onClick={() => {
                                 if (!maskRectRef.current) {
                                     return;
                                 }
 
-                                setDrawState(DrawState.Select);
+                                onToolClick(DrawState.Select);
                             }}
                         />
-                    </Tooltip>
+                    </KeyEventWrap>
 
                     <div className="draw-toolbar-splitter" />
 
                     {/* 矩形 */}
-                    <Tooltip title={<FormattedMessage id="draw.rect" />}>
+                    <KeyEventWrap
+                        onKeyDownEventPropName="onClick"
+                        componentKey={KeyEventKey.RectTool}
+                        enable={visible}
+                    >
                         <Button
-                            icon={<RectIcon style={{ fontSize: '0.9em' }} />}
+                            icon={<RectIcon style={{ fontSize: '1em' }} />}
                             type={getButtonTypeByState(drawState === DrawState.Rect)}
                             onClick={() => {
-                                setDrawState(DrawState.Rect);
+                                onToolClick(DrawState.Rect);
                             }}
                         />
-                    </Tooltip>
+                    </KeyEventWrap>
 
                     {/* 椭圆 */}
-                    <Tooltip title={<FormattedMessage id="draw.ellipse" />}>
+                    <KeyEventWrap
+                        onKeyDownEventPropName="onClick"
+                        componentKey={KeyEventKey.EllipseTool}
+                        enable={visible}
+                    >
                         <Button
-                            icon={<CircleIcon style={{ fontSize: '0.9em' }} />}
+                            icon={<CircleIcon style={{ fontSize: '1em' }} />}
                             type={getButtonTypeByState(drawState === DrawState.Ellipse)}
                             onClick={() => {
-                                setDrawState(DrawState.Ellipse);
+                                onToolClick(DrawState.Ellipse);
                             }}
                         />
-                    </Tooltip>
+                    </KeyEventWrap>
 
                     {/* 箭头 */}
-                    <Tooltip title={<FormattedMessage id="draw.arrow" />}>
+                    <KeyEventWrap
+                        onKeyDownEventPropName="onClick"
+                        componentKey={KeyEventKey.ArrowTool}
+                        enable={visible}
+                    >
                         <Button
                             icon={<ArrowIcon style={{ fontSize: '0.83em' }} />}
                             type={getButtonTypeByState(drawState === DrawState.Arrow)}
                             onClick={() => {
-                                setDrawState(DrawState.Arrow);
+                                onToolClick(DrawState.Arrow);
                             }}
                         />
-                    </Tooltip>
+                    </KeyEventWrap>
 
                     {/* 画笔 */}
-                    <Tooltip title={<FormattedMessage id="draw.pen" />}>
+                    <KeyEventWrap
+                        onKeyDownEventPropName="onClick"
+                        componentKey={KeyEventKey.PenTool}
+                        enable={visible}
+                    >
                         <Button
                             icon={<PenIcon style={{ fontSize: '1.08em' }} />}
                             type={getButtonTypeByState(drawState === DrawState.Pen)}
                             onClick={() => {
-                                setDrawState(DrawState.Pen);
+                                onToolClick(DrawState.Pen);
                             }}
                         />
-                    </Tooltip>
+                    </KeyEventWrap>
 
                     {/* 高亮 */}
-                    <Tooltip title={<FormattedMessage id="draw.highlight" />}>
+                    <KeyEventWrap
+                        onKeyDownEventPropName="onClick"
+                        componentKey={KeyEventKey.HighlightTool}
+                        enable={visible}
+                    >
                         <Button
                             icon={<HighlightOutlined />}
                             type={getButtonTypeByState(drawState === DrawState.Highlight)}
                             onClick={() => {
-                                setDrawState(DrawState.Highlight);
+                                onToolClick(DrawState.Highlight);
                             }}
                         />
-                    </Tooltip>
-
-                    {/* 马赛克 */}
-                    <Tooltip title={<FormattedMessage id="draw.mosaic" />}>
-                        <Button
-                            icon={<MosaicIcon />}
-                            type={getButtonTypeByState(drawState === DrawState.Mosaic)}
-                            onClick={() => {
-                                setDrawState(DrawState.Mosaic);
-                            }}
-                        />
-                    </Tooltip>
+                    </KeyEventWrap>
 
                     {/* 文字 */}
-                    <Tooltip title={<FormattedMessage id="draw.text" />}>
+                    <KeyEventWrap
+                        onKeyDownEventPropName="onClick"
+                        componentKey={KeyEventKey.TextTool}
+                        enable={visible}
+                    >
                         <Button
                             icon={<TextIcon style={{ fontSize: '1.08em' }} />}
                             type={getButtonTypeByState(drawState === DrawState.Text)}
                             onClick={() => {
-                                setDrawState(DrawState.Text);
+                                onToolClick(DrawState.Text);
                             }}
                         />
-                    </Tooltip>
+                    </KeyEventWrap>
+
+                    {/* 马赛克 */}
+                    <KeyEventWrap
+                        onKeyDownEventPropName="onClick"
+                        componentKey={KeyEventKey.MosaicTool}
+                        enable={visible}
+                    >
+                        <Button
+                            icon={<MosaicIcon />}
+                            type={getButtonTypeByState(drawState === DrawState.Mosaic)}
+                            onClick={() => {
+                                onToolClick(DrawState.Mosaic);
+                            }}
+                        />
+                    </KeyEventWrap>
+
+                    <KeyEventWrap
+                        onKeyDownEventPropName="onClick"
+                        componentKey={KeyEventKey.RemoveTool}
+                        enable={visible}
+                    >
+                        <Button
+                            icon={<DeleteOutlined style={{ fontSize: '0.96em' }} />}
+                            type="text"
+                            onClick={() => {
+                                selectedObjectListRef.current.forEach((obj) => {
+                                    fabricRef.current?.discardActiveObject();
+                                    fabricRef.current?.remove(obj);
+                                });
+                            }}
+                        />
+                    </KeyEventWrap>
 
                     {/* 橡皮擦 */}
-                    <Tooltip title={<FormattedMessage id="draw.eraser" />}>
+                    <KeyEventWrap
+                        onKeyDownEventPropName="onClick"
+                        componentKey={KeyEventKey.EraserTool}
+                        enable={visible}
+                    >
                         <Button
                             icon={<EraserIcon style={{ fontSize: '0.9em' }} />}
                             type={getButtonTypeByState(drawState === DrawState.Eraser)}
                             onClick={() => {
-                                setDrawState(DrawState.Eraser);
+                                onToolClick(DrawState.Eraser);
                             }}
                         />
-                    </Tooltip>
+                    </KeyEventWrap>
 
                     <div className="draw-toolbar-splitter" />
 
                     {/* 撤销 */}
-                    <Tooltip title={<FormattedMessage id="draw.undo" />}>
+                    <KeyEventWrap
+                        onKeyDownEventPropName="onClick"
+                        componentKey={KeyEventKey.UndoTool}
+                        enable={visible}
+                    >
                         <Button
                             disabled={!canUndo}
                             icon={<UndoOutlined />}
@@ -474,10 +596,14 @@ const DrawToolbarCore: React.FC<DrawToolbarProps> = ({
                                 canvasHistoryRef.current?.undo();
                             }}
                         />
-                    </Tooltip>
+                    </KeyEventWrap>
 
                     {/* 重做 */}
-                    <Tooltip title={<FormattedMessage id="draw.redo" />}>
+                    <KeyEventWrap
+                        onKeyDownEventPropName="onClick"
+                        componentKey={KeyEventKey.RedoTool}
+                        enable={visible}
+                    >
                         <Button
                             disabled={!canRedo}
                             icon={<RedoOutlined />}
@@ -486,12 +612,17 @@ const DrawToolbarCore: React.FC<DrawToolbarProps> = ({
                                 canvasHistoryRef.current?.redo();
                             }}
                         />
-                    </Tooltip>
+                    </KeyEventWrap>
 
                     <div className="draw-toolbar-splitter" />
 
                     {/* 取消截图 */}
-                    <Tooltip title={<FormattedMessage id="draw.cancel" />}>
+                    <KeyEventWrap
+                        onKeyDownEventPropName="onClick"
+                        componentKey={KeyEventKey.CancelTool}
+                        confirmTip={<>{intl.formatMessage({ id: 'draw.cancel.tip1' })}</>}
+                        enable={visible}
+                    >
                         <Button
                             icon={
                                 <CloseOutlined
@@ -503,19 +634,19 @@ const DrawToolbarCore: React.FC<DrawToolbarProps> = ({
                                 onCancel();
                             }}
                         />
-                    </Tooltip>
+                    </KeyEventWrap>
                 </Flex>
             </div>
             <div className="draw-subtoolbar" ref={drawSubToolbarRef}>
                 <Flex align="center" gap={token.paddingXS}>
-                    {drawState === DrawState.Pen && <PenToolbar />}
-                    {drawState === DrawState.Arrow && <ArrowToolbar />}
-                    {drawState === DrawState.Rect && <RectToolbar />}
-                    {drawState === DrawState.Ellipse && <EllipseToolbar />}
-                    {drawState === DrawState.Mosaic && <MosaicToolbar />}
-                    {drawState === DrawState.Eraser && <EraserToolbar />}
-                    {drawState === DrawState.Highlight && <HighlightToolbar />}
-                    {drawState === DrawState.Text && <TextToolbar />}
+                    {drawState === DrawState.Pen && <PenTool />}
+                    {drawState === DrawState.Arrow && <ArrowTool />}
+                    {drawState === DrawState.Rect && <RectTool />}
+                    {drawState === DrawState.Ellipse && <EllipseTool />}
+                    {drawState === DrawState.Mosaic && <MosaicTool />}
+                    {drawState === DrawState.Eraser && <EraserTool />}
+                    {drawState === DrawState.Highlight && <HighlightTool />}
+                    {drawState === DrawState.Text && <TextTool />}
                 </Flex>
             </div>
             <style jsx>{`

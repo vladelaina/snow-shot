@@ -3,7 +3,7 @@
 import { createContext, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { BaseDirectory, exists, mkdir, readTextFile, writeTextFile } from '@tauri-apps/plugin-fs';
 import { ConfigProvider, theme } from 'antd';
-import _ from 'lodash';
+import _, { trim } from 'lodash';
 import zhCN from 'antd/es/locale/zh_CN';
 import zhTW from 'antd/es/locale/zh_TW';
 import enUS from 'antd/es/locale/en_US';
@@ -73,13 +73,24 @@ import {
     ArrowConfigValue,
     defaultArrowConfigValue,
 } from './draw/components/drawToolbar/components/pickers/arrowConfigPicker';
-import { defaultEnableRadiusValue, EnableRadiusValue } from './draw/components/drawToolbar/components/pickers/enableRadiusPicker';
+import {
+    defaultEnableRadiusValue,
+    EnableRadiusValue,
+} from './draw/components/drawToolbar/components/pickers/enableRadiusPicker';
+import {
+    defaultKeyEventSettings,
+    KeyEventKey,
+    KeyEventValue,
+} from './draw/components/drawToolbar/components/keyEventWrap';
+import { AppFunction, AppFunctionConfig, defaultAppFunctionConfigs } from './page';
 
 export enum AppSettingsGroup {
     Common = 'common',
     Cache = 'cache',
     Screenshot = 'screenshot',
     DrawToolbarPicker = 'drawToolbarPicker',
+    DrawToolbarKeyEvent = 'drawToolbarKeyEvent',
+    AppFunction = 'appFunction',
 }
 
 export enum AppSettingsLanguage {
@@ -103,6 +114,10 @@ export type AppSettingsData = {
     [AppSettingsGroup.Screenshot]: {
         /** 选区控件样式 */
         controlNode: AppSettingsControlNode;
+        /** 选取窗口子元素 */
+        findChildrenElements: boolean;
+        /** 性能模式 */
+        performanceMode: boolean;
     };
     [AppSettingsGroup.Cache]: {
         menuCollapsed: boolean;
@@ -125,9 +140,11 @@ export type AppSettingsData = {
         arrowConfigPicker: Record<string, ArrowConfigValue>;
         enableRadiusPicker: Record<string, EnableRadiusValue>;
     };
+    [AppSettingsGroup.DrawToolbarKeyEvent]: Record<KeyEventKey, KeyEventValue>;
+    [AppSettingsGroup.AppFunction]: Record<AppFunction, AppFunctionConfig>;
 };
 
-const defaultAppSettingsData: AppSettingsData = {
+export const defaultAppSettingsData: AppSettingsData = {
     [AppSettingsGroup.Common]: {
         darkMode: false,
         language: AppSettingsLanguage.ZHHans,
@@ -135,6 +152,8 @@ const defaultAppSettingsData: AppSettingsData = {
     },
     [AppSettingsGroup.Screenshot]: {
         controlNode: AppSettingsControlNode.Polyline,
+        findChildrenElements: true,
+        performanceMode: false,
     },
     [AppSettingsGroup.Cache]: {
         menuCollapsed: false,
@@ -157,6 +176,8 @@ const defaultAppSettingsData: AppSettingsData = {
         arrowConfigPicker: {},
         enableRadiusPicker: {},
     },
+    [AppSettingsGroup.DrawToolbarKeyEvent]: defaultKeyEventSettings,
+    [AppSettingsGroup.AppFunction]: defaultAppFunctionConfigs,
 };
 
 export type AppSettingsContextType = AppSettingsData & {
@@ -260,7 +281,9 @@ export const ContextWrap: React.FC<{ children: React.ReactNode }> = ({ children 
 
             if (group === AppSettingsGroup.Common) {
                 newSettings = newSettings as AppSettingsData[typeof group];
-                const prevSettings = appSettingsRef.current[group] as AppSettingsData[typeof group];
+                const prevSettings = appSettingsRef.current[group] as
+                    | AppSettingsData[typeof group]
+                    | undefined;
                 settings = {
                     darkMode:
                         typeof newSettings?.darkMode === 'boolean'
@@ -285,7 +308,9 @@ export const ContextWrap: React.FC<{ children: React.ReactNode }> = ({ children 
                 };
             } else if (group === AppSettingsGroup.Cache) {
                 newSettings = newSettings as AppSettingsData[typeof group];
-                const prevSettings = appSettingsRef.current[group] as AppSettingsData[typeof group];
+                const prevSettings = appSettingsRef.current[group] as
+                    | AppSettingsData[typeof group]
+                    | undefined;
                 settings = {
                     menuCollapsed:
                         typeof newSettings?.menuCollapsed === 'boolean'
@@ -294,9 +319,11 @@ export const ContextWrap: React.FC<{ children: React.ReactNode }> = ({ children 
                 };
             } else if (group === AppSettingsGroup.Screenshot) {
                 newSettings = newSettings as AppSettingsData[typeof group];
-                const prevSettings = appSettingsRef.current[group] as AppSettingsData[typeof group];
+                const prevSettings = appSettingsRef.current[group] as
+                    | AppSettingsData[typeof group]
+                    | undefined;
 
-                let controlNode = prevSettings.controlNode;
+                let controlNode = prevSettings?.controlNode ?? AppSettingsControlNode.Polyline;
                 if (newSettings?.controlNode) {
                     if (newSettings.controlNode === AppSettingsControlNode.Circle) {
                         controlNode = AppSettingsControlNode.Circle;
@@ -304,12 +331,29 @@ export const ContextWrap: React.FC<{ children: React.ReactNode }> = ({ children 
                         controlNode = AppSettingsControlNode.Polyline;
                     }
                 }
+
+                const findChildrenElements =
+                    typeof newSettings?.findChildrenElements === 'boolean'
+                        ? newSettings.findChildrenElements
+                        : (prevSettings?.findChildrenElements ??
+                          defaultAppSettingsData[group].findChildrenElements);
+
+                const performanceMode =
+                    typeof newSettings?.performanceMode === 'boolean'
+                        ? newSettings.performanceMode
+                        : (prevSettings?.performanceMode ??
+                          defaultAppSettingsData[group].performanceMode);
+
                 settings = {
                     controlNode,
+                    findChildrenElements,
+                    performanceMode,
                 };
             } else if (group === AppSettingsGroup.DrawToolbarPicker) {
                 newSettings = newSettings as AppSettingsData[typeof group];
-                const prevSettings = appSettingsRef.current[group] as AppSettingsData[typeof group];
+                const prevSettings = appSettingsRef.current[group] as
+                    | AppSettingsData[typeof group]
+                    | undefined;
 
                 const fillShapePickerSettings = newSettings.fillShapePicker ?? {};
                 const lockWidthHeightPickerSettings = newSettings.lockWidthHeightPicker ?? {};
@@ -329,13 +373,12 @@ export const ContextWrap: React.FC<{ children: React.ReactNode }> = ({ children 
                 const arrowConfigPickerSettings = newSettings.arrowConfigPicker ?? {};
                 const enableRadiusPickerSettings = newSettings.enableRadiusPicker ?? {};
 
-
                 Object.keys(fillShapePickerSettings).forEach((key) => {
                     fillShapePickerSettings[key] = {
                         fill:
                             typeof fillShapePickerSettings[key]?.fill === 'boolean'
                                 ? fillShapePickerSettings[key]?.fill
-                                : (prevSettings.fillShapePicker[key]?.fill ??
+                                : (prevSettings?.fillShapePicker[key]?.fill ??
                                   defaultFillShapePickerValue.fill),
                     };
                 });
@@ -345,7 +388,7 @@ export const ContextWrap: React.FC<{ children: React.ReactNode }> = ({ children 
                         lock:
                             typeof lockWidthHeightPickerSettings[key]?.lock === 'boolean'
                                 ? lockWidthHeightPickerSettings[key]?.lock
-                                : (prevSettings.lockWidthHeightPicker[key]?.lock ??
+                                : (prevSettings?.lockWidthHeightPicker[key]?.lock ??
                                   defaultLockWidthHeightValue.lock),
                     };
                 });
@@ -355,14 +398,14 @@ export const ContextWrap: React.FC<{ children: React.ReactNode }> = ({ children 
                         radius:
                             typeof radiusPickerSettings[key]?.radius === 'number'
                                 ? radiusPickerSettings[key]?.radius
-                                : (prevSettings.radiusPicker[key]?.radius ??
+                                : (prevSettings?.radiusPicker[key]?.radius ??
                                   defaultRadiusPickerValue.radius),
                     };
                 });
 
                 Object.keys(lineColorPickerSettings).forEach((key) => {
                     const prevLineColor =
-                        prevSettings.lineColorPicker[key]?.color ??
+                        prevSettings?.lineColorPicker[key]?.color ??
                         defaultLineColorPickerValue.color;
                     let lineColor =
                         typeof lineColorPickerSettings[key]?.color === 'string'
@@ -385,7 +428,7 @@ export const ContextWrap: React.FC<{ children: React.ReactNode }> = ({ children 
                         width:
                             typeof lineWidthPickerSettings[key]?.width === 'number'
                                 ? lineWidthPickerSettings[key]?.width
-                                : (prevSettings.lineWidthPicker[key]?.width ??
+                                : (prevSettings?.lineWidthPicker[key]?.width ??
                                   defaultLineWidthPickerValue.width),
                     };
                 });
@@ -401,7 +444,7 @@ export const ContextWrap: React.FC<{ children: React.ReactNode }> = ({ children 
                         blur:
                             typeof enableBlurPickerSettings[key]?.blur === 'boolean'
                                 ? enableBlurPickerSettings[key].blur
-                                : (prevSettings.enableBlurPicker[key]?.blur ??
+                                : (prevSettings?.enableBlurPicker[key]?.blur ??
                                   defaultEnableBlurValue.blur),
                     };
                 });
@@ -411,7 +454,7 @@ export const ContextWrap: React.FC<{ children: React.ReactNode }> = ({ children 
                         enable:
                             typeof drawRectPickerSettings[key]?.enable === 'boolean'
                                 ? drawRectPickerSettings[key].enable
-                                : (prevSettings.drawRectPicker[key]?.enable ??
+                                : (prevSettings?.drawRectPicker[key]?.enable ??
                                   defaultDrawRectValue.enable),
                     };
                 });
@@ -421,7 +464,7 @@ export const ContextWrap: React.FC<{ children: React.ReactNode }> = ({ children 
                         size:
                             typeof fontSizePickerSettings[key]?.size === 'number'
                                 ? fontSizePickerSettings[key].size
-                                : (prevSettings.fontSizePicker[key]?.size ??
+                                : (prevSettings?.fontSizePicker[key]?.size ??
                                   defaultFontSizePickerValue.size),
                     };
                 });
@@ -431,7 +474,7 @@ export const ContextWrap: React.FC<{ children: React.ReactNode }> = ({ children 
                         enable:
                             typeof enableBoldPickerSettings[key]?.enable === 'boolean'
                                 ? enableBoldPickerSettings[key].enable
-                                : (prevSettings.enableBoldPicker[key]?.enable ??
+                                : (prevSettings?.enableBoldPicker[key]?.enable ??
                                   defaultEnableBoldValue.enable),
                     };
                 });
@@ -441,7 +484,7 @@ export const ContextWrap: React.FC<{ children: React.ReactNode }> = ({ children 
                         enable:
                             typeof enableItalicPickerSettings[key]?.enable === 'boolean'
                                 ? enableItalicPickerSettings[key].enable
-                                : (prevSettings.enableItalicPicker[key]?.enable ??
+                                : (prevSettings?.enableItalicPicker[key]?.enable ??
                                   defaultEnableItalicValue.enable),
                     };
                 });
@@ -451,7 +494,7 @@ export const ContextWrap: React.FC<{ children: React.ReactNode }> = ({ children 
                         enable:
                             typeof enableUnderlinePickerSettings[key]?.enable === 'boolean'
                                 ? enableUnderlinePickerSettings[key].enable
-                                : (prevSettings.enableUnderlinePicker[key]?.enable ??
+                                : (prevSettings?.enableUnderlinePicker[key]?.enable ??
                                   defaultEnableUnderlineValue.enable),
                     };
                 });
@@ -461,7 +504,7 @@ export const ContextWrap: React.FC<{ children: React.ReactNode }> = ({ children 
                         enable:
                             typeof enableStrikethroughPickerSettings[key]?.enable === 'boolean'
                                 ? enableStrikethroughPickerSettings[key].enable
-                                : (prevSettings.enableStrikethroughPicker[key]?.enable ??
+                                : (prevSettings?.enableStrikethroughPicker[key]?.enable ??
                                   defaultEnableStrikethroughValue.enable),
                     };
                 });
@@ -471,7 +514,7 @@ export const ContextWrap: React.FC<{ children: React.ReactNode }> = ({ children 
                         value:
                             typeof fontFamilyPickerSettings[key]?.value === 'string'
                                 ? fontFamilyPickerSettings[key].value
-                                : (prevSettings.fontFamilyPicker[key]?.value ??
+                                : (prevSettings?.fontFamilyPicker[key]?.value ??
                                   defaultFontFamilyPickerValue.value),
                     };
                 });
@@ -481,7 +524,7 @@ export const ContextWrap: React.FC<{ children: React.ReactNode }> = ({ children 
                         configId:
                             typeof arrowConfigPickerSettings[key]?.configId === 'string'
                                 ? arrowConfigPickerSettings[key].configId
-                                : (prevSettings.arrowConfigPicker[key]?.configId ??
+                                : (prevSettings?.arrowConfigPicker[key]?.configId ??
                                   defaultArrowConfigValue.configId),
                     };
                 });
@@ -491,76 +534,164 @@ export const ContextWrap: React.FC<{ children: React.ReactNode }> = ({ children 
                         enable:
                             typeof enableRadiusPickerSettings[key]?.enable === 'boolean'
                                 ? enableRadiusPickerSettings[key].enable
-                                : (prevSettings.enableRadiusPicker[key]?.enable ??
+                                : (prevSettings?.enableRadiusPicker[key]?.enable ??
                                   defaultEnableRadiusValue.enable),
                     };
                 });
 
                 settings = {
                     fillShapePicker: {
-                        ...prevSettings.fillShapePicker,
+                        ...prevSettings?.fillShapePicker,
                         ...fillShapePickerSettings,
                     },
                     lockWidthHeightPicker: {
-                        ...prevSettings.lockWidthHeightPicker,
+                        ...prevSettings?.lockWidthHeightPicker,
                         ...lockWidthHeightPickerSettings,
                     },
                     radiusPicker: {
-                        ...prevSettings.radiusPicker,
+                        ...prevSettings?.radiusPicker,
                         ...radiusPickerSettings,
                     },
                     lineColorPicker: {
-                        ...prevSettings.lineColorPicker,
+                        ...prevSettings?.lineColorPicker,
                         ...lineColorPickerSettings,
                     },
                     lineWidthPicker: {
-                        ...prevSettings.lineWidthPicker,
+                        ...prevSettings?.lineWidthPicker,
                         ...lineWidthPickerSettings,
                     },
                     sliderPicker: {
-                        ...prevSettings.sliderPicker,
+                        ...prevSettings?.sliderPicker,
                         ...sliderPickerSettings,
                     },
                     enableBlurPicker: {
-                        ...prevSettings.enableBlurPicker,
+                        ...prevSettings?.enableBlurPicker,
                         ...enableBlurPickerSettings,
                     },
                     drawRectPicker: {
-                        ...prevSettings.drawRectPicker,
+                        ...prevSettings?.drawRectPicker,
                         ...drawRectPickerSettings,
                     },
                     fontSizePicker: {
-                        ...prevSettings.fontSizePicker,
+                        ...prevSettings?.fontSizePicker,
                         ...fontSizePickerSettings,
                     },
                     enableBoldPicker: {
-                        ...prevSettings.enableBoldPicker,
+                        ...prevSettings?.enableBoldPicker,
                         ...enableBoldPickerSettings,
                     },
                     enableItalicPicker: {
-                        ...prevSettings.enableItalicPicker,
+                        ...prevSettings?.enableItalicPicker,
                         ...enableItalicPickerSettings,
                     },
                     enableUnderlinePicker: {
-                        ...prevSettings.enableUnderlinePicker,
+                        ...prevSettings?.enableUnderlinePicker,
                         ...enableUnderlinePickerSettings,
                     },
                     enableStrikethroughPicker: {
-                        ...prevSettings.enableStrikethroughPicker,
+                        ...prevSettings?.enableStrikethroughPicker,
                         ...enableStrikethroughPickerSettings,
                     },
                     fontFamilyPicker: {
-                        ...prevSettings.fontFamilyPicker,
+                        ...prevSettings?.fontFamilyPicker,
                         ...fontFamilyPickerSettings,
                     },
                     arrowConfigPicker: {
-                        ...prevSettings.arrowConfigPicker,
+                        ...prevSettings?.arrowConfigPicker,
                         ...arrowConfigPickerSettings,
                     },
                     enableRadiusPicker: {
-                        ...prevSettings.enableRadiusPicker,
+                        ...prevSettings?.enableRadiusPicker,
                         ...enableRadiusPickerSettings,
                     },
+                };
+            } else if (group === AppSettingsGroup.DrawToolbarKeyEvent) {
+                newSettings = newSettings as AppSettingsData[typeof group];
+                const prevSettings = appSettingsRef.current[group] as
+                    | AppSettingsData[typeof group]
+                    | undefined;
+
+                const settingsKeySet = new Set<string>();
+                const settingKeys: KeyEventKey[] = Object.keys(
+                    defaultKeyEventSettings,
+                ) as KeyEventKey[];
+                settingKeys.forEach((key) => {
+                    const keyEventSettings = newSettings as Record<KeyEventKey, KeyEventValue>;
+
+                    let keyEventSettingsKey =
+                        typeof keyEventSettings[key]?.hotKey === 'string'
+                            ? keyEventSettings[key].hotKey
+                            : (prevSettings?.[key]?.hotKey ?? defaultKeyEventSettings[key].hotKey);
+
+                    // 格式化处理下
+                    keyEventSettingsKey = keyEventSettingsKey
+                        .split(',')
+                        .map(trim)
+                        .filter((val) => {
+                            if (settingsKeySet.has(val)) {
+                                return false;
+                            }
+
+                            settingsKeySet.add(val);
+                            return true;
+                        })
+                        .join(', ');
+
+                    settingsKeySet.add(keyEventSettingsKey);
+
+                    keyEventSettings[key] = {
+                        hotKey: keyEventSettingsKey,
+                    };
+                });
+
+                settings = {
+                    ...defaultKeyEventSettings,
+                    ...newSettings,
+                };
+            } else if (group === AppSettingsGroup.AppFunction) {
+                newSettings = newSettings as AppSettingsData[typeof group];
+                const prevSettings = appSettingsRef.current[group] as
+                    | AppSettingsData[typeof group]
+                    | undefined;
+
+                const settingsKeySet = new Set<string>();
+                const settingKeys: AppFunction[] = Object.keys(
+                    defaultAppFunctionConfigs,
+                ) as AppFunction[];
+                settingKeys.forEach((key) => {
+                    const keyEventSettings = newSettings as Record<AppFunction, AppFunctionConfig>;
+
+                    let keyEventSettingsKey =
+                        typeof keyEventSettings[key]?.shortcutKey === 'string'
+                            ? keyEventSettings[key].shortcutKey
+                            : (prevSettings?.[key]?.shortcutKey ??
+                              defaultAppFunctionConfigs[key].shortcutKey);
+
+                    // 格式化处理下
+                    keyEventSettingsKey = keyEventSettingsKey
+                        .split(',')
+                        .slice(0, 1) // 快捷键不支持多个键，这里也限制下
+                        .map(trim)
+                        .filter((val) => {
+                            if (settingsKeySet.has(val)) {
+                                return false;
+                            }
+
+                            settingsKeySet.add(val);
+                            return true;
+                        })
+                        .join(', ');
+
+                    settingsKeySet.add(keyEventSettingsKey);
+
+                    keyEventSettings[key] = {
+                        shortcutKey: keyEventSettingsKey,
+                    };
+                });
+
+                settings = {
+                    ...defaultAppFunctionConfigs,
+                    ...newSettings,
                 };
             } else {
                 return defaultAppSettingsData[group];

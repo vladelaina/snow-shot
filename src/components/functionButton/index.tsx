@@ -1,15 +1,14 @@
-import { Button, Flex, Input, theme } from 'antd';
+import { Button, Flex, theme } from 'antd';
 import React, { useState } from 'react';
 import { IconLabel } from '../iconLable';
-import { useIntl } from 'react-intl';
 import { zIndexs } from '@/utils/zIndex';
 
 export const FunctionButton: React.FC<{
     label: React.ReactNode;
     icon?: React.ReactNode;
     onClick?: () => Promise<void>;
-}> = ({ label, icon, onClick }) => {
-    const intl = useIntl();
+    children?: React.ReactNode;
+}> = ({ label, icon, onClick, children }) => {
     const { token } = theme.useToken();
     const [loading, setLoading] = useState(false);
     return (
@@ -46,12 +45,7 @@ export const FunctionButton: React.FC<{
                     e.stopPropagation();
                 }}
             >
-                <Input
-                    style={{ width: '128px' }}
-                    variant="filled"
-                    onClick={() => {}}
-                    placeholder={intl.formatMessage({ id: 'home.shortcut' })}
-                />
+                {children}
             </div>
         </div>
     );

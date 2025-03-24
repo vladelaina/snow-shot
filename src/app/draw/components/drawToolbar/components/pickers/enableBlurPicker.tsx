@@ -1,8 +1,9 @@
 import { BlurIcon } from '@/components/icons';
-import { Button, Tooltip } from 'antd';
+import { Button } from 'antd';
 import { getButtonTypeByState } from '../..';
 import { FormattedMessage } from 'react-intl';
 import { withPickerBase } from './pickerBase';
+import { ToolbarTip } from '../../../toolbarTip';
 
 export type EnableBlurValue = {
     blur: boolean;
@@ -17,7 +18,7 @@ const EnableBlurPickerComponent: React.FC<{
     setValue: React.Dispatch<React.SetStateAction<EnableBlurValue>>;
 }> = ({ value, setValue }) => {
     return (
-        <Tooltip title={<FormattedMessage id="draw.enableBlur" />}>
+        <ToolbarTip destroyTooltipOnHide title={<FormattedMessage id="draw.enableBlur" />}>
             <Button
                 icon={<BlurIcon />}
                 type={getButtonTypeByState(value.blur)}
@@ -25,7 +26,7 @@ const EnableBlurPickerComponent: React.FC<{
                     setValue((prev) => ({ blur: !prev.blur }));
                 }}
             />
-        </Tooltip>
+        </ToolbarTip>
     );
 };
 

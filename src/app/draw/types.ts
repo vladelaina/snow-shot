@@ -16,3 +16,7 @@ export enum DrawState {
     Highlight = 'highlight',
     Text = 'text',
 }
+
+export const getMaskBackgroundColor = (darkMode: boolean) => {
+    return darkMode ? '#434343' : '#000000';
+};

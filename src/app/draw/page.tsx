@@ -1,14 +1,24 @@
 'use client';
 
-import { useContext, useRef, useEffect, useCallback, useState } from 'react';
+import {
+    useContext,
+    useRef,
+    useEffect,
+    useCallback,
+    useState,
+    useImperativeHandle,
+    RefObject,
+} from 'react';
 import { AppSettingsContext, AppSettingsControlNode } from '../contextWrap';
 import {
     captureCurrentMonitor,
     ElementInfo,
     ElementRect,
+    getElementFromPosition,
     getElementInfo,
     ImageBuffer,
     ImageEncoder,
+    initUiElementsCache,
 } from '@/commands';
 import * as fabric from 'fabric';
 import { getCurrentWindow, Window as AppWindow } from '@tauri-apps/api/window';
@@ -17,11 +27,14 @@ import { zIndexs } from '@/utils/zIndex';
 import { DrawToolbar } from './components/drawToolbar';
 import { EventListenerContext } from '@/components/eventListener';
 import React from 'react';
-import { CaptureStep, DrawState } from './types';
+import { CaptureStep, DrawState, getMaskBackgroundColor } from './types';
 import { theme } from 'antd';
-import { FabricHistory } from '@/utils/fabricjsHistory';
-import { DrawContext } from './context';
+import { FabricHistory, ignoreHistory } from '@/utils/fabricjsHistory';
+import { DrawContentActionType, DrawContext } from './context';
 import Flatbush from 'flatbush';
+import StatusBar from './components/statusBar';
+import { useHotkeys } from 'react-hotkeys-hook';
+import { ColorPicker } from './components/colorPicker';
 
 type CanvasPosition = {
     left: number;
@@ -36,30 +49,56 @@ type CanvasSize = {
 type DrawContentProps = {
     onCancel: () => void;
     imageBuffer: ImageBuffer | undefined;
-    getElementRectFromMousePosition: (mouseX: number, mouseY: number) => ElementRect[];
+    getElementRectFromMousePosition: (mouseX: number, mouseY: number) => Promise<ElementRect[]>;
+    getElementRectFromMousePositionLoading: boolean;
+    actionRef: RefObject<DrawContentActionType | undefined>;
 };
 
 type SelectWindowFromMousePositionCallback = (
     image: ImageBuffer,
     point: fabric.Point,
-) => {
-    left: number;
-    top: number;
-    width: number;
-    height: number;
+) => Promise<
+    | {
+          left: number;
+          top: number;
+          width: number;
+          height: number;
+      }
+    | undefined
+>;
+
+export const setSelectOnClick = (object: fabric.Object) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (object as any).selectOnClick = true;
 };
 
+export const isSelectOnClick = (object: fabric.Object | undefined) => {
+    if (!object) {
+        return false;
+    }
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    return !!(object as any).selectOnClick;
+};
+
+const maskOpacity = 0.5;
 const DrawContent: React.FC<DrawContentProps> = ({
     onCancel,
     imageBuffer,
     getElementRectFromMousePosition,
+    getElementRectFromMousePositionLoading,
+    actionRef,
 }) => {
     const { token } = theme.useToken();
 
     const {
         common: { darkMode },
-        screenshot: { controlNode },
+        screenshot: { controlNode, findChildrenElements },
     } = useContext(AppSettingsContext);
+
+    const findChildrenElementsRef = useRef(findChildrenElements);
+    useEffect(() => {
+        findChildrenElementsRef.current = findChildrenElements;
+    }, [findChildrenElements]);
 
     const imageBufferRef = useRef<ImageBuffer | undefined>(undefined);
     useEffect(() => {
@@ -77,12 +116,8 @@ const DrawContent: React.FC<DrawContentProps> = ({
     const circleCursorRef = useRef<HTMLDivElement>(null);
     const canvasUnlistenListRef = useRef<VoidFunction[]>([]);
     const imageLayerRef = useRef<fabric.Image | undefined>(undefined);
+    const objectCacheRef = useRef<Record<string, fabric.Object>>({});
     const canvasHistoryRef = useRef<FabricHistory | undefined>(undefined);
-    /**
-     * 创建矩形模糊图层时，创建后无法再次选中对象，发现可以通过 setActiveObject 来选中对象
-     * 这里特殊处理下
-     */
-    const activeObjectListRef = useRef<Set<fabric.Object>>(new Set());
 
     const appWindowRef = useRef<AppWindow | undefined>(undefined);
     const startPointRef = useRef<{ x: number; y: number } | undefined>(undefined);
@@ -94,9 +129,9 @@ const DrawContent: React.FC<DrawContentProps> = ({
     }, []);
     const [drawState, _setDrawState] = useState(DrawState.Idle);
     const drawStateRef = useRef<DrawState>(DrawState.Idle);
-    const setDrawState = useCallback((state: DrawState) => {
-        drawStateRef.current = state;
-        _setDrawState(state);
+    const setDrawState = useCallback((val: DrawState | ((prev: DrawState) => DrawState)) => {
+        drawStateRef.current = typeof val === 'function' ? val(drawStateRef.current) : val;
+        _setDrawState(drawStateRef.current);
     }, []);
     const resizeModeRef = useRef<string>('auto');
     const moveOffsetRef = useRef<CanvasPosition>({
@@ -290,6 +325,8 @@ const DrawContent: React.FC<DrawContentProps> = ({
                 cursor = 'crosshair';
             } else if (drawStateRef.current === DrawState.Text) {
                 cursor = 'text';
+            } else if (drawStateRef.current === DrawState.Select) {
+                cursor = 'crosshair';
             }
         }
 
@@ -307,39 +344,42 @@ const DrawContent: React.FC<DrawContentProps> = ({
     const selectWindowFromMousePositionLevelRef = useRef(0);
     const selectWindowFromMousePositionCallbackRef =
         useRef<SelectWindowFromMousePositionCallback>(undefined);
+
     useEffect(() => {
-        selectWindowFromMousePositionCallbackRef.current = (
+        selectWindowFromMousePositionCallbackRef.current = async (
             image: ImageBuffer,
             point: fabric.Point,
         ) => {
             const monitorX = image.monitorX;
             const monitorY = image.monitorY;
-            const monitorScale = 1 / image.monitorScaleFactor;
+            const mouseScaleFactor = image.monitorScaleFactor;
+            const monitorScale = 1 / mouseScaleFactor;
             const monitorWidth = image.monitorWidth;
             const monitorHeight = image.monitorHeight;
 
-            const elementRectList = getElementRectFromMousePosition(
-                monitorX * monitorScale + point.x,
-                monitorY * monitorScale + point.y,
+            const mouseX = monitorX + point.x * mouseScaleFactor;
+            const mouseY = monitorY + point.y * mouseScaleFactor;
+            const elementRectList = await getElementRectFromMousePosition(
+                mouseX * monitorScale,
+                mouseY * monitorScale,
             );
 
             const minLevel = 0;
             const maxLevel = Math.max(elementRectList.length - 1, minLevel);
             let currentLevel = selectWindowFromMousePositionLevelRef.current;
-            console.log("currentLevel", currentLevel);
             if (currentLevel < minLevel) {
                 currentLevel = minLevel;
             } else if (currentLevel > maxLevel) {
                 currentLevel = maxLevel;
+                selectWindowFromMousePositionLevelRef.current = maxLevel;
             }
 
-            const lastElementRect = elementRectList[elementRectList.length - currentLevel - 1] ?? {
+            const lastElementRect = elementRectList[currentLevel] ?? {
                 min_x: 0,
                 min_y: 0,
                 max_x: monitorWidth * monitorScale,
                 max_y: monitorHeight * monitorScale,
             };
-            console.log("index", elementRectList.length - currentLevel - 1);
 
             return normalizePositionAndSize(
                 lastElementRect.min_x,
@@ -351,6 +391,7 @@ const DrawContent: React.FC<DrawContentProps> = ({
     }, [getElementRectFromMousePosition, normalizePositionAndSize]);
 
     const lastMouseMovePointRef = useRef<fabric.Point | undefined>(undefined);
+    const selectWindowFromMousePositionCallbackPendingRef = useRef(false);
     const onMouseMove = useCallback(
         async (point: fabric.Point) => {
             lastMouseMovePointRef.current = point;
@@ -390,10 +431,16 @@ const DrawContent: React.FC<DrawContentProps> = ({
                         return;
                     }
 
-                    const res = selectWindowFromMousePositionCallbackRef.current?.(
+                    if (selectWindowFromMousePositionCallbackPendingRef.current) {
+                        return;
+                    }
+
+                    selectWindowFromMousePositionCallbackPendingRef.current = true;
+                    const res = await selectWindowFromMousePositionCallbackRef.current?.(
                         imageBuffer,
                         point,
                     );
+                    selectWindowFromMousePositionCallbackPendingRef.current = false;
                     if (!res) {
                         return;
                     }
@@ -532,12 +579,12 @@ const DrawContent: React.FC<DrawContentProps> = ({
         [limitPosition, limitSize],
     );
 
-    const onMouseMoveRefresh = useCallback(() => {
+    const onMouseMoveRefresh = useCallback(async () => {
         if (!lastMouseMovePointRef.current) {
             return;
         }
 
-        onMouseMove(lastMouseMovePointRef.current);
+        await onMouseMove(lastMouseMovePointRef.current);
     }, [onMouseMove]);
 
     // 选取更新时，自动选择下
@@ -614,52 +661,62 @@ const DrawContent: React.FC<DrawContentProps> = ({
     );
 
     // 处理鼠标松开事件
-    const onMouseUp = useCallback(() => {
-        if (captureStepRef.current === CaptureStep.Select) {
-            if (!fabricRef.current || !maskRectClipPathRef.current) {
-                return;
-            }
-
-            startPointRef.current = undefined;
-            setCaptureStep(CaptureStep.Draw);
-        } else if (captureStepRef.current === CaptureStep.Draw) {
-            if (drawStateRef.current === DrawState.Idle) {
-            } else if (drawStateRef.current === DrawState.Resize) {
-                setDrawState(DrawState.Idle);
-                resizeModeRef.current = 'auto';
-
-                // 将矩形的宽高可能变成负数了，纠正成正数
-                const rect = maskRectClipPathRef.current;
-                if (!rect) {
+    const onMouseUp = useCallback(
+        (e: { currentTarget?: fabric.FabricObject }) => {
+            if (captureStepRef.current === CaptureStep.Select) {
+                if (!fabricRef.current || !maskRectClipPathRef.current) {
                     return;
                 }
 
-                let left = rect.left;
-                let top = rect.top;
-                let width = rect.width;
-                let height = rect.height;
+                startPointRef.current = undefined;
+                setCaptureStep(CaptureStep.Draw);
+            } else if (captureStepRef.current === CaptureStep.Draw) {
+                if (drawStateRef.current === DrawState.Idle) {
+                } else if (drawStateRef.current === DrawState.Resize) {
+                    setDrawState(DrawState.Idle);
+                    resizeModeRef.current = 'auto';
 
-                if (width < 0) {
-                    left += width;
-                    width = -width;
+                    // 将矩形的宽高可能变成负数了，纠正成正数
+                    const rect = maskRectClipPathRef.current;
+                    if (!rect) {
+                        return;
+                    }
+
+                    let left = rect.left;
+                    let top = rect.top;
+                    let width = rect.width;
+                    let height = rect.height;
+
+                    if (width < 0) {
+                        left += width;
+                        width = -width;
+                    }
+
+                    if (height < 0) {
+                        top += height;
+                        height = -height;
+                    }
+
+                    rect.set({
+                        left,
+                        top,
+                        width,
+                        height,
+                    });
+
+                    // 矩形渲染位置和面积不变，不用重新渲染
+                } else if (drawStateRef.current === DrawState.Select) {
+                    const currentObject = e.currentTarget;
+                    if (!isSelectOnClick(currentObject)) {
+                        return;
+                    }
+
+                    fabricRef.current?.setActiveObject(currentObject!);
                 }
-
-                if (height < 0) {
-                    top += height;
-                    height = -height;
-                }
-
-                rect.set({
-                    left,
-                    top,
-                    width,
-                    height,
-                });
-
-                // 矩形渲染位置和面积不变，不用重新渲染
             }
-        }
-    }, [setCaptureStep, setDrawState]);
+        },
+        [setCaptureStep, setDrawState],
+    );
 
     useEffect(() => {
         const appWindow = appWindowRef.current;
@@ -709,21 +766,26 @@ const DrawContent: React.FC<DrawContentProps> = ({
 
             let rendered = true;
             let currentPoint = new fabric.Point(0, 0);
+            let lastCursor = 'default';
             mouseMoveUnlisten = canvas.on('mouse:move', (e) => {
                 currentPoint = canvas.getScenePoint(e.e);
-                changeCursor(currentPoint);
+                canvas.setCursor(lastCursor);
                 if (!rendered) {
                     return;
                 }
 
                 rendered = false;
-                requestAnimationFrame(() => {
+                requestAnimationFrame(async () => {
+                    lastCursor = changeCursor(currentPoint);
+                    await onMouseMove(currentPoint);
                     rendered = true;
-                    onMouseMove(currentPoint);
                 });
             });
-            mouseUpUnlisten = canvas.on('mouse:up', () => {
-                onMouseUp();
+            mouseUpUnlisten = canvas.on('mouse:up', (e) => {
+                onMouseUp(e);
+                if (maskRectRef.current) {
+                    fabricRef.current!.bringObjectToFront(maskRectRef.current);
+                }
                 maskRectObjectListRef.current.forEach((object) => {
                     fabricRef.current!.bringObjectToFront(object);
                 });
@@ -739,29 +801,30 @@ const DrawContent: React.FC<DrawContentProps> = ({
             canvas?.dispose();
         };
 
-        Promise.all([
-            appWindow.setAlwaysOnTop(process.env.NODE_ENV !== 'development'),
-            appWindow.setPosition(new PhysicalPosition(0, 0)),
-            appWindow.setFullscreen(true),
-        ]).then(() => {
-            initFabric();
-        });
+        initFabric();
 
         return () => {
             disposeFabric();
         };
     }, [changeCursor, onMouseDown, onMouseMove, onMouseUp, onMouseWheel]);
 
+    const [imageLoading, setImageLoading] = useState(true);
     useEffect(() => {
+        const appWindow = appWindowRef.current;
+        if (!appWindow) {
+            return;
+        }
+
         const initImage = async () => {
-            const appWindow = appWindowRef.current;
-            if (!appWindow || !canvasRef.current || !wrapRef.current || !fabricRef.current) {
+            if (!canvasRef.current || !wrapRef.current || !fabricRef.current) {
                 return;
             }
 
             if (!imageBuffer) {
                 return;
             }
+
+            setImageLoading(true);
 
             fabric.config.perfLimitSizeTotal =
                 imageBuffer.monitorWidth *
@@ -775,8 +838,27 @@ const DrawContent: React.FC<DrawContentProps> = ({
                 imageBuffer.monitorHeight *
                 imageBuffer.monitorScaleFactor;
 
-            const canvasWidth = wrapRef.current.clientWidth;
-            const canvasHeight = wrapRef.current.clientHeight;
+            const canvasWidth = imageBuffer.monitorWidth / imageBuffer.monitorScaleFactor;
+            const canvasHeight = imageBuffer.monitorHeight / imageBuffer.monitorScaleFactor;
+
+            const resizePromise = Promise.all([
+                appWindow.setAlwaysOnTop(process.env.NODE_ENV !== 'development'),
+                appWindow.setPosition(
+                    new PhysicalPosition(imageBuffer.monitorX, imageBuffer.monitorY),
+                ),
+                appWindow.setFullscreen(true),
+                new Promise((resolve) => {
+                    wrapRef.current!.style.width = `${canvasWidth}px`;
+                    wrapRef.current!.style.height = `${canvasHeight}px`;
+
+                    fabricRef.current!.setDimensions({
+                        height: canvasHeight,
+                        width: canvasWidth,
+                    });
+
+                    resolve(undefined);
+                }),
+            ]);
 
             // 设置截图图层
             const imgLayer = await fabric.FabricImage.fromURL(
@@ -791,15 +873,21 @@ const DrawContent: React.FC<DrawContentProps> = ({
             imgLayer.scaleToHeight(canvasHeight);
             imgLayer.scaleToWidth(canvasWidth);
             fabricRef.current.add(imgLayer);
+            ignoreHistory(imgLayer);
             imageLayerRef.current = imgLayer;
 
+            lastMouseMovePointRef.current =
+                lastMouseMovePointRef.current ??
+                new fabric.Point(
+                    imageBuffer.mouseX / imageBuffer.monitorScaleFactor,
+                    imageBuffer.mouseY / imageBuffer.monitorScaleFactor,
+                );
             // 添加遮罩
-            const selectWindow = selectWindowFromMousePositionCallbackRef.current?.(
-                imageBuffer,
-                lastMouseMovePointRef.current ?? new fabric.Point(0, 0),
-            );
             maskRectClipPathRef.current = new fabric.Rect({
-                ...selectWindow,
+                left: 0,
+                top: 0,
+                width: canvasWidth,
+                height: canvasHeight,
                 originX: 'left',
                 originY: 'top',
                 inverted: true,
@@ -814,14 +902,13 @@ const DrawContent: React.FC<DrawContentProps> = ({
                 height: canvasHeight,
                 left: 0,
                 top: 0,
-                fill: darkMode ? '#434343' : '#000000',
-                opacity: 0.5,
+                fill: getMaskBackgroundColor(darkMode),
+                opacity: maskOpacity,
                 selectable: false,
                 absolutePositioned: true,
                 clipPath: maskRectClipPathRef.current,
                 evented: false,
             });
-            maskRectObjectListRef.current.push(maskRectRef.current);
             // 设置边框
             const borderOptiopns: fabric.TOptions<fabric.FabricObjectProps> = {
                 stroke: '#4096ff',
@@ -982,8 +1069,11 @@ const DrawContent: React.FC<DrawContentProps> = ({
                     leftPolyline,
                 );
             }
+            fabricRef.current!.add(maskRectRef.current);
+            ignoreHistory(maskRectRef.current);
             maskRectObjectListRef.current.forEach((object) => {
                 fabricRef.current!.add(object);
+                ignoreHistory(object);
             });
 
             let previousLeft: number | undefined = undefined;
@@ -1166,7 +1256,10 @@ const DrawContent: React.FC<DrawContentProps> = ({
             resizeClipPathControlRef.current();
 
             canvasHistoryRef.current = new FabricHistory(fabricRef.current);
+
+            await resizePromise;
             await appWindow.show();
+            setImageLoading(false);
         };
 
         initImage();
@@ -1176,11 +1269,20 @@ const DrawContent: React.FC<DrawContentProps> = ({
             maskRectObjectListRef.current = [];
             canvasUnlistenListRef.current.forEach((unlisten) => unlisten());
             canvasUnlistenListRef.current = [];
-            activeObjectListRef.current = new Set();
             canvasHistoryRef.current = undefined;
+            objectCacheRef.current = {};
             selectWindowFromMousePositionLevelRef.current = 0;
+            lastMouseMovePointRef.current = undefined;
         };
-    }, [controlNode, darkMode, imageBuffer, setCaptureStep, setDrawState, token.colorPrimaryHover]);
+    }, [
+        controlNode,
+        darkMode,
+        imageBuffer,
+        onMouseMoveRefresh,
+        setCaptureStep,
+        setDrawState,
+        token.colorPrimaryHover,
+    ]);
 
     const initState = useCallback(() => {
         setCaptureStep(CaptureStep.Select);
@@ -1205,8 +1307,15 @@ const DrawContent: React.FC<DrawContentProps> = ({
         const mouseRightClick = (e: MouseEvent) => {
             e.preventDefault();
             if (captureStepRef.current === CaptureStep.Draw) {
+                if (drawStateRef.current !== DrawState.Select) {
+                    setDrawState(DrawState.Select);
+                    return;
+                }
+
                 initState();
-                onMouseMove(new fabric.Point(0, 0));
+                onMouseMoveRefresh();
+            } else if (captureStepRef.current === CaptureStep.Select) {
+                onCancel();
             }
         };
 
@@ -1215,12 +1324,36 @@ const DrawContent: React.FC<DrawContentProps> = ({
         return () => {
             document.removeEventListener('contextmenu', mouseRightClick);
         };
-    }, [initState, onMouseMove]);
+    }, [initState, onCancel, onMouseMoveRefresh, setDrawState]);
 
     useEffect(() => {
-        changeCursor(new fabric.Point(0, 0));
+        changeCursor(lastMouseMovePointRef.current ?? new fabric.Point(0, 0));
     }, [changeCursor, drawState, captureStep]);
 
+    useImperativeHandle(
+        actionRef,
+        () => ({
+            onMouseMoveRefresh,
+        }),
+        [onMouseMoveRefresh],
+    );
+
+    const setMaskVisible = useCallback((visible: boolean) => {
+        const maskRect = maskRectRef.current;
+        const maskRectObjectList = maskRectObjectListRef.current;
+        if (!maskRect || !maskRectObjectList) {
+            return;
+        }
+
+        maskRect.set({
+            opacity: visible ? maskOpacity : 0,
+        });
+        maskRectObjectList.forEach((object) => {
+            object.set({
+                opacity: visible ? 1 : 0,
+            });
+        });
+    }, []);
     return (
         <DrawContext.Provider
             value={{
@@ -1234,7 +1367,10 @@ const DrawContent: React.FC<DrawContentProps> = ({
                 canvasCursorRef,
                 canvasUnlistenListRef,
                 imageLayerRef,
+                objectCacheRef,
                 canvasHistoryRef,
+                actionRef,
+                setMaskVisible,
             }}
         >
             <div className="draw-wrap" data-tauri-drag-region ref={wrapRef}>
@@ -1243,12 +1379,29 @@ const DrawContent: React.FC<DrawContentProps> = ({
                     ref={canvasRef}
                     style={{ zIndex: zIndexs.Draw_Canvas }}
                 />
+                <StatusBar
+                    loadingElements={getElementRectFromMousePositionLoading}
+                    captureStep={captureStep}
+                    drawState={drawState}
+                    enable={!!imageBuffer && !imageLoading}
+                />
+
                 <DrawToolbar
                     step={captureStep}
                     drawState={drawState}
                     setDrawState={setDrawState}
                     onCancel={onCancel}
+                    enable={!!imageBuffer && !imageLoading}
                 />
+
+                {!imageLoading && (
+                    <ColorPicker
+                        captureStep={captureStep}
+                        drawState={drawState}
+                        onCopyColor={onCancel}
+                    />
+                )}
+
                 <style jsx>{`
                     .draw-wrap {
                         height: 100vh;
@@ -1256,8 +1409,8 @@ const DrawContent: React.FC<DrawContentProps> = ({
                     }
 
                     .draw-canvas {
-                        width: 100vh;
-                        height: 100vw;
+                        width: 100%
+                        height: 100%;
                     }
                 `}</style>
             </div>
@@ -1284,63 +1437,138 @@ const DrawContent: React.FC<DrawContentProps> = ({
 };
 
 const DrawPage: React.FC = () => {
-    const [imageBuffer, setImageBuffer] = useState<ImageBuffer | undefined>(undefined);
+    const [imageBuffer, _setImageBuffer] = useState<ImageBuffer | undefined>(undefined);
+    const imageBufferRef = useRef<ImageBuffer | undefined>(undefined);
+    const setImageBuffer = useCallback((imageBuffer: ImageBuffer | undefined) => {
+        imageBufferRef.current = imageBuffer;
+        _setImageBuffer(imageBuffer);
+    }, []);
     const elementInfoRef = useRef<ElementInfo | undefined>(undefined);
     const [elementsRTree, setElementsRTree] = useState<Flatbush | undefined>(undefined);
     const { addListener, removeListener } = useContext(EventListenerContext);
+
+    const actionRef = useRef<DrawContentActionType | undefined>(undefined);
+
+    const {
+        screenshot: { findChildrenElements },
+    } = useContext(AppSettingsContext);
+    const findChildrenElementsRef = useRef<boolean>(false);
+    const [tabFindChildrenElements, setTabFindChildrenElements] = useState<boolean | undefined>(
+        undefined,
+    );
+    useEffect(() => {
+        if (findChildrenElements) {
+            findChildrenElementsRef.current = tabFindChildrenElements ?? findChildrenElements;
+            actionRef.current?.onMouseMoveRefresh();
+        }
+    }, [findChildrenElements, tabFindChildrenElements]);
+
+    const initUiElementsReadyRef = useRef(false);
     useEffect(() => {
         const listenerId = addListener('execute-screenshot', async () => {
-            captureCurrentMonitor(ImageEncoder.WebP).then((imageBuffer) => {
-                setImageBuffer(imageBuffer);
-            });
+            if (imageBufferRef.current) {
+                return;
+            }
 
             elementInfoRef.current = undefined;
-            getElementInfo().then((elementInfo) => {
-                elementInfoRef.current = elementInfo;
-                const rTree = new Flatbush(elementInfo.rect_list.length);
-                const scale = 1 / elementInfo.scale_factor;
-                elementInfo.rect_list.forEach((rect) => {
-                    rect.min_x *= scale;
-                    rect.min_y *= scale;
-                    rect.max_x *= scale;
-                    rect.max_y *= scale;
-                    rTree.add(rect.min_x, rect.min_y, rect.max_x, rect.max_y);
-                });
-                rTree.finish();
+            setElementsRTree(undefined);
+            getElementInfo()
+                .then((elementInfo) => {
+                    elementInfoRef.current = elementInfo;
+                    const rTree = new Flatbush(elementInfo.rect_list.length);
+                    const scale = 1 / elementInfo.scale_factor;
+                    elementInfo.rect_list.forEach((rect) => {
+                        rect.min_x *= scale;
+                        rect.min_y *= scale;
+                        rect.max_x *= scale;
+                        rect.max_y *= scale;
+                        rTree.add(rect.min_x, rect.min_y, rect.max_x, rect.max_y);
+                    });
+                    rTree.finish();
 
-                setElementsRTree(rTree);
+                    setElementsRTree(rTree);
+                })
+                .finally(() => {
+                    initUiElementsReadyRef.current = false;
+                    initUiElementsCache().then(() => {
+                        initUiElementsReadyRef.current = true;
+                    });
+                });
+
+            captureCurrentMonitor(ImageEncoder.WebP).then((imageBuffer) => {
+                setImageBuffer(imageBuffer);
             });
         });
         return () => {
             removeListener(listenerId);
         };
-    }, [addListener, removeListener]);
+    }, [addListener, removeListener, setImageBuffer]);
 
     const reload = useCallback(() => {
         setImageBuffer(undefined);
-    }, []);
+    }, [setImageBuffer]);
 
     const getElementRectFromMousePosition = useCallback(
-        (mouseX: number, mouseY: number): ElementRect[] => {
+        async (mouseX: number, mouseY: number): Promise<ElementRect[]> => {
             if (!elementsRTree || !elementInfoRef.current) {
                 return [];
             }
 
-            const rectIndexs = elementsRTree.search(mouseX, mouseY, mouseX, mouseY);
-            rectIndexs.sort((a, b) => a - b);
+            const scale = 1 / elementInfoRef.current.scale_factor;
 
-            return rectIndexs.map((index) => {
-                return elementInfoRef.current!.rect_list[index];
-            });
+            let elementRectList = undefined;
+            if (findChildrenElementsRef.current && initUiElementsReadyRef.current) {
+                try {
+                    elementRectList = await getElementFromPosition(
+                        Math.round(mouseX / scale),
+                        Math.round(mouseY / scale),
+                    );
+
+                    elementRectList.forEach((item) => {
+                        item.min_x *= scale;
+                        item.min_y *= scale;
+                        item.max_x *= scale;
+                        item.max_y *= scale;
+                    });
+                } catch {
+                    // 获取元素失败，忽略
+                }
+            }
+
+            let result;
+            if (elementRectList) {
+                result = elementRectList;
+            } else {
+                const rectIndexs = elementsRTree.search(mouseX, mouseY, mouseX, mouseY);
+                rectIndexs.sort((a, b) => b - a);
+
+                result = rectIndexs.map((index) => {
+                    return elementInfoRef.current!.rect_list[index];
+                });
+            }
+
+            return result;
         },
         [elementsRTree],
     );
 
+    useHotkeys(
+        'Tab',
+        () => {
+            setTabFindChildrenElements((prev) => (prev === undefined ? false : !prev));
+        },
+        {
+            preventDefault: false,
+            enabled: true,
+        },
+    );
     return (
         <DrawContent
             onCancel={reload}
             imageBuffer={imageBuffer}
             getElementRectFromMousePosition={getElementRectFromMousePosition}
+            getElementRectFromMousePositionLoading={elementsRTree === undefined}
+            actionRef={actionRef}
         />
     );
 };

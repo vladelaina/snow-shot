@@ -2,11 +2,26 @@
 
 import { theme, Typography } from 'antd';
 
-export const GroupTitle: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+export const GroupTitle: React.FC<{
+    children: React.ReactNode;
+    id?: string;
+    extra?: React.ReactNode;
+}> = ({ children, id, extra }) => {
     const { token } = theme.useToken();
     return (
-        <Typography.Title style={{ marginTop: token.marginXXS, marginBottom: token.marginMD }} level={4}>
-            {children}
+        <Typography.Title
+            className="components_group-title"
+            style={{
+                marginTop: 0,
+                marginBottom: token.margin,
+                display: 'flex',
+                justifyContent: 'space-between',
+            }}
+            level={4}
+            id={id}
+        >
+            <div>{children}</div>
+            <div>{extra}</div>
         </Typography.Title>
     );
 };

@@ -63,7 +63,7 @@ export class HighlightBrush extends fabric.PencilBrush {
     }
 }
 
-export const HighlightToolbar: React.FC = () => {
+export const HighlightTool: React.FC = () => {
     const { fabricRef, canvasCursorRef } = useContext(DrawContext);
     const [width, setWidth] = useState<LineWidthPickerValue>(defaultLineWidthPickerValue);
     const [color, setColor, colorRef] = useStateRef<LineColorPickerValue>(
@@ -198,10 +198,15 @@ export const HighlightToolbar: React.FC = () => {
         const moveListener = canvas.on('mouse:move', onMouseMove);
         const upListener = canvas.on('mouse:up', onMouseUp);
 
+        const pathCreatedUnlisten = canvas.on('path:created', (e) => {
+            canvas.setActiveObject(e.path);
+        });
+
         return () => {
             downListener();
             moveListener();
             upListener();
+            pathCreatedUnlisten();
         };
     }, [colorRef, drawRectRef, fabricRef]);
 

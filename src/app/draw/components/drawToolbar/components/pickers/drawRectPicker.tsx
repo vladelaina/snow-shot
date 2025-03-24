@@ -1,8 +1,9 @@
 import { DrawRectIcon } from '@/components/icons';
-import { Button, Tooltip } from 'antd';
+import { Button } from 'antd';
 import { getButtonTypeByState } from '../..';
 import { FormattedMessage } from 'react-intl';
 import { withPickerBase } from './pickerBase';
+import { ToolbarTip } from '../../../toolbarTip';
 
 export type DrawRectValue = {
     enable: boolean;
@@ -17,7 +18,7 @@ const DrawRectPickerComponent: React.FC<{
     setValue: React.Dispatch<React.SetStateAction<DrawRectValue>>;
 }> = ({ value, setValue }) => {
     return (
-        <Tooltip title={<FormattedMessage id="draw.selectRect" />}>
+        <ToolbarTip destroyTooltipOnHide title={<FormattedMessage id="draw.selectRect" />}>
             <Button
                 icon={<DrawRectIcon style={{ fontSize: '0.9em' }} />}
                 type={getButtonTypeByState(value.enable)}
@@ -25,7 +26,7 @@ const DrawRectPickerComponent: React.FC<{
                     setValue((prev) => ({ enable: !prev.enable }));
                 }}
             />
-        </Tooltip>
+        </ToolbarTip>
     );
 };
 

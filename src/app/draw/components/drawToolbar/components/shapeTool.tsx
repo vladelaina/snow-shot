@@ -17,7 +17,7 @@ enum ShapeType {
     Ellipse,
 }
 
-const ShapeToolbar: React.FC<{
+const ShapeTool: React.FC<{
     shapeType: ShapeType;
 }> = ({ shapeType }) => {
     const { fabricRef } = useContext(DrawContext);
@@ -205,10 +205,10 @@ const ShapeToolbar: React.FC<{
     );
 };
 
-export const EllipseToolbar: React.FC = () => {
-    return <ShapeToolbar shapeType={ShapeType.Ellipse} />;
+export const EllipseTool: React.FC = () => {
+    return <ShapeTool shapeType={ShapeType.Ellipse} />;
 };
 
-export const RectToolbar: React.FC = () => {
-    return <ShapeToolbar shapeType={ShapeType.Rect} />;
+export const RectTool: React.FC = () => {
+    return <ShapeTool shapeType={ShapeType.Rect} />;
 };

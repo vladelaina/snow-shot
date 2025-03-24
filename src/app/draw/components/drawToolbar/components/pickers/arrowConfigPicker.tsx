@@ -1,6 +1,7 @@
 import { Select } from 'antd';
 import { withPickerBase } from './pickerBase';
 import { DefaultOptionType } from 'antd/es/select';
+import { DrawArrowIcon, DrawLineIcon } from '@/components/icons';
 
 export type ArrowConfigValue = {
     configId: string;
@@ -13,6 +14,7 @@ export const defaultArrowConfigValue: ArrowConfigValue = {
 export type ArrowStyleConfig = {
     id: string;
     headHeight: number;
+    icon: React.ReactNode;
     headBottomWidth: number;
     headBottomInnerWidth: number;
     bodyBottomWidth: number;
@@ -22,6 +24,7 @@ const configMap: Map<string, ArrowStyleConfig> = new Map();
 
 configMap.set(defaultArrowConfigValue.configId, {
     id: defaultArrowConfigValue.configId,
+    icon: <DrawArrowIcon style={{ fontSize: '32px' }} />,
     headHeight: 50,
     headBottomWidth: 42,
     headBottomInnerWidth: 16,
@@ -29,6 +32,7 @@ configMap.set(defaultArrowConfigValue.configId, {
 });
 configMap.set('arrow-style-2', {
     id: 'arrow-style-2',
+    icon: <DrawLineIcon style={{ fontSize: '32px' }} />,
     headHeight: 0,
     headBottomWidth: 42,
     headBottomInnerWidth: 42,
@@ -59,7 +63,11 @@ const ArrowConfigPickerComponent: React.FC<{
                     .map((config): DefaultOptionType => {
                         return {
                             value: config.id,
-                            label: <div>config.id</div>,
+                            label: (
+                                <div style={{ display: 'flex', alignItems: 'center', height: 21 }}>
+                                    {config.icon}
+                                </div>
+                            ),
                         };
                     })}
             />

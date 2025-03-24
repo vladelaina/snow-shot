@@ -4,25 +4,21 @@ import {
     defaultLineWidthPickerValue,
     LineWidthPicker,
     LineWidthPickerValue,
-} from './pickers/lineWidthPicker';
+} from '../pickers/lineWidthPicker';
 import { DrawContext } from '@/app/draw/context';
 import { useStateRef } from '@/hooks/useStateRef';
-import { CircleCursor } from './pickers/components/circleCursor';
-import { defaultSliderPickerValue, SliderPicker, SliderPickerValue } from './pickers/sliderPicker';
+import { CircleCursor } from '../pickers/components/circleCursor';
+import { defaultSliderPickerValue, SliderPicker, SliderPickerValue } from '../pickers/sliderPicker';
 import { useAppSettingsLoad } from '@/hooks/useAppSettingsLoad';
 import { MosaicFilter } from './fliters';
 import {
     defaultEnableBlurValue,
     EnableBlurPicker,
     EnableBlurValue,
-} from './pickers/enableBlurPicker';
-import { defaultDrawRectValue, DrawRectPicker, DrawRectValue } from './pickers/drawRectPicker';
+} from '../pickers/enableBlurPicker';
+import { defaultDrawRectValue, DrawRectPicker, DrawRectValue } from '../pickers/drawRectPicker';
 import { ignoreHistory } from '@/utils/fabricjsHistory';
-
-export enum MosaicType {
-    Mosaic = 'mosaic',
-    Eraser = 'eraser',
-}
+import { setSelectOnClick } from '@/app/draw/page';
 
 class MosaicBrush extends fabric.PatternBrush {
     clipPathGroup?: fabric.Group;
@@ -47,7 +43,9 @@ class MosaicBrush extends fabric.PatternBrush {
             strokeLineJoin: this.strokeLineJoin,
             strokeDashArray: this.strokeDashArray,
             globalCompositeOperation: 'multiply',
+            selectable: false,
         });
+        setSelectOnClick(path);
         if (this.shadow) {
             this.shadow.affectStroke = true;
             path.shadow = new fabric.Shadow(this.shadow);
@@ -68,15 +66,16 @@ class MosaicBrush extends fabric.PatternBrush {
     }
 }
 
-export const MosaicToolbarCore: React.FC<{ mosaicType: MosaicType }> = ({ mosaicType }) => {
-    const {
-        fabricRef,
-        maskRectRef,
-        maskRectObjectListRef,
-        imageBufferRef,
-        canvasCursorRef,
-        imageLayerRef,
-    } = useContext(DrawContext);
+const blurLayerCacheKey = 'MosaicTool_blurLayer';
+const blurLayerMaskGroupCacheKey = 'MosaicTool_blurLayerMaskGroup';
+
+export const clearMosaicCache = (objectCache: Record<string, fabric.Object>) => {
+    delete objectCache[blurLayerCacheKey];
+    delete objectCache[blurLayerMaskGroupCacheKey];
+};
+
+export const MosaicToolbarCore: React.FC = () => {
+    const { fabricRef, setMaskVisible, imageBufferRef, canvasCursorRef } = useContext(DrawContext);
 
     const [width, setWidth] = useStateRef<LineWidthPickerValue>(defaultLineWidthPickerValue);
     const [blur, setBlur, blurRef] = useStateRef<SliderPickerValue>(defaultSliderPickerValue);
@@ -85,39 +84,6 @@ export const MosaicToolbarCore: React.FC<{ mosaicType: MosaicType }> = ({ mosaic
         useStateRef<EnableBlurValue>(defaultEnableBlurValue);
 
     const mosaicBrushRef = useRef<MosaicBrush | undefined>(undefined);
-
-    const maskOpacityMapRef = useRef(new Map<fabric.Object, number>());
-    useEffect(() => {
-        const maskRect = maskRectRef.current;
-        if (!maskRect) {
-            return;
-        }
-
-        maskOpacityMapRef.current.set(maskRect, maskRect.get('opacity'));
-        maskRectObjectListRef.current.forEach((object) => {
-            maskOpacityMapRef.current.set(object, object.get('opacity'));
-        });
-    }, [maskRectObjectListRef, maskRectRef]);
-
-    const setMaskVisible = useCallback(
-        (visible: boolean) => {
-            const maskRect = maskRectRef.current;
-            const maskRectObjectList = maskRectObjectListRef.current;
-            if (!maskRect || !maskRectObjectList) {
-                return;
-            }
-
-            maskRect.set({
-                opacity: visible ? maskOpacityMapRef.current.get(maskRect) : 0,
-            });
-            maskRectObjectList.forEach((object) => {
-                object.set({
-                    opacity: visible ? maskOpacityMapRef.current.get(object) : 0,
-                });
-            });
-        },
-        [maskRectObjectListRef, maskRectRef],
-    );
 
     const imgRef = useRef<fabric.Image | undefined>(undefined);
     const lastBlurRef = useRef<
@@ -156,28 +122,26 @@ export const MosaicToolbarCore: React.FC<{ mosaicType: MosaicType }> = ({ mosaic
 
         // 创建一个模糊滤镜
         const imgFilters = [];
-        if (mosaicType === MosaicType.Mosaic) {
-            if (enableBlurRef.current.blur) {
-                imgFilters.push(
-                    new fabric.filters.Blur({
-                        blur: blurRef.current.value / 500,
-                    }),
-                );
-            } else {
-                imgFilters.push(
-                    new MosaicFilter({
-                        blockSize: (blurRef.current.value / 100) * 12,
-                    }),
-                );
-            }
+        if (enableBlurRef.current.blur) {
+            imgFilters.push(
+                new fabric.filters.Blur({
+                    blur: blurRef.current.value / 500,
+                }),
+            );
+        } else {
+            imgFilters.push(
+                new MosaicFilter({
+                    blockSize: (blurRef.current.value / 100) * 12,
+                }),
+            );
         }
 
         // 创建一个模糊图层
         let blurLayer: fabric.FabricImage;
         if (
             !blurLayerMaskGroupRef.current ||
-            blurLayerMaskGroupRef.current.getObjects().length !== 0 ||
-            !blurLayerRef.current
+            !blurLayerRef.current ||
+            blurLayerMaskGroupRef.current.getObjects().length !== 0
         ) {
             blurLayer = await img.clone();
 
@@ -241,7 +205,9 @@ export const MosaicToolbarCore: React.FC<{ mosaicType: MosaicType }> = ({ mosaic
             });
             canvas.isDrawingMode = true;
         }
-    }, [blurRef, drawRectRef, enableBlurRef, fabricRef, mosaicType]);
+
+        canvas.renderAll();
+    }, [blurRef, drawRectRef, enableBlurRef, fabricRef]);
 
     useEffect(() => {
         const canvas = fabricRef.current;
@@ -265,24 +231,26 @@ export const MosaicToolbarCore: React.FC<{ mosaicType: MosaicType }> = ({ mosaic
                 return;
             }
 
-            if (mosaicType === MosaicType.Mosaic) {
-                setMaskVisible(false);
+            setMaskVisible(false);
 
-                fabric.FabricImage.fromURL(canvas.toDataURL()).then((img) => {
-                    imgRef.current = img;
+            fabric.FabricImage.fromURL(
+                canvas.toDataURL({
+                    multiplier: 0.8,
+                    format: 'jpeg',
+                    quality: 1,
+                    enableRetinaScaling: false,
+                }),
+            ).then((img) => {
+                imgRef.current = img;
 
-                    img.scaleToWidth(imageBuffer.monitorWidth / imageBuffer.monitorScaleFactor);
-                    img.scaleToHeight(imageBuffer.monitorHeight / imageBuffer.monitorScaleFactor);
+                img.scaleToWidth(imageBuffer.monitorWidth / imageBuffer.monitorScaleFactor);
+                img.scaleToHeight(imageBuffer.monitorHeight / imageBuffer.monitorScaleFactor);
 
-                    updateFilter();
-                });
-
-                setMaskVisible(true);
-            } else {
-                imgRef.current = await imageLayerRef.current!.clone();
                 updateFilter();
-            }
-        }, [fabricRef, imageBufferRef, imageLayerRef, mosaicType, setMaskVisible, updateFilter]),
+            });
+
+            setMaskVisible(true);
+        }, [fabricRef, imageBufferRef, setMaskVisible, updateFilter]),
     );
 
     useEffect(() => {
@@ -330,6 +298,22 @@ export const MosaicToolbarCore: React.FC<{ mosaicType: MosaicType }> = ({ mosaic
     }, [fabricRef, imageBufferRef]);
 
     useEffect(() => {
+        const canvas = fabricRef.current;
+        if (!canvas) {
+            return;
+        }
+
+        return () => {
+            if (blurLayerMaskGroupRef.current?.getObjects().length !== 0) {
+                return;
+            }
+
+            canvas.remove(blurLayerRef.current!);
+            canvas.remove(blurLayerMaskGroupRef.current!);
+        };
+    }, [fabricRef]);
+
+    useEffect(() => {
         let isDrawing = false;
         let startX = 0;
         let startY = 0;
@@ -344,7 +328,7 @@ export const MosaicToolbarCore: React.FC<{ mosaicType: MosaicType }> = ({ mosaic
             originX: 'left',
             originY: 'top',
             hasControls: true,
-            selectable: true,
+            selectable: false,
             evented: true,
         };
 
@@ -397,6 +381,7 @@ export const MosaicToolbarCore: React.FC<{ mosaicType: MosaicType }> = ({ mosaic
             });
 
             canvas.add(shape);
+            setSelectOnClick(shape);
             canvas.add(shapeControls);
             blurLayerRef.current!.set('dirty', true);
         };
@@ -484,37 +469,35 @@ export const MosaicToolbarCore: React.FC<{ mosaicType: MosaicType }> = ({ mosaic
         canvas.on('mouse:move', onMouseMove);
         canvas.on('mouse:up', onMouseUp);
 
+        const pathCreatedUnlisten = canvas.on('path:created', (e) => {
+            canvas.setActiveObject(e.path);
+        });
+
         return () => {
             canvas.off('mouse:down', onMouseDown);
             canvas.off('mouse:move', onMouseMove);
             canvas.off('mouse:up', onMouseUp);
+            pathCreatedUnlisten();
         };
     }, [drawRectRef, fabricRef]);
 
-    const toolbarLocation = mosaicType === MosaicType.Mosaic ? 'mosaic' : 'eraser';
     return (
         <>
-            <DrawRectPicker onChange={setDrawRect} toolbarLocation={toolbarLocation} />
+            <DrawRectPicker onChange={setDrawRect} toolbarLocation={'mosaic'} />
 
             {!drawRect.enable && <CircleCursor radius={width.width / 2} />}
 
-            <LineWidthPicker onChange={setWidth} toolbarLocation={toolbarLocation} />
+            <LineWidthPicker onChange={setWidth} toolbarLocation={'mosaic'} />
 
             <div className="draw-toolbar-splitter" />
 
-            {mosaicType === MosaicType.Mosaic && (
-                <SliderPicker onChange={setBlur} toolbarLocation={toolbarLocation} />
-            )}
+            <SliderPicker onChange={setBlur} toolbarLocation={'mosaic'} />
 
-            <EnableBlurPicker onChange={setEnableBlur} toolbarLocation={toolbarLocation} />
+            <EnableBlurPicker onChange={setEnableBlur} toolbarLocation={'mosaic'} />
         </>
     );
 };
 
-export const MosaicToolbar: React.FC = () => {
-    return <MosaicToolbarCore mosaicType={MosaicType.Mosaic} />;
-};
-
-export const EraserToolbar: React.FC = () => {
-    return <MosaicToolbarCore mosaicType={MosaicType.Eraser} />;
+export const MosaicTool: React.FC = () => {
+    return <MosaicToolbarCore />;
 };

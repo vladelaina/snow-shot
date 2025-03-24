@@ -1,14 +1,13 @@
-use std::sync::Mutex;
-
 use device_query::{DeviceQuery, DeviceState, MouseState};
 use image::codecs::png::{CompressionType, FilterType, PngEncoder};
 use image::codecs::webp::WebPEncoder;
+use std::sync::Mutex;
 use tauri::command;
 use tauri::ipc::Response;
-use xcap::Monitor;
+use xcap::{Monitor, Window};
 
-use crate::os::ui_automation::UIAutomation;
-use crate::os::ElementInfo;
+use crate::os::ui_automation::UIElements;
+use crate::os::{ElementInfo, ElementRect};
 
 #[command]
 pub async fn capture_current_monitor(encoder: String) -> Response {
@@ -29,7 +28,7 @@ pub async fn capture_current_monitor(encoder: String) -> Response {
     // 前端也无需再转为 base64 显示
 
     // 编码为指定格式
-    let mut buf = Vec::new();
+    let mut buf = Vec::with_capacity(image_buffer.len() + 10 * 4);
 
     if encoder == "webp" {
         image_buffer
@@ -51,6 +50,8 @@ pub async fn capture_current_monitor(encoder: String) -> Response {
     let monitor_width_bytes = monitor.width().unwrap_or(0).to_le_bytes();
     let monitor_height_bytes = monitor.height().unwrap_or(0).to_le_bytes();
     let monitor_scale_factor_bytes = monitor.scale_factor().unwrap_or(0.0).to_le_bytes();
+    let mouse_x_bytes = mouse_x.to_le_bytes();
+    let mouse_y_bytes = mouse_y.to_le_bytes();
 
     buf.push(monitor_x_bytes[0]);
     buf.push(monitor_x_bytes[1]);
@@ -77,21 +78,136 @@ pub async fn capture_current_monitor(encoder: String) -> Response {
     buf.push(monitor_scale_factor_bytes[2]);
     buf.push(monitor_scale_factor_bytes[3]);
 
+    buf.push(mouse_x_bytes[0]);
+    buf.push(mouse_x_bytes[1]);
+    buf.push(mouse_x_bytes[2]);
+    buf.push(mouse_x_bytes[3]);
+
+    buf.push(mouse_y_bytes[0]);
+    buf.push(mouse_y_bytes[1]);
+    buf.push(mouse_y_bytes[2]);
+    buf.push(mouse_y_bytes[3]);
+
     return Response::new(buf);
 }
 
 #[command]
-pub async fn get_element_info(
-    ui_automation: tauri::State<'_, Mutex<UIAutomation>>,
-) -> Result<Option<ElementInfo>, ()> {
-    let ui_automation = match ui_automation.lock() {
-        Ok(ui_automation) => ui_automation,
-        Err(_) => return Ok(None),
-    };
-    let element_info = match ui_automation.get_element_info() {
-        Ok(element_info) => element_info,
-        Err(_) => return Ok(None),
+pub async fn init_ui_elements(
+    ui_elements: tauri::State<'_, Mutex<UIElements>>,
+    window: tauri::Window,
+) -> Result<(), ()> {
+    let mut ui_elements = match ui_elements.lock() {
+        Ok(ui_elements) => ui_elements,
+        Err(_) => return Err(()),
     };
 
-    Ok(Some(element_info))
+    match ui_elements.init(match window.hwnd() {
+        Ok(hwnd) => Some(hwnd),
+        Err(_) => None,
+    }) {
+        Ok(_) => Ok(()),
+        Err(_) => Err(()),
+    }
+}
+
+#[command]
+pub async fn init_ui_elements_cache(
+    ui_elements: tauri::State<'_, Mutex<UIElements>>,
+) -> Result<(), ()> {
+    let mut ui_elements = match ui_elements.lock() {
+        Ok(ui_elements) => ui_elements,
+        Err(_) => return Err(()),
+    };
+
+    match ui_elements.init_cache() {
+        Ok(_) => Ok(()),
+        Err(_) => Err(()),
+    }
+}
+
+#[command]
+pub async fn get_element_info() -> Result<ElementInfo, ()> {
+    let device_state = DeviceState::new();
+    let mouse: MouseState = device_state.get_mouse();
+    let (mouse_x, mouse_y) = mouse.coords;
+
+    let monitor = xcap::Monitor::from_point(mouse_x, mouse_y).unwrap();
+    let monitor_min_x = monitor.x().unwrap_or(0);
+    let monitor_min_y = monitor.y().unwrap_or(0);
+    let monitor_max_x = monitor_min_x + monitor.width().unwrap_or(0) as i32;
+    let monitor_max_y = monitor_min_y + monitor.height().unwrap_or(0) as i32;
+
+    // 获取所有窗口，简单筛选下需要的窗口，然后获取窗口所有元素
+    let mut windows = Window::all().unwrap_or_default();
+    // 获取窗口是，是从最顶层的窗口依次遍历，这里反转下便于后续查找
+    windows.reverse();
+
+    let mut rect_list = Vec::new();
+    for window in windows {
+        if window.is_minimized().unwrap_or(true) {
+            continue;
+        }
+
+        let x = match window.x() {
+            Ok(x) => x,
+            Err(_) => continue,
+        };
+
+        let y = match window.y() {
+            Ok(y) => y,
+            Err(_) => continue,
+        };
+
+        let width = match window.width() {
+            Ok(width) => width,
+            Err(_) => continue,
+        };
+        let height = match window.height() {
+            Ok(height) => height,
+            Err(_) => continue,
+        };
+
+        // 保留在屏幕内的窗口
+        if !(x >= monitor_min_x && y >= monitor_min_y && x <= monitor_max_x && y <= monitor_max_y) {
+            continue;
+        }
+
+        rect_list.push(ElementRect {
+            min_x: x,
+            min_y: y,
+            max_x: x + width as i32,
+            max_y: y + height as i32,
+        });
+    }
+
+    Ok(ElementInfo {
+        scale_factor: monitor.scale_factor().unwrap_or(1.0),
+        rect_list,
+    })
+}
+
+#[command]
+pub async fn get_element_from_position(
+    ui_elements: tauri::State<'_, Mutex<UIElements>>,
+    mouse_x: i32,
+    mouse_y: i32,
+) -> Result<Vec<ElementRect>, ()> {
+    let mut ui_elements = ui_elements.lock().unwrap();
+    let element_rect_list = match ui_elements.get_element_from_point_walker(mouse_x, mouse_y) {
+        Ok(element_rect) => element_rect,
+        Err(_) => {
+            return Err(());
+        }
+    };
+
+    Ok(element_rect_list)
+}
+
+#[command]
+pub async fn get_mouse_position() -> Result<(i32, i32), ()> {
+    let device_state = DeviceState::new();
+    let mouse: MouseState = device_state.get_mouse();
+    let (mouse_x, mouse_y) = mouse.coords;
+
+    Ok((mouse_x, mouse_y))
 }

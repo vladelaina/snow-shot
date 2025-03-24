@@ -1,9 +1,9 @@
 import { LockWidthHeightIcon } from '@/components/icons';
-import { Button, Tooltip } from 'antd';
+import { Button } from 'antd';
 import { useEffect } from 'react';
 import { getButtonTypeByState } from '../..';
-import { FormattedMessage } from 'react-intl';
 import { withPickerBase } from './pickerBase';
+import { KeyEventKey, KeyEventWrap } from '../keyEventWrap';
 
 export type LockWidthHeightValue = {
     lock: boolean;
@@ -44,7 +44,16 @@ const LockWidthHeightPickerComponent: React.FC<{
     }, [setTempValue]);
 
     return (
-        <Tooltip title={<FormattedMessage id="draw.lockWidthHeight" />}>
+        <KeyEventWrap
+            onKeyDown={() => {
+                setTempValue({ lock: true });
+            }}
+            onKeyUp={() => {
+                setTempValue(undefined);
+            }}
+            enable={true}
+            componentKey={KeyEventKey.LockWidthHeightPicker}
+        >
             <Button
                 icon={<LockWidthHeightIcon style={{ fontSize: '0.9em' }} />}
                 type={getButtonTypeByState(enableLockWidthHeight)}
@@ -52,7 +61,7 @@ const LockWidthHeightPickerComponent: React.FC<{
                     setValue((prev) => ({ lock: !prev.lock }));
                 }}
             />
-        </Tooltip>
+        </KeyEventWrap>
     );
 };
 

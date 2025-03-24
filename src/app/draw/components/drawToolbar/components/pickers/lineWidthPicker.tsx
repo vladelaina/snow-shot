@@ -1,6 +1,7 @@
-import { Button, Tooltip } from 'antd';
+import { Button } from 'antd';
 import { useCallback, useEffect, useRef } from 'react';
 import { withPickerBase } from './pickerBase';
+import { ToolbarTip } from '../../../toolbarTip';
 
 export const WidthIcon: React.FC<{ width: number; maxWidth: number }> = ({ width, maxWidth }) => {
     const showWidth = width > maxWidth ? 0 : width;
@@ -64,7 +65,7 @@ const LineWidthPickerComponent: React.FC<{
 
     return (
         <>
-            <Tooltip title={`${value.width}px`}>
+            <ToolbarTip destroyTooltipOnHide title={`${value.width}px`}>
                 <Button
                     icon={<WidthIcon width={value.width} maxWidth={21} />}
                     type="dashed"
@@ -72,8 +73,8 @@ const LineWidthPickerComponent: React.FC<{
                     onMouseLeave={() => (isHoveredRef.current = false)}
                     onWheel={onWheel}
                 />
-            </Tooltip>
-            <Tooltip title={`${smallWidth}px`}>
+            </ToolbarTip>
+            <ToolbarTip destroyTooltipOnHide title={`${smallWidth}px`}>
                 <Button
                     icon={<WidthIcon width={5} maxWidth={maxWidth} />}
                     type="text"
@@ -81,8 +82,8 @@ const LineWidthPickerComponent: React.FC<{
                         setValue({ width: smallWidth });
                     }}
                 />
-            </Tooltip>
-            <Tooltip title={`${mediumWidth}px`}>
+            </ToolbarTip>
+            <ToolbarTip destroyTooltipOnHide title={`${mediumWidth}px`}>
                 <Button
                     icon={<WidthIcon width={10} maxWidth={maxWidth} />}
                     type="text"
@@ -90,8 +91,8 @@ const LineWidthPickerComponent: React.FC<{
                         setValue({ width: mediumWidth });
                     }}
                 />
-            </Tooltip>
-            <Tooltip title={`${largeWidth}px`}>
+            </ToolbarTip>
+            <ToolbarTip destroyTooltipOnHide title={`${largeWidth}px`}>
                 <Button
                     icon={<WidthIcon width={20} maxWidth={maxWidth} />}
                     type="text"
@@ -99,7 +100,7 @@ const LineWidthPickerComponent: React.FC<{
                         setValue({ width: largeWidth });
                     }}
                 />
-            </Tooltip>
+            </ToolbarTip>
         </>
     );
 };
