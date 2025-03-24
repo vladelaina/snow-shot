@@ -126,11 +126,7 @@ pub async fn init_ui_elements_cache(
 }
 
 #[command]
-pub async fn get_element_info() -> Result<ElementInfo, ()> {
-    let device_state = DeviceState::new();
-    let mouse: MouseState = device_state.get_mouse();
-    let (mouse_x, mouse_y) = mouse.coords;
-
+pub async fn get_window_elements(mouse_x: i32, mouse_y: i32) -> Result<Vec<ElementRect>, ()> {
     let monitor = xcap::Monitor::from_point(mouse_x, mouse_y).unwrap();
     let monitor_min_x = monitor.x().unwrap_or(0);
     let monitor_min_y = monitor.y().unwrap_or(0);
@@ -138,12 +134,11 @@ pub async fn get_element_info() -> Result<ElementInfo, ()> {
     let monitor_max_y = monitor_min_y + monitor.height().unwrap_or(0) as i32;
 
     // 获取所有窗口，简单筛选下需要的窗口，然后获取窗口所有元素
-    let mut windows = Window::all().unwrap_or_default();
-    // 获取窗口是，是从最顶层的窗口依次遍历，这里反转下便于后续查找
-    windows.reverse();
+    let windows = Window::all().unwrap_or_default();
 
     let mut rect_list = Vec::new();
-    for window in windows {
+    // 获取窗口是，是从最顶层的窗口依次遍历，这里反转下，从最底层的窗口开始遍历
+    for window in windows.iter().rev() {
         if window.is_minimized().unwrap_or(true) {
             continue;
         }
@@ -180,10 +175,7 @@ pub async fn get_element_info() -> Result<ElementInfo, ()> {
         });
     }
 
-    Ok(ElementInfo {
-        scale_factor: monitor.scale_factor().unwrap_or(1.0),
-        rect_list,
-    })
+    Ok(rect_list)
 }
 
 #[command]

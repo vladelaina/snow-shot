@@ -1,22 +1,19 @@
 export enum CaptureStep {
+    // 选择阶段
     Select = 'select',
+    // 绘制阶段
     Draw = 'draw',
+    // 置顶阶段
+    TopUp = 'topUp',
 }
 
 export enum DrawState {
-    Idle = 'idle',
-    Resize = 'resize',
-    Select = 'select',
-    Pen = 'pen',
-    Arrow = 'arrow',
-    Rect = 'rect',
-    Ellipse = 'ellipse',
-    Mosaic = 'mosaic',
-    Eraser = 'eraser',
-    Highlight = 'highlight',
-    Text = 'text',
+    Move = 'move',
 }
 
-export const getMaskBackgroundColor = (darkMode: boolean) => {
-    return darkMode ? '#434343' : '#000000';
-};
+export enum CanvasLayer {
+    CaptureImage = 'captureImage',
+    BlurImage = 'blurImage',
+    Draw = 'draw',
+    Select = 'select',
+}

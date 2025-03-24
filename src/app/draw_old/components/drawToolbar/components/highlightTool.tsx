@@ -10,7 +10,7 @@ import {
     LineColorPickerValue,
 } from './pickers/lineColorPicker';
 import * as fabric from 'fabric';
-import { DrawContext } from '@/app/draw/context';
+import { DrawContext } from '@/app/draw_old/context';
 import { CircleCursor } from './pickers/components/circleCursor';
 import { useStateRef } from '@/hooks/useStateRef';
 import { defaultDrawRectValue, DrawRectPicker, DrawRectValue } from './pickers/drawRectPicker';

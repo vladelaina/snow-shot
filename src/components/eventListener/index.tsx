@@ -8,7 +8,6 @@ import React from 'react';
 import { MenuLayoutContext } from '@/app/menuLayout';
 import { getCurrentWindow, Window as AppWindow } from '@tauri-apps/api/window';
 import { AppSettingsContext } from '@/app/contextWrap';
-import { initUiElements } from '@/commands';
 
 type Listener = {
     event: string;
@@ -102,8 +101,6 @@ const EventListenerCore: React.FC<{ children: React.ReactNode }> = ({ children }
                     event: 'execute-screenshot',
                     callback: async () => {},
                 });
-
-                initUiElements();
             }
         }
 

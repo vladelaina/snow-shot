@@ -5,7 +5,7 @@ import {
     LineColorPickerValue,
 } from './pickers/lineColorPicker';
 import * as fabric from 'fabric';
-import { DrawContext } from '@/app/draw/context';
+import { DrawContext } from '@/app/draw_old/context';
 import { defaultFontSizePickerValue, FontSizePicker } from './pickers/fontSizePicker';
 import { useStateRef } from '@/hooks/useStateRef';
 import {

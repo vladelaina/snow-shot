@@ -52,19 +52,6 @@ export const captureCurrentMonitor = async (encoder: ImageEncoder): Promise<Imag
     };
 };
 
-export type WindowInfo = {
-    x: number;
-    y: number;
-    width: number;
-    height: number;
-    element_info: ElementInfo | undefined;
-};
-
-export type ElementInfo = {
-    rect_list: ElementRect[];
-    scale_factor: number;
-};
-
 export type ElementRect = {
     min_x: number;
     min_y: number;
@@ -72,8 +59,11 @@ export type ElementRect = {
     max_y: number;
 };
 
-export const getElementInfo = async () => {
-    const result = await invoke<ElementInfo>('get_element_info', {});
+export const getWindowElements = async (mouseX: number, mouseY: number) => {
+    const result = await invoke<ElementRect[]>('get_window_elements', {
+        mouseX,
+        mouseY,
+    });
     return result;
 };
 

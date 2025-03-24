@@ -34,7 +34,7 @@ pub fn run() {
         .manage(ui_elements)
         .invoke_handler(tauri::generate_handler![
             screenshot::capture_current_monitor,
-            screenshot::get_element_info,
+            screenshot::get_window_elements,
             screenshot::init_ui_elements,
             screenshot::get_element_from_position,
             screenshot::init_ui_elements_cache,

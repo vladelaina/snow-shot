@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { createContext, RefObject, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { BaseDirectory, exists, mkdir, readTextFile, writeTextFile } from '@tauri-apps/plugin-fs';
 import { ConfigProvider, theme } from 'antd';
 import _, { trim } from 'lodash';
@@ -11,77 +11,77 @@ import { IntlProvider } from 'react-intl';
 import { messages } from '@/messages/map';
 import { ImageBuffer } from '@/commands';
 import { emit } from '@tauri-apps/api/event';
-import { getCurrentWindow } from '@tauri-apps/api/window';
+import { getCurrentWindow, Window as AppWindow } from '@tauri-apps/api/window';
 import Color from 'color';
 import {
     defaultFillShapePickerValue,
     FillShapePickerValue,
-} from './draw/components/drawToolbar/components/pickers/fillShapePicker';
+} from './draw_old/components/drawToolbar/components/pickers/fillShapePicker';
 import {
     defaultLockWidthHeightValue,
     LockWidthHeightValue,
-} from './draw/components/drawToolbar/components/pickers/lockWidthHeightPicker';
+} from './draw_old/components/drawToolbar/components/pickers/lockWidthHeightPicker';
 import {
     defaultRadiusPickerValue,
     RadiusPickerValue,
-} from './draw/components/drawToolbar/components/pickers/radiusPicker';
+} from './draw_old/components/drawToolbar/components/pickers/radiusPicker';
 import {
     defaultLineColorPickerValue,
     LineColorPickerValue,
-} from './draw/components/drawToolbar/components/pickers/lineColorPicker';
+} from './draw_old/components/drawToolbar/components/pickers/lineColorPicker';
 import {
     defaultLineWidthPickerValue,
     LineWidthPickerValue,
-} from './draw/components/drawToolbar/components/pickers/lineWidthPicker';
+} from './draw_old/components/drawToolbar/components/pickers/lineWidthPicker';
 import {
     defaultSliderPickerValue,
     SliderPickerValue,
-} from './draw/components/drawToolbar/components/pickers/sliderPicker';
+} from './draw_old/components/drawToolbar/components/pickers/sliderPicker';
 import {
     defaultEnableBlurValue,
     EnableBlurValue,
-} from './draw/components/drawToolbar/components/pickers/enableBlurPicker';
+} from './draw_old/components/drawToolbar/components/pickers/enableBlurPicker';
 import {
     defaultDrawRectValue,
     DrawRectValue,
-} from './draw/components/drawToolbar/components/pickers/drawRectPicker';
+} from './draw_old/components/drawToolbar/components/pickers/drawRectPicker';
 import {
     defaultFontSizePickerValue,
     FontSizePickerValue,
-} from './draw/components/drawToolbar/components/pickers/fontSizePicker';
+} from './draw_old/components/drawToolbar/components/pickers/fontSizePicker';
 import {
     defaultEnableBoldValue,
     EnableBoldValue,
-} from './draw/components/drawToolbar/components/pickers/enableBoldPicker';
+} from './draw_old/components/drawToolbar/components/pickers/enableBoldPicker';
 import {
     defaultEnableItalicValue,
     EnableItalicValue,
-} from './draw/components/drawToolbar/components/pickers/enableItalicPicker';
+} from './draw_old/components/drawToolbar/components/pickers/enableItalicPicker';
 import {
     defaultEnableUnderlineValue,
     EnableUnderlineValue,
-} from './draw/components/drawToolbar/components/pickers/enableUnderlinePicker';
+} from './draw_old/components/drawToolbar/components/pickers/enableUnderlinePicker';
 import {
     defaultEnableStrikethroughValue,
     EnableStrikethroughValue,
-} from './draw/components/drawToolbar/components/pickers/enableStrikethroughPicker';
+} from './draw_old/components/drawToolbar/components/pickers/enableStrikethroughPicker';
 import {
     defaultFontFamilyPickerValue,
     FontFamilyPickerValue,
-} from './draw/components/drawToolbar/components/pickers/fontFamilyPicker';
+} from './draw_old/components/drawToolbar/components/pickers/fontFamilyPicker';
 import {
     ArrowConfigValue,
     defaultArrowConfigValue,
-} from './draw/components/drawToolbar/components/pickers/arrowConfigPicker';
+} from './draw_old/components/drawToolbar/components/pickers/arrowConfigPicker';
 import {
     defaultEnableRadiusValue,
     EnableRadiusValue,
-} from './draw/components/drawToolbar/components/pickers/enableRadiusPicker';
+} from './draw_old/components/drawToolbar/components/pickers/enableRadiusPicker';
 import {
     defaultKeyEventSettings,
     KeyEventKey,
     KeyEventValue,
-} from './draw/components/drawToolbar/components/keyEventWrap';
+} from './draw_old/components/drawToolbar/components/keyEventWrap';
 import { AppFunction, AppFunctionConfig, defaultAppFunctionConfigs } from './page';
 
 export enum AppSettingsGroup {
@@ -214,7 +214,20 @@ const getFileName = (group: AppSettingsGroup) => {
     return `${configDir}\\${group}.json`;
 };
 
+export type AppContextType = {
+    appWindowRef: RefObject<AppWindow | undefined>;
+};
+
+export const AppContext = createContext<AppContextType>({
+    appWindowRef: { current: undefined },
+});
+
 export const ContextWrap: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+    const appWindowRef = useRef<AppWindow>(undefined);
+    useEffect(() => {
+        appWindowRef.current = getCurrentWindow();
+    }, []);
+
     const [isDefaultData, setIsDefaultData] = useState(true);
     const [appSettings, _setAppSettings] = useState<AppSettingsData>(defaultAppSettingsData);
     const appSettingsRef = useRef<AppSettingsData>(defaultAppSettingsData);
@@ -749,7 +762,7 @@ export const ContextWrap: React.FC<{ children: React.ReactNode }> = ({ children 
                 baseDir: BaseDirectory.AppConfig,
             });
 
-            const saveToFile = getCurrentWindow().label === 'main';
+            const saveToFile = appWindowRef.current?.label === 'main';
 
             if (!isFileExists) {
                 settings[group] = updateAppSettings(
@@ -825,7 +838,7 @@ export const ContextWrap: React.FC<{ children: React.ReactNode }> = ({ children 
                     locale={appSettings[AppSettingsGroup.Common].language}
                     messages={messages[appSettings[AppSettingsGroup.Common].language]}
                 >
-                    {children}
+                    <AppContext.Provider value={{ appWindowRef }}>{children}</AppContext.Provider>
                 </IntlProvider>
             </ConfigProvider>
         </AppSettingsContext.Provider>

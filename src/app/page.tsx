@@ -118,7 +118,13 @@ export default function Home() {
                                     }
 
                                     try {
-                                        await register(value, onClick);
+                                        await register(value, (event) => {
+                                            if (event.state !== 'Pressed') {
+                                                return;
+                                            }
+
+                                            onClick();
+                                        });
                                     } catch (error) {
                                         // 将错误传给组件，组件捕获错误来判断快捷键状态
                                         throw error;

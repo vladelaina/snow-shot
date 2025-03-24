@@ -4,17 +4,23 @@ import {
     defaultLineWidthPickerValue,
     LineWidthPicker,
     LineWidthPickerValue,
-} from './pickers/lineWidthPicker';
-import { DrawContext } from '@/app/draw/context';
+} from '../pickers/lineWidthPicker';
+import { DrawContext } from '@/app/draw_old/context';
 import { useStateRef } from '@/hooks/useStateRef';
-import { CircleCursor } from './pickers/components/circleCursor';
+import { CircleCursor } from '../pickers/components/circleCursor';
+import { defaultSliderPickerValue, SliderPicker, SliderPickerValue } from '../pickers/sliderPicker';
 import { useAppSettingsLoad } from '@/hooks/useAppSettingsLoad';
-import { defaultDrawRectValue, DrawRectPicker, DrawRectValue } from './pickers/drawRectPicker';
+import { MosaicFilter } from './fliters';
+import {
+    defaultEnableBlurValue,
+    EnableBlurPicker,
+    EnableBlurValue,
+} from '../pickers/enableBlurPicker';
+import { defaultDrawRectValue, DrawRectPicker, DrawRectValue } from '../pickers/drawRectPicker';
 import { ignoreHistory } from '@/utils/fabricjsHistory';
-import { clearMosaicCache } from './mosaicTool/mosaicTool';
-import { setSelectOnClick } from '@/app/draw/page';
+import { setSelectOnClick } from '@/app/draw_old/page';
 
-class EraserBrush extends fabric.PatternBrush {
+class MosaicBrush extends fabric.PatternBrush {
     clipPathGroup?: fabric.Group;
 
     constructor(canvas: fabric.Canvas, clipPathGroup: fabric.Group | undefined) {
@@ -60,17 +66,30 @@ class EraserBrush extends fabric.PatternBrush {
     }
 }
 
-export const EraserTool: React.FC = () => {
-    const { fabricRef, imageBufferRef, canvasCursorRef, imageLayerRef, objectCacheRef } =
-        useContext(DrawContext);
+const blurLayerCacheKey = 'MosaicTool_blurLayer';
+const blurLayerMaskGroupCacheKey = 'MosaicTool_blurLayerMaskGroup';
+
+export const clearMosaicCache = (objectCache: Record<string, fabric.Object>) => {
+    delete objectCache[blurLayerCacheKey];
+    delete objectCache[blurLayerMaskGroupCacheKey];
+};
+
+export const MosaicToolbarCore: React.FC = () => {
+    const { fabricRef, setMaskVisible, imageBufferRef, canvasCursorRef } = useContext(DrawContext);
 
     const [width, setWidth] = useStateRef<LineWidthPickerValue>(defaultLineWidthPickerValue);
+    const [blur, setBlur, blurRef] = useStateRef<SliderPickerValue>(defaultSliderPickerValue);
     const [drawRect, setDrawRect, drawRectRef] = useStateRef<DrawRectValue>(defaultDrawRectValue);
+    const [enableBlur, setEnableBlur, enableBlurRef] =
+        useStateRef<EnableBlurValue>(defaultEnableBlurValue);
 
-    const eraserBrushRef = useRef<EraserBrush | undefined>(undefined);
+    const mosaicBrushRef = useRef<MosaicBrush | undefined>(undefined);
 
+    const imgRef = useRef<fabric.Image | undefined>(undefined);
     const lastBlurRef = useRef<
         | {
+              blur: number;
+              enableBlur: boolean;
               drawRect: boolean;
           }
         | undefined
@@ -78,26 +97,53 @@ export const EraserTool: React.FC = () => {
     const blurLayerRef = useRef<fabric.FabricImage | undefined>(undefined);
     const blurLayerMaskGroupRef = useRef<fabric.Group>(undefined);
     const updateFilter = useCallback(async () => {
+        const img = imgRef.current;
+        if (!img) {
+            return;
+        }
+
         const canvas = fabricRef.current;
         if (!canvas) {
             return;
         }
 
-        if (lastBlurRef.current?.drawRect === drawRectRef.current.enable) {
+        if (
+            lastBlurRef.current?.blur === blurRef.current.value &&
+            lastBlurRef.current?.enableBlur === enableBlurRef.current.blur &&
+            lastBlurRef.current?.drawRect === drawRectRef.current.enable
+        ) {
             return;
         }
         lastBlurRef.current = {
+            blur: blurRef.current.value,
+            enableBlur: enableBlurRef.current.blur,
             drawRect: drawRectRef.current.enable,
         };
+
+        // 创建一个模糊滤镜
+        const imgFilters = [];
+        if (enableBlurRef.current.blur) {
+            imgFilters.push(
+                new fabric.filters.Blur({
+                    blur: blurRef.current.value / 500,
+                }),
+            );
+        } else {
+            imgFilters.push(
+                new MosaicFilter({
+                    blockSize: (blurRef.current.value / 100) * 12,
+                }),
+            );
+        }
 
         // 创建一个模糊图层
         let blurLayer: fabric.FabricImage;
         if (
             !blurLayerMaskGroupRef.current ||
-            blurLayerMaskGroupRef.current.getObjects().length !== 0 ||
-            !blurLayerRef.current
+            !blurLayerRef.current ||
+            blurLayerMaskGroupRef.current.getObjects().length !== 0
         ) {
-            blurLayer = await imageLayerRef.current!.clone();
+            blurLayer = await img.clone();
 
             // 设置遮罩
             const blurLayerMaskGroup = new fabric.Group([], {
@@ -134,24 +180,24 @@ export const EraserTool: React.FC = () => {
             blurLayer = blurLayerRef.current;
         }
 
-        blurLayer.filters = [];
+        blurLayer.filters = imgFilters;
         blurLayer.applyFilters();
         blurLayerRef.current = blurLayer;
 
         if (drawRectRef.current.enable) {
             canvas.isDrawingMode = false;
         } else {
-            const eraserBrush = eraserBrushRef.current;
-            if (!eraserBrush) {
+            const mosaicBrush = mosaicBrushRef.current;
+            if (!mosaicBrush) {
                 return;
             }
-            eraserBrush.clipPathGroup = blurLayerMaskGroupRef.current;
+            mosaicBrush.clipPathGroup = blurLayerMaskGroupRef.current;
 
             // 使用处理后的图像作为画笔源
-            const eraserBrushSource = await imageLayerRef.current!.clone();
-            eraserBrushSource.filters = [];
-            eraserBrushSource.applyFilters();
-            eraserBrush.source = eraserBrushSource.toCanvasElement({
+            const mosaicBrushSource = await img.clone();
+            mosaicBrushSource.filters = imgFilters;
+            mosaicBrushSource.applyFilters();
+            mosaicBrush.source = mosaicBrushSource.toCanvasElement({
                 format: 'jpeg',
                 multiplier: 1,
                 left: 0,
@@ -159,16 +205,18 @@ export const EraserTool: React.FC = () => {
             });
             canvas.isDrawingMode = true;
         }
-    }, [drawRectRef, fabricRef, imageLayerRef]);
+
+        canvas.renderAll();
+    }, [blurRef, drawRectRef, enableBlurRef, fabricRef]);
 
     useEffect(() => {
         const canvas = fabricRef.current;
-        const eraserBrush = eraserBrushRef.current;
-        if (!canvas || !eraserBrush) {
+        const mosaicBrush = mosaicBrushRef.current;
+        if (!canvas || !mosaicBrush) {
             return;
         }
 
-        eraserBrush.width = width.width;
+        mosaicBrush.width = width.width;
     }, [fabricRef, width]);
 
     useAppSettingsLoad(
@@ -183,8 +231,26 @@ export const EraserTool: React.FC = () => {
                 return;
             }
 
-            updateFilter();
-        }, [fabricRef, imageBufferRef, updateFilter]),
+            setMaskVisible(false);
+
+            fabric.FabricImage.fromURL(
+                canvas.toDataURL({
+                    multiplier: 0.8,
+                    format: 'jpeg',
+                    quality: 1,
+                    enableRetinaScaling: false,
+                }),
+            ).then((img) => {
+                imgRef.current = img;
+
+                img.scaleToWidth(imageBuffer.monitorWidth / imageBuffer.monitorScaleFactor);
+                img.scaleToHeight(imageBuffer.monitorHeight / imageBuffer.monitorScaleFactor);
+
+                updateFilter();
+            });
+
+            setMaskVisible(true);
+        }, [fabricRef, imageBufferRef, setMaskVisible, updateFilter]),
     );
 
     useEffect(() => {
@@ -194,7 +260,7 @@ export const EraserTool: React.FC = () => {
         }
 
         updateFilter();
-    }, [drawRect.enable, updateFilter]);
+    }, [blur.value, enableBlur.blur, updateFilter, drawRect.enable]);
 
     useEffect(() => {
         const enableDrawRect = drawRect.enable;
@@ -215,9 +281,9 @@ export const EraserTool: React.FC = () => {
             return;
         }
 
-        const eraserBrush = new EraserBrush(canvas, blurLayerMaskGroupRef.current);
-        eraserBrushRef.current = eraserBrush;
-        canvas.freeDrawingBrush = eraserBrush;
+        const mosaicBrush = new MosaicBrush(canvas, blurLayerMaskGroupRef.current);
+        mosaicBrushRef.current = mosaicBrush;
+        canvas.freeDrawingBrush = mosaicBrush;
 
         return () => {
             canvas.freeDrawingBrush = undefined;
@@ -230,6 +296,22 @@ export const EraserTool: React.FC = () => {
             }
         };
     }, [fabricRef, imageBufferRef]);
+
+    useEffect(() => {
+        const canvas = fabricRef.current;
+        if (!canvas) {
+            return;
+        }
+
+        return () => {
+            if (blurLayerMaskGroupRef.current?.getObjects().length !== 0) {
+                return;
+            }
+
+            canvas.remove(blurLayerRef.current!);
+            canvas.remove(blurLayerMaskGroupRef.current!);
+        };
+    }, [fabricRef]);
 
     useEffect(() => {
         let isDrawing = false;
@@ -364,11 +446,6 @@ export const EraserTool: React.FC = () => {
             const canvas = fabricRef.current;
             if (!canvas) return;
 
-            // 清除下马赛克的缓存，避免橡皮擦擦除后无法应用马赛克效果
-            if (objectCacheRef.current) {
-                clearMosaicCache(objectCacheRef.current);
-            }
-
             if (shape && shapeControls) {
                 shape.set({ strokeWidth: 0 });
                 canvas.remove(shapeControls);
@@ -402,30 +479,25 @@ export const EraserTool: React.FC = () => {
             canvas.off('mouse:up', onMouseUp);
             pathCreatedUnlisten();
         };
-    }, [drawRectRef, fabricRef, objectCacheRef]);
+    }, [drawRectRef, fabricRef]);
 
-    useEffect(() => {
-        const canvas = fabricRef.current;
-        if (!canvas) {
-            return;
-        }
-
-        return () => {
-            if (blurLayerMaskGroupRef.current?.getObjects().length !== 0) {
-                return;
-            }
-
-            canvas.remove(blurLayerRef.current!);
-            canvas.remove(blurLayerMaskGroupRef.current!);
-        };
-    }, [fabricRef, objectCacheRef]);
     return (
         <>
-            <DrawRectPicker onChange={setDrawRect} toolbarLocation={'eraser'} />
+            <DrawRectPicker onChange={setDrawRect} toolbarLocation={'mosaic'} />
 
             {!drawRect.enable && <CircleCursor radius={width.width / 2} />}
 
-            <LineWidthPicker onChange={setWidth} toolbarLocation={'eraser'} />
+            <LineWidthPicker onChange={setWidth} toolbarLocation={'mosaic'} />
+
+            <div className="draw-toolbar-splitter" />
+
+            <SliderPicker onChange={setBlur} toolbarLocation={'mosaic'} />
+
+            <EnableBlurPicker onChange={setEnableBlur} toolbarLocation={'mosaic'} />
         </>
     );
+};
+
+export const MosaicTool: React.FC = () => {
+    return <MosaicToolbarCore />;
 };

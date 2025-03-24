@@ -5,7 +5,7 @@ import {
     defaultKeyEventComponentConfig,
     defaultKeyEventSettings,
     KeyEventKey,
-} from '@/app/draw/components/drawToolbar/components/keyEventWrap';
+} from '@/app/draw_old/components/drawToolbar/components/keyEventWrap';
 import { GroupTitle } from '@/components/groupTitle';
 import { KeyButton } from '@/components/keyButton';
 import { ResetSettingsButton } from '@/components/resetSettingsButton';
