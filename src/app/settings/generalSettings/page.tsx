@@ -19,7 +19,7 @@ import { ResetSettingsButton } from '@/components/resetSettingsButton';
 
 const { Option } = Select;
 
-export default function Settings() {
+export default function GeneralSettings() {
     const intl = useIntl();
 
     const {
@@ -140,9 +140,9 @@ export default function Settings() {
                             <Option value={AppSettingsControlNode.Circle}>
                                 <FormattedMessage id="settings.controlNode.circle" />
                             </Option>
-                            <Option value={AppSettingsControlNode.Polyline}>
+                            {/* <Option value={AppSettingsControlNode.Polyline}>
                                 <FormattedMessage id="settings.controlNode.polyline" />
-                            </Option>
+                            </Option> */}
                         </Select>
                     </Form.Item>
                     <Form.Item

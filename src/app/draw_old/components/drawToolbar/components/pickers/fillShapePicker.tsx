@@ -3,7 +3,7 @@ import { Button } from 'antd';
 import { getButtonTypeByState } from '../..';
 import { FormattedMessage } from 'react-intl';
 import { withPickerBase, WithPickerBaseProps } from './pickerBase';
-import { ToolbarTip } from '../../../toolbarTip';
+import { ToolbarTip } from '../../../../../../components/toolbarTip';
 
 export type FillShapePickerValue = {
     fill: boolean;

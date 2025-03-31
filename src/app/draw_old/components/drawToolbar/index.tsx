@@ -34,7 +34,7 @@ import { HighlightTool } from './components/highlightTool';
 import { ArrowTool } from './components/arrowTool';
 import { EraserTool } from './components/eraserTool';
 import { KeyEventKey, KeyEventWrap } from './components/keyEventWrap';
-import { ToolbarTip } from '../toolbarTip';
+import { ToolbarTip } from '../../../../components/toolbarTip';
 import * as fabric from 'fabric';
 
 export type DrawToolbarProps = {

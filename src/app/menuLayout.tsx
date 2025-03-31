@@ -171,6 +171,17 @@ const MenuLayoutCore: React.FC<{ children: React.ReactNode }> = ({ children }) =
                             },
                         ],
                     },
+                    {
+                        key: '/settings/systemSettings',
+                        path: '/settings/systemSettings',
+                        label: intl.formatMessage({ id: 'menu.settings.systemSettings' }),
+                        tabs: [
+                            {
+                                key: 'renderSettings',
+                                label: intl.formatMessage({ id: 'settings.renderSettings' }),
+                            },
+                        ],
+                    },
                 ],
             },
         ];

@@ -8,6 +8,7 @@ import {
     BaseLayerContext,
     withBaseLayer,
     BaseLayerActionType,
+    defaultBaseLayerActions,
 } from '../baseLayer';
 import { zIndexs } from '@/utils/zIndex';
 
@@ -36,11 +37,9 @@ const CaptureImageLayerCore: React.FC<CaptureImageLayerProps> = ({ actionRef }) 
     useImperativeHandle(
         actionRef,
         () => ({
+            ...defaultBaseLayerActions,
             onCaptureReady,
             onCaptureFinish,
-            disable: () => {},
-            enable: () => {},
-            onCanvasReady: () => {},
         }),
         [onCaptureFinish, onCaptureReady],
     );

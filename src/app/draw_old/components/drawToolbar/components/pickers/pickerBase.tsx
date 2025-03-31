@@ -32,7 +32,12 @@ export function withPickerBase<T extends object>(
     defaultValue: T,
     updateDebounce: number = 0,
 ) {
-    return React.memo(function PickerBase(props: PickerProps<T>) {
+    return React.memo(function PickerBase(props: PickerProps<T> & { enable: boolean }) {
+        const enableRef = useRef(props.enable);
+        useEffect(() => {
+            enableRef.current = props.enable;
+        }, [props.enable]);
+
         const { onChange, toolbarLocation, hidden } = props;
 
         const appSettings = useContext(AppSettingsContext);
@@ -41,6 +46,10 @@ export function withPickerBase<T extends object>(
         const [value, _setValue] = useState<T | undefined>();
         const valueRef = useRef<T | undefined>(undefined);
         const setValue: React.Dispatch<React.SetStateAction<T>> = useCallback((newValue) => {
+            if (!enableRef.current) {
+                return;
+            }
+
             _setValue((prev) => {
                 let res;
                 if (typeof newValue === 'function') {
@@ -53,7 +62,17 @@ export function withPickerBase<T extends object>(
                 return res;
             });
         }, []);
-        const [tempValue, setTempValue] = useState<T | undefined>(undefined);
+        const [tempValue, _setTempValue] = useState<T | undefined>(undefined);
+        const setTempValue: React.Dispatch<React.SetStateAction<T | undefined>> = useCallback(
+            (newValue) => {
+                if (!enableRef.current) {
+                    return;
+                }
+
+                _setTempValue(newValue);
+            },
+            [],
+        );
 
         const settingsValueRef = useRef<T | undefined>(undefined);
 

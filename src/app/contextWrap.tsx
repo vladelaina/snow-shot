@@ -91,6 +91,7 @@ export enum AppSettingsGroup {
     DrawToolbarPicker = 'drawToolbarPicker',
     DrawToolbarKeyEvent = 'drawToolbarKeyEvent',
     AppFunction = 'appFunction',
+    Render = 'render',
 }
 
 export enum AppSettingsLanguage {
@@ -142,6 +143,9 @@ export type AppSettingsData = {
     };
     [AppSettingsGroup.DrawToolbarKeyEvent]: Record<KeyEventKey, KeyEventValue>;
     [AppSettingsGroup.AppFunction]: Record<AppFunction, AppFunctionConfig>;
+    [AppSettingsGroup.Render]: {
+        antialias: boolean;
+    };
 };
 
 export const defaultAppSettingsData: AppSettingsData = {
@@ -151,7 +155,7 @@ export const defaultAppSettingsData: AppSettingsData = {
         browserLanguage: '',
     },
     [AppSettingsGroup.Screenshot]: {
-        controlNode: AppSettingsControlNode.Polyline,
+        controlNode: AppSettingsControlNode.Circle,
         findChildrenElements: true,
         performanceMode: false,
     },
@@ -178,6 +182,9 @@ export const defaultAppSettingsData: AppSettingsData = {
     },
     [AppSettingsGroup.DrawToolbarKeyEvent]: defaultKeyEventSettings,
     [AppSettingsGroup.AppFunction]: defaultAppFunctionConfigs,
+    [AppSettingsGroup.Render]: {
+        antialias: true,
+    },
 };
 
 export type AppSettingsContextType = AppSettingsData & {
@@ -706,6 +713,18 @@ export const ContextWrap: React.FC<{ children: React.ReactNode }> = ({ children 
                     ...defaultAppFunctionConfigs,
                     ...newSettings,
                 };
+            } else if (group === AppSettingsGroup.Render) {
+                newSettings = newSettings as AppSettingsData[typeof group];
+                const prevSettings = appSettingsRef.current[group] as
+                    | AppSettingsData[typeof group]
+                    | undefined;
+
+                settings = {
+                    antialias:
+                        typeof newSettings?.antialias === 'boolean'
+                            ? newSettings.antialias
+                            : (prevSettings?.antialias ?? defaultAppSettingsData[group].antialias),
+                };
             } else {
                 return defaultAppSettingsData[group];
             }
@@ -817,15 +836,23 @@ export const ContextWrap: React.FC<{ children: React.ReactNode }> = ({ children 
         }
     }, [appSettings]);
 
+    const appSettingsContextValue = useMemo(() => {
+        return {
+            isDefaultData,
+            ...appSettings,
+            updateAppSettings,
+            reloadAppSettings,
+        };
+    }, [isDefaultData, appSettings, updateAppSettings, reloadAppSettings]);
+
+    const appContextValue = useMemo(() => {
+        return {
+            appWindowRef,
+        };
+    }, [appWindowRef]);
+
     return (
-        <AppSettingsContext.Provider
-            value={{
-                isDefaultData,
-                ...appSettings,
-                updateAppSettings,
-                reloadAppSettings,
-            }}
-        >
+        <AppSettingsContext.Provider value={appSettingsContextValue}>
             <ConfigProvider
                 theme={{
                     algorithm: appSettings[AppSettingsGroup.Common].darkMode
@@ -838,7 +865,7 @@ export const ContextWrap: React.FC<{ children: React.ReactNode }> = ({ children 
                     locale={appSettings[AppSettingsGroup.Common].language}
                     messages={messages[appSettings[AppSettingsGroup.Common].language]}
                 >
-                    <AppContext.Provider value={{ appWindowRef }}>{children}</AppContext.Provider>
+                    <AppContext.Provider value={appContextValue}>{children}</AppContext.Provider>
                 </IntlProvider>
             </ConfigProvider>
         </AppSettingsContext.Provider>

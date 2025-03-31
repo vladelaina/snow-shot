@@ -8,10 +8,13 @@ export const settings = {
     'settings.screenshotSettings': '截图设置',
     'settings.findChildrenElements': '查找窗口子元素',
     'settings.performanceMode': '性能优先',
-    'settings.performanceMode.tip1': '启用性能优先模式后，会尝试降低一定绘图质量提高性能（软件快速迭代中，请保持开启）',
+    'settings.performanceMode.tip1':
+        '启用性能优先模式后，会尝试降低一定绘图质量提高性能（软件快速迭代中，请保持开启）',
     'settings.drawingHotKey': '绘图热键',
     'settings.addKeyConfig': '添加按键配置',
     'settings.pleasePressTheKey': '请按下按键',
     'settings.keyConfig': '“{title}”按键配置',
     'settings.resetSettings': '确定重置“{title}”为默认设置吗？',
+    'settings.antialias': '抗锯齿',
+    'settings.renderSettings': '渲染设置',
 };

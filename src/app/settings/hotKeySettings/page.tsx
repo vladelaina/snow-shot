@@ -14,7 +14,7 @@ import { Col, Form, Row, Spin, theme } from 'antd';
 import { useCallback, useContext, useMemo, useState } from 'react';
 import { FormattedMessage, useIntl } from 'react-intl';
 
-export default function Settings() {
+export default function HotKeySettings() {
     const { token } = theme.useToken();
     const intl = useIntl();
 

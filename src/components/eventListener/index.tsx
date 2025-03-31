@@ -1,7 +1,7 @@
 'use client';
 
 import { EventCallback, listen, UnlistenFn } from '@tauri-apps/api/event';
-import { createContext, useCallback, useContext, useEffect, useRef } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef } from 'react';
 import { attachConsole } from '@tauri-apps/plugin-log';
 import { appLog, LogMessageEvent } from '@/utils/appLog';
 import React from 'react';
@@ -135,8 +135,12 @@ const EventListenerCore: React.FC<{ children: React.ReactNode }> = ({ children }
             });
         };
     }, [mainWindow, pathname, reloadAppSettings]);
+
+    const eventListenerContextValue = useMemo(() => {
+        return { addListener, removeListener };
+    }, [addListener, removeListener]);
     return (
-        <EventListenerContext.Provider value={{ addListener, removeListener }}>
+        <EventListenerContext.Provider value={eventListenerContextValue}>
             {children}
         </EventListenerContext.Provider>
     );

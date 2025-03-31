@@ -18,10 +18,6 @@ import { FormattedMessage } from 'react-intl';
 import { KeyEventKey, KeyEventWrap } from '../drawToolbar/components/keyEventWrap';
 import { getCurrentWindow, Window as AppWindow, PhysicalPosition } from '@tauri-apps/api/window';
 
-export type ColorPickerActionType = {
-    update: (mouseX: number, mouseY: number) => void;
-};
-
 const previewScale = 12;
 const previewPickerSize = 10 + 1;
 const previewCanvasSize = previewPickerSize * previewScale;

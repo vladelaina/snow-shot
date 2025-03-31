@@ -7,6 +7,7 @@ import {
     withBaseLayer,
     BaseLayerActionType,
     BaseLayerContext,
+    defaultBaseLayerActions,
 } from '../baseLayer';
 import { zIndexs } from '@/utils/zIndex';
 import {
@@ -22,22 +23,37 @@ import { useHotkeys } from 'react-hotkeys-hook';
 import * as PIXI from 'pixi.js';
 import Flatbush from 'flatbush';
 import { useCallbackRender } from '@/hooks/useCallbackRender';
+import { TweenAnimation } from '@/utils/tweenAnimation';
+import * as TWEEN from '@tweenjs/tween.js';
+import {
+    convertDragModeToCursor,
+    DragMode,
+    dragRect,
+    drawSelectRect,
+    getDragModeFromMousePosition,
+    limitRect,
+    SelectState,
+} from './extra';
+import { MousePosition } from '@/utils/mousePosition';
+import { getMonitorRect } from '../../extra';
+import { CaptureStep, DrawContext } from '../../types';
+import { useStateSubscriber } from '@/hooks/useStateSubscriber';
+import { CaptureStepPublisher } from '../../page';
 
-export type SelectLayerActionType = BaseLayerActionType & {};
+export type SelectLayerActionType = BaseLayerActionType & {
+    getSelectRect: () => ElementRect | undefined;
+};
 
 export type SelectLayerProps = {
     actionRef: React.RefObject<SelectLayerActionType | undefined>;
 };
 
-export const getMaskBackgroundColor = (darkMode: boolean) => {
-    return darkMode ? '#434343' : '#000000';
-};
-
-const MASK_OPACITY = 0.5;
 const SelectLayerCore: React.FC<SelectLayerProps> = ({ actionRef }) => {
     const imageBufferRef = useRef<ImageBuffer | undefined>(undefined);
 
-    const { isEnable, addChildToTopContainer } = useContext(BaseLayerContext);
+    const { finishCapture, drawToolbarActionRef } = useContext(DrawContext);
+    const { isEnable, addChildToTopContainer, changeCursor, layerContainerElementRef } =
+        useContext(BaseLayerContext);
 
     const {
         screenshot: { findChildrenElements },
@@ -57,20 +73,44 @@ const SelectLayerCore: React.FC<SelectLayerProps> = ({ actionRef }) => {
     const elementsListRTreeRef = useRef<Flatbush | undefined>(undefined); // 窗口元素的 RTree
     const selectWindowElementLoadingRef = useRef(true); // 是否正在加载元素选择功能
     const overlayRectRef = useRef<PIXI.Graphics | undefined>(undefined); // 全屏遮罩
-    const overlayMaskRectRef = useRef<PIXI.Graphics | undefined>(undefined); // 全屏遮罩的 mask
+    const overlayMaskRectControlsRef = useRef<PIXI.Graphics | undefined>(undefined); // 全屏遮罩的 mask 的控制点
     const selectWindowFromMousePositionLevelRef = useRef(0);
-    const lastMouseMovePositionRef = useRef({
-        mouseX: 0,
-        mouseY: 0,
-    }); // 上一次鼠标移动事件触发的参数
+    const lastMouseMovePositionRef = useRef<MousePosition | undefined>(undefined); // 上一次鼠标移动事件触发的参数
+    const drawSelectRectAnimationRef = useRef<TweenAnimation<ElementRect> | undefined>(undefined); // 绘制选取框的动画
+    const selectStateRef = useRef(SelectState.Auto); // 当前的选择状态
+    const setSelectState = useCallback(
+        (state: SelectState) => {
+            if (state === SelectState.Selected) {
+                drawToolbarActionRef.current?.setEnable(true);
+            } else {
+                drawToolbarActionRef.current?.setEnable(false);
+                changeCursor('crosshair');
+            }
+
+            selectStateRef.current = state;
+        },
+        [changeCursor, drawToolbarActionRef],
+    );
+    const mouseDownPositionRef = useRef<MousePosition | undefined>(undefined); // 鼠标按下时的位置
+    const dragModeRef = useRef<DragMode | undefined>(undefined); // 拖动模式
+    const dragRectRef = useRef<ElementRect | undefined>(undefined); // 拖动矩形
+    const enableSelectRef = useRef(false); // 是否启用选择
+    const updateEnableSelect = useCallback((captureStep: CaptureStep) => {
+        enableSelectRef.current = captureStep === CaptureStep.Select;
+    }, []);
+    useStateSubscriber(CaptureStepPublisher, updateEnableSelect);
+
+    const getSelectRect = useCallback(() => {
+        return drawSelectRectAnimationRef.current?.getTargetObject();
+    }, []);
 
     /**
      * 初始化元素选择功能
      */
-    const initSelectWindowElement = useCallback(async (imageBuffer: ImageBuffer) => {
+    const initSelectWindowElement = useCallback(async () => {
         selectWindowElementLoadingRef.current = true;
 
-        const windowElements = await getWindowElements(imageBuffer.mouseX, imageBuffer.mouseY);
+        const windowElements = await getWindowElements();
         const initUiElementsCachePromise = initUiElementsCache();
 
         const rTree = new Flatbush(windowElements.length);
@@ -89,29 +129,23 @@ const SelectLayerCore: React.FC<SelectLayerProps> = ({ actionRef }) => {
      * 通过鼠标坐标获取候选框
      */
     const getElementRectFromMousePosition = useCallback(
-        async (mouseX: number, mouseY: number): Promise<ElementRect[] | undefined> => {
+        async (mousePosition: MousePosition): Promise<ElementRect[] | undefined> => {
             if (selectWindowElementLoadingRef.current) {
                 return undefined;
             }
 
-            const imageBuffer = imageBufferRef.current;
-            if (!imageBuffer) {
-                return undefined;
-            }
             const elementsRTree = elementsListRTreeRef.current;
             if (!elementsRTree) {
                 return undefined;
             }
 
-            const { monitorScaleFactor, monitorX, monitorY } = imageBuffer;
-            // 将坐标转换为物理坐标
-            mouseX = Math.floor(mouseX * monitorScaleFactor) + monitorX;
-            mouseY = Math.floor(mouseY * monitorScaleFactor) + monitorY;
-
             let elementRectList = undefined;
             if (tabFindChildrenElementsRef.current) {
                 try {
-                    elementRectList = await getElementFromPosition(mouseX, mouseY);
+                    elementRectList = await getElementFromPosition(
+                        mousePosition.mouseX,
+                        mousePosition.mouseY,
+                    );
                 } catch {
                     // 获取元素失败，忽略
                 }
@@ -121,9 +155,14 @@ const SelectLayerCore: React.FC<SelectLayerProps> = ({ actionRef }) => {
             if (elementRectList) {
                 result = elementRectList;
             } else {
-                const rectIndexs = elementsRTree.search(mouseX, mouseY, mouseX, mouseY);
-                // 获取的是原始数据的索引，原始数据下标越小的，窗口层级越低，所以优先选择下标大的
-                rectIndexs.sort((a, b) => b - a);
+                const rectIndexs = elementsRTree.search(
+                    mousePosition.mouseX,
+                    mousePosition.mouseY,
+                    mousePosition.mouseX,
+                    mousePosition.mouseY,
+                );
+                // 获取的是原始数据的索引，原始数据下标越小的，窗口层级越高，所以优先选择下标小的
+                rectIndexs.sort((a, b) => a - b);
 
                 result = rectIndexs.map((index) => {
                     return elementsListRef.current[index];
@@ -135,77 +174,99 @@ const SelectLayerCore: React.FC<SelectLayerProps> = ({ actionRef }) => {
         [],
     );
 
+    const updateSelectRect = useCallback(
+        (
+            rect: ElementRect,
+            imageBuffer: ImageBuffer,
+            overlayRect: PIXI.Graphics,
+            overlayMaskRectControls: PIXI.Graphics,
+        ) => {
+            drawSelectRect(
+                imageBuffer.monitorWidth,
+                imageBuffer.monitorHeight,
+                rect,
+                overlayRect,
+                overlayMaskRectControls,
+                darkMode,
+                imageBuffer.monitorScaleFactor,
+            );
+        },
+        [darkMode],
+    );
+
+    const initAnimation = useCallback(
+        (
+            imageBuffer: ImageBuffer,
+            overlayRect: PIXI.Graphics,
+            overlayMaskRectControls: PIXI.Graphics,
+        ) => {
+            if (drawSelectRectAnimationRef.current) {
+                drawSelectRectAnimationRef.current.dispose();
+            }
+
+            drawSelectRectAnimationRef.current = new TweenAnimation<ElementRect>(
+                {
+                    min_x: 0,
+                    min_y: 0,
+                    max_x: imageBuffer.monitorWidth,
+                    max_y: imageBuffer.monitorHeight,
+                },
+                TWEEN.Easing.Quadratic.Out,
+                1 * 100,
+                (rect) => {
+                    updateSelectRect(rect, imageBuffer, overlayRect, overlayMaskRectControls);
+                },
+            );
+        },
+        [updateSelectRect],
+    );
+
     const onCaptureReady = useCallback<BaseLayerEventActionType['onCaptureReady']>(
         async (_texture, imageBuffer): Promise<void> => {
-            const initSelectWindowElementPromise = initSelectWindowElement(imageBuffer);
-
-            const { monitorWidth, monitorHeight, mouseX, mouseY, monitorScaleFactor } = imageBuffer;
             imageBufferRef.current = imageBuffer;
+            const { mouseX, mouseY } = imageBuffer;
             // 初始化下坐标，用来在触发鼠标移动事件前选取坐标
-            lastMouseMovePositionRef.current = {
-                mouseX: Math.floor(mouseX / monitorScaleFactor),
-                mouseY: Math.floor(mouseY / monitorScaleFactor),
-            };
+            lastMouseMovePositionRef.current = new MousePosition(mouseX, mouseY);
+            // 初始化下选择状态
+            setSelectState(SelectState.Auto);
+
             // 创建一个全屏遮罩
-            const overlayRect = new PIXI.Graphics().rect(0, 0, monitorWidth, monitorHeight).fill({
-                color: getMaskBackgroundColor(darkMode),
-                alpha: MASK_OPACITY,
+            const overlayRect = new PIXI.Graphics({
+                cullable: true,
             });
-            // 创建遮罩的 mask，用来显示选择的范围
-            // 开始选择全屏，这样过渡效果比较好
-            const overlayMaskRect = new PIXI.Graphics()
-                .rect(0, 0, monitorWidth, monitorHeight)
-                .fill('#000000');
-            overlayRect.setMask({
-                mask: overlayMaskRect,
-                inverse: true,
+            const overlayControls = new PIXI.Graphics({
+                cullable: true,
             });
 
             addChildToTopContainer(overlayRect);
-            addChildToTopContainer(overlayMaskRect);
+            addChildToTopContainer(overlayControls);
 
             overlayRectRef.current = overlayRect;
-            overlayMaskRectRef.current = overlayMaskRect;
+            overlayMaskRectControlsRef.current = overlayControls;
 
-            await initSelectWindowElementPromise;
+            initAnimation(imageBuffer, overlayRect, overlayControls);
         },
-        [darkMode, addChildToTopContainer, initSelectWindowElement],
+        [addChildToTopContainer, initAnimation, setSelectState],
     );
+
+    const onCaptureLoad = useCallback<
+        BaseLayerEventActionType['onCaptureLoad']
+    >(async () => {}, []);
 
     const onCaptureFinish = useCallback<BaseLayerEventActionType['onCaptureFinish']>(() => {
         imageBufferRef.current = undefined;
         selectWindowElementLoadingRef.current = true;
         elementsListRTreeRef.current = undefined;
         elementsListRef.current = [];
+        lastMouseMovePositionRef.current = undefined;
     }, []);
 
-    /** 更新选取的位置 */
-    const updateSelectRect = useCallback((rect: ElementRect) => {
-        const maskRect = overlayMaskRectRef.current;
-        if (!maskRect) {
-            return;
-        }
-
-        maskRect
-            .clear()
-            .rect(rect.min_x, rect.min_y, rect.max_x - rect.min_x, rect.max_y - rect.min_y)
-            .fill('#000000');
-    }, []);
-
-    const onMouseMove = useCallback(
-        async (mouseX: number, mouseY: number) => {
-            lastMouseMovePositionRef.current = {
-                mouseX,
-                mouseY,
-            };
-
-            const elementRectList = await getElementRectFromMousePosition(
-                lastMouseMovePositionRef.current.mouseX,
-                lastMouseMovePositionRef.current.mouseY,
-            );
+    const autoSelect = useCallback(
+        async (mousePosition: MousePosition): Promise<ElementRect> => {
+            let elementRectList = await getElementRectFromMousePosition(mousePosition);
 
             if (!elementRectList || elementRectList.length === 0) {
-                return;
+                elementRectList = [getMonitorRect(imageBufferRef.current)];
             }
 
             const minLevel = 0;
@@ -218,23 +279,117 @@ const SelectLayerCore: React.FC<SelectLayerProps> = ({ actionRef }) => {
                 selectWindowFromMousePositionLevelRef.current = maxLevel;
             }
 
-            // 更新选取位置
-            updateSelectRect(elementRectList[currentLevel]);
+            return elementRectList[currentLevel];
         },
-        [getElementRectFromMousePosition, updateSelectRect],
+        [getElementRectFromMousePosition],
     );
+
+    const updateDragMode = useCallback(
+        (mousePosition: MousePosition): DragMode => {
+            dragModeRef.current = getDragModeFromMousePosition(getSelectRect()!, mousePosition);
+
+            changeCursor(convertDragModeToCursor(dragModeRef.current));
+
+            return dragModeRef.current;
+        },
+        [changeCursor, getSelectRect],
+    );
+
+    const onMouseDown = useCallback(
+        (mousePosition: MousePosition) => {
+            mouseDownPositionRef.current = mousePosition;
+            if (selectStateRef.current === SelectState.Auto) {
+            } else if (selectStateRef.current === SelectState.Selected) {
+                // 改变状态为拖动
+                setSelectState(SelectState.Drag);
+                updateDragMode(mousePosition);
+                dragRectRef.current = getSelectRect()!;
+            }
+        },
+        [getSelectRect, setSelectState, updateDragMode],
+    );
+    const onMouseMove = useCallback(
+        async (mousePosition: MousePosition) => {
+            // 检测下鼠标移动的距离
+            lastMouseMovePositionRef.current = mousePosition;
+
+            if (selectStateRef.current === SelectState.Auto) {
+                if (mouseDownPositionRef.current) {
+                    // 检测拖动距离是否启用手动选择
+                    const maxDistance = mouseDownPositionRef.current.getMaxDistance(mousePosition);
+                    if (maxDistance > 9) {
+                        setSelectState(SelectState.Manual);
+                    }
+                }
+
+                drawSelectRectAnimationRef.current?.update(await autoSelect(mousePosition));
+            } else if (selectStateRef.current === SelectState.Manual) {
+                if (!mouseDownPositionRef.current) {
+                    return;
+                }
+
+                drawSelectRectAnimationRef.current?.update(
+                    mouseDownPositionRef.current.toElementRect(mousePosition),
+                    true,
+                );
+            } else if (selectStateRef.current === SelectState.Selected) {
+                updateDragMode(mousePosition);
+            } else if (selectStateRef.current === SelectState.Drag) {
+                if (!mouseDownPositionRef.current) {
+                    return;
+                }
+
+                drawSelectRectAnimationRef.current?.update(
+                    dragRect(
+                        dragModeRef.current!,
+                        dragRectRef.current!,
+                        mouseDownPositionRef.current,
+                        mousePosition,
+                    ),
+                    true,
+                );
+            }
+        },
+        [autoSelect, setSelectState, updateDragMode],
+    );
+    const onMouseUp = useCallback(() => {
+        if (!mouseDownPositionRef.current) {
+            return;
+        }
+
+        if (selectStateRef.current === SelectState.Auto) {
+            setSelectState(SelectState.Selected);
+        } else if (selectStateRef.current === SelectState.Manual) {
+            setSelectState(SelectState.Selected);
+        } else if (selectStateRef.current === SelectState.Drag) {
+            setSelectState(SelectState.Selected);
+            drawSelectRectAnimationRef.current?.update(
+                limitRect(
+                    drawSelectRectAnimationRef.current.getTargetObject(),
+                    getMonitorRect(imageBufferRef.current),
+                ),
+            );
+            dragRectRef.current = undefined;
+        }
+
+        mouseDownPositionRef.current = undefined;
+    }, [setSelectState]);
+
     const onMouseMoveRenderCallback = useCallbackRender(onMouseMove);
     // 用上一次的鼠标移动事件触发 onMouseMove 来更新一些状态
     const refreshMouseMove = useCallback(() => {
-        if (lastMouseMovePositionRef.current) {
-            onMouseMove(
-                lastMouseMovePositionRef.current.mouseX,
-                lastMouseMovePositionRef.current.mouseY,
-            );
+        if (!lastMouseMovePositionRef.current) {
+            return;
         }
+
+        onMouseMove(lastMouseMovePositionRef.current);
     }, [onMouseMove]);
     const onMouseWheel = useCallback(
         (e: WheelEvent) => {
+            if (selectStateRef.current !== SelectState.Auto) {
+                return;
+            }
+
             const deltaLevel = e.deltaY > 0 ? 1 : -1;
             selectWindowFromMousePositionLevelRef.current = Math.max(
                 selectWindowFromMousePositionLevelRef.current + deltaLevel,
@@ -246,8 +401,21 @@ const SelectLayerCore: React.FC<SelectLayerProps> = ({ actionRef }) => {
     );
     const onMouseWheelRenderCallback = useCallbackRender(onMouseWheel);
 
+    const onExecuteScreenshot = useCallback<
+        BaseLayerEventActionType['onExecuteScreenshot']
+    >(async () => {
+        await initSelectWindowElement();
+
+        // 初始化可能晚于截图准备
+        refreshMouseMove();
+    }, [initSelectWindowElement, refreshMouseMove]);
+
     useEffect(() => {
         initUiElements();
+
+        return () => {
+            drawSelectRectAnimationRef.current?.dispose();
+        };
     }, []);
 
     useEffect(() => {
@@ -263,35 +431,107 @@ const SelectLayerCore: React.FC<SelectLayerProps> = ({ actionRef }) => {
             return;
         }
 
+        const layerContainerElement = layerContainerElementRef.current;
+        if (!layerContainerElement) {
+            return;
+        }
+
+        const handleMouseDown = (e: MouseEvent) => {
+            if (!enableSelectRef.current) {
+                return;
+            }
+
+            if (e.button !== 0) {
+                return;
+            }
+
+            if (!imageBufferRef.current) {
+                return;
+            }
+
+            onMouseDown(
+                new MousePosition(e.clientX, e.clientY).scale(
+                    imageBufferRef.current.monitorScaleFactor,
+                ),
+            );
+        };
         const handleMouseMove = (e: MouseEvent) => {
-            onMouseMoveRenderCallback(e.clientX, e.clientY);
+            if (!enableSelectRef.current) {
+                return;
+            }
+
+            if (!imageBufferRef.current) {
+                return;
+            }
+
+            onMouseMoveRenderCallback(
+                new MousePosition(e.clientX, e.clientY).scale(
+                    imageBufferRef.current.monitorScaleFactor,
+                ),
+            );
         };
-        document.addEventListener('mousemove', handleMouseMove);
-        document.addEventListener('wheel', onMouseWheelRenderCallback);
+        const handleMouseUp = (e: MouseEvent) => {
+            if (!enableSelectRef.current) {
+                return;
+            }
+
+            if (e.button !== 0) {
+                return;
+            }
+
+            onMouseUp();
+        };
+        layerContainerElement.addEventListener('mousedown', handleMouseDown);
+        layerContainerElement.addEventListener('mousemove', handleMouseMove);
+        layerContainerElement.addEventListener('mouseup', handleMouseUp);
+        layerContainerElement.addEventListener('wheel', onMouseWheelRenderCallback, {
+            passive: true,
+        });
         return () => {
-            document.removeEventListener('mousemove', handleMouseMove);
-            document.removeEventListener('wheel', onMouseWheelRenderCallback);
+            layerContainerElement.removeEventListener('mousedown', handleMouseDown);
+            layerContainerElement.removeEventListener('mousemove', handleMouseMove);
+            layerContainerElement.removeEventListener('mouseup', handleMouseUp);
+            layerContainerElement.removeEventListener('wheel', onMouseWheelRenderCallback);
         };
-    }, [isEnable, onMouseMoveRenderCallback, onMouseWheelRenderCallback]);
+    }, [
+        isEnable,
+        layerContainerElementRef,
+        onMouseDown,
+        onMouseMoveRenderCallback,
+        onMouseUp,
+        onMouseWheelRenderCallback,
+    ]);
 
     useImperativeHandle(
         actionRef,
         () => ({
+            ...defaultBaseLayerActions,
+            onExecuteScreenshot,
             onCaptureReady: async (texture, imageBuffer) => {
                 await onCaptureReady(texture, imageBuffer);
                 refreshMouseMove();
             },
+            onCaptureLoad,
             onCaptureFinish,
-            disable: () => {},
-            enable: () => {},
-            onCanvasReady: () => {},
+            getSelectRect,
         }),
-        [onCaptureFinish, onCaptureReady, refreshMouseMove],
+        [
+            getSelectRect,
+            onCaptureFinish,
+            onCaptureLoad,
+            onCaptureReady,
+            onExecuteScreenshot,
+            refreshMouseMove,
+        ],
     );
 
     useHotkeys(
         'Tab',
         () => {
+            if (!enableSelectRef.current) {
+                return;
+            }
+
             setTabFindChildrenElements((prev) => !prev);
         },
         {
@@ -299,6 +539,30 @@ const SelectLayerCore: React.FC<SelectLayerProps> = ({ actionRef }) => {
             enabled: isEnable && findChildrenElements,
         },
     );
+
+    useEffect(() => {
+        if (!isEnable) {
+            return;
+        }
+
+        const mouseRightClick = (e: MouseEvent) => {
+            e.preventDefault();
+            // 回退到选择
+            if (selectStateRef.current === SelectState.Selected) {
+                setSelectState(SelectState.Auto);
+                refreshMouseMove();
+            } else if (selectStateRef.current === SelectState.Auto) {
+                // 取消截图
+                finishCapture();
+            }
+        };
+
+        document.addEventListener('contextmenu', mouseRightClick);
+
+        return () => {
+            document.removeEventListener('contextmenu', mouseRightClick);
+        };
+    }, [finishCapture, isEnable, refreshMouseMove, setSelectState]);
 
     return <></>;
 };

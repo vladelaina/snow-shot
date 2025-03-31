@@ -3,7 +3,12 @@
 import { useCallback, useImperativeHandle, useRef } from 'react';
 import * as PIXI from 'pixi.js';
 import React from 'react';
-import { BaseLayerEventActionType, withBaseLayer, BaseLayerActionType } from '../baseLayer';
+import {
+    BaseLayerEventActionType,
+    withBaseLayer,
+    BaseLayerActionType,
+    defaultBaseLayerActions,
+} from '../baseLayer';
 import { zIndexs } from '@/utils/zIndex';
 
 export type BlurImageLayerActionType = BaseLayerActionType & {};
@@ -30,11 +35,9 @@ const BlurImageLayerCore: React.FC<BlurImageLayerProps> = ({ actionRef }) => {
     useImperativeHandle(
         actionRef,
         () => ({
+            ...defaultBaseLayerActions,
             onCaptureReady,
             onCaptureFinish,
-            disable: () => {},
-            enable: () => {},
-            onCanvasReady: () => {},
         }),
         [onCaptureFinish, onCaptureReady],
     );

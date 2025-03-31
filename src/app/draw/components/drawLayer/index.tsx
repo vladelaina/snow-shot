@@ -2,7 +2,12 @@
 
 import { useCallback, useImperativeHandle } from 'react';
 import React from 'react';
-import { BaseLayerEventActionType, withBaseLayer, BaseLayerActionType } from '../baseLayer';
+import {
+    BaseLayerEventActionType,
+    withBaseLayer,
+    BaseLayerActionType,
+    defaultBaseLayerActions,
+} from '../baseLayer';
 import { zIndexs } from '@/utils/zIndex';
 
 export type DrawLayerActionType = BaseLayerActionType & {};
@@ -21,11 +26,9 @@ const DrawLayerCore: React.FC<DrawLayerProps> = ({ actionRef }) => {
     useImperativeHandle(
         actionRef,
         () => ({
+            ...defaultBaseLayerActions,
             onCaptureReady,
             onCaptureFinish,
-            disable: () => {},
-            enable: () => {},
-            onCanvasReady: () => {},
         }),
         [onCaptureFinish, onCaptureReady],
     );

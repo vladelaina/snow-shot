@@ -59,11 +59,8 @@ export type ElementRect = {
     max_y: number;
 };
 
-export const getWindowElements = async (mouseX: number, mouseY: number) => {
-    const result = await invoke<ElementRect[]>('get_window_elements', {
-        mouseX,
-        mouseY,
-    });
+export const getWindowElements = async () => {
+    const result = await invoke<ElementRect[]>('get_window_elements');
     return result;
 };
 

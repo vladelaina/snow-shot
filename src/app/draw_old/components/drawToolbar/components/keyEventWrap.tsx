@@ -5,7 +5,8 @@ import React, { useCallback, useContext, useEffect, useRef, useState } from 'rea
 import { JSX } from 'react';
 import { useHotkeys } from 'react-hotkeys-hook';
 import { FormattedMessage } from 'react-intl';
-import { ToolbarTip } from '../../toolbarTip';
+import { ToolbarTip } from '../../../../../components/toolbarTip';
+import { BaseToolContext } from '@/app/draw/components/drawToolbar/components/tools/baseTool';
 
 export type KeyEventValue = {
     hotKey: string;

@@ -4,7 +4,7 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { FormattedMessage } from 'react-intl';
 import { DeleteOutlined, PlusOutlined } from '@ant-design/icons';
 import _ from 'lodash';
-import { ToolbarTip } from '@/app/draw_old/components/toolbarTip';
+import { ToolbarTip } from '@/components/toolbarTip';
 
 type KeyConfig = {
     anyKey: string;
@@ -19,7 +19,7 @@ const convertKeyConfigToString = (keyConfig: KeyConfig) => {
         keyConfig.selectCtrl ? 'Ctrl' : '',
         keyConfig.selectShift ? 'Shift' : '',
         keyConfig.selectAlt ? 'Alt' : '',
-        keyConfig.anyKey.toUpperCase(),
+        keyConfig.anyKey.charAt(0).toUpperCase() + keyConfig.anyKey.slice(1).toLowerCase(),
     ]
         .filter(Boolean)
         .join('+');
@@ -116,7 +116,7 @@ export const KeyButton: React.FC<{
             }
 
             keyConfigListRef.current[inputAnyKeyConfigIndexRef.current].anyKey =
-                e.key.toUpperCase();
+                e.key.charAt(0).toUpperCase() + e.key.slice(1).toLowerCase();
             updateKeyConfig();
             setInputAnyKeyConfigIndex(undefined);
         };

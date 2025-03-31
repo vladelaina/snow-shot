@@ -1,0 +1,37 @@
+import { useCallback, useContext, useEffect } from 'react';
+import { StatePublisher, StatePublisherListener } from './useStatePublisher';
+
+export function useStateSubscriber<Value>(
+    statePublisher: StatePublisher<Value>,
+    onChange: StatePublisherListener<Value> | undefined,
+): [getValue: () => Value, setValue: (value: Value) => void, reset: () => void] {
+    const { stateRef, publish, subscribe, reset } = useContext(statePublisher.context);
+
+    const getValue = useCallback(() => stateRef.current, [stateRef]);
+
+    const setValue = useCallback(
+        (value: Value) => {
+            if (stateRef.current === value) {
+                return;
+            }
+
+            stateRef.current = value;
+            publish(value);
+        },
+        [stateRef, publish],
+    );
+
+    useEffect(() => {
+        if (!onChange) {
+            return;
+        }
+
+        const unsubscribe = subscribe(onChange);
+
+        return () => {
+            unsubscribe();
+        };
+    }, [onChange, subscribe]);
+
+    return [getValue, setValue, reset];
+}

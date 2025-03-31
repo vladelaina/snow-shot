@@ -3,8 +3,10 @@
 import React, {
     ComponentType,
     useCallback,
+    useContext,
     useEffect,
     useImperativeHandle,
+    useMemo,
     useRef,
     useState,
 } from 'react';
@@ -12,26 +14,51 @@ import * as PIXI from 'pixi.js';
 import _ from 'lodash';
 import { ImageBuffer } from '@/commands';
 import styles from './index.module.css';
+import { AppSettingsContext } from '@/app/contextWrap';
+import { useAppSettingsLoad } from '@/hooks/useAppSettingsLoad';
 
 export type BaseLayerContextType = {
     /** 调整画布大小 */
     resizeCanvas: (width: number, height: number) => void;
     /** 添加一个子元素到最上层的容器 */
-    addChildToTopContainer: (children: PIXI.Container<PIXI.ContainerChild>) => Promise<boolean>;
+    addChildToTopContainer: (children: PIXI.Container<PIXI.ContainerChild>) => void;
+    /** 创建一个新的画布容器 */
+    createNewCanvasContainer: () => void;
     /** 清空画布 */
     clearCanvas: () => void;
     /** 是否启用 */
     isEnable: boolean;
+    /**
+     * 改变光标样式
+     */
+    changeCursor: (cursor: Required<React.CSSProperties>['cursor']) => void;
+    /** 画布容器元素 */
+    layerContainerElementRef: React.RefObject<HTMLDivElement | null>;
+    /** 获取画布上下文 */
+    getCanvasApp: () => PIXI.Application | undefined;
 };
 
 export const BaseLayerContext = React.createContext<BaseLayerContextType>({
     resizeCanvas: () => {},
-    addChildToTopContainer: () => Promise.resolve(false),
+    addChildToTopContainer: () => {},
+    createNewCanvasContainer: () => {},
     clearCanvas: () => {},
     isEnable: false,
+    /**
+     * 改变光标样式
+     */
+    changeCursor: () => {},
+    /** 画布容器元素 */
+    layerContainerElementRef: { current: null },
+    /** 获取画布上下文 */
+    getCanvasApp: () => undefined,
 });
 
 export type BaseLayerEventActionType = {
+    /**
+     * 执行截图
+     */
+    onExecuteScreenshot: () => Promise<void>;
     /**
      * 画布准备就绪
      */
@@ -41,25 +68,52 @@ export type BaseLayerEventActionType = {
      */
     onCaptureReady: (texture: PIXI.Texture, imageBuffer: ImageBuffer) => Promise<void>;
     /**
+     * 截图加载完成
+     */
+    onCaptureLoad: () => Promise<void>;
+    /**
      * 截图完成
      */
     onCaptureFinish: () => void;
+    /**
+     * 获取画布上下文
+     */
+    getCanvasApp: () => PIXI.Application | undefined | null;
+    /**
+     * 获取画布容器元素
+     */
+    getLayerContainerElement: () => HTMLDivElement | null;
+    /**
+     * 添加一个子元素到最上层的容器
+     */
+    addChildToTopContainer: (children: PIXI.Container<PIXI.ContainerChild>) => void;
 };
 
 export type BaseLayerActionType = {
     /**
-     * 禁用当前图层
+     * 设置是否启用
      */
-    disable: () => void;
-    /**
-     * 启用当前图层
-     */
-    enable: () => void;
+    setEnable: (enable: boolean) => void;
 } & BaseLayerEventActionType;
+
+export const defaultBaseLayerActions: BaseLayerActionType = {
+    onCanvasReady: () => {},
+    onCaptureReady: () => Promise.resolve(),
+    onCaptureLoad: () => Promise.resolve(),
+    onCaptureFinish: () => {},
+    setEnable: () => {},
+    onExecuteScreenshot: () => Promise.resolve(),
+    getCanvasApp: () => null,
+    getLayerContainerElement: () => null,
+    addChildToTopContainer: () => {},
+};
 
 type BaseLayerCoreActionType = {
     resizeCanvas: (width: number, height: number) => void;
     clearCanvas: () => void;
+    getCanvasApp: () => PIXI.Application | undefined;
+    getLayerContainerElement: () => HTMLDivElement | null;
+    addChildToTopContainer: (children: PIXI.Container<PIXI.ContainerChild>) => void;
 };
 
 export type BaseLayerProps = {
@@ -72,8 +126,18 @@ export type BaseLayerProps = {
 export const BaseLayerCore: React.FC<
     BaseLayerProps & { actionRef?: React.RefObject<BaseLayerCoreActionType | undefined> }
 > = ({ zIndex, actionRef, enable, children, onCanvasReady }) => {
+    const [appSettingsLoading, setAppSettingsLoading] = useState(true);
+    const {
+        render: { antialias },
+    } = useContext(AppSettingsContext);
+    useAppSettingsLoad(
+        useCallback(() => {
+            setAppSettingsLoading(false);
+        }, []),
+    );
+
     const layerContainerElementRef = useRef<HTMLDivElement>(null);
-    const canvasAppRef = useRef<PIXI.Application | null>(null);
+    const canvasAppRef = useRef<PIXI.Application | undefined>(undefined);
     const canvasContainerListRef = useRef<PIXI.Container[]>([]);
     const canvasContainerChildCountRef = useRef<number>(0);
 
@@ -86,6 +150,7 @@ export const BaseLayerCore: React.FC<
 
         const container = new PIXI.Container();
         container.zIndex = canvasContainerListRef.current.length + 1;
+        container.sortableChildren = true;
         container.x = 0;
         container.y = 0;
         canvasApp.stage.addChild(container);
@@ -94,21 +159,34 @@ export const BaseLayerCore: React.FC<
     }, []);
 
     /** 初始化画布 */
-    const initCanvas = useCallback(async () => {
-        const canvasApp = new PIXI.Application();
-        await canvasApp.init({
-            backgroundAlpha: 0,
-            eventFeatures: {
-                move: false,
-                globalMove: false,
-                click: false,
-                wheel: false,
-            },
-        });
-        canvasAppRef.current = canvasApp;
-        layerContainerElementRef.current?.appendChild(canvasApp.canvas);
-        onCanvasReady(canvasApp);
-    }, [onCanvasReady]);
+    const initCanvas = useCallback(
+        async (antialias: boolean) => {
+            const canvasApp = new PIXI.Application();
+            await canvasApp.init({
+                backgroundAlpha: 0,
+                eventFeatures: {
+                    move: false,
+                    globalMove: false,
+                    click: false,
+                    wheel: false,
+                },
+                antialias,
+            });
+            canvasAppRef.current = canvasApp;
+            layerContainerElementRef.current?.appendChild(canvasApp.canvas);
+            onCanvasReady(canvasApp);
+        },
+        [onCanvasReady],
+    );
+
+    const disposeCanvas = useCallback(() => {
+        const canvasApp = canvasAppRef.current;
+        if (!canvasApp) {
+            return;
+        }
+        layerContainerElementRef.current?.removeChild(canvasApp.canvas);
+        canvasApp.destroy();
+    }, []);
 
     /** 调整画布大小 */
     const resizeCanvas = useCallback(
@@ -130,15 +208,14 @@ export const BaseLayerCore: React.FC<
     }, []);
 
     const addChildToTopContainer = useCallback(
-        async (children: PIXI.Container<PIXI.ContainerChild>): Promise<boolean> => {
+        (children: PIXI.Container<PIXI.ContainerChild>) => {
             const topContainer = getTopContainer();
             if (!topContainer) {
-                return false;
+                throw new Error('Top container not found');
             }
-            topContainer.zIndex = canvasContainerChildCountRef.current + 1;
+            children.zIndex = canvasContainerChildCountRef.current + 1;
             topContainer.addChild(children);
             canvasContainerChildCountRef.current++;
-            return true;
         },
         [getTopContainer],
     );
@@ -153,26 +230,79 @@ export const BaseLayerCore: React.FC<
         }
         canvasContainerListRef.current = [];
         canvasContainerChildCountRef.current = 0;
+        layerContainerElementRef.current!.style.cursor = 'auto';
     }, []);
 
-    useEffect(() => {
-        initCanvas();
-    }, [initCanvas]);
+    const changeCursor = useCallback<BaseLayerContextType['changeCursor']>((cursor) => {
+        layerContainerElementRef.current!.style.cursor = cursor;
+    }, []);
 
-    useImperativeHandle(actionRef, () => ({ resizeCanvas, clearCanvas }), [
+    const getCanvasApp = useCallback<BaseLayerContextType['getCanvasApp']>(() => {
+        return canvasAppRef.current;
+    }, []);
+
+    const getLayerContainerElement = useCallback<
+        BaseLayerCoreActionType['getLayerContainerElement']
+    >(() => layerContainerElementRef.current, []);
+
+    useEffect(() => {
+        if (appSettingsLoading) {
+            return;
+        }
+
+        initCanvas(antialias);
+
+        return () => {
+            disposeCanvas();
+        };
+    }, [initCanvas, antialias, disposeCanvas, appSettingsLoading]);
+
+    useImperativeHandle(
+        actionRef,
+        () => ({
+            resizeCanvas,
+            clearCanvas,
+            getCanvasApp,
+            getLayerContainerElement,
+            addChildToTopContainer,
+        }),
+        [resizeCanvas, clearCanvas, getCanvasApp, getLayerContainerElement, addChildToTopContainer],
+    );
+
+    useEffect(() => {
+        if (enable) {
+            layerContainerElementRef.current!.style.pointerEvents = 'auto';
+            canvasAppRef.current?.start();
+        } else {
+            layerContainerElementRef.current!.style.pointerEvents = 'none';
+            canvasAppRef.current?.stop();
+        }
+    }, [enable]);
+
+    const baseLayerContextValue = useMemo(() => {
+        return {
+            resizeCanvas,
+            addChildToTopContainer,
+            clearCanvas,
+            createNewCanvasContainer,
+            isEnable: enable,
+            changeCursor,
+            layerContainerElementRef,
+            getCanvasApp,
+        };
+    }, [
         resizeCanvas,
+        addChildToTopContainer,
         clearCanvas,
+        createNewCanvasContainer,
+        enable,
+        changeCursor,
+        getCanvasApp,
     ]);
 
     return (
-        <BaseLayerContext.Provider
-            value={{ resizeCanvas, addChildToTopContainer, clearCanvas, isEnable: enable }}
-        >
-            <div
-                className={styles.baseLayer}
-                ref={layerContainerElementRef}
-                style={{ zIndex, pointerEvents: enable ? 'auto' : 'none' }}
-            />
+        <BaseLayerContext.Provider value={baseLayerContextValue}>
+            <div className={styles.baseLayer} ref={layerContainerElementRef} style={{ zIndex }} />
             {children}
         </BaseLayerContext.Provider>
     );
@@ -212,18 +342,30 @@ export function withBaseLayer<
             },
             [],
         );
-        const disable = useCallback((...args: Parameters<BaseLayerActionType['disable']>) => {
-            setLayerEnable(false);
-            layerActionRef.current?.disable(...args);
-        }, []);
-        const enable = useCallback((...args: Parameters<BaseLayerActionType['enable']>) => {
-            setLayerEnable(true);
-            layerActionRef.current?.enable(...args);
+
+        const setEnable = useCallback((...args: Parameters<BaseLayerActionType['setEnable']>) => {
+            setLayerEnable(...args);
+            layerActionRef.current?.setEnable(...args);
         }, []);
 
         const onCanvasReady = useCallback((app: PIXI.Application) => {
             layerActionRef.current?.onCanvasReady(app);
         }, []);
+
+        const getCanvasApp = useCallback(() => {
+            return baseLayerCoreActionRef.current?.getCanvasApp();
+        }, []);
+
+        const getLayerContainerElement = useCallback(() => {
+            return baseLayerCoreActionRef.current?.getLayerContainerElement();
+        }, []);
+
+        const addChildToTopContainer = useCallback(
+            (children: PIXI.Container<PIXI.ContainerChild>) => {
+                baseLayerCoreActionRef.current?.addChildToTopContainer(children);
+            },
+            [],
+        );
 
         useImperativeHandle(
             actionRef,
@@ -231,10 +373,19 @@ export function withBaseLayer<
                 ...(layerActionRef.current as ActionType),
                 onCaptureReady,
                 onCaptureFinish,
-                disable,
-                enable,
+                setEnable,
+                getCanvasApp,
+                getLayerContainerElement,
+                addChildToTopContainer,
             }),
-            [disable, enable, onCaptureFinish, onCaptureReady],
+            [
+                onCaptureReady,
+                onCaptureFinish,
+                setEnable,
+                getCanvasApp,
+                getLayerContainerElement,
+                addChildToTopContainer,
+            ],
         );
 
         return (

@@ -9,12 +9,17 @@ use xcap::{Monitor, Window};
 use crate::os::ui_automation::UIElements;
 use crate::os::{ElementInfo, ElementRect};
 
+fn get_device_mouse_position() -> (i32, i32) {
+    let device_state = DeviceState::new();
+    let mouse: MouseState = device_state.get_mouse();
+
+    mouse.coords
+}
+
 #[command]
 pub async fn capture_current_monitor(encoder: String) -> Response {
     // 获取当前鼠标的位置
-    let device_state = DeviceState::new();
-    let mouse: MouseState = device_state.get_mouse();
-    let (mouse_x, mouse_y) = mouse.coords;
+    let (mouse_x, mouse_y) = get_device_mouse_position();
 
     // 获取当前鼠标所在屏幕的截图图像
     let monitor = Monitor::from_point(mouse_x, mouse_y).unwrap();
@@ -114,19 +119,35 @@ pub async fn init_ui_elements(
 pub async fn init_ui_elements_cache(
     ui_elements: tauri::State<'_, Mutex<UIElements>>,
 ) -> Result<(), ()> {
+    // 获取当前鼠标的位置
+    let (mouse_x, mouse_y) = get_device_mouse_position();
+
     let mut ui_elements = match ui_elements.lock() {
         Ok(ui_elements) => ui_elements,
         Err(_) => return Err(()),
     };
 
     match ui_elements.init_cache() {
-        Ok(_) => Ok(()),
-        Err(_) => Err(()),
+        Ok(_) => (),
+        Err(_) => return Err(()),
     }
+
+    // 用当前鼠标位置初始化下
+    match ui_elements.get_element_from_point_walker(mouse_x, mouse_y) {
+        Ok(_) => (),
+        Err(_) => return Err(()),
+    }
+
+    Ok(())
 }
 
 #[command]
-pub async fn get_window_elements(mouse_x: i32, mouse_y: i32) -> Result<Vec<ElementRect>, ()> {
+pub async fn get_window_elements() -> Result<Vec<ElementRect>, ()> {
+    // 获取当前鼠标的位置
+    let device_state = DeviceState::new();
+    let mouse: MouseState = device_state.get_mouse();
+    let (mouse_x, mouse_y) = mouse.coords;
+
     let monitor = xcap::Monitor::from_point(mouse_x, mouse_y).unwrap();
     let monitor_min_x = monitor.x().unwrap_or(0);
     let monitor_min_y = monitor.y().unwrap_or(0);
@@ -137,10 +158,15 @@ pub async fn get_window_elements(mouse_x: i32, mouse_y: i32) -> Result<Vec<Eleme
     let windows = Window::all().unwrap_or_default();
 
     let mut rect_list = Vec::new();
-    // 获取窗口是，是从最顶层的窗口依次遍历，这里反转下，从最底层的窗口开始遍历
-    for window in windows.iter().rev() {
+    for window in windows {
         if window.is_minimized().unwrap_or(true) {
             continue;
+        }
+
+        if let Ok(title) = window.title() {
+            if title.eq("Shell Handwriting Canvas") {
+                continue;
+            }
         }
 
         let x = match window.x() {
