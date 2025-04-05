@@ -1,82 +1,84 @@
 import { FillShapePicker } from '../pickers/fillShapePicker';
 import { LineColorPicker } from '../pickers/lineColorPicker';
 import { LineWidthPicker } from '../pickers/lineWidthPicker';
-import { LockWidthHeightPicker } from '../pickers/lockWidthHeightPicker';
-import { RadiusPicker } from '../pickers/radiusPicker';
 import { useCallback, useContext, useRef } from 'react';
 import { BaseToolEnablePublisher, withBaseTool } from './baseTool';
 import { DrawContext, DrawState } from '@/app/draw/types';
 import { MousePosition } from '@/utils/mousePosition';
 import { useCallbackRender } from '@/hooks/useCallbackRender';
-import { CanvasDrawShape, CanvasDrawShapeType } from '@/core/canvas/canvasDrawShape';
 import { useHistory } from '../../../historyContext';
 import { useStateSubscriber } from '@/hooks/useStateSubscriber';
+import { ArrowConfigPicker, getArrowStyleConfig } from '../pickers/arrowConfigPicker';
+import { useStateRef } from '@/hooks/useStateRef';
 import { DrawingPublisher } from '../..';
-import { defaultLineColorPickerValue, LineColorPickerValue } from '../pickers/defaultValues';
-import { defaultLineWidthPickerValue } from '../pickers/defaultValues';
-import { defaultRadiusPickerValue } from '../pickers/defaultValues';
-import { defaultLockWidthHeightValue } from '../pickers/defaultValues';
-import { defaultFillShapePickerValue } from '../pickers/defaultValues';
+import { CanvasDrawArrow } from '@/core/canvas/canvasDrawArrow';
+import {
+    defaultArrowConfigValue,
+    defaultFillShapePickerValue,
+    defaultLineColorPickerValue,
+    defaultLineWidthPickerValue,
+    LineColorPickerValue,
+    LineWidthPickerValue,
+} from '../pickers/defaultValues';
 
-const ShapeTool: React.FC<{
-    shapeType: CanvasDrawShapeType;
-}> = ({ shapeType }) => {
+const ArrowToolCore: React.FC = () => {
     const { history } = useHistory();
 
     const { drawLayerActionRef, imageBufferRef, mousePositionRef } = useContext(DrawContext);
 
-    const borderWidthRef = useRef(defaultLineWidthPickerValue);
-    const radiusRef = useRef(defaultRadiusPickerValue);
-    const borderColorRef = useRef(defaultLineColorPickerValue);
-    const lockWidthHeightRef = useRef(defaultLockWidthHeightValue);
-    const fillShapeRef = useRef(defaultFillShapePickerValue);
+    const [, setWidth, widthRef] = useStateRef<LineWidthPickerValue>(defaultLineWidthPickerValue);
+    const [, setColor, colorRef] = useStateRef<LineColorPickerValue>(defaultLineColorPickerValue);
+    const [, setArrowConfigId, arrowConfigIdRef] = useStateRef(defaultArrowConfigValue);
+    const [, setFillShape, fillShapeRef] = useStateRef(defaultFillShapePickerValue);
+
     const [, setDrawing] = useStateSubscriber(DrawingPublisher, undefined);
     const [getEnable] = useStateSubscriber(BaseToolEnablePublisher, undefined);
 
-    const canvasDrawShapeRef = useRef<CanvasDrawShape | undefined>(undefined);
+    const canvasDrawRef = useRef<CanvasDrawArrow | undefined>(undefined);
 
     const onMouseDown = useCallback(
         (mousePosition: MousePosition) => {
             if (!getEnable()) {
                 return;
             }
-            if (!canvasDrawShapeRef.current) {
+            if (!canvasDrawRef.current) {
                 return;
             }
 
-            canvasDrawShapeRef.current.setStyle(
-                borderWidthRef.current.width,
-                radiusRef.current.radius,
-                borderColorRef.current.color,
+            canvasDrawRef.current.setStyle(
+                widthRef.current.width,
+                colorRef.current.color,
+                getArrowStyleConfig(arrowConfigIdRef.current.configId),
                 fillShapeRef.current.fill,
             );
-            canvasDrawShapeRef.current.start(mousePosition);
+            canvasDrawRef.current.start(mousePosition);
         },
-        [getEnable],
+        [arrowConfigIdRef, colorRef, fillShapeRef, getEnable, widthRef],
     );
 
     const onMouseMove = useCallback((mousePosition: MousePosition) => {
-        if (!canvasDrawShapeRef.current) {
+        if (!canvasDrawRef.current) {
             return;
         }
-        if (!canvasDrawShapeRef.current.drawing) {
+        if (!canvasDrawRef.current.drawing) {
             return;
         }
-        canvasDrawShapeRef.current.execute(mousePosition, lockWidthHeightRef.current.lock);
+        canvasDrawRef.current.execute(mousePosition);
     }, []);
     const onMouseMoveRender = useCallbackRender(onMouseMove);
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const refreshMouseMove = useCallback(() => {
         onMouseMoveRender(mousePositionRef.current);
-    }, [onMouseMoveRender, mousePositionRef]);
+    }, [mousePositionRef, onMouseMoveRender]);
 
     const onMouseUp = useCallback(() => {
-        if (!canvasDrawShapeRef.current) {
+        if (!canvasDrawRef.current) {
             return;
         }
-        if (!canvasDrawShapeRef.current.drawing) {
+        if (!canvasDrawRef.current.drawing) {
             return;
         }
-        canvasDrawShapeRef.current.finish();
+        canvasDrawRef.current.finish();
     }, []);
 
     const initEvents = useCallback(
@@ -117,7 +119,7 @@ const ShapeTool: React.FC<{
         [drawLayerActionRef, onMouseUp, onMouseDown, onMouseMoveRender],
     );
 
-    const initCanvasDrawShape = useCallback(
+    const initDraw = useCallback(
         (enable: boolean) => {
             if (!enable) {
                 return;
@@ -127,70 +129,33 @@ const ShapeTool: React.FC<{
                 return;
             }
 
-            canvasDrawShapeRef.current = new CanvasDrawShape(
+            canvasDrawRef.current = new CanvasDrawArrow(
                 history,
                 imageBufferRef.current?.monitorScaleFactor ?? 1,
                 setDrawing,
                 drawLayerActionRef.current,
-                shapeType,
             );
         },
-        [history, drawLayerActionRef, imageBufferRef, shapeType, setDrawing],
+        [drawLayerActionRef, history, imageBufferRef, setDrawing],
     );
     const onEnableChange = useCallback(
         (enable: boolean) => {
             initEvents(enable);
-            initCanvasDrawShape(enable);
+            initDraw(enable);
         },
-        [initEvents, initCanvasDrawShape],
+        [initEvents, initDraw],
     );
     useStateSubscriber(BaseToolEnablePublisher, onEnableChange);
 
-    const toolbarLocation = shapeType === CanvasDrawShapeType.Rect ? 'shape_rect' : 'shape_ellipse';
-
     return (
         <>
-            <LineWidthPicker
-                onChange={(width) => (borderWidthRef.current = width)}
-                toolbarLocation={toolbarLocation}
-            />
+            <LineWidthPicker onChange={setWidth} toolbarLocation="arrow" />
+            <ArrowConfigPicker onChange={setArrowConfigId} toolbarLocation="arrow" />
             <div className="draw-toolbar-splitter" />
-            <LineColorPicker
-                onChange={(value: LineColorPickerValue) => {
-                    borderColorRef.current = value;
-                }}
-                toolbarLocation={toolbarLocation}
-            />
-            <div className="draw-toolbar-splitter" />
-            {shapeType === CanvasDrawShapeType.Rect && (
-                <RadiusPicker
-                    onChange={(radius) => (radiusRef.current = radius)}
-                    toolbarLocation={toolbarLocation}
-                />
-            )}
-            <LockWidthHeightPicker
-                onChange={(lockWidthHeight) => {
-                    lockWidthHeightRef.current = lockWidthHeight;
-                    refreshMouseMove();
-                }}
-                toolbarLocation={toolbarLocation}
-            />
-            <FillShapePicker
-                onChange={(fillShape) => (fillShapeRef.current = fillShape)}
-                toolbarLocation={toolbarLocation}
-            />
+            <LineColorPicker onChange={setColor} toolbarLocation="arrow" />
+            <FillShapePicker onChange={setFillShape} toolbarLocation="arrow" />
         </>
     );
 };
 
-const EllipseToolCore: React.FC = () => {
-    return <ShapeTool shapeType={CanvasDrawShapeType.Ellipse} />;
-};
-
-export const EllipseTool = withBaseTool(EllipseToolCore, DrawState.Ellipse);
-
-const RectToolCore: React.FC = () => {
-    return <ShapeTool shapeType={CanvasDrawShapeType.Rect} />;
-};
-
-export const RectTool = withBaseTool(RectToolCore, DrawState.Rect);
+export const ArrowTool = withBaseTool(ArrowToolCore, DrawState.Arrow);

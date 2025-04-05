@@ -19,8 +19,9 @@ import { ColorPicker } from './components/colorPicker';
 import { HistoryProvider } from './components/historyContext';
 import { createPublisher, withStatePublisher } from '@/hooks/useStatePublisher';
 import { useStateSubscriber } from '@/hooks/useStateSubscriber';
-import { EnableKeyEventPublisher } from './components/drawToolbar/components/keyEventWrap';
 import StatusBar from './components/statusBar';
+import { MousePosition } from '@/utils/mousePosition';
+import { EnableKeyEventPublisher } from './components/drawToolbar/components/keyEventWrap/extra';
 
 export const CaptureStepPublisher = createPublisher<CaptureStep>(CaptureStep.Select);
 export const DrawStatePublisher = createPublisher<DrawState>(DrawState.Idle);
@@ -45,7 +46,11 @@ const DrawPageCore: React.FC = () => {
     const drawToolbarActionRef = useRef<DrawToolbarActionType | undefined>(undefined);
 
     // 状态
-    const [getCaptureStep, , resetCaptureStep] = useStateSubscriber(CaptureStepPublisher, undefined);
+    const mousePositionRef = useRef<MousePosition>(new MousePosition(0, 0));
+    const [getCaptureStep, , resetCaptureStep] = useStateSubscriber(
+        CaptureStepPublisher,
+        undefined,
+    );
     const [getDrawState, , resetDrawState] = useStateSubscriber(DrawStatePublisher, undefined);
     const [, setCaptureLoading] = useStateSubscriber(CaptureLoadingPublisher, undefined);
     const onCaptureLoad = useCallback<BaseLayerEventActionType['onCaptureLoad']>(async () => {
@@ -76,6 +81,10 @@ const DrawPageCore: React.FC = () => {
                 src: imageBlobUrlRef.current,
                 loadParser: 'loadTextures',
             });
+            mousePositionRef.current = new MousePosition(
+                Math.floor(imageBuffer.mouseX / imageBuffer.monitorScaleFactor),
+                Math.floor(imageBuffer.mouseY / imageBuffer.monitorScaleFactor),
+            );
 
             await Promise.all([
                 captureImageLayerActionRef.current?.onCaptureReady(imageTexture, imageBuffer),
@@ -203,8 +212,21 @@ const DrawPageCore: React.FC = () => {
             selectLayerActionRef,
             imageBufferRef,
             drawToolbarActionRef,
+            mousePositionRef,
         };
     }, [finishCapture]);
+
+    useEffect(() => {
+        const handleMouseMove = (e: MouseEvent) => {
+            mousePositionRef.current = new MousePosition(e.clientX, e.clientY);
+        };
+
+        document.addEventListener('mousemove', handleMouseMove);
+
+        return () => {
+            document.removeEventListener('mousemove', handleMouseMove);
+        };
+    }, []);
 
     return (
         <DrawContext.Provider value={drawContextValue}>

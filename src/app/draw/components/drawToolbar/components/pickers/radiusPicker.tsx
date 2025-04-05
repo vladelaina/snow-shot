@@ -5,14 +5,8 @@ import { withPickerBase } from './pickerBase';
 import { RadiusSettingOutlined } from '@ant-design/icons';
 import { WidthIcon } from './lineWidthPicker';
 import { ToolbarTip } from '../../../../../../components/toolbarTip';
-
-export type RadiusPickerValue = {
-    radius: number;
-};
-
-export const defaultRadiusPickerValue: RadiusPickerValue = {
-    radius: 3,
-};
+import { useCallbackRender } from '@/hooks/useCallbackRender';
+import { defaultRadiusPickerValue, RadiusPickerValue } from './defaultValues';
 
 const minRadius = 1;
 const maxRadius = 83;
@@ -54,6 +48,7 @@ const RadiusPickerComponent: React.FC<{
         },
         [setValue],
     );
+    const onWheelRender = useCallbackRender(onWheel);
 
     return (
         <>
@@ -73,7 +68,7 @@ const RadiusPickerComponent: React.FC<{
                     onClick={() => setValue({ radius: defaultRadius })}
                     onMouseEnter={() => setIsHovered(true)}
                     onMouseLeave={() => setIsHovered(false)}
-                    onWheel={onWheel}
+                    onWheel={onWheelRender}
                 />
             </ToolbarTip>
         </>

@@ -2,6 +2,8 @@ import { Button } from 'antd';
 import { useCallback, useEffect, useRef } from 'react';
 import { withPickerBase } from './pickerBase';
 import { ToolbarTip } from '../../../../../../components/toolbarTip';
+import { useCallbackRender } from '@/hooks/useCallbackRender';
+import { defaultLineWidthPickerValue, LineWidthPickerValue } from './defaultValues';
 
 export const WidthIcon: React.FC<{ width: number; maxWidth: number }> = ({ width, maxWidth }) => {
     const showWidth = width > maxWidth ? 0 : width;
@@ -19,14 +21,6 @@ export const WidthIcon: React.FC<{ width: number; maxWidth: number }> = ({ width
             {showWidth === 0 ? width : ''}
         </div>
     );
-};
-
-export type LineWidthPickerValue = {
-    width: number;
-};
-
-export const defaultLineWidthPickerValue: LineWidthPickerValue = {
-    width: 5,
 };
 
 const minWidth = 1;
@@ -62,6 +56,7 @@ const LineWidthPickerComponent: React.FC<{
         },
         [setValue],
     );
+    const onWheelRender = useCallbackRender(onWheel);
 
     return (
         <>
@@ -71,7 +66,7 @@ const LineWidthPickerComponent: React.FC<{
                     type="dashed"
                     onMouseEnter={() => (isHoveredRef.current = true)}
                     onMouseLeave={() => (isHoveredRef.current = false)}
-                    onWheel={onWheel}
+                    onWheel={onWheelRender}
                 />
             </ToolbarTip>
             <ToolbarTip destroyTooltipOnHide title={`${smallWidth}px`}>

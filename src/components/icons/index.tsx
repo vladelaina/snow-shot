@@ -260,6 +260,26 @@ const FillSVG = () => (
     </svg>
 );
 
+const LockAngleSVG = () => (
+    <svg
+        viewBox="0 0 1024 1024"
+        version="1.1"
+        xmlns="http://www.w3.org/2000/svg"
+        width="1em"
+        height="1em"
+        fill="currentColor"
+    >
+        <path
+            d="M286.656 516.8a331.52 331.52 0 0 1 206.976 131.968 328.576 328.576 0 0 1 57.792 238.72l-390.656-1.216 125.888-369.472z m354.752 370.88a417.024 417.024 0 0 0-74.816-290.88 421.184 421.184 0 0 0-250.752-165.568L428.288 101.12 319.232 64 0 1001.024l989.824 3.008 0.384-115.264-348.8-1.088z"
+            p-id="1496"
+        ></path>
+    </svg>
+);
+
+export const LockAngleIcon = (props: IconComponentProps) => (
+    <Icon component={LockAngleSVG} {...props} />
+);
+
 export const FillIcon = (props: IconComponentProps) => <Icon component={FillSVG} {...props} />;
 
 const RadiusSVG = () => (

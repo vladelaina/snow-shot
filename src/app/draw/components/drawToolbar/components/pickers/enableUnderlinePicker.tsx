@@ -1,17 +1,10 @@
 import { Button } from 'antd';
-import { getButtonTypeByState } from '../..';
+import { getButtonTypeByState } from '../../extra';
 import { FormattedMessage } from 'react-intl';
 import { withPickerBase } from './pickerBase';
 import { UnderlineOutlined } from '@ant-design/icons';
 import { ToolbarTip } from '../../../../../../components/toolbarTip';
-
-export type EnableUnderlineValue = {
-    enable: boolean;
-};
-
-export const defaultEnableUnderlineValue: EnableUnderlineValue = {
-    enable: false,
-};
+import { defaultEnableUnderlineValue, EnableUnderlineValue } from './defaultValues';
 
 const EnableUnderlinePickerComponent: React.FC<{
     value: EnableUnderlineValue;

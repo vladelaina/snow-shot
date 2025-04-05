@@ -1,17 +1,10 @@
 import { Button } from 'antd';
-import { getButtonTypeByState } from '../..';
+import { getButtonTypeByState } from '../../extra';
 import { FormattedMessage } from 'react-intl';
 import { withPickerBase } from './pickerBase';
 import { BoldOutlined } from '@ant-design/icons';
 import { ToolbarTip } from '../../../../../../components/toolbarTip';
-
-export type EnableBoldValue = {
-    enable: boolean;
-};
-
-export const defaultEnableBoldValue: EnableBoldValue = {
-    enable: false,
-};
+import { defaultEnableBoldValue, EnableBoldValue } from './defaultValues';
 
 const EnableBoldPickerComponent: React.FC<{
     value: EnableBoldValue;

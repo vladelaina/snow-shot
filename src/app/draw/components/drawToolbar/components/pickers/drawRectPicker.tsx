@@ -1,17 +1,10 @@
 import { DrawRectIcon } from '@/components/icons';
 import { Button } from 'antd';
-import { getButtonTypeByState } from '../..';
+import { getButtonTypeByState } from '../../extra';
 import { FormattedMessage } from 'react-intl';
 import { withPickerBase } from './pickerBase';
 import { ToolbarTip } from '../../../../../../components/toolbarTip';
-
-export type DrawRectValue = {
-    enable: boolean;
-};
-
-export const defaultDrawRectValue: DrawRectValue = {
-    enable: false,
-};
+import { defaultDrawRectValue, DrawRectValue } from './defaultValues';
 
 const DrawRectPickerComponent: React.FC<{
     value: DrawRectValue;

@@ -44,12 +44,12 @@ const StatusBar: React.FC = () => {
     const { selectLayerActionRef, imageBufferRef } = useContext(DrawContext);
     const [getCaptureStep] = useStateSubscriber(CaptureStepPublisher, undefined);
     const [getDrawState] = useStateSubscriber(DrawStatePublisher, undefined);
+    const [isHover, setIsHover] = useState(false);
     const onCaptureLoadingChange = useCallback((captureLoading: boolean) => {
-        
+        setIsHover(captureLoading);
     }, []);
     const [getCaptureLoading] = useStateSubscriber(CaptureLoadingPublisher, onCaptureLoadingChange);
 
-    const [isHover, setIsHover] = useState(false);
 
     const [descriptionsItems, setDescriptionsItems] = useState<DescriptionsItemType[]>([]);
     const updateDescriptionsItems = useCallback(() => {

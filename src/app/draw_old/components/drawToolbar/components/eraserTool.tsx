@@ -12,7 +12,7 @@ import { useAppSettingsLoad } from '@/hooks/useAppSettingsLoad';
 import { defaultDrawRectValue, DrawRectPicker, DrawRectValue } from './pickers/drawRectPicker';
 import { ignoreHistory } from '@/utils/fabricjsHistory';
 import { clearMosaicCache } from './mosaicTool/mosaicTool';
-import { setSelectOnClick } from '@/app/draw_old/page';
+// import { setSelectOnClick } from '@/app/draw_old/page';
 
 class EraserBrush extends fabric.PatternBrush {
     clipPathGroup?: fabric.Group;
@@ -39,7 +39,7 @@ class EraserBrush extends fabric.PatternBrush {
             globalCompositeOperation: 'multiply',
             selectable: false,
         });
-        setSelectOnClick(path);
+        // setSelectOnClick(path);
         if (this.shadow) {
             this.shadow.affectStroke = true;
             path.shadow = new fabric.Shadow(this.shadow);

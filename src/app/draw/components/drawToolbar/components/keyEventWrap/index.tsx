@@ -5,13 +5,14 @@ import React, { useCallback, useContext, useEffect, useRef, useState } from 'rea
 import { JSX } from 'react';
 import { useHotkeys } from 'react-hotkeys-hook';
 import { FormattedMessage } from 'react-intl';
-import { ToolbarTip } from '../../../../../components/toolbarTip';
-import { createPublisher } from '@/hooks/useStatePublisher';
+import { ToolbarTip } from '../../../../../../components/toolbarTip';
 import { useStateSubscriber } from '@/hooks/useStateSubscriber';
-import { DrawingPublisher } from '..';
+import { DrawingPublisher } from '../..';
+import { EnableKeyEventPublisher } from './extra';
 
 export type KeyEventValue = {
     hotKey: string;
+    unique?: boolean;
 };
 
 export type KeyEventComponentValue = KeyEventValue & {
@@ -33,6 +34,7 @@ export enum KeyEventKey {
     RedoTool = 'redoTool',
     CancelTool = 'cancelTool',
     LockWidthHeightPicker = 'lockWidthHeightPicker',
+    LockAnglePicker = 'lockAnglePicker',
     RemoveTool = 'removeTool',
     ColorPickerCopy = 'colorPickerCopy',
     ColorPickerMoveUp = 'colorPickerMoveUp',
@@ -45,63 +47,85 @@ export enum KeyEventKey {
 export const defaultKeyEventSettings: Record<KeyEventKey, KeyEventValue> = {
     [KeyEventKey.MoveTool]: {
         hotKey: 'M',
+        unique: true,
     },
     [KeyEventKey.SelectTool]: {
         hotKey: 'S',
+        unique: true,
     },
     [KeyEventKey.RectTool]: {
         hotKey: '1',
+        unique: true,
     },
     [KeyEventKey.EllipseTool]: {
         hotKey: '2',
+        unique: true,
     },
     [KeyEventKey.ArrowTool]: {
         hotKey: '3',
+        unique: true,
     },
     [KeyEventKey.PenTool]: {
         hotKey: '4',
+        unique: true,
     },
     [KeyEventKey.HighlightTool]: {
         hotKey: '5',
+        unique: true,
     },
     [KeyEventKey.TextTool]: {
         hotKey: '6, T',
+        unique: true,
     },
     [KeyEventKey.MosaicTool]: {
         hotKey: '7',
+        unique: true,
     },
     [KeyEventKey.EraserTool]: {
         hotKey: '8, E',
+        unique: true,
     },
     [KeyEventKey.UndoTool]: {
         hotKey: 'Ctrl+Z',
+        unique: true,
     },
     [KeyEventKey.RedoTool]: {
         hotKey: 'Ctrl+Y',
+        unique: true,
     },
     [KeyEventKey.CancelTool]: {
         hotKey: 'Escape',
+        unique: true,
     },
     [KeyEventKey.LockWidthHeightPicker]: {
         hotKey: 'Shift',
     },
+    [KeyEventKey.LockAnglePicker]: {
+        hotKey: 'Shift',
+    },
     [KeyEventKey.RemoveTool]: {
         hotKey: 'Delete',
+        unique: true,
     },
     [KeyEventKey.ColorPickerCopy]: {
         hotKey: 'Ctrl+C',
+        unique: true,
     },
     [KeyEventKey.ColorPickerMoveUp]: {
         hotKey: 'Ctrl+W, ArrowUp',
+        unique: true,
     },
     [KeyEventKey.ColorPickerMoveDown]: {
         hotKey: 'Ctrl+S, ArrowDown',
+        unique: true,
     },
     [KeyEventKey.ColorPickerMoveLeft]: {
         hotKey: 'Ctrl+A, ArrowLeft',
+        unique: true,
     },
     [KeyEventKey.ColorPickerMoveRight]: {
         hotKey: 'Ctrl+D, ArrowRight',
+        unique: true,
     },
     // [KeyEventKey.PenDrawLine]: {
     //     hotKey: 'Shift',
@@ -120,8 +144,6 @@ export const defaultKeyEventComponentConfig: Record<KeyEventKey, KeyEventCompone
         },
         {} as Record<KeyEventKey, KeyEventComponentValue>,
     );
-
-export const EnableKeyEventPublisher = createPublisher<boolean>(false);
 
 export const KeyEventWrap: React.FC<{
     onKeyDownEventPropName?: string;

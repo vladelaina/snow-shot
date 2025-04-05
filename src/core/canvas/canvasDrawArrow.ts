@@ -3,46 +3,49 @@ import * as PIXI from 'pixi.js';
 import { CanvasHistory } from './canvasHistory';
 import { CanvasDraw } from './canvasDraw';
 import { DrawLayerActionType } from '@/app/draw/components/drawLayer';
+import { vec2, Vec2 } from 'gl-matrix';
 
-export enum CanvasDrawShapeType {
-    Rect,
-    Ellipse,
-}
+export type ArrowStyleConfig = {
+    id: string;
+    icon: React.ReactNode;
+    calculatePath: (start: Vec2, stop: Vec2, width: number, minAngle?: number) => Vec2[];
+};
 
-export class CanvasDrawShape extends CanvasDraw {
+export class CanvasDrawArrow extends CanvasDraw {
     private startPosition: MousePosition | undefined;
     private graphics: PIXI.Graphics | undefined;
     private action: DrawLayerActionType;
 
-    private strokeWidth: number;
-    private radius: number;
+    private width: number;
     private color: string;
+    private config: ArrowStyleConfig;
     private fill: boolean;
-
-    private shapeType: CanvasDrawShapeType;
 
     constructor(
         history: CanvasHistory,
         scaleFactor: number,
         onDrawingChange: (drawing: boolean) => void,
         action: DrawLayerActionType,
-        shapeType: CanvasDrawShapeType,
     ) {
         super(history, scaleFactor, onDrawingChange);
         this.action = action;
 
-        this.strokeWidth = 1;
-        this.radius = 0;
+        this.width = 1;
         this.color = 'red';
         this.fill = false;
-
-        this.shapeType = shapeType;
+        this.config = {
+            id: 'arrow-style-1',
+            icon: null,
+            calculatePath: () => {
+                return [];
+            },
+        };
     }
 
-    public setStyle(strokeWidth: number, radius: number, color: string, fill: boolean): void {
-        this.strokeWidth = strokeWidth * this.scaleFactor;
-        this.radius = radius * this.scaleFactor;
+    public setStyle(width: number, color: string, config: ArrowStyleConfig, fill: boolean): void {
+        this.width = width * this.scaleFactor;
         this.color = color;
+        this.config = config;
         this.fill = fill;
     }
 
@@ -55,15 +58,16 @@ export class CanvasDrawShape extends CanvasDraw {
         );
         this.graphics = new PIXI.Graphics();
         this.graphics.setStrokeStyle({
-            color: this.color,
-            width: this.strokeWidth,
             join: 'round',
+            cap: 'round',
+            width: Math.floor(this.width / 3),
+            color: this.color,
         });
 
         this.action.addChildToTopContainer(this.graphics);
     }
 
-    public execute(_stopPosition: MousePosition, lockWidthHeight: boolean): void {
+    public execute(_stopPosition: MousePosition): void {
         super.execute();
 
         const stopPosition = new MousePosition(
@@ -75,36 +79,26 @@ export class CanvasDrawShape extends CanvasDraw {
             return;
         }
 
-        let width = stopPosition.mouseX - this.startPosition.mouseX;
-        let height = stopPosition.mouseY - this.startPosition.mouseY;
-
-        if (lockWidthHeight) {
-            const size = Math.max(Math.abs(width), Math.abs(height));
-            width = width >= 0 ? size : -size;
-            height = height >= 0 ? size : -size;
-        }
-
-        const x = Math.min(this.startPosition.mouseX, this.startPosition.mouseX + width);
-        const y = Math.min(this.startPosition.mouseY, this.startPosition.mouseY + height);
-        const finalWidth = Math.max(Math.abs(width), 1);
-        const finalHeight = Math.max(Math.abs(height), 1);
-
         this.graphics.clear();
 
-        if (this.shapeType === CanvasDrawShapeType.Rect) {
-            this.graphics.roundRect(x, y, finalWidth, finalHeight, this.radius);
-        } else if (this.shapeType === CanvasDrawShapeType.Ellipse) {
-            const halfWidth = Math.max(finalWidth * 0.5, 1);
-            const halfHeight = Math.max(finalHeight * 0.5, 1);
-            this.graphics.ellipse(x + halfWidth, y + halfHeight, halfWidth, halfHeight);
+        const paths = this.config.calculatePath(
+            vec2.fromValues(this.startPosition.mouseX, this.startPosition.mouseY),
+            vec2.fromValues(stopPosition.mouseX, stopPosition.mouseY),
+            this.width,
+            30
+        );
+        const firstPoint = paths[0];
+        this.graphics.moveTo(firstPoint.x, firstPoint.y);
+
+        for (let i = 1; i < paths.length; i++) {
+            const point = paths[i];
+            this.graphics.lineTo(point.x, point.y);
         }
 
         this.graphics.stroke();
 
         if (this.fill) {
-            this.graphics.fill({
-                color: this.color,
-            });
+            this.graphics.fill();
         }
     }
 

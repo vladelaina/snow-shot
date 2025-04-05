@@ -14,75 +14,49 @@ import { emit } from '@tauri-apps/api/event';
 import { getCurrentWindow, Window as AppWindow } from '@tauri-apps/api/window';
 import Color from 'color';
 import {
-    defaultFillShapePickerValue,
-    FillShapePickerValue,
-} from './draw_old/components/drawToolbar/components/pickers/fillShapePicker';
-import {
     defaultLockWidthHeightValue,
     LockWidthHeightValue,
-} from './draw_old/components/drawToolbar/components/pickers/lockWidthHeightPicker';
-import {
     defaultRadiusPickerValue,
     RadiusPickerValue,
-} from './draw_old/components/drawToolbar/components/pickers/radiusPicker';
-import {
     defaultLineColorPickerValue,
     LineColorPickerValue,
-} from './draw_old/components/drawToolbar/components/pickers/lineColorPicker';
-import {
     defaultLineWidthPickerValue,
     LineWidthPickerValue,
-} from './draw_old/components/drawToolbar/components/pickers/lineWidthPicker';
-import {
     defaultSliderPickerValue,
     SliderPickerValue,
-} from './draw_old/components/drawToolbar/components/pickers/sliderPicker';
-import {
     defaultEnableBlurValue,
     EnableBlurValue,
-} from './draw_old/components/drawToolbar/components/pickers/enableBlurPicker';
-import {
     defaultDrawRectValue,
     DrawRectValue,
-} from './draw_old/components/drawToolbar/components/pickers/drawRectPicker';
-import {
     defaultFontSizePickerValue,
     FontSizePickerValue,
-} from './draw_old/components/drawToolbar/components/pickers/fontSizePicker';
-import {
     defaultEnableBoldValue,
     EnableBoldValue,
-} from './draw_old/components/drawToolbar/components/pickers/enableBoldPicker';
-import {
     defaultEnableItalicValue,
     EnableItalicValue,
-} from './draw_old/components/drawToolbar/components/pickers/enableItalicPicker';
-import {
     defaultEnableUnderlineValue,
     EnableUnderlineValue,
-} from './draw_old/components/drawToolbar/components/pickers/enableUnderlinePicker';
-import {
     defaultEnableStrikethroughValue,
     EnableStrikethroughValue,
-} from './draw_old/components/drawToolbar/components/pickers/enableStrikethroughPicker';
-import {
     defaultFontFamilyPickerValue,
     FontFamilyPickerValue,
-} from './draw_old/components/drawToolbar/components/pickers/fontFamilyPicker';
-import {
     ArrowConfigValue,
     defaultArrowConfigValue,
-} from './draw_old/components/drawToolbar/components/pickers/arrowConfigPicker';
-import {
     defaultEnableRadiusValue,
     EnableRadiusValue,
-} from './draw_old/components/drawToolbar/components/pickers/enableRadiusPicker';
+    defaultFillShapePickerValue,
+    FillShapePickerValue,
+    defaultLockAngleValue,
+    LockAngleValue,
+} from './draw/components/drawToolbar/components/pickers/defaultValues';
+import { AppFunction, AppFunctionConfig, defaultAppFunctionConfigs } from './page';
+import { createPublisher, withStatePublisher } from '@/hooks/useStatePublisher';
+import { useStateSubscriber } from '@/hooks/useStateSubscriber';
 import {
     defaultKeyEventSettings,
     KeyEventKey,
     KeyEventValue,
-} from './draw_old/components/drawToolbar/components/keyEventWrap';
-import { AppFunction, AppFunctionConfig, defaultAppFunctionConfigs } from './page';
+} from './draw/components/drawToolbar/components/keyEventWrap/index';
 
 export enum AppSettingsGroup {
     Common = 'common',
@@ -140,6 +114,7 @@ export type AppSettingsData = {
         fontFamilyPicker: Record<string, FontFamilyPickerValue>;
         arrowConfigPicker: Record<string, ArrowConfigValue>;
         enableRadiusPicker: Record<string, EnableRadiusValue>;
+        lockAnglePicker: Record<string, LockAngleValue>;
     };
     [AppSettingsGroup.DrawToolbarKeyEvent]: Record<KeyEventKey, KeyEventValue>;
     [AppSettingsGroup.AppFunction]: Record<AppFunction, AppFunctionConfig>;
@@ -179,6 +154,7 @@ export const defaultAppSettingsData: AppSettingsData = {
         fontFamilyPicker: {},
         arrowConfigPicker: {},
         enableRadiusPicker: {},
+        lockAnglePicker: {},
     },
     [AppSettingsGroup.DrawToolbarKeyEvent]: defaultKeyEventSettings,
     [AppSettingsGroup.AppFunction]: defaultAppFunctionConfigs,
@@ -210,6 +186,7 @@ export const AppSettingsContext = createContext<AppSettingsContextType>({
     updateAppSettings: () => {},
     reloadAppSettings: () => {},
 });
+export const AppSettingsPublisher = createPublisher<AppSettingsData>(defaultAppSettingsData);
 
 export type ScreenshotContextType = {
     imageBuffer: ImageBuffer | undefined;
@@ -229,15 +206,26 @@ export const AppContext = createContext<AppContextType>({
     appWindowRef: { current: undefined },
 });
 
-export const ContextWrap: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+const ContextWrapCore: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     const appWindowRef = useRef<AppWindow>(undefined);
     useEffect(() => {
         appWindowRef.current = getCurrentWindow();
     }, []);
 
     const [isDefaultData, setIsDefaultData] = useState(true);
+
     const [appSettings, _setAppSettings] = useState<AppSettingsData>(defaultAppSettingsData);
     const appSettingsRef = useRef<AppSettingsData>(defaultAppSettingsData);
+    const onAppSettingChange = useCallback(
+        (data: AppSettingsData) => {
+            _setAppSettings(data);
+        },
+        [_setAppSettings],
+    );
+    const [, setAppSettingsStatePublisher] = useStateSubscriber(
+        AppSettingsPublisher,
+        onAppSettingChange,
+    );
     const setAppSettings = useCallback<React.Dispatch<React.SetStateAction<AppSettingsData>>>(
         (newSettings) => {
             if (typeof newSettings === 'function') {
@@ -245,9 +233,9 @@ export const ContextWrap: React.FC<{ children: React.ReactNode }> = ({ children 
             }
 
             appSettingsRef.current = newSettings;
-            _setAppSettings(newSettings);
+            setAppSettingsStatePublisher(newSettings);
         },
-        [_setAppSettings],
+        [setAppSettingsStatePublisher],
     );
 
     const writeAppSettings = useCallback(
@@ -392,6 +380,7 @@ export const ContextWrap: React.FC<{ children: React.ReactNode }> = ({ children 
                 const fontFamilyPickerSettings = newSettings.fontFamilyPicker ?? {};
                 const arrowConfigPickerSettings = newSettings.arrowConfigPicker ?? {};
                 const enableRadiusPickerSettings = newSettings.enableRadiusPicker ?? {};
+                const lockAnglePickerSettings = newSettings.lockAnglePicker ?? {};
 
                 Object.keys(fillShapePickerSettings).forEach((key) => {
                     fillShapePickerSettings[key] = {
@@ -559,6 +548,21 @@ export const ContextWrap: React.FC<{ children: React.ReactNode }> = ({ children 
                     };
                 });
 
+                Object.keys(lockAnglePickerSettings).forEach((key) => {
+                    lockAnglePickerSettings[key] = {
+                        lock:
+                            typeof lockAnglePickerSettings[key]?.lock === 'boolean'
+                                ? lockAnglePickerSettings[key].lock
+                                : (prevSettings?.lockAnglePicker[key]?.lock ??
+                                  defaultLockAngleValue.lock),
+                        angle:
+                            typeof lockAnglePickerSettings[key]?.angle === 'number'
+                                ? lockAnglePickerSettings[key].angle
+                                : (prevSettings?.lockAnglePicker[key]?.angle ??
+                                  defaultLockAngleValue.angle),
+                    };
+                });
+
                 settings = {
                     fillShapePicker: {
                         ...prevSettings?.fillShapePicker,
@@ -624,6 +628,10 @@ export const ContextWrap: React.FC<{ children: React.ReactNode }> = ({ children 
                         ...prevSettings?.enableRadiusPicker,
                         ...enableRadiusPickerSettings,
                     },
+                    lockAnglePicker: {
+                        ...prevSettings?.lockAnglePicker,
+                        ...lockAnglePickerSettings,
+                    },
                 };
             } else if (group === AppSettingsGroup.DrawToolbarKeyEvent) {
                 newSettings = newSettings as AppSettingsData[typeof group];
@@ -652,7 +660,10 @@ export const ContextWrap: React.FC<{ children: React.ReactNode }> = ({ children 
                                 return false;
                             }
 
-                            settingsKeySet.add(val);
+                            if (defaultKeyEventSettings[key].unique) {
+                                settingsKeySet.add(val);
+                            }
+
                             return true;
                         })
                         .join(', ');
@@ -871,3 +882,5 @@ export const ContextWrap: React.FC<{ children: React.ReactNode }> = ({ children 
         </AppSettingsContext.Provider>
     );
 };
+
+export const ContextWrap = withStatePublisher(ContextWrapCore, AppSettingsPublisher);

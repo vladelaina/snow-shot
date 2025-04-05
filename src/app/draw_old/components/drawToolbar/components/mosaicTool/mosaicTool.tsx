@@ -18,7 +18,6 @@ import {
 } from '../pickers/enableBlurPicker';
 import { defaultDrawRectValue, DrawRectPicker, DrawRectValue } from '../pickers/drawRectPicker';
 import { ignoreHistory } from '@/utils/fabricjsHistory';
-import { setSelectOnClick } from '@/app/draw_old/page';
 
 class MosaicBrush extends fabric.PatternBrush {
     clipPathGroup?: fabric.Group;
@@ -45,7 +44,7 @@ class MosaicBrush extends fabric.PatternBrush {
             globalCompositeOperation: 'multiply',
             selectable: false,
         });
-        setSelectOnClick(path);
+        // setSelectOnClick(path);
         if (this.shadow) {
             this.shadow.affectStroke = true;
             path.shadow = new fabric.Shadow(this.shadow);

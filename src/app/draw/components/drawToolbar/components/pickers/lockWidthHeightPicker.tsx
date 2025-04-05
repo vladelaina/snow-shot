@@ -1,16 +1,9 @@
 import { LockWidthHeightIcon } from '@/components/icons';
 import { Button } from 'antd';
 import { withPickerBase } from './pickerBase';
-import { KeyEventKey, KeyEventWrap } from '../keyEventWrap';
+import { KeyEventKey, KeyEventWrap } from '../keyEventWrap/index';
 import { getButtonTypeByState } from '../../extra';
-
-export type LockWidthHeightValue = {
-    lock: boolean;
-};
-
-export const defaultLockWidthHeightValue: LockWidthHeightValue = {
-    lock: false,
-};
+import { defaultLockWidthHeightValue, LockWidthHeightValue } from './defaultValues';
 
 const LockWidthHeightPickerComponent: React.FC<{
     value: LockWidthHeightValue;

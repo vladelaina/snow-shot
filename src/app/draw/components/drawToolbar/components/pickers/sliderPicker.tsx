@@ -1,14 +1,7 @@
 import { Slider, theme } from 'antd';
 import { withPickerBase } from './pickerBase';
 import { useEffect, useState } from 'react';
-
-export type SliderPickerValue = {
-    value: number;
-};
-
-export const defaultSliderPickerValue: SliderPickerValue = {
-    value: 30,
-};
+import { defaultSliderPickerValue, SliderPickerValue } from './defaultValues';  
 
 const SliderPickerComponent: React.FC<{
     value: SliderPickerValue;

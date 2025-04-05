@@ -5,15 +5,17 @@ import { CaptureStep, DrawState } from '../../types';
 import { useCallback, useImperativeHandle, useMemo, useRef, useState } from 'react';
 import { Button, Flex, theme } from 'antd';
 import React from 'react';
-import { DragButton, DragButtonActionType } from './components/dragButton.tsx';
+import { DragButton, DragButtonActionType } from './components/dragButton';
 import { DrawToolbarContext, getButtonTypeByState } from './extra';
-import { EnableKeyEventPublisher, KeyEventKey, KeyEventWrap } from './components/keyEventWrap';
+import { KeyEventKey, KeyEventWrap } from './components/keyEventWrap';
 import { DragOutlined } from '@ant-design/icons';
-import { CircleIcon, RectIcon } from '@/components/icons';
+import { ArrowIcon, CircleIcon, RectIcon } from '@/components/icons';
 import { EllipseTool, RectTool } from './components/tools/shapeTool';
 import { CaptureStepPublisher, DrawStatePublisher } from '../../page';
 import { useStateSubscriber } from '@/hooks/useStateSubscriber';
 import { createPublisher, withStatePublisher } from '@/hooks/useStatePublisher';
+import { ArrowTool } from './components/tools/arrowTool';
+import { EnableKeyEventPublisher } from './components/keyEventWrap/extra';
 
 export type DrawToolbarProps = {
     actionRef: React.RefObject<DrawToolbarActionType | undefined>;
@@ -87,6 +89,8 @@ const DrawToolbarCore: React.FC<DrawToolbarProps> = ({ actionRef }) => {
 
             if (next !== DrawState.Idle) {
                 setCaptureStep(CaptureStep.Draw);
+            } else {
+                setCaptureStep(CaptureStep.Select);
             }
 
             setDrawState(next);
@@ -96,12 +100,10 @@ const DrawToolbarCore: React.FC<DrawToolbarProps> = ({ actionRef }) => {
 
     const enableSubToolbar = useMemo(() => {
         switch (drawState) {
-            case DrawState.Rect:
-                return true;
-            case DrawState.Ellipse:
-                return true;
-            default:
+            case DrawState.Idle:
                 return false;
+            default:
+                return true;
         }
     }, [drawState]);
 
@@ -215,12 +217,28 @@ const DrawToolbarCore: React.FC<DrawToolbarProps> = ({ actionRef }) => {
                                 }}
                             />
                         </KeyEventWrap>
+
+                        {/* 箭头 */}
+                        <KeyEventWrap
+                            onKeyDownEventPropName="onClick"
+                            componentKey={KeyEventKey.ArrowTool}
+                            disableOnDrawing
+                        >
+                            <Button
+                                icon={<ArrowIcon style={{ fontSize: '0.83em' }} />}
+                                type={getButtonTypeByState(drawState === DrawState.Arrow)}
+                                onClick={() => {
+                                    onToolClick(DrawState.Arrow);
+                                }}
+                            />
+                        </KeyEventWrap>
                     </Flex>
 
                     <div className="draw-subtoolbar-container">
                         <div className="draw-subtoolbar" ref={drawSubToolbarRef}>
                             <EllipseTool />
                             <RectTool />
+                            <ArrowTool />
                         </div>
                     </div>
                 </div>

@@ -6,7 +6,6 @@ import { JSX } from 'react';
 import { useHotkeys } from 'react-hotkeys-hook';
 import { FormattedMessage } from 'react-intl';
 import { ToolbarTip } from '../../../../../components/toolbarTip';
-import { BaseToolContext } from '@/app/draw/components/drawToolbar/components/tools/baseTool';
 
 export type KeyEventValue = {
     hotKey: string;

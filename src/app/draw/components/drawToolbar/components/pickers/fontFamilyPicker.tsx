@@ -3,14 +3,7 @@ import { withPickerBase } from './pickerBase';
 import { platform } from 'os';
 import { useMemo } from 'react';
 import { useIntl } from 'react-intl';
-
-export type FontFamilyPickerValue = {
-    value: string;
-};
-
-export const defaultFontFamilyPickerValue: FontFamilyPickerValue = {
-    value: '',
-};
+import { defaultFontFamilyPickerValue, FontFamilyPickerValue } from './defaultValues';
 
 const windowsFontFamilies = [
     'Arial',

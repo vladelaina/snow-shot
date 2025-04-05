@@ -3,14 +3,8 @@ import { useCallback, useEffect, useRef } from 'react';
 import { withPickerBase } from './pickerBase';
 import { WidthIcon } from './lineWidthPicker';
 import { ToolbarTip } from '../../../../../../components/toolbarTip';
-
-export type FontSizePickerValue = {
-    size: number;
-};
-
-export const defaultFontSizePickerValue: FontSizePickerValue = {
-    size: 14,
-};
+import { useCallbackRender } from '@/hooks/useCallbackRender';
+import { defaultFontSizePickerValue, FontSizePickerValue } from './defaultValues';
 
 const minWidth = 1;
 const maxWidth = 83;
@@ -44,6 +38,7 @@ const FontSizePickerComponent: React.FC<{
         },
         [setValue],
     );
+    const onWheelRender = useCallbackRender(onWheel);
 
     return (
         <Flex align="center" gap={token.marginXXS}>
@@ -53,7 +48,7 @@ const FontSizePickerComponent: React.FC<{
                     type="dashed"
                     onMouseEnter={() => (isHoveredRef.current = true)}
                     onMouseLeave={() => (isHoveredRef.current = false)}
-                    onWheel={onWheel}
+                    onWheel={onWheelRender}
                 />
             </ToolbarTip>
             <Select

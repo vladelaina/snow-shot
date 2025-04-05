@@ -2,7 +2,7 @@
 
 import { theme } from 'antd';
 import { zIndexs } from '@/utils/zIndex';
-import React, { useCallback, useContext, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useContext, useEffect, useRef } from 'react';
 import { getCurrentWindow, Window as AppWindow, PhysicalPosition } from '@tauri-apps/api/window';
 import { CaptureStep, DrawContext, DrawState } from '@/app/draw/types';
 import { KeyEventKey, KeyEventWrap } from '../drawToolbar/components/keyEventWrap';
@@ -10,6 +10,8 @@ import { useCallbackRender, useCallbackRenderSlow } from '@/hooks/useCallbackRen
 import { MousePosition } from '@/utils/mousePosition';
 import { useStateSubscriber } from '@/hooks/useStateSubscriber';
 import { CaptureLoadingPublisher, CaptureStepPublisher, DrawStatePublisher } from '../../page';
+import { withStatePublisher } from '@/hooks/useStatePublisher';
+import { EnableKeyEventPublisher } from '../drawToolbar/components/keyEventWrap/extra';
 
 const previewScale = 12;
 const previewPickerSize = 10 + 1;
@@ -32,15 +34,13 @@ const ColorPickerCore: React.FC<{
 }> = ({ onCopyColor }) => {
     const [getCaptureStep] = useStateSubscriber(CaptureStepPublisher, undefined);
     const [getDrawState] = useStateSubscriber(DrawStatePublisher, undefined);
-    const [enableKeyEvent, setEnableKeyEvent] = useState(false);
-    const onCaptureLoadingChange = useCallback((captureLoading: boolean) => {
-        setEnableKeyEvent(!captureLoading);
-    }, []);
-    const [getCaptureLoading] = useStateSubscriber(CaptureLoadingPublisher, onCaptureLoadingChange);
+    const [, setEnableKeyEvent] = useStateSubscriber(EnableKeyEventPublisher, undefined);
+    const [getCaptureLoading] = useStateSubscriber(CaptureLoadingPublisher, undefined);
 
     const { token } = theme.useToken();
 
-    const { imageBufferRef, captureImageLayerActionRef } = useContext(DrawContext);
+    const { imageBufferRef, captureImageLayerActionRef, mousePositionRef } =
+        useContext(DrawContext);
 
     const appWindowRef = useRef<AppWindow | undefined>(undefined);
     useEffect(() => {
@@ -50,68 +50,23 @@ const ColorPickerCore: React.FC<{
     const colorPickerRef = useRef<HTMLDivElement>(null);
     const previewCanvasRef = useRef<HTMLCanvasElement>(null);
     const previewCanvasCtxRef = useRef<CanvasRenderingContext2D | null>(null);
-    const latestTransformRef = useRef<{ left: number; top: number }>({
-        left: 0,
-        top: 0,
-    });
-
-    const initPreviewCanvas = useCallback(() => {
-        const previewCanvas = previewCanvasRef.current;
-        if (!previewCanvas) {
-            return;
-        }
-
-        const ctx = previewCanvas.getContext('2d');
-        if (!ctx) {
-            return;
-        }
-
-        previewCanvasCtxRef.current = ctx;
-        previewCanvas.width = previewCanvasSize;
-        previewCanvas.height = previewCanvasSize;
+    const pickerPositionRef = useRef<MousePosition>(new MousePosition(0, 0));
+    const updatePickerPosition = useCallback((x: number, y: number) => {
+        pickerPositionRef.current.mouseX = x;
+        pickerPositionRef.current.mouseY = y;
+        pickerPositionElementRef.current!.textContent = `X: ${x} Y: ${y}`;
     }, []);
-    const initImageData = useCallback(() => {
-        const canvasApp = captureImageLayerActionRef.current?.getCanvasApp();
-        if (!canvasApp) {
-            return;
-        }
 
-        requestAnimationFrame(() => {
-            currentCanvasImageDataRef.current = canvasApp.renderer.extract
-                .canvas(canvasApp.stage)
-                .getContext('2d')
-                ?.getImageData(
-                    0,
-                    0,
-                    imageBufferRef.current!.monitorWidth,
-                    imageBufferRef.current!.monitorHeight,
-                    {
-                        colorSpace: 'srgb',
-                    },
-                );
-        });
-    }, [captureImageLayerActionRef, imageBufferRef]);
     const enableRef = useRef(false);
-    const [enable, _setEnable] = useState(enableRef.current);
-    const setEnable = useCallback((value: boolean | ((prev: boolean) => boolean)) => {
-        enableRef.current = typeof value === 'function' ? value(enableRef.current) : value;
-        _setEnable(enableRef.current);
-    }, []);
-    const onEnableChange = useCallback(
-        (enable: boolean) => {
-            if (!enable) {
-                return;
-            }
+    const onEnableChange = useCallback((enable: boolean) => {
+        enableRef.current = enable;
 
-            setEnable(enable);
-            initPreviewCanvas();
-            initImageData();
-        },
-        [initImageData, initPreviewCanvas, setEnable],
-    );
+        if (!enable && colorPickerRef.current) {
+            colorPickerRef.current.style.opacity = '0';
+        }
+    }, []);
     const updateEnable = useCallback(() => {
         const enable = isEnableColorPicker(getCaptureStep(), getDrawState(), getCaptureLoading());
-
         if (enableRef.current === enable) {
             return;
         }
@@ -144,12 +99,6 @@ const ColorPickerCore: React.FC<{
     }, []);
 
     const pickerPositionElementRef = useRef<HTMLDivElement>(null);
-    const pickerPositionRef = useRef<MousePosition>(new MousePosition(0, 0));
-    const updatePickerPosition = useCallback((x: number, y: number) => {
-        pickerPositionRef.current.mouseX = x;
-        pickerPositionRef.current.mouseY = y;
-        pickerPositionElementRef.current!.textContent = `X: ${x} Y: ${y}`;
-    }, []);
 
     const moveCursorFinishedRef = useRef(true);
     const moveCursorFinishedTimeoutRef = useRef<NodeJS.Timeout | undefined>(undefined);
@@ -241,10 +190,7 @@ const ColorPickerCore: React.FC<{
         const colorPickerLeft = Math.min(Math.max(mouseX, 0), maxLeft);
         const colorPickerTop = Math.min(Math.max(mouseY, 0), maxTop);
 
-        latestTransformRef.current.left = colorPickerLeft;
-        latestTransformRef.current.top = colorPickerTop;
-
-        colorPickerElement.style.transform = `translate(${latestTransformRef.current.left}px, ${latestTransformRef.current.top}px)`;
+        colorPickerElement.style.transform = `translate(${colorPickerLeft}px, ${colorPickerTop}px)`;
         colorPickerElement.style.opacity = '1';
     }, []);
     const updateTransformRender = useCallbackRender(updateTransform);
@@ -255,6 +201,63 @@ const ColorPickerCore: React.FC<{
         },
         [updateImageRender, updateTransformRender],
     );
+    const initPreviewCanvas = useCallback(() => {
+        const previewCanvas = previewCanvasRef.current;
+        if (!previewCanvas) {
+            return;
+        }
+
+        const ctx = previewCanvas.getContext('2d');
+        if (!ctx) {
+            return;
+        }
+
+        previewCanvasCtxRef.current = ctx;
+        previewCanvas.width = previewCanvasSize;
+        previewCanvas.height = previewCanvasSize;
+    }, []);
+    const initImageData = useCallback(() => {
+        const canvasApp = captureImageLayerActionRef.current?.getCanvasApp();
+        if (!canvasApp) {
+            return;
+        }
+
+        // 用截图地址作为 picker 的初始位置
+        pickerPositionRef.current = new MousePosition(
+            imageBufferRef.current!.mouseX,
+            imageBufferRef.current!.mouseY,
+        );
+
+        requestAnimationFrame(() => {
+            currentCanvasImageDataRef.current = canvasApp.renderer.extract
+                .canvas(canvasApp.stage)
+                .getContext('2d')
+                ?.getImageData(
+                    0,
+                    0,
+                    imageBufferRef.current!.monitorWidth,
+                    imageBufferRef.current!.monitorHeight,
+                    {
+                        colorSpace: 'srgb',
+                    },
+                );
+
+            update(mousePositionRef.current.mouseX, mousePositionRef.current.mouseY);
+        });
+    }, [captureImageLayerActionRef, imageBufferRef, mousePositionRef, update]);
+    const onCaptureLoad = useCallback(
+        (captureLoading: boolean) => {
+            setEnableKeyEvent(!captureLoading);
+            if (captureLoading) {
+                return;
+            }
+
+            initPreviewCanvas();
+            initImageData();
+        },
+        [initImageData, initPreviewCanvas, setEnableKeyEvent],
+    );
+    useStateSubscriber(CaptureLoadingPublisher, onCaptureLoad);
 
     useEffect(() => {
         const handleMouseMove = (e: MouseEvent) => {
@@ -274,7 +277,7 @@ const ColorPickerCore: React.FC<{
         return () => {
             document.removeEventListener('mousemove', handleMouseMove);
         };
-    }, [enableRef, update, updateImageRender, updateTransformRender]);
+    }, [enableRef, update]);
 
     const moveCursor = useCallback(
         (offsetX: number, offsetY: number) => {
@@ -285,6 +288,17 @@ const ColorPickerCore: React.FC<{
 
             let mouseX = pickerPositionRef.current.mouseX + offsetX;
             let mouseY = pickerPositionRef.current.mouseY + offsetY;
+            if (!enableRef.current) {
+                // 未启用时，用全局位置简单计算下
+                mouseX = Math.round(
+                    (mousePositionRef.current.mouseX + offsetX) *
+                        imageBufferRef.current!.monitorScaleFactor,
+                );
+                mouseY = Math.round(
+                    (mousePositionRef.current.mouseY + offsetY) *
+                        imageBufferRef.current!.monitorScaleFactor,
+                );
+            }
 
             if (mouseX < 0) {
                 mouseX = 0;
@@ -300,17 +314,21 @@ const ColorPickerCore: React.FC<{
 
             moveCursorFinishedRef.current = false;
             appWindow.setCursorPosition(new PhysicalPosition(mouseX, mouseY));
-            update(
-                mouseX / imageBufferRef.current!.monitorScaleFactor,
-                mouseY / imageBufferRef.current!.monitorScaleFactor,
-                mouseX,
-                mouseY,
-            );
+
+            if (enableRef.current) {
+                update(
+                    mouseX / imageBufferRef.current!.monitorScaleFactor,
+                    mouseY / imageBufferRef.current!.monitorScaleFactor,
+                    mouseX,
+                    mouseY,
+                );
+            }
         },
-        [imageBufferRef, update],
+        [imageBufferRef, mousePositionRef, update],
     );
+
     return (
-        <div className="color-picker" ref={colorPickerRef} style={enable ? {} : { opacity: 0 }}>
+        <div className="color-picker" ref={colorPickerRef}>
             <KeyEventWrap
                 componentKey={KeyEventKey.ColorPickerCopy}
                 onKeyDown={() => {
@@ -319,7 +337,6 @@ const ColorPickerCore: React.FC<{
                     );
                     onCopyColor?.();
                 }}
-                enable={enableKeyEvent}
             >
                 <div />
             </KeyEventWrap>
@@ -328,7 +345,6 @@ const ColorPickerCore: React.FC<{
                 onKeyDown={() => {
                     moveCursor(0, -1);
                 }}
-                enable={enableKeyEvent}
             >
                 <div />
             </KeyEventWrap>
@@ -337,7 +353,6 @@ const ColorPickerCore: React.FC<{
                 onKeyDown={() => {
                     moveCursor(0, 1);
                 }}
-                enable={enableKeyEvent}
             >
                 <div />
             </KeyEventWrap>
@@ -346,7 +361,6 @@ const ColorPickerCore: React.FC<{
                 onKeyDown={() => {
                     moveCursor(-1, 0);
                 }}
-                enable={enableKeyEvent}
             >
                 <div />
             </KeyEventWrap>
@@ -355,7 +369,6 @@ const ColorPickerCore: React.FC<{
                 onKeyDown={() => {
                     moveCursor(1, 0);
                 }}
-                enable={enableKeyEvent}
             >
                 <div />
             </KeyEventWrap>
@@ -446,4 +459,4 @@ const ColorPickerCore: React.FC<{
     );
 };
 
-export const ColorPicker = React.memo(ColorPickerCore);
+export const ColorPicker = React.memo(withStatePublisher(ColorPickerCore, EnableKeyEventPublisher));

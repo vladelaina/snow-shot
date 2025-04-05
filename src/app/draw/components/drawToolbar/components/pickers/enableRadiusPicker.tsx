@@ -1,17 +1,10 @@
 import { Button } from 'antd';
-import { getButtonTypeByState } from '../..';
 import { FormattedMessage } from 'react-intl';
 import { withPickerBase } from './pickerBase';
 import { RadiusSettingOutlined } from '@ant-design/icons';
 import { ToolbarTip } from '../../../../../../components/toolbarTip';
-
-export type EnableRadiusValue = {
-    enable: boolean;
-};
-
-export const defaultEnableRadiusValue: EnableRadiusValue = {
-    enable: true,
-};
+import { getButtonTypeByState } from '../../extra';
+import { defaultEnableRadiusValue, EnableRadiusValue } from './defaultValues';
 
 const EnableRadiusPickerComponent: React.FC<{
     value: EnableRadiusValue;

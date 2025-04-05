@@ -1,17 +1,10 @@
 import { BlurIcon } from '@/components/icons';
 import { Button } from 'antd';
-import { getButtonTypeByState } from '../..';
 import { FormattedMessage } from 'react-intl';
 import { withPickerBase } from './pickerBase';
 import { ToolbarTip } from '../../../../../../components/toolbarTip';
-
-export type EnableBlurValue = {
-    blur: boolean;
-};
-
-export const defaultEnableBlurValue: EnableBlurValue = {
-    blur: false,
-};
+import { getButtonTypeByState } from '../../extra';
+import { defaultEnableBlurValue, EnableBlurValue } from './defaultValues';
 
 const EnableBlurPickerComponent: React.FC<{
     value: EnableBlurValue;

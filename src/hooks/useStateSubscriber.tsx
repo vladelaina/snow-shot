@@ -1,3 +1,5 @@
+'use client';
+
 import { useCallback, useContext, useEffect } from 'react';
 import { StatePublisher, StatePublisherListener } from './useStatePublisher';
 

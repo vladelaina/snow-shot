@@ -1,17 +1,10 @@
 import { Button } from 'antd';
-import { getButtonTypeByState } from '../..';
+import { getButtonTypeByState } from '../../extra';
 import { FormattedMessage } from 'react-intl';
 import { withPickerBase } from './pickerBase';
 import { StrikethroughOutlined } from '@ant-design/icons';
 import { ToolbarTip } from '../../../../../../components/toolbarTip';
-
-export type EnableStrikethroughValue = {
-    enable: boolean;
-};
-
-export const defaultEnableStrikethroughValue: EnableStrikethroughValue = {
-    enable: false,
-};
+import { defaultEnableStrikethroughValue, EnableStrikethroughValue } from './defaultValues';
 
 const EnableStrikethroughPickerComponent: React.FC<{
     value: EnableStrikethroughValue;

@@ -1,5 +1,3 @@
-'use client';
-
 import { Context, createContext, RefObject, useCallback, useEffect, useMemo, useRef } from 'react';
 
 export type StatePublisherListener<Value> = (value: Value, previousValue: Value) => void;

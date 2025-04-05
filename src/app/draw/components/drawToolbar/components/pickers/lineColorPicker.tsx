@@ -4,16 +4,9 @@ import { withPickerBase } from './pickerBase';
 import Color from 'color';
 import { useCallback, useEffect, useState } from 'react';
 import { ToolbarTip } from '../../../../../../components/toolbarTip';
+import { defaultLineColorPickerValue, LineColorPickerValue } from './defaultValues';
 
 type Color = Extract<GetProp<ColorPickerProps, 'value'>, string | { cleared: unknown }>;
-
-export type LineColorPickerValue = {
-    color: string;
-};
-
-export const defaultLineColorPickerValue: LineColorPickerValue = {
-    color: '#f5222d',
-};
 
 const ColorIcon: React.FC<{ color: string; borderColor?: string }> = ({ color, borderColor }) => {
     const { token } = theme.useToken();

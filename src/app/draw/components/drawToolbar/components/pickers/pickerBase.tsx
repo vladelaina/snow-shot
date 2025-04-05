@@ -1,5 +1,10 @@
 import React, { useContext, useEffect, useState, ComponentType, useRef, useCallback } from 'react';
-import { AppSettingsContext, AppSettingsData, AppSettingsGroup } from '@/app/contextWrap';
+import {
+    AppSettingsContext,
+    AppSettingsData,
+    AppSettingsGroup,
+    AppSettingsPublisher,
+} from '@/app/contextWrap';
 import _, { debounce } from 'lodash';
 import { BaseToolEnablePublisher } from '../tools/baseTool';
 import { useStateSubscriber } from '@/hooks/useStateSubscriber';
@@ -39,8 +44,8 @@ export function withPickerBase<T extends object>(
 
         const { onChange, toolbarLocation, hidden } = props;
 
-        const appSettings = useContext(AppSettingsContext);
-        const { updateAppSettings } = appSettings;
+        const { updateAppSettings } = useContext(AppSettingsContext);
+        const [getAppSettings] = useStateSubscriber(AppSettingsPublisher, undefined);
 
         const [value, _setValue] = useState<T | undefined>();
         const valueRef = useRef<T | undefined>(undefined);
@@ -85,7 +90,7 @@ export function withPickerBase<T extends object>(
                 }
 
                 const currentSettings =
-                    appSettings[AppSettingsGroup.DrawToolbarPicker][settingsKey][
+                    getAppSettings()[AppSettingsGroup.DrawToolbarPicker][settingsKey][
                         getSettingsKey(toolbarLocation)
                     ];
                 const settingsValue = (currentSettings as T) ?? defaultValue;
@@ -99,7 +104,7 @@ export function withPickerBase<T extends object>(
                     return settingsValue;
                 });
             },
-            [appSettings, setValue, toolbarLocation],
+            [getAppSettings, setValue, toolbarLocation],
         );
         useStateSubscriber(BaseToolEnablePublisher, onEnableChange);
 
@@ -118,6 +123,7 @@ export function withPickerBase<T extends object>(
                 false,
                 true,
                 false,
+                true,
             );
         }, [updateAppSettings, toolbarLocation]);
         const updateSettingsDebounce = useCallback(() => {

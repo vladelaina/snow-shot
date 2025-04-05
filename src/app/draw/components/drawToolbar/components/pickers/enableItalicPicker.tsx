@@ -1,17 +1,10 @@
 import { Button } from 'antd';
-import { getButtonTypeByState } from '../..';
+import { getButtonTypeByState } from '../../extra';
 import { FormattedMessage } from 'react-intl';
 import { withPickerBase } from './pickerBase';
 import { ItalicOutlined } from '@ant-design/icons';
 import { ToolbarTip } from '../../../../../../components/toolbarTip';
-
-export type EnableItalicValue = {
-    enable: boolean;
-};
-
-export const defaultEnableItalicValue: EnableItalicValue = {
-    enable: false,
-};
+import { defaultEnableItalicValue, EnableItalicValue } from './defaultValues';
 
 const EnableItalicPickerComponent: React.FC<{
     value: EnableItalicValue;

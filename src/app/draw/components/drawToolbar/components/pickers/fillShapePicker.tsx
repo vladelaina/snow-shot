@@ -4,14 +4,7 @@ import { getButtonTypeByState } from '../../extra';
 import { FormattedMessage } from 'react-intl';
 import { withPickerBase, WithPickerBaseProps } from './pickerBase';
 import { ToolbarTip } from '../../../../../../components/toolbarTip';
-
-export type FillShapePickerValue = {
-    fill: boolean;
-};
-
-export const defaultFillShapePickerValue: FillShapePickerValue = {
-    fill: false,
-};
+import { defaultFillShapePickerValue, FillShapePickerValue } from './defaultValues';
 
 const FillShapePickerComponent: React.FC<WithPickerBaseProps<FillShapePickerValue>> = ({
     value,
