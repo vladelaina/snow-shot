@@ -53,7 +53,6 @@ const RadiusPickerComponent: React.FC<{
     return (
         <>
             <ToolbarTip
-                destroyTooltipOnHide
                 title={<FormattedMessage id="draw.radiusDesc" values={{ radius: value.radius }} />}
             >
                 <Button

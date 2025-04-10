@@ -60,7 +60,7 @@ const LineWidthPickerComponent: React.FC<{
 
     return (
         <>
-            <ToolbarTip destroyTooltipOnHide title={`${value.width}px`}>
+            <ToolbarTip title={`${value.width}px`}>
                 <Button
                     icon={<WidthIcon width={value.width} maxWidth={21} />}
                     type="dashed"
@@ -69,7 +69,7 @@ const LineWidthPickerComponent: React.FC<{
                     onWheel={onWheelRender}
                 />
             </ToolbarTip>
-            <ToolbarTip destroyTooltipOnHide title={`${smallWidth}px`}>
+            <ToolbarTip title={`${smallWidth}px`}>
                 <Button
                     icon={<WidthIcon width={5} maxWidth={maxWidth} />}
                     type="text"
@@ -78,7 +78,7 @@ const LineWidthPickerComponent: React.FC<{
                     }}
                 />
             </ToolbarTip>
-            <ToolbarTip destroyTooltipOnHide title={`${mediumWidth}px`}>
+            <ToolbarTip title={`${mediumWidth}px`}>
                 <Button
                     icon={<WidthIcon width={10} maxWidth={maxWidth} />}
                     type="text"
@@ -87,7 +87,7 @@ const LineWidthPickerComponent: React.FC<{
                     }}
                 />
             </ToolbarTip>
-            <ToolbarTip destroyTooltipOnHide title={`${largeWidth}px`}>
+            <ToolbarTip title={`${largeWidth}px`}>
                 <Button
                     icon={<WidthIcon width={20} maxWidth={maxWidth} />}
                     type="text"

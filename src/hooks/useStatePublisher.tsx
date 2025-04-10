@@ -1,6 +1,6 @@
 'use client';
 
-import { Context, createContext, RefObject, useCallback, useEffect, useMemo, useRef } from 'react';
+import { Context, createContext, RefObject, useCallback, useMemo, useRef } from 'react';
 
 export type StatePublisherListener<Value> = (value: Value, previousValue: Value) => void;
 
@@ -70,13 +70,6 @@ export function PublisherProvider<Value>({
         }),
         [stateRef, stateListenersRef, publish, subscribe, reset],
     );
-
-    useEffect(() => {
-        setTimeout(() => {
-            publish(defaultValue);
-        }, 0);
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, []);
 
     return (
         <StatePublisherContext.Provider value={publisherValue}>

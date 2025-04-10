@@ -11,7 +11,7 @@ const EnableBlurPickerComponent: React.FC<{
     setValue: React.Dispatch<React.SetStateAction<EnableBlurValue>>;
 }> = ({ value, setValue }) => {
     return (
-        <ToolbarTip destroyTooltipOnHide title={<FormattedMessage id="draw.enableBlur" />}>
+        <ToolbarTip title={<FormattedMessage id="draw.enableBlur" />}>
             <Button
                 icon={<BlurIcon />}
                 type={getButtonTypeByState(value.blur)}

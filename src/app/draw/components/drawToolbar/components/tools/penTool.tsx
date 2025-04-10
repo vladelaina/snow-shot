@@ -1,42 +1,39 @@
-import { FillShapePicker } from '../pickers/fillShapePicker';
-import { LineColorPicker } from '../pickers/lineColorPicker';
-import { LineWidthPicker } from '../pickers/lineWidthPicker';
+'use client';
+
 import { useCallback, useContext, useRef } from 'react';
-import { BaseToolEnablePublisher, withBaseTool } from './baseTool';
-import { DrawContext, DrawState } from '@/app/draw/types';
-import { MousePosition } from '@/utils/mousePosition';
-import { useCallbackRender } from '@/hooks/useCallbackRender';
-import { useHistory } from '../../../historyContext';
-import { useStateSubscriber } from '@/hooks/useStateSubscriber';
-import { ArrowConfigPicker, getArrowStyleConfig } from '../pickers/arrowConfigPicker';
-import { DrawingPublisher } from '../..';
-import { CanvasDrawArrow } from '@/core/canvas/canvasDrawArrow';
 import {
-    defaultArrowConfigValue,
-    defaultFillShapePickerValue,
     defaultLineColorPickerValue,
     defaultLineWidthPickerValue,
-    defaultLockAngleValue,
     LineColorPickerValue,
-    LineWidthPickerValue,
 } from '../pickers/defaultValues';
-import { LockAnglePicker } from '../pickers/lockAngle';
+import { LineWidthPickerValue } from '../pickers/defaultValues';
+import { LineWidthPicker } from '../pickers/lineWidthPicker';
+import { LineColorPicker } from '../pickers/lineColorPicker';
+import { CircleCursor, CircleCursorActionType } from '../pickers/components/circleCursor';
+import { useHistory } from '../../../historyContext';
+import { DrawContext, DrawState } from '@/app/draw/types';
+import { useStateSubscriber } from '@/hooks/useStateSubscriber';
+import { DrawingPublisher } from '../..';
+import { BaseToolEnablePublisher, withBaseTool } from './baseTool';
+import { MousePosition } from '@/utils/mousePosition';
+import { CanvasDrawPen } from '@/core/canvas/canvasDrawPen';
+import { useCallbackRender } from '@/hooks/useCallbackRender';
+import { AppSettingsGroup, AppSettingsPublisher } from '@/app/contextWrap';
 
-const ArrowToolCore: React.FC = () => {
+const PenToolCore: React.FC = () => {
     const { history } = useHistory();
 
-    const { drawLayerActionRef, imageBufferRef, mousePositionRef } = useContext(DrawContext);
+    const { drawLayerActionRef, imageBufferRef } = useContext(DrawContext);
 
+    const [getAppSettings] = useStateSubscriber(AppSettingsPublisher, undefined);
     const widthRef = useRef<LineWidthPickerValue>(defaultLineWidthPickerValue);
     const colorRef = useRef<LineColorPickerValue>(defaultLineColorPickerValue);
-    const arrowConfigIdRef = useRef(defaultArrowConfigValue);
-    const fillShapeRef = useRef(defaultFillShapePickerValue);
-    const lockAngleRef = useRef(defaultLockAngleValue);
+    const circleCursorActionRef = useRef<CircleCursorActionType | undefined>(undefined);
 
     const [, setDrawing] = useStateSubscriber(DrawingPublisher, undefined);
     const [getEnable] = useStateSubscriber(BaseToolEnablePublisher, undefined);
 
-    const canvasDrawRef = useRef<CanvasDrawArrow | undefined>(undefined);
+    const canvasDrawRef = useRef<CanvasDrawPen | undefined>(undefined);
 
     const onMouseDown = useCallback(
         (mousePosition: MousePosition) => {
@@ -47,33 +44,23 @@ const ArrowToolCore: React.FC = () => {
                 return;
             }
 
-            canvasDrawRef.current.setStyle(
-                widthRef.current.width,
-                colorRef.current.color,
-                getArrowStyleConfig(arrowConfigIdRef.current.configId),
-                fillShapeRef.current.fill,
-            );
+            canvasDrawRef.current.setStyle(widthRef.current.width, colorRef.current.color);
             canvasDrawRef.current.start(mousePosition);
         },
-        [arrowConfigIdRef, colorRef, fillShapeRef, getEnable, widthRef],
+        [colorRef, getEnable, widthRef],
     );
 
-    const onMouseMove = useCallback(
-        (mousePosition: MousePosition) => {
-            if (!canvasDrawRef.current) {
-                return;
-            }
-            if (!canvasDrawRef.current.drawing) {
-                return;
-            }
-            canvasDrawRef.current.execute(mousePosition, lockAngleRef.current);
-        },
-        [lockAngleRef],
-    );
+    const onMouseMove = useCallback((mousePosition: MousePosition) => {
+        if (!canvasDrawRef.current) {
+            return;
+        }
+        if (!canvasDrawRef.current.drawing) {
+            return;
+        }
+
+        canvasDrawRef.current.execute(mousePosition);
+    }, []);
     const onMouseMoveRender = useCallbackRender(onMouseMove);
-    const refreshMouseMove = useCallback(() => {
-        onMouseMoveRender(mousePositionRef.current);
-    }, [mousePositionRef, onMouseMoveRender]);
 
     const onMouseUp = useCallback(() => {
         if (!canvasDrawRef.current) {
@@ -133,14 +120,15 @@ const ArrowToolCore: React.FC = () => {
                 return;
             }
 
-            canvasDrawRef.current = new CanvasDrawArrow(
+            canvasDrawRef.current = new CanvasDrawPen(
                 history,
                 imageBufferRef.current?.monitorScaleFactor ?? 1,
                 setDrawing,
                 drawLayerActionRef.current,
+                getAppSettings()[AppSettingsGroup.Render],
             );
         },
-        [drawLayerActionRef, history, imageBufferRef, setDrawing],
+        [drawLayerActionRef, history, imageBufferRef, setDrawing, getAppSettings],
     );
     const onEnableChange = useCallback(
         (enable: boolean) => {
@@ -153,41 +141,26 @@ const ArrowToolCore: React.FC = () => {
 
     return (
         <>
+            <CircleCursor actionRef={circleCursorActionRef} />
+
             <LineWidthPicker
                 onChange={(value) => {
                     widthRef.current = value;
+                    circleCursorActionRef.current?.setRadius(value.width / 2);
                 }}
-                toolbarLocation="arrow"
+                toolbarLocation="pen"
             />
-            <ArrowConfigPicker
-                onChange={(value) => {
-                    arrowConfigIdRef.current = value;
-                }}
-                toolbarLocation="arrow"
-            />
+
             <div className="draw-toolbar-splitter" />
+
             <LineColorPicker
                 onChange={(value) => {
                     colorRef.current = value;
                 }}
-                toolbarLocation="arrow"
-            />
-            <div className="draw-toolbar-splitter" />
-            <FillShapePicker
-                onChange={(value) => {
-                    fillShapeRef.current = value;
-                }}
-                toolbarLocation="arrow"
-            />
-            <LockAnglePicker
-                onChange={(value) => {
-                    lockAngleRef.current = value;
-                    refreshMouseMove();
-                }}
-                toolbarLocation="arrow"
+                toolbarLocation="pen"
             />
         </>
     );
 };
 
-export const ArrowTool = withBaseTool(ArrowToolCore, DrawState.Arrow);
+export const PenTool = withBaseTool(PenToolCore, DrawState.Pen);

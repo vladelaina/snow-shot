@@ -36,6 +36,7 @@ import { EraserTool } from './components/eraserTool';
 import { KeyEventKey, KeyEventWrap } from './components/keyEventWrap';
 import { ToolbarTip } from '../../../../components/toolbarTip';
 import * as fabric from 'fabric';
+import { BaseButtonProps } from 'antd/es/button/button';
 
 export type DrawToolbarProps = {
     step: CaptureStep;
@@ -45,7 +46,7 @@ export type DrawToolbarProps = {
     enable: boolean;
 };
 
-export const getButtonTypeByState = (active: boolean) => {
+export const getButtonTypeByState = (active: boolean): BaseButtonProps['type'] => {
     return active ? 'primary' : 'text';
 };
 

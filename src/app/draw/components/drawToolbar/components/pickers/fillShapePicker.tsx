@@ -11,9 +11,9 @@ const FillShapePickerComponent: React.FC<WithPickerBaseProps<FillShapePickerValu
     setValue,
 }) => {
     return (
-        <ToolbarTip destroyTooltipOnHide title={<FormattedMessage id="draw.fillShape" />}>
+        <ToolbarTip title={<FormattedMessage id="draw.fillShape" />}>
             <Button
-                icon={<FillIcon style={{ fontSize: '0.83em' }} />}
+                icon={<FillIcon style={{ fontSize: '0.9em' }} />}
                 type={getButtonTypeByState(value.fill)}
                 onClick={() => setValue((prev) => ({ fill: !prev.fill }))}
             />

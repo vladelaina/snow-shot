@@ -57,7 +57,7 @@ const LineColorPickerComponent: React.FC<{
                 format="hex"
                 disabledFormat
             />
-            <ToolbarTip destroyTooltipOnHide title={<FormattedMessage id="draw.red" />}>
+            <ToolbarTip title={<FormattedMessage id="draw.red" />}>
                 <Button
                     onClick={() => {
                         setColor('#f5222d', true);
@@ -66,7 +66,7 @@ const LineColorPickerComponent: React.FC<{
                     icon={<ColorIcon color="#f5222d" />}
                 />
             </ToolbarTip>
-            <ToolbarTip destroyTooltipOnHide title={<FormattedMessage id="draw.orange" />}>
+            <ToolbarTip title={<FormattedMessage id="draw.orange" />}>
                 <Button
                     onClick={() => {
                         setColor('#faad14', true);
@@ -75,7 +75,7 @@ const LineColorPickerComponent: React.FC<{
                     icon={<ColorIcon color="#faad14" />}
                 />
             </ToolbarTip>
-            <ToolbarTip destroyTooltipOnHide title={<FormattedMessage id="draw.green" />}>
+            <ToolbarTip title={<FormattedMessage id="draw.green" />}>
                 <Button
                     onClick={() => {
                         setColor('#52c41a', true);
@@ -84,7 +84,7 @@ const LineColorPickerComponent: React.FC<{
                     icon={<ColorIcon color="#52c41a" />}
                 />
             </ToolbarTip>
-            <ToolbarTip destroyTooltipOnHide title={<FormattedMessage id="draw.blue" />}>
+            <ToolbarTip title={<FormattedMessage id="draw.blue" />}>
                 <Button
                     onClick={() => {
                         setColor('#1677ff', true);
@@ -93,7 +93,7 @@ const LineColorPickerComponent: React.FC<{
                     icon={<ColorIcon color="#1677ff" />}
                 />
             </ToolbarTip>
-            <ToolbarTip destroyTooltipOnHide title={<FormattedMessage id="draw.purple" />}>
+            <ToolbarTip title={<FormattedMessage id="draw.purple" />}>
                 <Button
                     onClick={() => {
                         setColor('#722ed1', true);
@@ -102,7 +102,7 @@ const LineColorPickerComponent: React.FC<{
                     icon={<ColorIcon color="#722ed1" />}
                 />
             </ToolbarTip>
-            <ToolbarTip destroyTooltipOnHide title={<FormattedMessage id="draw.black" />}>
+            <ToolbarTip title={<FormattedMessage id="draw.black" />}>
                 <Button
                     onClick={() => {
                         setColor('#141414', true);
@@ -111,7 +111,7 @@ const LineColorPickerComponent: React.FC<{
                     icon={<ColorIcon color="#141414" />}
                 />
             </ToolbarTip>
-            <ToolbarTip destroyTooltipOnHide title={<FormattedMessage id="draw.gray" />}>
+            <ToolbarTip title={<FormattedMessage id="draw.gray" />}>
                 <Button
                     onClick={() => {
                         setColor('#bfbfbf', true);
@@ -120,7 +120,7 @@ const LineColorPickerComponent: React.FC<{
                     icon={<ColorIcon color="#bfbfbf" />}
                 />
             </ToolbarTip>
-            <ToolbarTip destroyTooltipOnHide title={<FormattedMessage id="draw.white" />}>
+            <ToolbarTip title={<FormattedMessage id="draw.white" />}>
                 <Button
                     onClick={() => {
                         setColor('#ffffff', true);

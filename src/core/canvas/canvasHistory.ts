@@ -26,8 +26,21 @@ type CanvasHistoryAction =
 export class CanvasHistory {
     private undoStack: CanvasHistoryAction[] = [];
     private redoStack: CanvasHistoryAction[] = [];
+    private onUpdateListener: Set<() => void> = new Set();
 
     constructor() {}
+
+    public addOnUpdateListener(listener: () => void): () => void {
+        this.onUpdateListener.add(listener);
+
+        return () => {
+            this.onUpdateListener.delete(listener);
+        };
+    }
+
+    private onUpdate(): void {
+        this.onUpdateListener.forEach((listener) => listener());
+    }
 
     /**
      * 将操作添加到历史栈
@@ -37,19 +50,13 @@ export class CanvasHistory {
         this.undoStack.push(action);
         // 有新的操作，清空重做栈
         this.redoStack = [];
+
+        this.onUpdateListener.forEach((listener) => listener());
     }
 
     public pushAddAction(container: PIXI.Container, object: PIXI.Container): void {
         this.pushAction({
             type: CanvasHistoryActionType.Add,
-            container,
-            object,
-        });
-    }
-
-    public pushRemoveAction(container: PIXI.Container, object: PIXI.Container): void {
-        this.pushAction({
-            type: CanvasHistoryActionType.Remove,
             container,
             object,
         });
@@ -90,6 +97,7 @@ export class CanvasHistory {
         }
 
         this.redoStack.push(action);
+        this.onUpdate();
     }
 
     /**
@@ -111,6 +119,7 @@ export class CanvasHistory {
         }
 
         this.undoStack.push(action);
+        this.onUpdate();
     }
 
     /**
@@ -119,6 +128,8 @@ export class CanvasHistory {
     public clear(): void {
         this.undoStack = [];
         this.redoStack = [];
+
+        this.onUpdate();
     }
 
     /**

@@ -42,7 +42,7 @@ const FontSizePickerComponent: React.FC<{
 
     return (
         <Flex align="center" gap={token.marginXXS}>
-            <ToolbarTip destroyTooltipOnHide title={`${value.size}px`}>
+            <ToolbarTip title={`${value.size}px`}>
                 <Button
                     icon={<WidthIcon width={value.size} maxWidth={0} />}
                     type="dashed"

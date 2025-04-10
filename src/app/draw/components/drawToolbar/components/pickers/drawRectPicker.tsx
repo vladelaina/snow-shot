@@ -11,7 +11,7 @@ const DrawRectPickerComponent: React.FC<{
     setValue: React.Dispatch<React.SetStateAction<DrawRectValue>>;
 }> = ({ value, setValue }) => {
     return (
-        <ToolbarTip destroyTooltipOnHide title={<FormattedMessage id="draw.selectRect" />}>
+        <ToolbarTip title={<FormattedMessage id="draw.selectRect" />}>
             <Button
                 icon={<DrawRectIcon style={{ fontSize: '0.9em' }} />}
                 type={getButtonTypeByState(value.enable)}

@@ -46,6 +46,7 @@ const StatusBar: React.FC<{
         colorPickerMoveLeft: { hotKey: colorPickerMoveLeftHotKey },
         colorPickerMoveRight: { hotKey: colorPickerMoveRightHotKey },
         lockWidthHeightPicker: { hotKey: lockWidthHeightPickerHotKey },
+        lockAnglePicker: { hotKey: lockAnglePickerHotKey },
     } = appSettings[AppSettingsGroup.DrawToolbarKeyEvent];
 
     const { maskRectClipPathRef } = useContext(DrawContext);
@@ -128,6 +129,14 @@ const StatusBar: React.FC<{
             });
         }
 
+        if (drawState === DrawState.Arrow) {
+            items.push({
+                key: 'lockAnglePicker',
+                label: <FormattedMessage id="draw.lockAnglePicker" />,
+                children: <KeyLabel hotKey={lockAnglePickerHotKey} />,
+            });
+        }
+
         if (
             drawState === DrawState.Pen ||
             drawState === DrawState.Eraser ||
@@ -151,6 +160,7 @@ const StatusBar: React.FC<{
         colorPickerMoveLeftHotKey,
         colorPickerMoveRightHotKey,
         lockWidthHeightPickerHotKey,
+        lockAnglePickerHotKey,
     ]);
 
     const statusBarRef = useRef<HTMLDivElement>(null);

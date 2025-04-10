@@ -1,6 +1,4 @@
 import React from 'react';
-import { CaptureImageLayerActionType } from './components/captureImageLayer';
-import { BlurImageLayerActionType } from './components/blurImageLayer';
 import { DrawLayerActionType } from './components/drawLayer';
 import { SelectLayerActionType } from './components/selectLayer';
 import { ImageBuffer } from '@/commands';
@@ -8,11 +6,13 @@ import { DrawToolbarActionType } from './components/drawToolbar';
 import { MousePosition } from '@/utils/mousePosition';
 export enum CaptureStep {
     // 选择阶段
-    Select = 0,
+    Pending = 0,
+    // 选择阶段
+    Select = 1,
     // 绘制阶段
-    Draw = 1,
+    Draw = 2,
     // 置顶阶段
-    TopUp = 2,
+    TopUp = 3,
 }
 
 export enum DrawState {
@@ -25,6 +25,11 @@ export enum DrawState {
     Ellipse = 3,
     // 箭头
     Arrow = 4,
+    // 画笔
+    Pen = 5,
+    Redo = 101,
+    Undo = 102,
+    Cancel = 103,
 }
 
 export enum CanvasLayer {
@@ -36,22 +41,20 @@ export enum CanvasLayer {
 
 export type DrawContextType = {
     finishCapture: () => void;
-    captureImageLayerActionRef: React.RefObject<CaptureImageLayerActionType | undefined>;
-    blurImageLayerActionRef: React.RefObject<BlurImageLayerActionType | undefined>;
     drawLayerActionRef: React.RefObject<DrawLayerActionType | undefined>;
     selectLayerActionRef: React.RefObject<SelectLayerActionType | undefined>;
     imageBufferRef: React.RefObject<ImageBuffer | undefined>;
     mousePositionRef: React.RefObject<MousePosition>;
     drawToolbarActionRef: React.RefObject<DrawToolbarActionType | undefined>;
+    circleCursorRef: React.RefObject<HTMLDivElement | null>;
 };
 
 export const DrawContext = React.createContext<DrawContextType>({
     mousePositionRef: { current: new MousePosition(0, 0) },
     imageBufferRef: { current: undefined },
     finishCapture: () => {},
-    captureImageLayerActionRef: { current: undefined },
-    blurImageLayerActionRef: { current: undefined },
     drawLayerActionRef: { current: undefined },
     selectLayerActionRef: { current: undefined },
     drawToolbarActionRef: { current: undefined },
+    circleCursorRef: { current: null },
 });

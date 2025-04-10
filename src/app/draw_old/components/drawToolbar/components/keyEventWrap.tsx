@@ -37,6 +37,7 @@ export enum KeyEventKey {
     ColorPickerMoveLeft = 'colorPickerMoveLeft',
     ColorPickerMoveRight = 'colorPickerMoveRight',
     // PenDrawLine = 'penDrawLine',
+    LockAnglePicker = 'lockAnglePicker',
 }
 
 export const defaultKeyEventSettings: Record<KeyEventKey, KeyEventValue> = {
@@ -80,6 +81,9 @@ export const defaultKeyEventSettings: Record<KeyEventKey, KeyEventValue> = {
         hotKey: 'Escape',
     },
     [KeyEventKey.LockWidthHeightPicker]: {
+        hotKey: 'Shift',
+    },
+    [KeyEventKey.LockAnglePicker]: {
         hotKey: 'Shift',
     },
     [KeyEventKey.RemoveTool]: {

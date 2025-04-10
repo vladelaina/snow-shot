@@ -1,7 +1,6 @@
-import { AppSettingsContext } from '@/app/contextWrap';
 import { useAppSettingsLoad } from '@/hooks/useAppSettingsLoad';
 import { Modal } from 'antd';
-import React, { useCallback, useContext, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { JSX } from 'react';
 import { useHotkeys } from 'react-hotkeys-hook';
 import { FormattedMessage } from 'react-intl';
@@ -9,6 +8,7 @@ import { ToolbarTip } from '../../../../../../components/toolbarTip';
 import { useStateSubscriber } from '@/hooks/useStateSubscriber';
 import { DrawingPublisher } from '../..';
 import { EnableKeyEventPublisher } from './extra';
+import { AppSettingsData } from '@/app/contextWrap';
 
 export type KeyEventValue = {
     hotKey: string;
@@ -145,7 +145,53 @@ export const defaultKeyEventComponentConfig: Record<KeyEventKey, KeyEventCompone
         {} as Record<KeyEventKey, KeyEventComponentValue>,
     );
 
-export const KeyEventWrap: React.FC<{
+const KeyEventHandleCore: React.FC<{
+    keyEventValue: KeyEventValue;
+    onKeyDownChildren: () => void;
+    onKeyUpChildren: () => void;
+    componentKey: KeyEventKey;
+    children: JSX.Element;
+}> = ({ keyEventValue, onKeyDownChildren, onKeyUpChildren, componentKey, children }) => {
+    useHotkeys(keyEventValue.hotKey, onKeyDownChildren, {
+        keydown: true,
+        keyup: false,
+        preventDefault: true,
+    });
+    useHotkeys(keyEventValue.hotKey, onKeyUpChildren, {
+        keydown: false,
+        keyup: true,
+        preventDefault: true,
+    });
+    return (
+        <>
+            <ToolbarTip
+                destroyTooltipOnHide
+                title={
+                    <FormattedMessage
+                        id="draw.keyEventTooltip"
+                        values={{
+                            message: (
+                                <FormattedMessage
+                                    key={componentKey + keyEventValue.hotKey}
+                                    id={defaultKeyEventComponentConfig[componentKey].messageId}
+                                />
+                            ),
+                            key: keyEventValue.hotKey,
+                        }}
+                    />
+                }
+            >
+                {React.cloneElement(children, {
+                    disabled: children.props.disabled,
+                })}
+            </ToolbarTip>
+        </>
+    );
+};
+
+const KeyEventHandle = React.memo(KeyEventHandleCore);
+
+const KeyEventWrapCore: React.FC<{
     onKeyDownEventPropName?: string;
     onKeyUpEventPropName?: string;
     onKeyDown?: () => void;
@@ -173,11 +219,7 @@ export const KeyEventWrap: React.FC<{
 
     const [modal, contextHolder] = Modal.useModal();
 
-    const appSettings = useContext(AppSettingsContext);
-    const [keyEventValue, setKeyEventValue] = useState(
-        appSettings?.drawToolbarKeyEvent?.[componentKey] ?? defaultKeyEventSettings[componentKey],
-    );
-    const appSettingsLoading = useRef(true);
+    const [keyEventValue, setKeyEventValue] = useState<KeyEventValue | undefined>(undefined);
     const [getEnableKeyEvent] = useStateSubscriber(EnableKeyEventPublisher, () => {});
     const [getDrawing] = useStateSubscriber(DrawingPublisher, () => {});
     const isEnable = useCallback(() => {
@@ -187,19 +229,18 @@ export const KeyEventWrap: React.FC<{
 
         return getEnableKeyEvent() && (disableOnDrawing ? !getDrawing() : true);
     }, [disableOnDrawing, getEnableKeyEvent, getDrawing]);
-    useAppSettingsLoad(() => {
-        appSettingsLoading.current = false;
-    });
-    useEffect(() => {
-        if (appSettingsLoading.current) {
-            return;
-        }
-
-        setKeyEventValue(
-            appSettings?.drawToolbarKeyEvent?.[componentKey] ??
-                defaultKeyEventSettings[componentKey],
-        );
-    }, [appSettings, componentKey]);
+    useAppSettingsLoad(
+        useCallback(
+            (appSettings: AppSettingsData) => {
+                setKeyEventValue(
+                    appSettings?.drawToolbarKeyEvent?.[componentKey] ??
+                        defaultKeyEventSettings[componentKey],
+                );
+            },
+            [componentKey],
+        ),
+        true,
+    );
 
     const confirming = useRef(false);
     const keyEvent = useCallback(
@@ -258,40 +299,23 @@ export const KeyEventWrap: React.FC<{
         keyEvent(children, onKeyUpEventPropName, onKeyUp);
     }, [children, isEnable, keyEvent, onKeyUp, onKeyUpEventPropName]);
 
-    useHotkeys(keyEventValue.hotKey, onKeyDownChildren, {
-        keydown: true,
-        keyup: false,
-        preventDefault: true,
-    });
-    useHotkeys(keyEventValue.hotKey, onKeyUpChildren, {
-        keydown: false,
-        keyup: true,
-        preventDefault: true,
-    });
+    if (!keyEventValue) {
+        return null;
+    }
+
     return (
         <>
-            <ToolbarTip
-                destroyTooltipOnHide
-                title={
-                    <FormattedMessage
-                        id="draw.keyEventTooltip"
-                        values={{
-                            message: (
-                                <FormattedMessage
-                                    key={componentKey + keyEventValue.hotKey}
-                                    id={defaultKeyEventComponentConfig[componentKey].messageId}
-                                />
-                            ),
-                            key: keyEventValue.hotKey,
-                        }}
-                    />
-                }
+            <KeyEventHandle
+                keyEventValue={keyEventValue}
+                onKeyDownChildren={onKeyDownChildren}
+                onKeyUpChildren={onKeyUpChildren}
+                componentKey={componentKey}
             >
-                {React.cloneElement(children, {
-                    disabled: children.props.disabled,
-                })}
-            </ToolbarTip>
+                {children}
+            </KeyEventHandle>
             {contextHolder}
         </>
     );
 };
+
+export const KeyEventWrap = React.memo(KeyEventWrapCore);

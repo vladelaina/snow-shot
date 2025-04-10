@@ -1,35 +1,48 @@
 'use client';
 
-import { AppSettingsContext, AppSettingsData, AppSettingsGroup } from '@/app/contextWrap';
+import { AppSettingsActionContext, AppSettingsData, AppSettingsGroup } from '@/app/contextWrap';
 import {
     defaultKeyEventComponentConfig,
     defaultKeyEventSettings,
     KeyEventKey,
-} from '@/app/draw_old/components/drawToolbar/components/keyEventWrap';
+} from '@/app/draw/components/drawToolbar/components/keyEventWrap';
 import { GroupTitle } from '@/components/groupTitle';
 import { KeyButton } from '@/components/keyButton';
 import { ResetSettingsButton } from '@/components/resetSettingsButton';
 import { useAppSettingsLoad } from '@/hooks/useAppSettingsLoad';
 import { Col, Form, Row, Spin, theme } from 'antd';
 import { useCallback, useContext, useMemo, useState } from 'react';
-import { FormattedMessage, useIntl } from 'react-intl';
+import { FormattedMessage } from 'react-intl';
 
 export default function HotKeySettings() {
     const { token } = theme.useToken();
-    const intl = useIntl();
 
-    const appSettings = useContext(AppSettingsContext);
-    const { drawToolbarKeyEvent, updateAppSettings } = appSettings;
+    const { updateAppSettings } = useContext(AppSettingsActionContext);
 
     const [appSettingsLoading, setAppSettingsLoading] = useState(true);
-    useAppSettingsLoad(
-        useCallback(() => {
-            setAppSettingsLoading(false);
-        }, []),
-    );
 
     const [drawToolbarKeyEventForm] =
         Form.useForm<AppSettingsData[AppSettingsGroup.DrawToolbarKeyEvent]>();
+
+    const [drawToolbarKeyEvent, setDrawToolbarKeyEvent] =
+        useState<AppSettingsData[AppSettingsGroup.DrawToolbarKeyEvent]>(defaultKeyEventSettings);
+    useAppSettingsLoad(
+        useCallback(
+            (settings: AppSettingsData, preSettings?: AppSettingsData) => {
+                setAppSettingsLoading(false);
+
+                if (
+                    preSettings === undefined ||
+                    preSettings[AppSettingsGroup.DrawToolbarKeyEvent] !==
+                        settings[AppSettingsGroup.DrawToolbarKeyEvent]
+                ) {
+                    setDrawToolbarKeyEvent(settings[AppSettingsGroup.DrawToolbarKeyEvent]);
+                }
+            },
+            [setAppSettingsLoading],
+        ),
+        true,
+    );
 
     const drawToolbarKeyEventFormItemList = useMemo(() => {
         return Object.keys(defaultKeyEventSettings).map((key) => {
@@ -66,19 +79,19 @@ export default function HotKeySettings() {
                 </Col>
             );
         });
-    }, [updateAppSettings, drawToolbarKeyEvent]);
+    }, [drawToolbarKeyEvent, updateAppSettings]);
     return (
         <div className="settings-wrap">
             <GroupTitle
                 id="drawingHotKey"
                 extra={
                     <ResetSettingsButton
-                        title={intl.formatMessage({ id: 'settings.drawingHotKey' })}
+                        title={<FormattedMessage id="settings.drawingHotKey" key="drawingHotKey" />}
                         appSettingsGroup={AppSettingsGroup.DrawToolbarKeyEvent}
                     />
                 }
             >
-                {intl.formatMessage({ id: 'settings.drawingHotKey' })}
+                <FormattedMessage id="settings.drawingHotKey" />
             </GroupTitle>
 
             {/* 这里用 form 控制值的更新和保存的话反而很麻烦，所以 */}

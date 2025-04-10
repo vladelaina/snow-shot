@@ -11,7 +11,7 @@ const EnableBoldPickerComponent: React.FC<{
     setValue: React.Dispatch<React.SetStateAction<EnableBoldValue>>;
 }> = ({ value, setValue }) => {
     return (
-        <ToolbarTip destroyTooltipOnHide title={<FormattedMessage id="draw.bold" />}>
+        <ToolbarTip title={<FormattedMessage id="draw.bold" />}>
             <Button
                 icon={<BoldOutlined style={{ fontSize: '0.83em' }} />}
                 type={getButtonTypeByState(value.enable)}

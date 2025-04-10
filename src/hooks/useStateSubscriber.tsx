@@ -35,5 +35,10 @@ export function useStateSubscriber<Value>(
         };
     }, [onChange, subscribe]);
 
+    // 初始调用
+    useEffect(() => {
+        onChange?.(stateRef.current, stateRef.current);
+    }, [onChange, stateRef]);
+
     return [getValue, setValue, reset];
 }

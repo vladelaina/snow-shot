@@ -11,7 +11,7 @@ const EnableRadiusPickerComponent: React.FC<{
     setValue: React.Dispatch<React.SetStateAction<EnableRadiusValue>>;
 }> = ({ value, setValue }) => {
     return (
-        <ToolbarTip destroyTooltipOnHide title={<FormattedMessage id="draw.enableRadius" />}>
+        <ToolbarTip title={<FormattedMessage id="draw.enableRadius" />}>
             <Button
                 icon={<RadiusSettingOutlined style={{ fontSize: '0.9em' }} />}
                 type={getButtonTypeByState(value.enable)}

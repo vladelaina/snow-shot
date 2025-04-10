@@ -18,7 +18,7 @@ import {
     initUiElements,
     initUiElementsCache,
 } from '@/commands';
-import { AppSettingsContext } from '@/app/contextWrap';
+import { AppSettingsData, AppSettingsGroup, AppSettingsPublisher } from '@/app/contextWrap';
 import { useHotkeys } from 'react-hotkeys-hook';
 import * as PIXI from 'pixi.js';
 import Flatbush from 'flatbush';
@@ -55,10 +55,13 @@ const SelectLayerCore: React.FC<SelectLayerProps> = ({ actionRef }) => {
     const { isEnable, addChildToTopContainer, changeCursor, layerContainerElementRef } =
         useContext(BaseLayerContext);
 
-    const {
-        screenshot: { findChildrenElements },
-        common: { darkMode },
-    } = useContext(AppSettingsContext);
+    const [findChildrenElements, setFindChildrenElements] = useState(false);
+    const [getAppSettings] = useStateSubscriber(
+        AppSettingsPublisher,
+        useCallback((settings: AppSettingsData) => {
+            setFindChildrenElements(settings[AppSettingsGroup.Screenshot].findChildrenElements);
+        }, []),
+    );
     const tabFindChildrenElementsRef = useRef<boolean>(false); // 是否查找子元素
     const [tabFindChildrenElements, _setTabFindChildrenElements] = useState<boolean>(false); // Tab 键的切换查找子元素
     const setTabFindChildrenElements = useCallback(
@@ -187,11 +190,11 @@ const SelectLayerCore: React.FC<SelectLayerProps> = ({ actionRef }) => {
                 rect,
                 overlayRect,
                 overlayMaskRectControls,
-                darkMode,
+                getAppSettings()[AppSettingsGroup.Common].darkMode,
                 imageBuffer.monitorScaleFactor,
             );
         },
-        [darkMode],
+        [getAppSettings],
     );
 
     const initAnimation = useCallback(
@@ -253,7 +256,7 @@ const SelectLayerCore: React.FC<SelectLayerProps> = ({ actionRef }) => {
         BaseLayerEventActionType['onCaptureLoad']
     >(async () => {}, []);
 
-    const onCaptureFinish = useCallback<BaseLayerEventActionType['onCaptureFinish']>(() => {
+    const onCaptureFinish = useCallback<BaseLayerEventActionType['onCaptureFinish']>(async () => {
         imageBufferRef.current = undefined;
         selectWindowElementLoadingRef.current = true;
         elementsListRTreeRef.current = undefined;
@@ -536,7 +539,7 @@ const SelectLayerCore: React.FC<SelectLayerProps> = ({ actionRef }) => {
         },
         {
             preventDefault: true,
-            enabled: isEnable && findChildrenElements,
+            enabled: isEnable && getAppSettings()[AppSettingsGroup.Screenshot].findChildrenElements,
         },
     );
 

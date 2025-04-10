@@ -3,67 +3,68 @@
 import { GroupTitle } from '@/components/groupTitle';
 import { Divider, Form, Select, Spin, Switch } from 'antd';
 import {
-    AppSettingsContext,
+    AppSettingsActionContext,
     AppSettingsControlNode,
     AppSettingsData,
     AppSettingsGroup,
     AppSettingsLanguage,
 } from '../../contextWrap';
-import { useCallback, useContext, useEffect, useState } from 'react';
+import { useCallback, useContext } from 'react';
 import { useAppSettingsLoad } from '@/hooks/useAppSettingsLoad';
 import { FormattedMessage, useIntl } from 'react-intl';
 import { ContentWrap } from '@/components/contentWrap';
 import { DarkModeIcon, LanguageIcon } from '@/components/icons';
 import { IconLabel } from '@/components/iconLable';
 import { ResetSettingsButton } from '@/components/resetSettingsButton';
+import { useStateRef } from '@/hooks/useStateRef';
 
 const { Option } = Select;
 
 export default function GeneralSettings() {
     const intl = useIntl();
 
-    const {
-        updateAppSettings,
-        common: commonAppSettings,
-        screenshot: screenshotAppSettings,
-    } = useContext(AppSettingsContext);
+    const { updateAppSettings } = useContext(AppSettingsActionContext);
     const [commonForm] = Form.useForm<AppSettingsData[AppSettingsGroup.Common]>();
     const [screenshotForm] = Form.useForm<AppSettingsData[AppSettingsGroup.Screenshot]>();
 
-    const [appSettingsLoading, setAppSettingsLoading] = useState(true);
+    const [appSettingsLoading, setAppSettingsLoading] = useStateRef(true);
     useAppSettingsLoad(
-        useCallback(() => {
-            setAppSettingsLoading(false);
-        }, []),
+        useCallback(
+            (settings: AppSettingsData, preSettings?: AppSettingsData) => {
+                setAppSettingsLoading(false);
+                if (
+                    preSettings === undefined ||
+                    preSettings[AppSettingsGroup.Common] !== settings[AppSettingsGroup.Common]
+                ) {
+                    commonForm.setFieldsValue(settings[AppSettingsGroup.Common]);
+                }
+
+                if (
+                    preSettings === undefined ||
+                    preSettings[AppSettingsGroup.Screenshot] !==
+                        settings[AppSettingsGroup.Screenshot]
+                ) {
+                    screenshotForm.setFieldsValue(settings[AppSettingsGroup.Screenshot]);
+                }
+            },
+            [commonForm, screenshotForm, setAppSettingsLoading],
+        ),
+        true,
     );
-
-    useEffect(() => {
-        if (appSettingsLoading) {
-            return;
-        }
-
-        commonForm.setFieldsValue(commonAppSettings);
-    }, [commonAppSettings, commonForm, appSettingsLoading]);
-    useEffect(() => {
-        if (appSettingsLoading) {
-            return;
-        }
-
-        screenshotForm.setFieldsValue(screenshotAppSettings);
-    }, [screenshotAppSettings, screenshotForm, appSettingsLoading]);
-
     return (
         <ContentWrap className="settings-wrap">
             <GroupTitle
                 id="commonSettings"
                 extra={
                     <ResetSettingsButton
-                        title={intl.formatMessage({ id: 'settings.commonSettings' })}
+                        title={
+                            <FormattedMessage id="settings.commonSettings" key="commonSettings" />
+                        }
                         appSettingsGroup={AppSettingsGroup.Common}
                     />
                 }
             >
-                {intl.formatMessage({ id: 'settings.commonSettings' })}
+                <FormattedMessage id="settings.commonSettings" />
             </GroupTitle>
 
             <Spin spinning={appSettingsLoading}>
@@ -155,20 +156,6 @@ export default function GeneralSettings() {
                         valuePropName="checked"
                         required={false}
                         rules={[{ required: true }]}
-                    >
-                        <Switch />
-                    </Form.Item>
-                    <Form.Item
-                        name="performanceMode"
-                        label={
-                            <IconLabel
-                                label={<FormattedMessage id="settings.performanceMode" />}
-                                tooltipTitle={
-                                    <FormattedMessage id="settings.performanceMode.tip1" />
-                                }
-                            />
-                        }
-                        valuePropName="checked"
                     >
                         <Switch />
                     </Form.Item>

@@ -3,7 +3,6 @@
 import React, {
     ComponentType,
     useCallback,
-    useContext,
     useEffect,
     useImperativeHandle,
     useMemo,
@@ -14,7 +13,7 @@ import * as PIXI from 'pixi.js';
 import _ from 'lodash';
 import { ImageBuffer } from '@/commands';
 import styles from './index.module.css';
-import { AppSettingsContext } from '@/app/contextWrap';
+import { AppSettingsData, AppSettingsGroup } from '@/app/contextWrap';
 import { useAppSettingsLoad } from '@/hooks/useAppSettingsLoad';
 
 export type BaseLayerContextType = {
@@ -23,7 +22,7 @@ export type BaseLayerContextType = {
     /** 添加一个子元素到最上层的容器 */
     addChildToTopContainer: (children: PIXI.Container<PIXI.ContainerChild>) => void;
     /** 创建一个新的画布容器 */
-    createNewCanvasContainer: () => void;
+    createNewCanvasContainer: () => PIXI.Container | undefined;
     /** 清空画布 */
     clearCanvas: () => void;
     /** 是否启用 */
@@ -41,7 +40,7 @@ export type BaseLayerContextType = {
 export const BaseLayerContext = React.createContext<BaseLayerContextType>({
     resizeCanvas: () => {},
     addChildToTopContainer: () => {},
-    createNewCanvasContainer: () => {},
+    createNewCanvasContainer: () => undefined,
     clearCanvas: () => {},
     isEnable: false,
     /**
@@ -74,7 +73,7 @@ export type BaseLayerEventActionType = {
     /**
      * 截图完成
      */
-    onCaptureFinish: () => void;
+    onCaptureFinish: () => Promise<void>;
     /**
      * 获取画布上下文
      */
@@ -100,7 +99,7 @@ export const defaultBaseLayerActions: BaseLayerActionType = {
     onCanvasReady: () => {},
     onCaptureReady: () => Promise.resolve(),
     onCaptureLoad: () => Promise.resolve(),
-    onCaptureFinish: () => {},
+    onCaptureFinish: () => Promise.resolve(),
     setEnable: () => {},
     onExecuteScreenshot: () => Promise.resolve(),
     getCanvasApp: () => null,
@@ -110,7 +109,7 @@ export const defaultBaseLayerActions: BaseLayerActionType = {
 
 type BaseLayerCoreActionType = {
     resizeCanvas: (width: number, height: number) => void;
-    clearCanvas: () => void;
+    clearCanvas: () => Promise<void>;
     getCanvasApp: () => PIXI.Application | undefined;
     getLayerContainerElement: () => HTMLDivElement | null;
     addChildToTopContainer: (children: PIXI.Container<PIXI.ContainerChild>) => void;
@@ -126,16 +125,6 @@ export type BaseLayerProps = {
 export const BaseLayerCore: React.FC<
     BaseLayerProps & { actionRef?: React.RefObject<BaseLayerCoreActionType | undefined> }
 > = ({ zIndex, actionRef, enable, children, onCanvasReady }) => {
-    const [appSettingsLoading, setAppSettingsLoading] = useState(true);
-    const {
-        render: { antialias },
-    } = useContext(AppSettingsContext);
-    useAppSettingsLoad(
-        useCallback(() => {
-            setAppSettingsLoading(false);
-        }, []),
-    );
-
     const layerContainerElementRef = useRef<HTMLDivElement>(null);
     const canvasAppRef = useRef<PIXI.Application | undefined>(undefined);
     const canvasContainerListRef = useRef<PIXI.Container[]>([]);
@@ -158,9 +147,20 @@ export const BaseLayerCore: React.FC<
         return container;
     }, []);
 
+    const disposeCanvas = useCallback(() => {
+        const canvasApp = canvasAppRef.current;
+        if (!canvasApp) {
+            return;
+        }
+        layerContainerElementRef.current?.removeChild(canvasApp.canvas);
+        canvasApp.destroy();
+    }, []);
+
     /** 初始化画布 */
     const initCanvas = useCallback(
         async (antialias: boolean) => {
+            disposeCanvas();
+
             const canvasApp = new PIXI.Application();
             await canvasApp.init({
                 backgroundAlpha: 0,
@@ -176,18 +176,24 @@ export const BaseLayerCore: React.FC<
             layerContainerElementRef.current?.appendChild(canvasApp.canvas);
             onCanvasReady(canvasApp);
         },
-        [onCanvasReady],
+        [disposeCanvas, onCanvasReady],
     );
 
-    const disposeCanvas = useCallback(() => {
-        const canvasApp = canvasAppRef.current;
-        if (!canvasApp) {
-            return;
-        }
-        layerContainerElementRef.current?.removeChild(canvasApp.canvas);
-        canvasApp.destroy();
-    }, []);
-
+    useAppSettingsLoad(
+        useCallback(
+            (settings: AppSettingsData, preSettings?: AppSettingsData) => {
+                if (
+                    preSettings === undefined ||
+                    preSettings[AppSettingsGroup.Render].antialias !==
+                        settings[AppSettingsGroup.Render].antialias
+                ) {
+                    initCanvas(settings.render.antialias);
+                }
+            },
+            [initCanvas],
+        ),
+        true,
+    );
     /** 调整画布大小 */
     const resizeCanvas = useCallback(
         (width: number, height: number) => {
@@ -220,7 +226,7 @@ export const BaseLayerCore: React.FC<
         [getTopContainer],
     );
 
-    const clearCanvas = useCallback(() => {
+    const clearCanvas = useCallback<BaseLayerCoreActionType['clearCanvas']>(async () => {
         const canvasApp = canvasAppRef.current;
         if (!canvasApp) {
             return;
@@ -245,18 +251,6 @@ export const BaseLayerCore: React.FC<
         BaseLayerCoreActionType['getLayerContainerElement']
     >(() => layerContainerElementRef.current, []);
 
-    useEffect(() => {
-        if (appSettingsLoading) {
-            return;
-        }
-
-        initCanvas(antialias);
-
-        return () => {
-            disposeCanvas();
-        };
-    }, [initCanvas, antialias, disposeCanvas, appSettingsLoading]);
-
     useImperativeHandle(
         actionRef,
         () => ({
@@ -272,10 +266,8 @@ export const BaseLayerCore: React.FC<
     useEffect(() => {
         if (enable) {
             layerContainerElementRef.current!.style.pointerEvents = 'auto';
-            canvasAppRef.current?.start();
         } else {
             layerContainerElementRef.current!.style.pointerEvents = 'none';
-            canvasAppRef.current?.stop();
         }
     }, [enable]);
 
@@ -337,8 +329,10 @@ export function withBaseLayer<
         );
         const onCaptureFinish = useCallback(
             async (...args: Parameters<BaseLayerActionType['onCaptureFinish']>) => {
-                baseLayerCoreActionRef.current?.clearCanvas();
-                layerActionRef.current?.onCaptureFinish(...args);
+                await Promise.all([
+                    baseLayerCoreActionRef.current?.clearCanvas(),
+                    layerActionRef.current?.onCaptureFinish(...args),
+                ]);
             },
             [],
         );

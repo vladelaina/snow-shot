@@ -1,6 +1,14 @@
-import React, { useContext, useEffect, useState, ComponentType, useRef, useCallback } from 'react';
+import React, {
+    useContext,
+    useEffect,
+    useState,
+    ComponentType,
+    useRef,
+    useCallback,
+    useMemo,
+} from 'react';
 import {
-    AppSettingsContext,
+    AppSettingsActionContext,
     AppSettingsData,
     AppSettingsGroup,
     AppSettingsPublisher,
@@ -44,7 +52,7 @@ export function withPickerBase<T extends object>(
 
         const { onChange, toolbarLocation, hidden } = props;
 
-        const { updateAppSettings } = useContext(AppSettingsContext);
+        const { updateAppSettings } = useContext(AppSettingsActionContext);
         const [getAppSettings] = useStateSubscriber(AppSettingsPublisher, undefined);
 
         const [value, _setValue] = useState<T | undefined>();
@@ -124,15 +132,18 @@ export function withPickerBase<T extends object>(
                 true,
                 false,
                 true,
+                true,
             );
         }, [updateAppSettings, toolbarLocation]);
-        const updateSettingsDebounce = useCallback(() => {
+        const updateSettingsDebounce = useMemo(() => {
             if (updateDebounce === 0) {
-                updateSettings();
-            } else {
-                debounce(() => {
+                return () => {
                     updateSettings();
-                }, updateDebounce)();
+                };
+            } else {
+                return debounce(() => {
+                    updateSettings();
+                }, updateDebounce);
             }
         }, [updateSettings]);
 

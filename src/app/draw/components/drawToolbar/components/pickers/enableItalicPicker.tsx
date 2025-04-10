@@ -11,7 +11,7 @@ const EnableItalicPickerComponent: React.FC<{
     setValue: React.Dispatch<React.SetStateAction<EnableItalicValue>>;
 }> = ({ value, setValue }) => {
     return (
-        <ToolbarTip destroyTooltipOnHide title={<FormattedMessage id="draw.italic" />}>
+        <ToolbarTip title={<FormattedMessage id="draw.italic" />}>
             <Button
                 icon={<ItalicOutlined style={{ fontSize: '0.83em' }} />}
                 type={getButtonTypeByState(value.enable)}

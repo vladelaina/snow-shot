@@ -2,7 +2,12 @@ import { Descriptions, theme } from 'antd';
 import { CaptureStep, DrawContext, DrawState } from '../../types';
 import Color from 'color';
 import { FormattedMessage } from 'react-intl';
-import { AppSettingsContext, AppSettingsGroup } from '@/app/contextWrap';
+import {
+    AppSettingsData,
+    AppSettingsGroup,
+    AppSettingsLoadingPublisher,
+    AppSettingsPublisher,
+} from '@/app/contextWrap';
 import { useCallback, useContext, useEffect, useRef, useState } from 'react';
 import { KeyboardIcon, MouseIcon } from '@/components/icons';
 import { DescriptionsItemType } from 'antd/es/descriptions';
@@ -29,16 +34,22 @@ const KeyLabel: React.FC<{
 
 const StatusBar: React.FC = () => {
     const { token } = theme.useToken();
-    const appSettings = useContext(AppSettingsContext);
-    const { darkMode } = appSettings[AppSettingsGroup.Common];
-    const {
-        colorPickerCopy: { hotKey: colorPickerCopyHotKey },
-        colorPickerMoveUp: { hotKey: colorPickerMoveUpHotKey },
-        colorPickerMoveDown: { hotKey: colorPickerMoveDownHotKey },
-        colorPickerMoveLeft: { hotKey: colorPickerMoveLeftHotKey },
-        colorPickerMoveRight: { hotKey: colorPickerMoveRightHotKey },
-        lockWidthHeightPicker: { hotKey: lockWidthHeightPickerHotKey },
-    } = appSettings[AppSettingsGroup.DrawToolbarKeyEvent];
+
+    const [darkMode, setDarkMode] = useState(false);
+    const [getAppSettingsLoading] = useStateSubscriber(AppSettingsLoadingPublisher, undefined);
+    const [getAppSettings] = useStateSubscriber(
+        AppSettingsPublisher,
+        useCallback(
+            (settings: AppSettingsData) => {
+                if (getAppSettingsLoading()) {
+                    return;
+                }
+
+                setDarkMode(settings[AppSettingsGroup.Common].darkMode);
+            },
+            [getAppSettingsLoading],
+        ),
+    );
 
     const statusBarRef = useRef<HTMLDivElement>(null);
     const { selectLayerActionRef, imageBufferRef } = useContext(DrawContext);
@@ -50,9 +61,18 @@ const StatusBar: React.FC = () => {
     }, []);
     const [getCaptureLoading] = useStateSubscriber(CaptureLoadingPublisher, onCaptureLoadingChange);
 
-
     const [descriptionsItems, setDescriptionsItems] = useState<DescriptionsItemType[]>([]);
     const updateDescriptionsItems = useCallback(() => {
+        const {
+            colorPickerCopy: { hotKey: colorPickerCopyHotKey },
+            colorPickerMoveUp: { hotKey: colorPickerMoveUpHotKey },
+            colorPickerMoveDown: { hotKey: colorPickerMoveDownHotKey },
+            colorPickerMoveLeft: { hotKey: colorPickerMoveLeftHotKey },
+            colorPickerMoveRight: { hotKey: colorPickerMoveRightHotKey },
+            lockWidthHeightPicker: { hotKey: lockWidthHeightPickerHotKey },
+            lockAnglePicker: { hotKey: lockAnglePickerHotKey },
+        } = getAppSettings()[AppSettingsGroup.DrawToolbarKeyEvent];
+
         const items: DescriptionsItemType[] = [
             {
                 key: 'colorPickerMoveUp',
@@ -109,6 +129,14 @@ const StatusBar: React.FC = () => {
             });
         }
 
+        if (drawState === DrawState.Arrow) {
+            items.push({
+                key: 'lockAnglePicker',
+                label: <FormattedMessage id="draw.lockAnglePicker" />,
+                children: <KeyLabel hotKey={lockAnglePickerHotKey} />,
+            });
+        }
+
         // if (
         //     drawState === DrawState.Pen ||
         //     drawState === DrawState.Eraser ||
@@ -122,16 +150,7 @@ const StatusBar: React.FC = () => {
         //     });
         // }
         setDescriptionsItems(items);
-    }, [
-        colorPickerCopyHotKey,
-        colorPickerMoveDownHotKey,
-        colorPickerMoveLeftHotKey,
-        colorPickerMoveRightHotKey,
-        colorPickerMoveUpHotKey,
-        getCaptureStep,
-        getDrawState,
-        lockWidthHeightPickerHotKey,
-    ]);
+    }, [getAppSettings, getCaptureStep, getDrawState]);
     useStateSubscriber(CaptureStepPublisher, updateDescriptionsItems);
     useStateSubscriber(DrawStatePublisher, updateDescriptionsItems);
 

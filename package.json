@@ -12,6 +12,7 @@
   "dependencies": {
     "@ant-design/icons": "^5.6.1",
     "@ant-design/nextjs-registry": "^1.0.2",
+    "@ant-design/pro-form": "^2.31.7",
     "@ant-design/v5-patch-for-react-19": "^1.0.3",
     "@tauri-apps/api": "^2.2.0",
     "@tauri-apps/plugin-fs": "2.2.0",
@@ -35,7 +36,8 @@
     "react-hotkeys-hook": "^4.6.1",
     "react-intl": "^7.1.6",
     "react-scrollbars-custom": "^4.1.1",
-    "scroll-shadow-element": "^2.0.6"
+    "scroll-shadow-element": "^2.0.6",
+    "simplify-js": "^1.2.4"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",

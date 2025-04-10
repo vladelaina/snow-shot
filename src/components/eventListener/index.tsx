@@ -7,7 +7,7 @@ import { appLog, LogMessageEvent } from '@/utils/appLog';
 import React from 'react';
 import { MenuLayoutContext } from '@/app/menuLayout';
 import { getCurrentWindow, Window as AppWindow } from '@tauri-apps/api/window';
-import { AppSettingsContext } from '@/app/contextWrap';
+import { AppSettingsActionContext } from '@/app/contextWrap';
 
 type Listener = {
     event: string;
@@ -64,7 +64,7 @@ const EventListenerCore: React.FC<{ children: React.ReactNode }> = ({ children }
         return res;
     }, []);
 
-    const { reloadAppSettings } = useContext(AppSettingsContext);
+    const { reloadAppSettings } = useContext(AppSettingsActionContext);
 
     const inited = useRef(false);
     useEffect(() => {

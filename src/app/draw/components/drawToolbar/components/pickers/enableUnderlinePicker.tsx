@@ -11,7 +11,7 @@ const EnableUnderlinePickerComponent: React.FC<{
     setValue: React.Dispatch<React.SetStateAction<EnableUnderlineValue>>;
 }> = ({ value, setValue }) => {
     return (
-        <ToolbarTip destroyTooltipOnHide title={<FormattedMessage id="draw.underline" />}>
+        <ToolbarTip title={<FormattedMessage id="draw.underline" />}>
             <Button
                 icon={<UnderlineOutlined style={{ fontSize: '0.83em' }} />}
                 type={getButtonTypeByState(value.enable)}

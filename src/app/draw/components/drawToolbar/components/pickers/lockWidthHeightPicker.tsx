@@ -11,12 +11,12 @@ const LockWidthHeightPickerComponent: React.FC<{
     setValue: React.Dispatch<React.SetStateAction<LockWidthHeightValue>>;
     setTempValue: React.Dispatch<React.SetStateAction<LockWidthHeightValue | undefined>>;
 }> = ({ value, tempValue, setValue, setTempValue }) => {
-    const enableLockWidthHeight = (tempValue?.lock ?? false) || value.lock;
+    const enableLockWidthHeight = tempValue ? tempValue.lock : value.lock;
 
     return (
         <KeyEventWrap
             onKeyDown={() => {
-                setTempValue({ lock: true });
+                setTempValue({ lock: !value.lock });
             }}
             onKeyUp={() => {
                 setTempValue(undefined);

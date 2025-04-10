@@ -29,7 +29,7 @@ export type LockAngleValue = {
 
 export const defaultLockAngleValue: LockAngleValue = {
     lock: false,
-    angle: 0,
+    angle: 30,
 };
 
 export type ArrowConfigValue = {

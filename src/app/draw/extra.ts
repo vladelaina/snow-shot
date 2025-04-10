@@ -1,29 +1,17 @@
 import { CanvasLayer } from './types';
-import { CaptureImageLayerActionType } from './components/captureImageLayer';
-import { BlurImageLayerActionType } from './components/blurImageLayer';
 import { DrawLayerActionType } from './components/drawLayer';
 import { SelectLayerActionType } from './components/selectLayer';
 import { ImageBuffer } from '@/commands';
 
 export const switchLayer = (
     layer: CanvasLayer,
-    captureImageLayerAction: CaptureImageLayerActionType | undefined,
-    blurImageLayerAction: BlurImageLayerActionType | undefined,
     drawLayerAction: DrawLayerActionType | undefined,
     selectLayerAction: SelectLayerActionType | undefined,
 ) => {
-    let switchCaptureImage = false;
-    let switchBlurImage = false;
     let switchDraw = false;
     let switchSelect = false;
 
     switch (layer) {
-        case CanvasLayer.CaptureImage:
-            switchCaptureImage = true;
-            break;
-        case CanvasLayer.BlurImage:
-            switchBlurImage = true;
-            break;
         case CanvasLayer.Draw:
             switchDraw = true;
             break;
@@ -32,8 +20,6 @@ export const switchLayer = (
             break;
     }
 
-    captureImageLayerAction?.setEnable(switchCaptureImage);
-    blurImageLayerAction?.setEnable(switchBlurImage);
     drawLayerAction?.setEnable(switchDraw);
     selectLayerAction?.setEnable(switchSelect);
 };

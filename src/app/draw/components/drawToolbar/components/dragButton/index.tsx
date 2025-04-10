@@ -1,4 +1,4 @@
-import { DrawContext } from '@/app/draw/types';
+import { DrawContext, DrawState } from '@/app/draw/types';
 import { ToolbarTip } from '@/components/toolbarTip';
 import { useCallbackRender } from '@/hooks/useCallbackRender';
 import { MousePosition } from '@/utils/mousePosition';
@@ -13,25 +13,23 @@ import React, {
     useState,
 } from 'react';
 import { FormattedMessage } from 'react-intl';
-import { DrawToolbarContext } from '../../extra';
+import { DrawToolbarContext, isEnableSubToolbar } from '../../extra';
 import { ElementRect } from '@/commands';
 import { dragRect } from './extra';
+import { useStateSubscriber } from '@/hooks/useStateSubscriber';
+import { DrawStatePublisher } from '@/app/draw/page';
 
 export type DragButtonActionType = {
     setEnable: (enable: boolean) => void;
     onDraggingChange: (dragging: boolean) => void;
 };
 
-export const DragButton: React.FC<{
-    enableSubToolbar: boolean;
+const DragButtonCore: React.FC<{
     actionRef: React.RefObject<DragButtonActionType | undefined>;
-}> = ({ enableSubToolbar, actionRef }) => {
+}> = ({ actionRef }) => {
     const enableRef = useRef(false);
 
-    const enableSubToolbarRef = useRef(enableSubToolbar);
-    useEffect(() => {
-        enableSubToolbarRef.current = enableSubToolbar;
-    }, [enableSubToolbar]);
+    const enableSubToolbarRef = useRef(false);
 
     const [hideTooltip, setHideTooltip] = useState(false);
     const { selectLayerActionRef, imageBufferRef } = useContext(DrawContext);
@@ -194,10 +192,16 @@ export const DragButton: React.FC<{
         [onEnableChange],
     );
 
-    useEffect(() => {
-        drawSubToolbarRef.current!.style.opacity = enableSubToolbar ? '1' : '0';
-        updateDrawToolbarStyleRender();
-    }, [drawSubToolbarRef, enableSubToolbar, updateDrawToolbarStyleRender]);
+    const onDrawStateChange = useCallback(
+        (drawState: DrawState) => {
+            enableSubToolbarRef.current = isEnableSubToolbar(drawState);
+
+            drawSubToolbarRef.current!.style.opacity = enableSubToolbarRef.current ? '1' : '0';
+            updateDrawToolbarStyleRender();
+        },
+        [drawSubToolbarRef, updateDrawToolbarStyleRender],
+    );
+    useStateSubscriber(DrawStatePublisher, onDrawStateChange);
 
     const onDraggingChange = useCallback((dragging: boolean) => {
         setHideTooltip(dragging);
@@ -221,3 +225,5 @@ export const DragButton: React.FC<{
         </ToolbarTip>
     );
 };
+
+export const DragButton = React.memo(DragButtonCore);

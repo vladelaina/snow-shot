@@ -17,4 +17,18 @@ export const settings = {
     'settings.resetSettings': '确定重置“{title}”为默认设置吗？',
     'settings.antialias': '抗锯齿',
     'settings.renderSettings': '渲染设置',
+    'settings.drawLine': '绘制线条',
+    'settings.enableDrawLineSimplify': '启用简化线条',
+    'settings.enableDrawLineSimplify.tip':
+        '减少绘制线条的采样数，降低绘制时的抖动影响，但会使折角绘制不准确',
+    'settings.drawLineSimplifyTolerance': '简化容差',
+    'settings.drawLineSimplifyTolerance.tip': '容差越小，保留的细节越多',
+    'settings.drawLineSimplifyHighQuality': '简化高质量',
+    'settings.drawLineSimplifyHighQuality.tip': '提高质量但大幅降低性能',
+    'settings.enableDrawLineSmooth': '启用平滑线条',
+    'settings.enableDrawLineSmooth.tip': '平滑线条，减少锯齿',
+    'settings.drawLineSmoothRatio': '细分比例',
+    'settings.drawLineSmoothRatio.tip': '比例越小，线条越平滑',
+    'settings.drawLineSmoothIterations': '细分迭代次数',
+    'settings.drawLineSmoothIterations.tip': '迭代次数越多，线条越平滑',
 };

@@ -4,6 +4,7 @@ import { CanvasHistory } from './canvasHistory';
 import { CanvasDraw } from './canvasDraw';
 import { DrawLayerActionType } from '@/app/draw/components/drawLayer';
 import { vec2, Vec2 } from 'gl-matrix';
+import { LockAngleValue } from '@/app/draw/components/drawToolbar/components/pickers/defaultValues';
 
 export type ArrowStyleConfig = {
     id: string;
@@ -67,7 +68,7 @@ export class CanvasDrawArrow extends CanvasDraw {
         this.action.addChildToTopContainer(this.graphics);
     }
 
-    public execute(_stopPosition: MousePosition): void {
+    public execute(_stopPosition: MousePosition, lockAngle: LockAngleValue): void {
         super.execute();
 
         const stopPosition = new MousePosition(
@@ -85,7 +86,7 @@ export class CanvasDrawArrow extends CanvasDraw {
             vec2.fromValues(this.startPosition.mouseX, this.startPosition.mouseY),
             vec2.fromValues(stopPosition.mouseX, stopPosition.mouseY),
             this.width,
-            30
+            lockAngle.lock ? lockAngle.angle : undefined,
         );
         const firstPoint = paths[0];
         this.graphics.moveTo(firstPoint.x, firstPoint.y);
@@ -98,7 +99,7 @@ export class CanvasDrawArrow extends CanvasDraw {
         this.graphics.stroke();
 
         if (this.fill) {
-            this.graphics.fill();
+            this.graphics.fill(this.color);
         }
     }
 

@@ -11,7 +11,7 @@ const EnableStrikethroughPickerComponent: React.FC<{
     setValue: React.Dispatch<React.SetStateAction<EnableStrikethroughValue>>;
 }> = ({ value, setValue }) => {
     return (
-        <ToolbarTip destroyTooltipOnHide title={<FormattedMessage id="draw.strikethrough" />}>
+        <ToolbarTip title={<FormattedMessage id="draw.strikethrough" />}>
             <Button
                 icon={<StrikethroughOutlined style={{ fontSize: '0.83em' }} />}
                 type={getButtonTypeByState(value.enable)}

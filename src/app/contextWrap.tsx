@@ -91,8 +91,6 @@ export type AppSettingsData = {
         controlNode: AppSettingsControlNode;
         /** 选取窗口子元素 */
         findChildrenElements: boolean;
-        /** 性能模式 */
-        performanceMode: boolean;
     };
     [AppSettingsGroup.Cache]: {
         menuCollapsed: boolean;
@@ -120,6 +118,12 @@ export type AppSettingsData = {
     [AppSettingsGroup.AppFunction]: Record<AppFunction, AppFunctionConfig>;
     [AppSettingsGroup.Render]: {
         antialias: boolean;
+        enableDrawLineSimplify: boolean;
+        drawLineSimplifyTolerance: number;
+        drawLineSimplifyHighQuality: boolean;
+        enableDrawLineSmooth: boolean;
+        drawLineSmoothRatio: number;
+        drawLineSmoothIterations: number;
     };
 };
 
@@ -132,7 +136,6 @@ export const defaultAppSettingsData: AppSettingsData = {
     [AppSettingsGroup.Screenshot]: {
         controlNode: AppSettingsControlNode.Circle,
         findChildrenElements: true,
-        performanceMode: false,
     },
     [AppSettingsGroup.Cache]: {
         menuCollapsed: false,
@@ -160,12 +163,16 @@ export const defaultAppSettingsData: AppSettingsData = {
     [AppSettingsGroup.AppFunction]: defaultAppFunctionConfigs,
     [AppSettingsGroup.Render]: {
         antialias: true,
+        enableDrawLineSimplify: true,
+        drawLineSimplifyTolerance: 0.42,
+        drawLineSimplifyHighQuality: false,
+        enableDrawLineSmooth: true,
+        drawLineSmoothRatio: 0.25,
+        drawLineSmoothIterations: 3,
     },
 };
 
-export type AppSettingsContextType = AppSettingsData & {
-    /** 是否时未加载的默认数据 */
-    isDefaultData: boolean;
+export type AppSettingsActionContextType = {
     updateAppSettings: (
         group: AppSettingsGroup,
         settings: Partial<AppSettingsData[typeof group]>,
@@ -176,17 +183,19 @@ export type AppSettingsContextType = AppSettingsData & {
         syncAllWindow: boolean,
         /** 是否忽略状态更新 */
         ignoreState?: boolean,
+        /** 是否忽略 publisher 更新 */
+        ignorePublisher?: boolean,
     ) => void;
     reloadAppSettings: () => void;
 };
 
-export const AppSettingsContext = createContext<AppSettingsContextType>({
-    isDefaultData: true,
-    ...defaultAppSettingsData,
+export const AppSettingsActionContext = createContext<AppSettingsActionContextType>({
     updateAppSettings: () => {},
     reloadAppSettings: () => {},
 });
 export const AppSettingsPublisher = createPublisher<AppSettingsData>(defaultAppSettingsData);
+
+export const AppSettingsLoadingPublisher = createPublisher<boolean>(true);
 
 export type ScreenshotContextType = {
     imageBuffer: ImageBuffer | undefined;
@@ -212,30 +221,24 @@ const ContextWrapCore: React.FC<{ children: React.ReactNode }> = ({ children }) 
         appWindowRef.current = getCurrentWindow();
     }, []);
 
-    const [isDefaultData, setIsDefaultData] = useState(true);
-
     const [appSettings, _setAppSettings] = useState<AppSettingsData>(defaultAppSettingsData);
     const appSettingsRef = useRef<AppSettingsData>(defaultAppSettingsData);
-    const onAppSettingChange = useCallback(
-        (data: AppSettingsData) => {
-            _setAppSettings(data);
-        },
-        [_setAppSettings],
+    const [, setAppSettingsStatePublisher] = useStateSubscriber(AppSettingsPublisher, undefined);
+    const [, setAppSettingsLoadingPublisher] = useStateSubscriber(
+        AppSettingsLoadingPublisher,
+        undefined,
     );
-    const [, setAppSettingsStatePublisher] = useStateSubscriber(
-        AppSettingsPublisher,
-        onAppSettingChange,
-    );
-    const setAppSettings = useCallback<React.Dispatch<React.SetStateAction<AppSettingsData>>>(
-        (newSettings) => {
-            if (typeof newSettings === 'function') {
-                newSettings = newSettings(appSettingsRef.current);
-            }
-
+    const setAppSettings = useCallback(
+        (newSettings: AppSettingsData, ignoreState?: boolean, ignorePublisher?: boolean) => {
             appSettingsRef.current = newSettings;
-            setAppSettingsStatePublisher(newSettings);
+            if (!ignorePublisher) {
+                setAppSettingsStatePublisher(newSettings);
+            }
+            if (!ignoreState) {
+                _setAppSettings(newSettings);
+            }
         },
-        [setAppSettingsStatePublisher],
+        [_setAppSettings, setAppSettingsStatePublisher],
     );
 
     const writeAppSettings = useCallback(
@@ -271,6 +274,8 @@ const ContextWrapCore: React.FC<{ children: React.ReactNode }> = ({ children }) 
             syncAllWindow: boolean,
             /** 是否忽略状态更新 */
             ignoreState?: boolean,
+            /** 是否忽略 publisher 更新 */
+            ignorePublisher?: boolean,
         ): AppSettingsData[typeof group] => {
             let newSettings: Partial<AppSettingsData[typeof group]>;
             if (typeof val === 'string') {
@@ -346,16 +351,9 @@ const ContextWrapCore: React.FC<{ children: React.ReactNode }> = ({ children }) 
                         : (prevSettings?.findChildrenElements ??
                           defaultAppSettingsData[group].findChildrenElements);
 
-                const performanceMode =
-                    typeof newSettings?.performanceMode === 'boolean'
-                        ? newSettings.performanceMode
-                        : (prevSettings?.performanceMode ??
-                          defaultAppSettingsData[group].performanceMode);
-
                 settings = {
                     controlNode,
                     findChildrenElements,
-                    performanceMode,
                 };
             } else if (group === AppSettingsGroup.DrawToolbarPicker) {
                 newSettings = newSettings as AppSettingsData[typeof group];
@@ -668,8 +666,6 @@ const ContextWrapCore: React.FC<{ children: React.ReactNode }> = ({ children }) 
                         })
                         .join(', ');
 
-                    settingsKeySet.add(keyEventSettingsKey);
-
                     keyEventSettings[key] = {
                         hotKey: keyEventSettingsKey,
                     };
@@ -708,7 +704,6 @@ const ContextWrapCore: React.FC<{ children: React.ReactNode }> = ({ children }) 
                                 return false;
                             }
 
-                            settingsKeySet.add(val);
                             return true;
                         })
                         .join(', ');
@@ -735,19 +730,49 @@ const ContextWrapCore: React.FC<{ children: React.ReactNode }> = ({ children }) 
                         typeof newSettings?.antialias === 'boolean'
                             ? newSettings.antialias
                             : (prevSettings?.antialias ?? defaultAppSettingsData[group].antialias),
+                    enableDrawLineSimplify:
+                        typeof newSettings?.enableDrawLineSimplify === 'boolean'
+                            ? newSettings.enableDrawLineSimplify
+                            : (prevSettings?.enableDrawLineSimplify ??
+                              defaultAppSettingsData[group].enableDrawLineSimplify),
+                    drawLineSimplifyTolerance:
+                        typeof newSettings?.drawLineSimplifyTolerance === 'number'
+                            ? Math.min(Math.max(newSettings.drawLineSimplifyTolerance, 0.1), 5)
+                            : (prevSettings?.drawLineSimplifyTolerance ??
+                              defaultAppSettingsData[group].drawLineSimplifyTolerance),
+                    drawLineSimplifyHighQuality:
+                        typeof newSettings?.drawLineSimplifyHighQuality === 'boolean'
+                            ? newSettings.drawLineSimplifyHighQuality
+                            : (prevSettings?.drawLineSimplifyHighQuality ??
+                              defaultAppSettingsData[group].drawLineSimplifyHighQuality),
+                    enableDrawLineSmooth:
+                        typeof newSettings?.enableDrawLineSmooth === 'boolean'
+                            ? newSettings.enableDrawLineSmooth
+                            : (prevSettings?.enableDrawLineSmooth ??
+                              defaultAppSettingsData[group].enableDrawLineSmooth),
+                    drawLineSmoothRatio:
+                        typeof newSettings?.drawLineSmoothRatio === 'number'
+                            ? Math.min(Math.max(newSettings.drawLineSmoothRatio, 0.1), 0.5)
+                            : (prevSettings?.drawLineSmoothRatio ??
+                              defaultAppSettingsData[group].drawLineSmoothRatio),
+                    drawLineSmoothIterations:
+                        typeof newSettings?.drawLineSmoothIterations === 'number'
+                            ? Math.min(Math.max(newSettings.drawLineSmoothIterations, 1), 8)
+                            : (prevSettings?.drawLineSmoothIterations ??
+                              defaultAppSettingsData[group].drawLineSmoothIterations),
                 };
             } else {
                 return defaultAppSettingsData[group];
             }
 
-            if (!ignoreState) {
-                setAppSettings((prev) => {
-                    return {
-                        ...prev,
-                        [group]: settings,
-                    };
-                });
-            }
+            setAppSettings(
+                {
+                    ...appSettingsRef.current,
+                    [group]: settings,
+                },
+                ignoreState,
+                ignorePublisher,
+            );
 
             if (saveToFile) {
                 if (debounce) {
@@ -763,6 +788,7 @@ const ContextWrapCore: React.FC<{ children: React.ReactNode }> = ({ children }) 
     );
 
     const reloadAppSettings = useCallback(async () => {
+        setAppSettingsLoadingPublisher(true);
         const groups = Object.keys(defaultAppSettingsData).filter(
             (group) => group in defaultAppSettingsData,
         );
@@ -802,6 +828,7 @@ const ContextWrapCore: React.FC<{ children: React.ReactNode }> = ({ children }) 
                     saveToFile,
                     false,
                     true,
+                    true,
                     // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 ) as any;
                 return;
@@ -818,19 +845,16 @@ const ContextWrapCore: React.FC<{ children: React.ReactNode }> = ({ children }) 
                 saveToFile,
                 false,
                 true,
+                true,
                 // eslint-disable-next-line @typescript-eslint/no-explicit-any
             ) as any;
         }
 
-        setAppSettings((prev) => {
-            if (_.isEqual(prev, settings)) {
-                return prev;
-            }
-
-            return settings;
-        });
-        setIsDefaultData(false);
-    }, [setAppSettings, updateAppSettings]);
+        if (_.isEqual(appSettingsRef.current, settings)) {
+            setAppSettings(settings);
+        }
+        setAppSettingsLoadingPublisher(false);
+    }, [setAppSettingsLoadingPublisher, updateAppSettings, setAppSettings]);
     useEffect(() => {
         reloadAppSettings();
     }, [reloadAppSettings]);
@@ -849,12 +873,11 @@ const ContextWrapCore: React.FC<{ children: React.ReactNode }> = ({ children }) 
 
     const appSettingsContextValue = useMemo(() => {
         return {
-            isDefaultData,
             ...appSettings,
             updateAppSettings,
             reloadAppSettings,
         };
-    }, [isDefaultData, appSettings, updateAppSettings, reloadAppSettings]);
+    }, [appSettings, updateAppSettings, reloadAppSettings]);
 
     const appContextValue = useMemo(() => {
         return {
@@ -863,7 +886,7 @@ const ContextWrapCore: React.FC<{ children: React.ReactNode }> = ({ children }) 
     }, [appWindowRef]);
 
     return (
-        <AppSettingsContext.Provider value={appSettingsContextValue}>
+        <AppSettingsActionContext.Provider value={appSettingsContextValue}>
             <ConfigProvider
                 theme={{
                     algorithm: appSettings[AppSettingsGroup.Common].darkMode
@@ -879,8 +902,11 @@ const ContextWrapCore: React.FC<{ children: React.ReactNode }> = ({ children }) 
                     <AppContext.Provider value={appContextValue}>{children}</AppContext.Provider>
                 </IntlProvider>
             </ConfigProvider>
-        </AppSettingsContext.Provider>
+        </AppSettingsActionContext.Provider>
     );
 };
 
-export const ContextWrap = withStatePublisher(ContextWrapCore, AppSettingsPublisher);
+export const ContextWrap = withStatePublisher(
+    withStatePublisher(ContextWrapCore, AppSettingsPublisher),
+    AppSettingsLoadingPublisher,
+);

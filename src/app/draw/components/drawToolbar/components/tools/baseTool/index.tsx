@@ -68,5 +68,7 @@ export function withBaseTool<Props extends object>(
         );
     }
 
-    return withStatePublisher(BaseTool, BaseToolVisiblePublisher, BaseToolEnablePublisher);
+    return React.memo(
+        withStatePublisher(BaseTool, BaseToolVisiblePublisher, BaseToolEnablePublisher),
+    );
 }

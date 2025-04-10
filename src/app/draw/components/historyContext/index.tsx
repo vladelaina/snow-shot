@@ -15,8 +15,14 @@ export const useHistory = () => {
     return context;
 };
 
-export const HistoryProvider = ({ children }: { children: React.ReactNode }) => {
-    const history = useMemo(() => new CanvasHistory(), []);
+export function withCanvasHistory<T extends object>(Component: React.ComponentType<T>) {
+    return function CanvasHistoryProvider(props: T) {
+        const history = useMemo(() => new CanvasHistory(), []);
 
-    return <HistoryContext.Provider value={{ history }}>{children}</HistoryContext.Provider>;
-};
+        return (
+            <HistoryContext.Provider value={{ history }}>
+                <Component {...props} />
+            </HistoryContext.Provider>
+        );
+    };
+}

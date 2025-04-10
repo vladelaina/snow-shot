@@ -2,23 +2,27 @@
 
 import { zIndexs } from '@/utils/zIndex';
 import { CaptureStep, DrawState } from '../../types';
-import { useCallback, useImperativeHandle, useMemo, useRef, useState } from 'react';
-import { Button, Flex, theme } from 'antd';
+import { useCallback, useImperativeHandle, useMemo, useRef } from 'react';
+import { Flex, theme } from 'antd';
 import React from 'react';
 import { DragButton, DragButtonActionType } from './components/dragButton';
-import { DrawToolbarContext, getButtonTypeByState } from './extra';
-import { KeyEventKey, KeyEventWrap } from './components/keyEventWrap';
-import { DragOutlined } from '@ant-design/icons';
-import { ArrowIcon, CircleIcon, RectIcon } from '@/components/icons';
+import { DrawToolbarContext } from './extra';
+import { KeyEventKey } from './components/keyEventWrap';
+import { CloseOutlined, DragOutlined } from '@ant-design/icons';
+import { ArrowIcon, CircleIcon, PenIcon, RectIcon } from '@/components/icons';
 import { EllipseTool, RectTool } from './components/tools/shapeTool';
 import { CaptureStepPublisher, DrawStatePublisher } from '../../page';
 import { useStateSubscriber } from '@/hooks/useStateSubscriber';
 import { createPublisher, withStatePublisher } from '@/hooks/useStatePublisher';
 import { ArrowTool } from './components/tools/arrowTool';
 import { EnableKeyEventPublisher } from './components/keyEventWrap/extra';
+import { HistoryControls } from './components/historyControls';
+import { ToolButton } from './components/toolButton';
+import { PenTool } from './components/tools/penTool';
 
 export type DrawToolbarProps = {
     actionRef: React.RefObject<DrawToolbarActionType | undefined>;
+    onCancel: () => void;
 };
 
 export type DrawToolbarActionType = {
@@ -27,9 +31,8 @@ export type DrawToolbarActionType = {
 
 export const DrawingPublisher = createPublisher<boolean>(false);
 
-const DrawToolbarCore: React.FC<DrawToolbarProps> = ({ actionRef }) => {
-    const [drawState, _setDrawState] = useState(DrawStatePublisher.defaultValue);
-    const [getDrawState, setDrawState] = useStateSubscriber(DrawStatePublisher, _setDrawState);
+const DrawToolbarCore: React.FC<DrawToolbarProps> = ({ actionRef, onCancel }) => {
+    const [getDrawState, setDrawState] = useStateSubscriber(DrawStatePublisher, undefined);
     const [, setCaptureStep] = useStateSubscriber(CaptureStepPublisher, undefined);
     const { token } = theme.useToken();
 
@@ -98,15 +101,6 @@ const DrawToolbarCore: React.FC<DrawToolbarProps> = ({ actionRef }) => {
         [getDrawState, setCaptureStep, setDrawState],
     );
 
-    const enableSubToolbar = useMemo(() => {
-        switch (drawState) {
-            case DrawState.Idle:
-                return false;
-            default:
-                return true;
-        }
-    }, [drawState]);
-
     const drawToolbarContextValue = useMemo(() => {
         return {
             drawToolbarRef,
@@ -138,7 +132,6 @@ const DrawToolbarCore: React.FC<DrawToolbarProps> = ({ actionRef }) => {
             setEnable,
         };
     }, [setEnable]);
-
     return (
         <div
             className="draw-toolbar-container"
@@ -151,87 +144,85 @@ const DrawToolbarCore: React.FC<DrawToolbarProps> = ({ actionRef }) => {
             <DrawToolbarContext.Provider value={drawToolbarContextValue}>
                 <div className="draw-toolbar" ref={drawToolbarRef}>
                     <Flex align="center" gap={token.paddingXS}>
-                        <DragButton
-                            enableSubToolbar={enableSubToolbar}
-                            actionRef={dragButtonActionRef}
-                        />
+                        <DragButton actionRef={dragButtonActionRef} />
 
                         {/* 默认状态 */}
-                        <KeyEventWrap
-                            onKeyDownEventPropName="onClick"
+                        <ToolButton
                             componentKey={KeyEventKey.MoveTool}
+                            icon={<DragOutlined />}
                             disableOnDrawing
-                        >
-                            <Button
-                                icon={<DragOutlined />}
-                                type={getButtonTypeByState(drawState === DrawState.Idle)}
-                                onClick={() => {
-                                    onToolClick(DrawState.Idle);
-                                }}
-                            />
-                        </KeyEventWrap>
-
-                        {/* 选择物体 */}
-                        {/* <KeyEventWrap
-                            onKeyDownEventPropName="onClick"
-                            componentKey={KeyEventKey.SelectTool}
-                            enable={enableKeyEvent}
-                        >
-                            <Button
-                                icon={<ArrowSelectIcon style={{ fontSize: '1.08em' }} />}
-                                type={getButtonTypeByState(drawState === DrawState.Select)}
-                                onClick={() => {
-                                    onToolClick(DrawState.Select);
-                                }}
-                            />
-                        </KeyEventWrap> */}
+                            drawState={DrawState.Idle}
+                            onClick={() => {
+                                onToolClick(DrawState.Idle);
+                            }}
+                        />
 
                         <div className="draw-toolbar-splitter" />
 
                         {/* 矩形 */}
-                        <KeyEventWrap
-                            onKeyDownEventPropName="onClick"
+                        <ToolButton
                             componentKey={KeyEventKey.RectTool}
+                            icon={<RectIcon style={{ fontSize: '1em' }} />}
                             disableOnDrawing
-                        >
-                            <Button
-                                icon={<RectIcon style={{ fontSize: '1em' }} />}
-                                type={getButtonTypeByState(drawState === DrawState.Rect)}
-                                onClick={() => {
-                                    onToolClick(DrawState.Rect);
-                                }}
-                            />
-                        </KeyEventWrap>
+                            drawState={DrawState.Rect}
+                            onClick={() => {
+                                onToolClick(DrawState.Rect);
+                            }}
+                        />
 
                         {/* 椭圆 */}
-                        <KeyEventWrap
-                            onKeyDownEventPropName="onClick"
+                        <ToolButton
                             componentKey={KeyEventKey.EllipseTool}
+                            icon={<CircleIcon style={{ fontSize: '1em' }} />}
                             disableOnDrawing
-                        >
-                            <Button
-                                icon={<CircleIcon style={{ fontSize: '1em' }} />}
-                                type={getButtonTypeByState(drawState === DrawState.Ellipse)}
-                                onClick={() => {
-                                    onToolClick(DrawState.Ellipse);
-                                }}
-                            />
-                        </KeyEventWrap>
+                            drawState={DrawState.Ellipse}
+                            onClick={() => {
+                                onToolClick(DrawState.Ellipse);
+                            }}
+                        />
 
                         {/* 箭头 */}
-                        <KeyEventWrap
-                            onKeyDownEventPropName="onClick"
+                        <ToolButton
                             componentKey={KeyEventKey.ArrowTool}
+                            icon={<ArrowIcon style={{ fontSize: '0.83em' }} />}
                             disableOnDrawing
-                        >
-                            <Button
-                                icon={<ArrowIcon style={{ fontSize: '0.83em' }} />}
-                                type={getButtonTypeByState(drawState === DrawState.Arrow)}
-                                onClick={() => {
-                                    onToolClick(DrawState.Arrow);
-                                }}
-                            />
-                        </KeyEventWrap>
+                            drawState={DrawState.Arrow}
+                            onClick={() => {
+                                onToolClick(DrawState.Arrow);
+                            }}
+                        />
+
+                        {/* 画笔 */}
+                        <ToolButton
+                            componentKey={KeyEventKey.PenTool}
+                            icon={<PenIcon style={{ fontSize: '1.08em' }} />}
+                            disableOnDrawing
+                            drawState={DrawState.Pen}
+                            onClick={() => {
+                                onToolClick(DrawState.Pen);
+                            }}
+                        />
+
+                        <div className="draw-toolbar-splitter" />
+
+                        <HistoryControls />
+
+                        <div className="draw-toolbar-splitter" />
+
+                        {/* 取消截图 */}
+                        <ToolButton
+                            componentKey={KeyEventKey.CancelTool}
+                            icon={
+                                <CloseOutlined
+                                    style={{ fontSize: '0.83em', color: token.colorError }}
+                                />
+                            }
+                            disableOnDrawing
+                            drawState={DrawState.Cancel}
+                            onClick={() => {
+                                onCancel();
+                            }}
+                        />
                     </Flex>
 
                     <div className="draw-subtoolbar-container">
@@ -239,6 +230,7 @@ const DrawToolbarCore: React.FC<DrawToolbarProps> = ({ actionRef }) => {
                             <EllipseTool />
                             <RectTool />
                             <ArrowTool />
+                            <PenTool />
                         </div>
                     </div>
                 </div>

@@ -39,8 +39,7 @@ const ColorPickerCore: React.FC<{
 
     const { token } = theme.useToken();
 
-    const { imageBufferRef, captureImageLayerActionRef, mousePositionRef } =
-        useContext(DrawContext);
+    const { imageBufferRef, drawLayerActionRef, mousePositionRef } = useContext(DrawContext);
 
     const appWindowRef = useRef<AppWindow | undefined>(undefined);
     useEffect(() => {
@@ -124,6 +123,11 @@ const ColorPickerCore: React.FC<{
                 return;
             }
 
+            const imageBuffer = imageBufferRef.current;
+            if (!imageBuffer) {
+                return;
+            }
+
             // 延迟一下阻止鼠标事件触发
             if (moveCursorFinishedTimeoutRef.current) {
                 clearTimeout(moveCursorFinishedTimeoutRef.current);
@@ -144,8 +148,8 @@ const ColorPickerCore: React.FC<{
             //     imageBufferRef.current!.monitorHeight,
             // );
 
-            mouseX = physicalX ?? Math.floor(mouseX * imageBufferRef.current!.monitorScaleFactor);
-            mouseY = physicalY ?? Math.floor(mouseY * imageBufferRef.current!.monitorScaleFactor);
+            mouseX = physicalX ?? Math.floor(mouseX * imageBuffer.monitorScaleFactor);
+            mouseY = physicalY ?? Math.floor(mouseY * imageBuffer.monitorScaleFactor);
 
             const ctx = previewCanvasCtxRef.current!;
             const halfPickerSize = Math.floor(previewPickerSize / 2);
@@ -156,7 +160,7 @@ const ColorPickerCore: React.FC<{
             const pickerY = y + halfPickerSize;
             updatePickerPosition(pickerX, pickerY);
             const imageData = currentCanvasImageDataRef.current!;
-            const baseIndex = (pickerY * imageBufferRef.current!.monitorWidth + pickerX) * 4;
+            const baseIndex = (pickerY * imageBuffer.monitorWidth + pickerX) * 4;
 
             // 更新颜色
             updateColor(
@@ -217,7 +221,7 @@ const ColorPickerCore: React.FC<{
         previewCanvas.height = previewCanvasSize;
     }, []);
     const initImageData = useCallback(() => {
-        const canvasApp = captureImageLayerActionRef.current?.getCanvasApp();
+        const canvasApp = drawLayerActionRef.current?.getCanvasApp();
         if (!canvasApp) {
             return;
         }
@@ -244,7 +248,7 @@ const ColorPickerCore: React.FC<{
 
             update(mousePositionRef.current.mouseX, mousePositionRef.current.mouseY);
         });
-    }, [captureImageLayerActionRef, imageBufferRef, mousePositionRef, update]);
+    }, [drawLayerActionRef, imageBufferRef, mousePositionRef, update]);
     const onCaptureLoad = useCallback(
         (captureLoading: boolean) => {
             setEnableKeyEvent(!captureLoading);

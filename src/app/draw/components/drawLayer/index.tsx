@@ -1,14 +1,16 @@
 'use client';
 
-import { useCallback, useImperativeHandle } from 'react';
+import { useCallback, useContext, useImperativeHandle, useRef } from 'react';
 import React from 'react';
 import {
     BaseLayerEventActionType,
     withBaseLayer,
     BaseLayerActionType,
     defaultBaseLayerActions,
+    BaseLayerContext,
 } from '../baseLayer';
 import { zIndexs } from '@/utils/zIndex';
+import * as PIXI from 'pixi.js';
 
 export type DrawLayerActionType = BaseLayerActionType & {};
 
@@ -17,11 +19,31 @@ export type DrawLayerProps = {
 };
 
 const DrawLayerCore: React.FC<DrawLayerProps> = ({ actionRef }) => {
-    const onCaptureReady = useCallback<
-        BaseLayerEventActionType['onCaptureReady']
-    >(async (): Promise<void> => {}, []);
+    const { addChildToTopContainer, createNewCanvasContainer } = useContext(BaseLayerContext);
 
-    const onCaptureFinish = useCallback<BaseLayerEventActionType['onCaptureFinish']>(() => {}, []);
+    const imageTextureRef = useRef<PIXI.Texture | undefined>(undefined);
+    const blurContainerRef = useRef<PIXI.Container | undefined>(undefined);
+    const drawContainerRef = useRef<PIXI.Container | undefined>(undefined);
+    /*
+     * 初始化截图
+     */
+    const onCaptureReady = useCallback<BaseLayerEventActionType['onCaptureReady']>(
+        async (texture: PIXI.Texture): Promise<void> => {
+            // 底图作为单独的层级显示
+            const imageSprite = new PIXI.Sprite(texture);
+            addChildToTopContainer(imageSprite);
+
+            // 模糊层和和绘制层独立处理
+            imageTextureRef.current = texture;
+            blurContainerRef.current = createNewCanvasContainer();
+            drawContainerRef.current = createNewCanvasContainer();
+        },
+        [addChildToTopContainer, createNewCanvasContainer],
+    );
+
+    const onCaptureFinish = useCallback<
+        BaseLayerEventActionType['onCaptureFinish']
+    >(async () => {}, []);
 
     useImperativeHandle(
         actionRef,

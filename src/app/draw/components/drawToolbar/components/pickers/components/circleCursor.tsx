@@ -1,9 +1,13 @@
-import { DrawContext } from '@/app/draw_old/context';
-import React, { useContext, useEffect } from 'react';
+import { DrawContext } from '@/app/draw/types';
+import React, { useCallback, useContext, useEffect } from 'react';
+
+export type CircleCursorActionType = {
+    setRadius: (radius: number) => void;
+};
 
 const CircleCursorCore: React.FC<{
-    radius: number;
-}> = ({ radius }) => {
+    actionRef: React.RefObject<CircleCursorActionType | undefined>;
+}> = ({ actionRef }) => {
     const { circleCursorRef } = useContext(DrawContext);
 
     useEffect(() => {
@@ -40,14 +44,23 @@ const CircleCursorCore: React.FC<{
         };
     }, [circleCursorRef]);
 
+    const setRadius = useCallback(
+        (radius: number) => {
+            const circleCursor = circleCursorRef.current;
+            if (!circleCursor) {
+                return;
+            }
+            circleCursor.style.width = `${radius * 2}px`;
+            circleCursor.style.height = `${radius * 2}px`;
+        },
+        [circleCursorRef],
+    );
+
     useEffect(() => {
-        const circleCursor = circleCursorRef.current;
-        if (!circleCursor) {
-            return;
-        }
-        circleCursor.style.width = `${radius * 2}px`;
-        circleCursor.style.height = `${radius * 2}px`;
-    }, [circleCursorRef, radius]);
+        actionRef.current = {
+            setRadius,
+        };
+    }, [actionRef, setRadius]);
 
     return null;
 };
