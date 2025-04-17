@@ -4,6 +4,8 @@ import { SelectLayerActionType } from './components/selectLayer';
 import { ImageBuffer } from '@/commands';
 import { DrawToolbarActionType } from './components/drawToolbar';
 import { MousePosition } from '@/utils/mousePosition';
+import { DrawCacheLayerActionType } from './components/drawCacheLayer/extra';
+
 export enum CaptureStep {
     // 选择阶段
     Pending = 0,
@@ -27,6 +29,8 @@ export enum DrawState {
     Arrow = 4,
     // 画笔
     Pen = 5,
+    // 高亮
+    Highlight = 6,
     Redo = 101,
     Undo = 102,
     Cancel = 103,
@@ -47,6 +51,7 @@ export type DrawContextType = {
     mousePositionRef: React.RefObject<MousePosition>;
     drawToolbarActionRef: React.RefObject<DrawToolbarActionType | undefined>;
     circleCursorRef: React.RefObject<HTMLDivElement | null>;
+    drawCacheLayerActionRef: React.RefObject<DrawCacheLayerActionType | undefined>;
 };
 
 export const DrawContext = React.createContext<DrawContextType>({
@@ -57,4 +62,5 @@ export const DrawContext = React.createContext<DrawContextType>({
     selectLayerActionRef: { current: undefined },
     drawToolbarActionRef: { current: undefined },
     circleCursorRef: { current: null },
+    drawCacheLayerActionRef: { current: undefined },
 });

@@ -66,3 +66,44 @@ export const dragRect = (
         newOriginPosition: boundaryHit ? adjustedOriginPosition : originMousePosition,
     };
 };
+
+export const updateElementPosition = (
+    element: HTMLElement,
+    baseOffsetX: number,
+    baseOffsetY: number,
+    originMousePosition: MousePosition,
+    currentMousePosition: MousePosition,
+    previousRect: ElementRect | undefined,
+) => {
+    const { clientWidth: toolbarWidth, clientHeight: toolbarHeight } = element;
+
+    const viewportWidth = Math.max(document.body.clientWidth, toolbarWidth);
+    const viewportHeight = Math.max(document.body.clientHeight, toolbarHeight);
+
+    const dragRes = dragRect(
+        {
+            min_x: 0,
+            min_y: 0,
+            max_x: toolbarWidth,
+            max_y: toolbarHeight,
+        },
+        originMousePosition,
+        currentMousePosition,
+        previousRect,
+        {
+            min_x: -baseOffsetX,
+            min_y: -baseOffsetY,
+            max_x: viewportWidth - baseOffsetX,
+            max_y: viewportHeight - baseOffsetY,
+        },
+    );
+
+    const translateX = baseOffsetX + dragRes.rect.min_x;
+    const translateY = baseOffsetY + dragRes.rect.min_y;
+    element.style.transform = `translate(${translateX}px, ${translateY}px)`;
+
+    return {
+        rect: dragRes.rect,
+        originPosition: dragRes.newOriginPosition,
+    };
+};

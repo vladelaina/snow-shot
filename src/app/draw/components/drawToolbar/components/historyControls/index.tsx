@@ -1,4 +1,4 @@
-import { KeyEventKey } from '../keyEventWrap';
+import { KeyEventKey } from '../keyEventWrap/extra';
 import { RedoOutlined, UndoOutlined } from '@ant-design/icons';
 import { useHistory } from '../../../historyContext';
 import { useEffect, useState } from 'react';

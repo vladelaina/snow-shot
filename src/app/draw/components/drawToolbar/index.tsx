@@ -1,24 +1,22 @@
 'use client';
 
 import { zIndexs } from '@/utils/zIndex';
-import { CaptureStep, DrawState } from '../../types';
-import { useCallback, useImperativeHandle, useMemo, useRef } from 'react';
+import { CaptureStep, DrawContext, DrawState } from '../../types';
+import { useCallback, useContext, useImperativeHandle, useMemo, useRef } from 'react';
 import { Flex, theme } from 'antd';
 import React from 'react';
 import { DragButton, DragButtonActionType } from './components/dragButton';
 import { DrawToolbarContext } from './extra';
-import { KeyEventKey } from './components/keyEventWrap';
-import { CloseOutlined, DragOutlined } from '@ant-design/icons';
+import { KeyEventKey } from './components/keyEventWrap/extra';
+import { CloseOutlined, DragOutlined, HighlightOutlined } from '@ant-design/icons';
 import { ArrowIcon, CircleIcon, PenIcon, RectIcon } from '@/components/icons';
-import { EllipseTool, RectTool } from './components/tools/shapeTool';
-import { CaptureStepPublisher, DrawStatePublisher } from '../../page';
+import { CaptureStepPublisher, DrawStatePublisher } from '../../extra';
 import { useStateSubscriber } from '@/hooks/useStateSubscriber';
 import { createPublisher, withStatePublisher } from '@/hooks/useStatePublisher';
-import { ArrowTool } from './components/tools/arrowTool';
 import { EnableKeyEventPublisher } from './components/keyEventWrap/extra';
 import { HistoryControls } from './components/historyControls';
 import { ToolButton } from './components/toolButton';
-import { PenTool } from './components/tools/penTool';
+import { FormattedMessage } from 'react-intl';
 
 export type DrawToolbarProps = {
     actionRef: React.RefObject<DrawToolbarActionType | undefined>;
@@ -32,6 +30,8 @@ export type DrawToolbarActionType = {
 export const DrawingPublisher = createPublisher<boolean>(false);
 
 const DrawToolbarCore: React.FC<DrawToolbarProps> = ({ actionRef, onCancel }) => {
+    const { drawCacheLayerActionRef } = useContext(DrawContext);
+
     const [getDrawState, setDrawState] = useStateSubscriber(DrawStatePublisher, undefined);
     const [, setCaptureStep] = useStateSubscriber(CaptureStepPublisher, undefined);
     const { token } = theme.useToken();
@@ -39,7 +39,6 @@ const DrawToolbarCore: React.FC<DrawToolbarProps> = ({ actionRef, onCancel }) =>
     const enableRef = useRef(false);
     const drawToolarContainerRef = useRef<HTMLDivElement | null>(null);
     const drawToolbarRef = useRef<HTMLDivElement | null>(null);
-    const drawSubToolbarRef = useRef<HTMLDivElement | null>(null);
     const dragButtonActionRef = useRef<DragButtonActionType | undefined>(undefined);
     const [, setEnableKeyEvent] = useStateSubscriber(EnableKeyEventPublisher, undefined);
     const draggingRef = useRef(false);
@@ -96,23 +95,41 @@ const DrawToolbarCore: React.FC<DrawToolbarProps> = ({ actionRef, onCancel }) =>
                 setCaptureStep(CaptureStep.Select);
             }
 
+            switch (next) {
+                case DrawState.Idle:
+                    drawCacheLayerActionRef.current?.setEnable(false);
+                    drawCacheLayerActionRef.current?.setActiveTool({
+                        type: 'selection',
+                    });
+                    break;
+                case DrawState.Rect:
+                    drawCacheLayerActionRef.current?.setEnable(true);
+                    drawCacheLayerActionRef.current?.setActiveTool({
+                        type: 'rectangle',
+                        locked: true,
+                    });
+                    break;
+                default:
+                    break;
+            }
+
             setDrawState(next);
         },
-        [getDrawState, setCaptureStep, setDrawState],
+        [drawCacheLayerActionRef, getDrawState, setCaptureStep, setDrawState],
     );
 
     const drawToolbarContextValue = useMemo(() => {
         return {
             drawToolbarRef,
-            drawSubToolbarRef,
             draggingRef,
             setDragging,
         };
-    }, [drawToolbarRef, drawSubToolbarRef, draggingRef, setDragging]);
+    }, [drawToolbarRef, draggingRef, setDragging]);
 
     const onEnableChange = useCallback((enable: boolean) => {
         enableRef.current = enable;
         dragButtonActionRef.current?.setEnable(enable);
+        drawToolarContainerRef.current!.style.pointerEvents = enable ? 'auto' : 'none';
     }, []);
 
     const setEnable = useCallback(
@@ -203,6 +220,17 @@ const DrawToolbarCore: React.FC<DrawToolbarProps> = ({ actionRef, onCancel }) =>
                             }}
                         />
 
+                        {/* 高亮 */}
+                        <ToolButton
+                            componentKey={KeyEventKey.HighlightTool}
+                            icon={<HighlightOutlined />}
+                            disableOnDrawing
+                            drawState={DrawState.Highlight}
+                            onClick={() => {
+                                onToolClick(DrawState.Highlight);
+                            }}
+                        />
+
                         <div className="draw-toolbar-splitter" />
 
                         <HistoryControls />
@@ -217,6 +245,7 @@ const DrawToolbarCore: React.FC<DrawToolbarProps> = ({ actionRef, onCancel }) =>
                                     style={{ fontSize: '0.83em', color: token.colorError }}
                                 />
                             }
+                            confirmTip={<FormattedMessage id="draw.cancel.tip1" />}
                             disableOnDrawing
                             drawState={DrawState.Cancel}
                             onClick={() => {
@@ -224,15 +253,6 @@ const DrawToolbarCore: React.FC<DrawToolbarProps> = ({ actionRef, onCancel }) =>
                             }}
                         />
                     </Flex>
-
-                    <div className="draw-subtoolbar-container">
-                        <div className="draw-subtoolbar" ref={drawSubToolbarRef}>
-                            <EllipseTool />
-                            <RectTool />
-                            <ArrowTool />
-                            <PenTool />
-                        </div>
-                    </div>
                 </div>
             </DrawToolbarContext.Provider>
             <style jsx>{`
@@ -249,8 +269,7 @@ const DrawToolbarCore: React.FC<DrawToolbarProps> = ({ actionRef, onCancel }) =>
                     opacity: 0;
                 }
 
-                .draw-toolbar,
-                .draw-subtoolbar :global(.base-tool-container) {
+                .draw-toolbar {
                     padding: ${token.paddingXXS}px ${token.paddingSM}px;
                     box-sizing: border-box;
                     background-color: ${token.colorBgContainer};
@@ -272,10 +291,13 @@ const DrawToolbarCore: React.FC<DrawToolbarProps> = ({ actionRef, onCancel }) =>
                     height: 100%;
                 }
 
-                .draw-toolbar :global(.draw-toolbar-drag) {
-                    font-size: 18px;
+                :global(.drag-button) {
                     color: ${token.colorTextQuaternary};
                     cursor: move;
+                }
+
+                .draw-toolbar :global(.draw-toolbar-drag) {
+                    font-size: 18px;
                     margin-right: -3px;
                     margin-left: -3px;
                 }

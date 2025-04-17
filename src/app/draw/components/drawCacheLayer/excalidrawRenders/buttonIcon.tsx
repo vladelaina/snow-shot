@@ -1,0 +1,27 @@
+import { ExcalidrawPropsCustomOptions } from '@mg-chao/excalidraw/types';
+import React from 'react';
+import { Button } from 'antd';
+import { getButtonTypeByState } from '../../drawToolbar/extra';
+
+export const ButtonIcon = React.forwardRef<
+    HTMLButtonElement,
+    React.ComponentProps<
+        NonNullable<NonNullable<ExcalidrawPropsCustomOptions['pickerRenders']>['CustomButtonIcon']>
+    >
+>((props, ref) => {
+    const { title, testId, active, icon, onClick } = props;
+    return (
+        <Button
+            ref={ref}
+            key={title}
+            title={title}
+            type={getButtonTypeByState(active ?? false)}
+            data-testid={testId}
+            onClick={onClick}
+        >
+            {icon}
+        </Button>
+    );
+});
+
+ButtonIcon.displayName = 'ButtonIcon';

@@ -135,3 +135,23 @@ export type LineWidthPickerValue = {
 export const defaultLineWidthPickerValue: LineWidthPickerValue = {
     width: 5,
 };
+
+export type EnableStraightLineValue = {
+    enable: boolean;
+};
+
+export const defaultEnableStraightLineValue: EnableStraightLineValue = {
+    enable: false,
+};
+
+export type MaintainAspectRatioValue = {};
+
+export const defaultMaintainAspectRatioValue: MaintainAspectRatioValue = {};
+
+export type ResizeFromCenterValue = {};
+
+export const defaultResizeFromCenterValue: ResizeFromCenterValue = {};
+
+export type RotateWithDiscreteAngleValue = {};
+
+export const defaultRotateWithDiscreteAngleValue: RotateWithDiscreteAngleValue = {};

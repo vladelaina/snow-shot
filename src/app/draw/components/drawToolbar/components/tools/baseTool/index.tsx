@@ -5,7 +5,7 @@ import { ComponentType } from 'react';
 import { Flex, theme } from 'antd';
 import { DrawState } from '@/app/draw/types';
 import { useStateSubscriber } from '@/hooks/useStateSubscriber';
-import { DrawStatePublisher } from '@/app/draw/page';
+import { DrawStatePublisher } from '@/app/draw/extra';
 import { createPublisher, withStatePublisher } from '@/hooks/useStatePublisher';
 import { EnableKeyEventPublisher } from '@/app/draw/components/drawToolbar/components/keyEventWrap/extra';
 

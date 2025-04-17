@@ -1,48 +1,56 @@
 import { DrawContext } from '@/app/draw/types';
-import React, { useCallback, useContext, useEffect } from 'react';
+import React, { useCallback, useContext, useEffect, useState } from 'react';
+import { useCallbackRender } from '@/hooks/useCallbackRender';
 
 export type CircleCursorActionType = {
     setRadius: (radius: number) => void;
+    setEnable: (enable: boolean) => void;
 };
 
 const CircleCursorCore: React.FC<{
     actionRef: React.RefObject<CircleCursorActionType | undefined>;
 }> = ({ actionRef }) => {
-    const { circleCursorRef } = useContext(DrawContext);
+    const { circleCursorRef, drawLayerActionRef } = useContext(DrawContext);
+
+    const [enable, setEnable] = useState(false);
+
+    const onMouseMove = (cursor: HTMLDivElement, clientX: number, clientY: number) => {
+        if (!cursor) {
+            return;
+        }
+
+        cursor.style.transform = `translate(calc(${clientX}px - 50%), calc(${clientY}px - 50%))`;
+    };
+    const onMouseMoveRender = useCallbackRender(onMouseMove);
 
     useEffect(() => {
+        if (!enable) {
+            return;
+        }
+
         const cursor = circleCursorRef.current;
         if (!cursor) {
             return;
         }
 
-        let x = 0;
-        let y = 0;
-        let rendered = true;
-        const onMouseMove = (e: MouseEvent) => {
-            if (!rendered) {
-                return;
-            }
+        const layerAction = drawLayerActionRef.current;
+        if (!layerAction) {
+            return;
+        }
 
-            x = e.clientX;
-            y = e.clientY;
+        layerAction.changeCursor('none');
 
-            rendered = false;
-            requestAnimationFrame(() => {
-                rendered = true;
-
-                cursor.style.transform = `translate(calc(${x}px - 50%), calc(${y}px - 50%))`;
-            });
+        const handleMouseMove = (e: MouseEvent) => {
+            onMouseMoveRender(cursor, e.clientX, e.clientY);
         };
-
-        document.addEventListener('mousemove', onMouseMove);
+        document.addEventListener('mousemove', handleMouseMove);
 
         return () => {
-            document.removeEventListener('mousemove', onMouseMove);
+            document.removeEventListener('mousemove', handleMouseMove);
             cursor.style.width = '0px';
             cursor.style.height = '0px';
         };
-    }, [circleCursorRef]);
+    }, [enable, drawLayerActionRef, circleCursorRef, onMouseMoveRender]);
 
     const setRadius = useCallback(
         (radius: number) => {
@@ -59,8 +67,9 @@ const CircleCursorCore: React.FC<{
     useEffect(() => {
         actionRef.current = {
             setRadius,
+            setEnable,
         };
-    }, [actionRef, setRadius]);
+    }, [actionRef, setEnable, setRadius]);
 
     return null;
 };

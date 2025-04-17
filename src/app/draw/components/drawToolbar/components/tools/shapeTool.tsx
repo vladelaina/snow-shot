@@ -1,148 +1,66 @@
 import { FillShapePicker } from '../pickers/fillShapePicker';
 import { LineColorPicker } from '../pickers/lineColorPicker';
 import { LineWidthPicker } from '../pickers/lineWidthPicker';
-import { LockWidthHeightPicker } from '../pickers/lockWidthHeightPicker';
-import { RadiusPicker } from '../pickers/radiusPicker';
 import { useCallback, useContext, useRef } from 'react';
 import { BaseToolEnablePublisher, withBaseTool } from './baseTool';
 import { DrawContext, DrawState } from '@/app/draw/types';
-import { MousePosition } from '@/utils/mousePosition';
-import { useCallbackRender } from '@/hooks/useCallbackRender';
-import { CanvasDrawShape, CanvasDrawShapeType } from '@/core/canvas/canvasDrawShape';
-import { useHistory } from '../../../historyContext';
+import { CanvasDrawShapeType } from '@/core/canvas/canvasDrawShape';
 import { useStateSubscriber } from '@/hooks/useStateSubscriber';
-import { DrawingPublisher } from '../..';
-import { defaultLineColorPickerValue, LineColorPickerValue } from '../pickers/defaultValues';
+import {
+    defaultEnableRadiusValue,
+    defaultLineColorPickerValue,
+    LineColorPickerValue,
+} from '../pickers/defaultValues';
 import { defaultLineWidthPickerValue } from '../pickers/defaultValues';
-import { defaultRadiusPickerValue } from '../pickers/defaultValues';
-import { defaultLockWidthHeightValue } from '../pickers/defaultValues';
 import { defaultFillShapePickerValue } from '../pickers/defaultValues';
+import { EnableRadiusPicker } from '../pickers/enableRadiusPicker';
+import { CaptureUpdateAction } from '@mg-chao/excalidraw/index';
 
 const ShapeTool: React.FC<{
     shapeType: CanvasDrawShapeType;
 }> = ({ shapeType }) => {
-    const { history } = useHistory();
-
-    const { drawLayerActionRef, imageBufferRef, mousePositionRef } = useContext(DrawContext);
+    const { drawCacheLayerActionRef } = useContext(DrawContext);
 
     const borderWidthRef = useRef(defaultLineWidthPickerValue);
-    const radiusRef = useRef(defaultRadiusPickerValue);
+    const enableRadiusRef = useRef(defaultEnableRadiusValue);
     const borderColorRef = useRef(defaultLineColorPickerValue);
-    const lockWidthHeightRef = useRef(defaultLockWidthHeightValue);
     const fillShapeRef = useRef(defaultFillShapePickerValue);
-    const [, setDrawing] = useStateSubscriber(DrawingPublisher, undefined);
+
     const [getEnable] = useStateSubscriber(BaseToolEnablePublisher, undefined);
-
-    const canvasDrawShapeRef = useRef<CanvasDrawShape | undefined>(undefined);
-
-    const onMouseDown = useCallback(
-        (mousePosition: MousePosition) => {
-            if (!getEnable()) {
-                return;
-            }
-            if (!canvasDrawShapeRef.current) {
-                return;
-            }
-
-            canvasDrawShapeRef.current.setStyle(
-                borderWidthRef.current.width,
-                radiusRef.current.radius,
-                borderColorRef.current.color,
-                fillShapeRef.current.fill,
-            );
-            canvasDrawShapeRef.current.start(mousePosition);
-        },
-        [getEnable],
-    );
-
-    const onMouseMove = useCallback((mousePosition: MousePosition) => {
-        if (!canvasDrawShapeRef.current) {
+    const updateStyle = useCallback(() => {
+        if (!getEnable()) {
             return;
         }
-        if (!canvasDrawShapeRef.current.drawing) {
-            return;
-        }
-        canvasDrawShapeRef.current.execute(mousePosition, lockWidthHeightRef.current.lock);
-    }, []);
-    const onMouseMoveRender = useCallbackRender(onMouseMove);
-    const refreshMouseMove = useCallback(() => {
-        onMouseMoveRender(mousePositionRef.current);
-    }, [onMouseMoveRender, mousePositionRef]);
 
-    const onMouseUp = useCallback(() => {
-        if (!canvasDrawShapeRef.current) {
-            return;
-        }
-        if (!canvasDrawShapeRef.current.drawing) {
-            return;
-        }
-        canvasDrawShapeRef.current.finish();
-    }, []);
+        drawCacheLayerActionRef.current?.updateScene({
+            appState: {
+                currentItemStrokeColor: borderColorRef.current.color,
+                currentItemStrokeWidth: borderWidthRef.current.width,
+                currentItemRoundness: enableRadiusRef.current.enable ? 'round' : 'sharp',
+                currentItemBackgroundColor: fillShapeRef.current.fill
+                    ? borderColorRef.current.color
+                    : 'transparent',
+            },
+            captureUpdate: CaptureUpdateAction.NEVER,
+        });
+    }, [drawCacheLayerActionRef, getEnable]);
 
-    const initEvents = useCallback(
-        (enable: boolean) => {
-            if (!enable) {
-                return;
-            }
+    const initDraw = useCallback(() => {
+        drawCacheLayerActionRef.current?.setEnable(true);
+        drawCacheLayerActionRef.current?.setActiveTool({
+            type: 'rectangle',
+            locked: true,
+        });
+        updateStyle();
+    }, [drawCacheLayerActionRef, updateStyle]);
 
-            const layerContainerElement = drawLayerActionRef.current?.getLayerContainerElement();
-            if (!layerContainerElement) {
-                return;
-            }
-
-            const handleMouseDown = (e: MouseEvent) => {
-                const mousePosition = new MousePosition(e.clientX, e.clientY);
-                onMouseDown(mousePosition);
-            };
-
-            const handleMouseMove = (e: MouseEvent) => {
-                const mousePosition = new MousePosition(e.clientX, e.clientY);
-                onMouseMoveRender(mousePosition);
-            };
-
-            const handleMouseUp = () => {
-                onMouseUp();
-            };
-
-            layerContainerElement.addEventListener('mousemove', handleMouseMove);
-            layerContainerElement.addEventListener('mouseup', handleMouseUp);
-            layerContainerElement.addEventListener('mousedown', handleMouseDown);
-
-            return () => {
-                layerContainerElement.removeEventListener('mousemove', handleMouseMove);
-                layerContainerElement.removeEventListener('mouseup', handleMouseUp);
-                layerContainerElement.removeEventListener('mousedown', handleMouseDown);
-            };
-        },
-        [drawLayerActionRef, onMouseUp, onMouseDown, onMouseMoveRender],
-    );
-
-    const initCanvasDrawShape = useCallback(
-        (enable: boolean) => {
-            if (!enable) {
-                return;
-            }
-
-            if (!drawLayerActionRef.current) {
-                return;
-            }
-
-            canvasDrawShapeRef.current = new CanvasDrawShape(
-                history,
-                imageBufferRef.current?.monitorScaleFactor ?? 1,
-                setDrawing,
-                drawLayerActionRef.current,
-                shapeType,
-            );
-        },
-        [history, drawLayerActionRef, imageBufferRef, shapeType, setDrawing],
-    );
     const onEnableChange = useCallback(
         (enable: boolean) => {
-            initEvents(enable);
-            initCanvasDrawShape(enable);
+            if (enable) {
+                initDraw();
+            }
         },
-        [initEvents, initCanvasDrawShape],
+        [initDraw],
     );
     useStateSubscriber(BaseToolEnablePublisher, onEnableChange);
 
@@ -151,32 +69,35 @@ const ShapeTool: React.FC<{
     return (
         <>
             <LineWidthPicker
-                onChange={(width) => (borderWidthRef.current = width)}
+                onChange={(width) => {
+                    borderWidthRef.current = width;
+                    updateStyle();
+                }}
                 toolbarLocation={toolbarLocation}
             />
             <div className="draw-toolbar-splitter" />
             <LineColorPicker
                 onChange={(value: LineColorPickerValue) => {
                     borderColorRef.current = value;
+                    updateStyle();
                 }}
                 toolbarLocation={toolbarLocation}
             />
             <div className="draw-toolbar-splitter" />
             {shapeType === CanvasDrawShapeType.Rect && (
-                <RadiusPicker
-                    onChange={(radius) => (radiusRef.current = radius)}
+                <EnableRadiusPicker
+                    onChange={(enableRadius) => {
+                        enableRadiusRef.current = enableRadius;
+                        updateStyle();
+                    }}
                     toolbarLocation={toolbarLocation}
                 />
             )}
-            <LockWidthHeightPicker
-                onChange={(lockWidthHeight) => {
-                    lockWidthHeightRef.current = lockWidthHeight;
-                    refreshMouseMove();
-                }}
-                toolbarLocation={toolbarLocation}
-            />
             <FillShapePicker
-                onChange={(fillShape) => (fillShapeRef.current = fillShape)}
+                onChange={(fillShape) => {
+                    fillShapeRef.current = fillShape;
+                    updateStyle();
+                }}
                 toolbarLocation={toolbarLocation}
             />
         </>

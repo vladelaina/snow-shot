@@ -12,7 +12,7 @@ import { useCallback, useContext, useEffect, useRef, useState } from 'react';
 import { KeyboardIcon, MouseIcon } from '@/components/icons';
 import { DescriptionsItemType } from 'antd/es/descriptions';
 import { zIndexs } from '@/utils/zIndex';
-import { CaptureLoadingPublisher, CaptureStepPublisher, DrawStatePublisher } from '../../page';
+import { CaptureLoadingPublisher, CaptureStepPublisher, DrawStatePublisher } from '../../extra';
 import { useStateSubscriber } from '@/hooks/useStateSubscriber';
 import { getMaskBackgroundColor } from '../selectLayer/extra';
 import { MousePosition } from '@/utils/mousePosition';
@@ -69,8 +69,10 @@ const StatusBar: React.FC = () => {
             colorPickerMoveDown: { hotKey: colorPickerMoveDownHotKey },
             colorPickerMoveLeft: { hotKey: colorPickerMoveLeftHotKey },
             colorPickerMoveRight: { hotKey: colorPickerMoveRightHotKey },
-            lockWidthHeightPicker: { hotKey: lockWidthHeightPickerHotKey },
-            lockAnglePicker: { hotKey: lockAnglePickerHotKey },
+            maintainAspectRatioPicker: { hotKey: maintainAspectRatioPickerHotKey },
+            rotateWithDiscreteAnglePicker: { hotKey: rotateWithDiscreteAnglePickerHotKey },
+            resizeFromCenterPicker: { hotKey: resizeFromCenterPickerHotKey },
+            autoAlignPicker: { hotKey: autoAlignPickerHotKey },
         } = getAppSettings()[AppSettingsGroup.DrawToolbarKeyEvent];
 
         const items: DescriptionsItemType[] = [
@@ -123,17 +125,35 @@ const StatusBar: React.FC = () => {
 
         if (drawState === DrawState.Rect || drawState === DrawState.Ellipse) {
             items.push({
-                key: 'lockWidthHeightPicker',
-                label: <FormattedMessage id="draw.lockWidthHeightPicker" />,
-                children: <KeyLabel hotKey={lockWidthHeightPickerHotKey} />,
+                key: 'maintainAspectRatioPicker',
+                label: <FormattedMessage id="draw.maintainAspectRatioPicker" />,
+                children: <KeyLabel hotKey={maintainAspectRatioPickerHotKey} />,
+            });
+            items.push({
+                key: 'resizeFromCenterPicker',
+                label: <FormattedMessage id="draw.resizeFromCenterPicker" />,
+                children: <KeyLabel hotKey={resizeFromCenterPickerHotKey} />,
+            });
+            items.push({
+                key: 'autoAlignPicker',
+                label: <FormattedMessage id="draw.autoAlignPicker" />,
+                children: <KeyLabel hotKey={autoAlignPickerHotKey} />,
             });
         }
 
         if (drawState === DrawState.Arrow) {
             items.push({
-                key: 'lockAnglePicker',
-                label: <FormattedMessage id="draw.lockAnglePicker" />,
-                children: <KeyLabel hotKey={lockAnglePickerHotKey} />,
+                key: 'rotateWithDiscreteAnglePicker',
+                label: <FormattedMessage id="draw.rotateWithDiscreteAnglePicker" />,
+                children: <KeyLabel hotKey={rotateWithDiscreteAnglePickerHotKey} />,
+            });
+        }
+
+        if (drawState === DrawState.Pen) {
+            items.push({
+                key: 'enableStraightLinePicker',
+                label: <FormattedMessage id="draw.enableStraightLinePicker" />,
+                children: <KeyLabel messageId="draw.shiftKey" />,
             });
         }
 

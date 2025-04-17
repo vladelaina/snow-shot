@@ -5,6 +5,7 @@ import { AntdRegistry } from '@ant-design/nextjs-registry';
 import StyledJsxRegistry from './registry';
 import { ContextWrap } from './contextWrap';
 import { MenuLayout } from './menuLayout';
+import Script from 'next/dist/client/script';
 
 export default function RootLayout({
     children,
@@ -13,6 +14,11 @@ export default function RootLayout({
 }>) {
     return (
         <html lang="zh-CN">
+            <head>
+                <Script id="load-env-variables" strategy="beforeInteractive">
+                    {`window["EXCALIDRAW_ASSET_PATH"] = location.origin;`}
+                </Script>
+            </head>
             <body>
                 <StyledJsxRegistry>
                     <AntdRegistry>

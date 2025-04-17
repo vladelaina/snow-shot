@@ -33,7 +33,7 @@
         "**/*.ts",
         "**/*.tsx",
         ".next/types/**/*.ts"
-    ],
+, "src/app/draw/components/drawCacheLayer/excalidrawRenders/buttonIcon.tsx"    ],
     "exclude": [
         "node_modules",
         "src-tauri",

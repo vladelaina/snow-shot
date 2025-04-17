@@ -6,12 +6,10 @@ export interface Point {
 type Shape = Point[];
 
 const chaikin = (function () {
-    // 线性插值函数
     function _lerp(start: number, end: number, t: number): number {
         return start * (1 - t) + end * t;
     }
 
-    // 优化后的切割函数，直接返回计算好的点
     function _chaikinCut(a: Point, b: Point, ratio: number, result: Point[]): void {
         result[0] = {
             x: _lerp(a.x, b.x, ratio),
@@ -23,7 +21,6 @@ const chaikin = (function () {
         };
     }
 
-    // 预分配数组空间
     function _preallocateArray(size: number): Point[] {
         const arr: Point[] = new Array(size);
         for (let i = 0; i < size; i++) {
@@ -32,7 +29,6 @@ const chaikin = (function () {
         return arr;
     }
 
-    // 计算最终数组大小
     function _calculateFinalSize(initialSize: number, iterations: number, close: boolean): number {
         let size = initialSize;
         for (let i = 0; i < iterations; i++) {
@@ -44,12 +40,10 @@ const chaikin = (function () {
     return function (shape: Shape, ratio: number, iterations: number, close: boolean): Shape {
         if (iterations === 0) return shape;
 
-        // 预计算最终数组大小
         const finalSize = _calculateFinalSize(shape.length, iterations, close);
         const result = _preallocateArray(finalSize);
         let resultIndex = 0;
 
-        // 使用循环替代递归
         let currentShape = shape;
         let currentIterations = iterations;
         const tempPoints: Point[] = [

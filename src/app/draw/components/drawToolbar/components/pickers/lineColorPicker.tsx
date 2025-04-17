@@ -8,18 +8,42 @@ import { defaultLineColorPickerValue, LineColorPickerValue } from './defaultValu
 
 type Color = Extract<GetProp<ColorPickerProps, 'value'>, string | { cleared: unknown }>;
 
-const ColorIcon: React.FC<{ color: string; borderColor?: string }> = ({ color, borderColor }) => {
+export const ColorIcon: React.FC<{ color: string }> = ({ color }) => {
     const { token } = theme.useToken();
     return (
-        <div
-            style={{
-                width: '0.72em',
-                height: '0.72em',
-                backgroundColor: color,
-                borderRadius: token.borderRadiusSM,
-                border: borderColor ? `1px solid ${borderColor}` : 'none',
-            }}
-        />
+        <div className="color-icon">
+            <div className="color-icon-transparent" />
+            <div className="color-icon-color" />
+            <style jsx>
+                {`
+                    .color-icon {
+                        width: 0.72em;
+                        height: 0.72em;
+                        position: relative;
+                    }
+                    .color-icon-color {
+                        width: 100%;
+                        height: 100%;
+                        position: absolute;
+                        background-color: ${color};
+                        border-radius: ${token.borderRadiusXS}px;
+                        box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.06);
+                    }
+                    .color-icon-transparent {
+                        position: absolute;
+                        width: 100%;
+                        height: 100%;
+                        background-image: conic-gradient(
+                            rgba(0, 0, 0, 0.06) 25%,
+                            transparent 25% 50%,
+                            rgba(0, 0, 0, 0.06) 50% 75%,
+                            transparent 75% 100%
+                        );
+                        border-radius: ${token.borderRadiusXS}px;
+                    }
+                `}
+            </style>
+        </div>
     );
 };
 
@@ -120,7 +144,7 @@ const LineColorPickerComponent: React.FC<{
                     icon={<ColorIcon color="#bfbfbf" />}
                 />
             </ToolbarTip>
-            <ToolbarTip title={<FormattedMessage id="draw.white" />}>
+            {/* <ToolbarTip title={<FormattedMessage id="draw.white" />}>
                 <Button
                     onClick={() => {
                         setColor('#ffffff', true);
@@ -128,7 +152,7 @@ const LineColorPickerComponent: React.FC<{
                     type="text"
                     icon={<ColorIcon borderColor="#bfbfbf" color="#ffffff" />}
                 />
-            </ToolbarTip>
+            </ToolbarTip> */}
         </>
     );
 };

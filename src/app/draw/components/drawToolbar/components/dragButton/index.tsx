@@ -1,5 +1,4 @@
 import { DrawContext, DrawState } from '@/app/draw/types';
-import { ToolbarTip } from '@/components/toolbarTip';
 import { useCallbackRender } from '@/hooks/useCallbackRender';
 import { MousePosition } from '@/utils/mousePosition';
 import { HolderOutlined } from '@ant-design/icons';
@@ -9,19 +8,18 @@ import React, {
     useContext,
     useEffect,
     useImperativeHandle,
+    useMemo,
     useRef,
-    useState,
 } from 'react';
-import { FormattedMessage } from 'react-intl';
+import { useIntl } from 'react-intl';
 import { DrawToolbarContext, isEnableSubToolbar } from '../../extra';
 import { ElementRect } from '@/commands';
-import { dragRect } from './extra';
+import { updateElementPosition } from './extra';
 import { useStateSubscriber } from '@/hooks/useStateSubscriber';
-import { DrawStatePublisher } from '@/app/draw/page';
+import { DrawStatePublisher } from '@/app/draw/extra';
 
 export type DragButtonActionType = {
     setEnable: (enable: boolean) => void;
-    onDraggingChange: (dragging: boolean) => void;
 };
 
 const DragButtonCore: React.FC<{
@@ -31,10 +29,8 @@ const DragButtonCore: React.FC<{
 
     const enableSubToolbarRef = useRef(false);
 
-    const [hideTooltip, setHideTooltip] = useState(false);
     const { selectLayerActionRef, imageBufferRef } = useContext(DrawContext);
-    const { drawToolbarRef, drawSubToolbarRef, setDragging, draggingRef } =
-        useContext(DrawToolbarContext);
+    const { drawToolbarRef, setDragging, draggingRef } = useContext(DrawToolbarContext);
     const { token } = theme.useToken();
 
     // 保存 toolbar 位置
@@ -49,8 +45,7 @@ const DragButtonCore: React.FC<{
     const toolbarPreviousRectRef = useRef<ElementRect>(undefined);
     const updateDrawToolbarStyle = useCallback(() => {
         const drawToolbar = drawToolbarRef.current;
-        const drawSubToolbar = drawSubToolbarRef.current;
-        if (!drawToolbar || !drawSubToolbar) {
+        if (!drawToolbar) {
             return;
         }
 
@@ -64,52 +59,22 @@ const DragButtonCore: React.FC<{
             return;
         }
 
-        const marginHeight = token.marginXXS;
-        const { clientWidth: toolbarWidth, clientHeight: toolbarHeight } = drawToolbar;
-        const isSubToolbarVisible = enableSubToolbarRef.current;
+        const baseOffsetX =
+            selectedRect.max_x / imageBuffer.monitorScaleFactor - drawToolbar.clientWidth;
+        const baseOffsetY = selectedRect.max_y / imageBuffer.monitorScaleFactor + token.marginXXS;
 
-        const subToolbarWidth = isSubToolbarVisible ? drawSubToolbar.clientWidth : 0;
-        const subToolbarHeight = isSubToolbarVisible
-            ? drawSubToolbar.clientHeight + marginHeight
-            : 0;
-
-        const scaleFactor = imageBuffer.monitorScaleFactor || 1;
-        const baseOffsetX = selectedRect.max_x / scaleFactor - toolbarWidth;
-        const baseOffsetY = selectedRect.max_y / scaleFactor + marginHeight;
-
-        const totalHeight = toolbarHeight + subToolbarHeight;
-        const subToolbarWidthDiff = isSubToolbarVisible ? subToolbarWidth - toolbarWidth : 0;
-
-        const extraLeftSpace = Math.max(0, subToolbarWidthDiff);
-
-        const viewportWidth = Math.max(document.body.clientWidth, toolbarWidth + extraLeftSpace);
-        const viewportHeight = Math.max(document.body.clientHeight, totalHeight);
-
-        const dragRes = dragRect(
-            {
-                min_x: 0,
-                min_y: 0,
-                max_x: toolbarWidth,
-                max_y: toolbarHeight,
-            },
+        const dragRes = updateElementPosition(
+            drawToolbar,
+            baseOffsetX,
+            baseOffsetY,
             mouseOriginPositionRef.current,
             mouseCurrentPositionRef.current,
             toolbarPreviousRectRef.current,
-            {
-                min_x: extraLeftSpace - baseOffsetX,
-                min_y: 0 - baseOffsetY,
-                max_x: viewportWidth - baseOffsetX,
-                max_y: viewportHeight - baseOffsetY - (totalHeight - toolbarHeight),
-            },
         );
 
         toolbarCurrentRectRef.current = dragRes.rect;
-        mouseOriginPositionRef.current = dragRes.newOriginPosition;
-
-        const translateX = baseOffsetX + toolbarCurrentRectRef.current.min_x;
-        const translateY = baseOffsetY + toolbarCurrentRectRef.current.min_y;
-        drawToolbar.style.transform = `translate(${translateX}px, ${translateY}px)`;
-    }, [drawSubToolbarRef, drawToolbarRef, imageBufferRef, selectLayerActionRef, token.marginXXS]);
+        mouseOriginPositionRef.current = dragRes.originPosition;
+    }, [drawToolbarRef, imageBufferRef, selectLayerActionRef, token.marginXXS]);
     const updateDrawToolbarStyleRender = useCallbackRender(updateDrawToolbarStyle);
 
     const handleMouseDown = useCallback(
@@ -166,7 +131,6 @@ const DragButtonCore: React.FC<{
                 updateDrawToolbarStyleRender();
             } else {
                 drawToolbarRef.current!.style.opacity = '0';
-                drawSubToolbarRef.current!.style.opacity = '0';
                 toolbarCurrentRectRef.current = {
                     min_x: 0,
                     min_y: 0,
@@ -178,7 +142,7 @@ const DragButtonCore: React.FC<{
                 mouseCurrentPositionRef.current = new MousePosition(0, 0);
             }
         },
-        [drawSubToolbarRef, drawToolbarRef, updateDrawToolbarStyleRender],
+        [drawToolbarRef, updateDrawToolbarStyleRender],
     );
 
     const setEnable = useCallback(
@@ -196,33 +160,31 @@ const DragButtonCore: React.FC<{
         (drawState: DrawState) => {
             enableSubToolbarRef.current = isEnableSubToolbar(drawState);
 
-            drawSubToolbarRef.current!.style.opacity = enableSubToolbarRef.current ? '1' : '0';
             updateDrawToolbarStyleRender();
         },
-        [drawSubToolbarRef, updateDrawToolbarStyleRender],
+        [updateDrawToolbarStyleRender],
     );
     useStateSubscriber(DrawStatePublisher, onDrawStateChange);
-
-    const onDraggingChange = useCallback((dragging: boolean) => {
-        setHideTooltip(dragging);
-    }, []);
 
     useImperativeHandle(actionRef, () => {
         return {
             setEnable,
-            onDraggingChange,
         };
-    }, [setEnable, onDraggingChange]);
+    }, [setEnable]);
+
+    const intl = useIntl();
+    const dragTitle = useMemo(() => {
+        return intl.formatMessage({ id: 'draw.drag' });
+    }, [intl]);
 
     return (
-        <ToolbarTip
-            destroyTooltipOnHide
-            title={hideTooltip ? '' : <FormattedMessage id="draw.drag" />}
+        <div
+            className="draw-toolbar-drag drag-button"
+            title={dragTitle}
+            onMouseDown={handleMouseDown}
         >
-            <div className="draw-toolbar-drag" onMouseDown={handleMouseDown}>
-                <HolderOutlined />
-            </div>
-        </ToolbarTip>
+            <HolderOutlined />
+        </div>
     );
 };
 

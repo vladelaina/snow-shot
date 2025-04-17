@@ -30,7 +30,7 @@ export type BaseLayerContextType = {
     /**
      * 改变光标样式
      */
-    changeCursor: (cursor: Required<React.CSSProperties>['cursor']) => void;
+    changeCursor: (cursor: Required<React.CSSProperties>['cursor']) => string;
     /** 画布容器元素 */
     layerContainerElementRef: React.RefObject<HTMLDivElement | null>;
     /** 获取画布上下文 */
@@ -46,7 +46,7 @@ export const BaseLayerContext = React.createContext<BaseLayerContextType>({
     /**
      * 改变光标样式
      */
-    changeCursor: () => {},
+    changeCursor: () => 'auto',
     /** 画布容器元素 */
     layerContainerElementRef: { current: null },
     /** 获取画布上下文 */
@@ -93,6 +93,10 @@ export type BaseLayerActionType = {
      * 设置是否启用
      */
     setEnable: (enable: boolean) => void;
+    /**
+     * 改变光标样式
+     */
+    changeCursor: (cursor: Required<React.CSSProperties>['cursor']) => string;
 } & BaseLayerEventActionType;
 
 export const defaultBaseLayerActions: BaseLayerActionType = {
@@ -105,6 +109,7 @@ export const defaultBaseLayerActions: BaseLayerActionType = {
     getCanvasApp: () => null,
     getLayerContainerElement: () => null,
     addChildToTopContainer: () => {},
+    changeCursor: () => 'auto',
 };
 
 type BaseLayerCoreActionType = {
@@ -113,6 +118,7 @@ type BaseLayerCoreActionType = {
     getCanvasApp: () => PIXI.Application | undefined;
     getLayerContainerElement: () => HTMLDivElement | null;
     addChildToTopContainer: (children: PIXI.Container<PIXI.ContainerChild>) => void;
+    changeCursor: (cursor: Required<React.CSSProperties>['cursor']) => string;
 };
 
 export type BaseLayerProps = {
@@ -236,11 +242,12 @@ export const BaseLayerCore: React.FC<
         }
         canvasContainerListRef.current = [];
         canvasContainerChildCountRef.current = 0;
-        layerContainerElementRef.current!.style.cursor = 'auto';
     }, []);
 
     const changeCursor = useCallback<BaseLayerContextType['changeCursor']>((cursor) => {
+        const previousCursor = layerContainerElementRef.current!.style.cursor;
         layerContainerElementRef.current!.style.cursor = cursor;
+        return previousCursor;
     }, []);
 
     const getCanvasApp = useCallback<BaseLayerContextType['getCanvasApp']>(() => {
@@ -259,8 +266,16 @@ export const BaseLayerCore: React.FC<
             getCanvasApp,
             getLayerContainerElement,
             addChildToTopContainer,
+            changeCursor,
         }),
-        [resizeCanvas, clearCanvas, getCanvasApp, getLayerContainerElement, addChildToTopContainer],
+        [
+            resizeCanvas,
+            clearCanvas,
+            getCanvasApp,
+            getLayerContainerElement,
+            addChildToTopContainer,
+            changeCursor,
+        ],
     );
 
     useEffect(() => {
@@ -361,6 +376,10 @@ export function withBaseLayer<
             [],
         );
 
+        const changeCursor = useCallback<BaseLayerActionType['changeCursor']>((cursor) => {
+            return baseLayerCoreActionRef.current?.changeCursor(cursor) ?? 'auto';
+        }, []);
+
         useImperativeHandle(
             actionRef,
             () => ({
@@ -371,6 +390,7 @@ export function withBaseLayer<
                 getCanvasApp,
                 getLayerContainerElement,
                 addChildToTopContainer,
+                changeCursor,
             }),
             [
                 onCaptureReady,
@@ -379,6 +399,7 @@ export function withBaseLayer<
                 getCanvasApp,
                 getLayerContainerElement,
                 addChildToTopContainer,
+                changeCursor,
             ],
         );
 

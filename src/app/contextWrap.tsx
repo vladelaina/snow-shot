@@ -14,8 +14,6 @@ import { emit } from '@tauri-apps/api/event';
 import { getCurrentWindow, Window as AppWindow } from '@tauri-apps/api/window';
 import Color from 'color';
 import {
-    defaultLockWidthHeightValue,
-    LockWidthHeightValue,
     defaultRadiusPickerValue,
     RadiusPickerValue,
     defaultLineColorPickerValue,
@@ -48,15 +46,21 @@ import {
     FillShapePickerValue,
     defaultLockAngleValue,
     LockAngleValue,
+    EnableStraightLineValue,
+    defaultEnableStraightLineValue,
+    MaintainAspectRatioValue,
+    ResizeFromCenterValue,
+    RotateWithDiscreteAngleValue,
 } from './draw/components/drawToolbar/components/pickers/defaultValues';
-import { AppFunction, AppFunctionConfig, defaultAppFunctionConfigs } from './page';
+import { AppFunction, AppFunctionConfig, defaultAppFunctionConfigs } from './extra';
 import { createPublisher, withStatePublisher } from '@/hooks/useStatePublisher';
 import { useStateSubscriber } from '@/hooks/useStateSubscriber';
 import {
     defaultKeyEventSettings,
     KeyEventKey,
     KeyEventValue,
-} from './draw/components/drawToolbar/components/keyEventWrap/index';
+} from './draw/components/drawToolbar/components/keyEventWrap/extra';
+import React from 'react';
 
 export enum AppSettingsGroup {
     Common = 'common',
@@ -97,7 +101,6 @@ export type AppSettingsData = {
     };
     [AppSettingsGroup.DrawToolbarPicker]: {
         fillShapePicker: Record<string, FillShapePickerValue>;
-        lockWidthHeightPicker: Record<string, LockWidthHeightValue>;
         radiusPicker: Record<string, RadiusPickerValue>;
         lineColorPicker: Record<string, LineColorPickerValue>;
         lineWidthPicker: Record<string, LineWidthPickerValue>;
@@ -113,6 +116,10 @@ export type AppSettingsData = {
         arrowConfigPicker: Record<string, ArrowConfigValue>;
         enableRadiusPicker: Record<string, EnableRadiusValue>;
         lockAnglePicker: Record<string, LockAngleValue>;
+        enableStraightLinePicker: Record<string, EnableStraightLineValue>;
+        resizeFromCenter: Record<string, ResizeFromCenterValue>;
+        maintainAspectRatio: Record<string, MaintainAspectRatioValue>;
+        rotateWithDiscreteAngle: Record<string, RotateWithDiscreteAngleValue>;
     };
     [AppSettingsGroup.DrawToolbarKeyEvent]: Record<KeyEventKey, KeyEventValue>;
     [AppSettingsGroup.AppFunction]: Record<AppFunction, AppFunctionConfig>;
@@ -142,7 +149,6 @@ export const defaultAppSettingsData: AppSettingsData = {
     },
     [AppSettingsGroup.DrawToolbarPicker]: {
         fillShapePicker: {},
-        lockWidthHeightPicker: {},
         radiusPicker: {},
         lineColorPicker: {},
         lineWidthPicker: {},
@@ -158,13 +164,17 @@ export const defaultAppSettingsData: AppSettingsData = {
         arrowConfigPicker: {},
         enableRadiusPicker: {},
         lockAnglePicker: {},
+        enableStraightLinePicker: {},
+        resizeFromCenter: {},
+        maintainAspectRatio: {},
+        rotateWithDiscreteAngle: {},
     },
     [AppSettingsGroup.DrawToolbarKeyEvent]: defaultKeyEventSettings,
     [AppSettingsGroup.AppFunction]: defaultAppFunctionConfigs,
     [AppSettingsGroup.Render]: {
         antialias: true,
         enableDrawLineSimplify: true,
-        drawLineSimplifyTolerance: 0.42,
+        drawLineSimplifyTolerance: 0.5,
         drawLineSimplifyHighQuality: false,
         enableDrawLineSmooth: true,
         drawLineSmoothRatio: 0.25,
@@ -362,7 +372,6 @@ const ContextWrapCore: React.FC<{ children: React.ReactNode }> = ({ children }) 
                     | undefined;
 
                 const fillShapePickerSettings = newSettings.fillShapePicker ?? {};
-                const lockWidthHeightPickerSettings = newSettings.lockWidthHeightPicker ?? {};
                 const radiusPickerSettings = newSettings.radiusPicker ?? {};
                 const lineColorPickerSettings = newSettings.lineColorPicker ?? {};
                 const lineWidthPickerSettings = newSettings.lineWidthPicker ?? {};
@@ -379,6 +388,7 @@ const ContextWrapCore: React.FC<{ children: React.ReactNode }> = ({ children }) 
                 const arrowConfigPickerSettings = newSettings.arrowConfigPicker ?? {};
                 const enableRadiusPickerSettings = newSettings.enableRadiusPicker ?? {};
                 const lockAnglePickerSettings = newSettings.lockAnglePicker ?? {};
+                const enableStraightLinePickerSettings = newSettings.enableStraightLinePicker ?? {};
 
                 Object.keys(fillShapePickerSettings).forEach((key) => {
                     fillShapePickerSettings[key] = {
@@ -387,16 +397,6 @@ const ContextWrapCore: React.FC<{ children: React.ReactNode }> = ({ children }) 
                                 ? fillShapePickerSettings[key]?.fill
                                 : (prevSettings?.fillShapePicker[key]?.fill ??
                                   defaultFillShapePickerValue.fill),
-                    };
-                });
-
-                Object.keys(lockWidthHeightPickerSettings).forEach((key) => {
-                    lockWidthHeightPickerSettings[key] = {
-                        lock:
-                            typeof lockWidthHeightPickerSettings[key]?.lock === 'boolean'
-                                ? lockWidthHeightPickerSettings[key]?.lock
-                                : (prevSettings?.lockWidthHeightPicker[key]?.lock ??
-                                  defaultLockWidthHeightValue.lock),
                     };
                 });
 
@@ -561,14 +561,20 @@ const ContextWrapCore: React.FC<{ children: React.ReactNode }> = ({ children }) 
                     };
                 });
 
+                Object.keys(enableStraightLinePickerSettings).forEach((key) => {
+                    enableStraightLinePickerSettings[key] = {
+                        enable:
+                            typeof enableStraightLinePickerSettings[key]?.enable === 'boolean'
+                                ? enableStraightLinePickerSettings[key].enable
+                                : (prevSettings?.enableStraightLinePicker[key]?.enable ??
+                                  defaultEnableStraightLineValue.enable),
+                    };
+                });
+
                 settings = {
                     fillShapePicker: {
                         ...prevSettings?.fillShapePicker,
                         ...fillShapePickerSettings,
-                    },
-                    lockWidthHeightPicker: {
-                        ...prevSettings?.lockWidthHeightPicker,
-                        ...lockWidthHeightPickerSettings,
                     },
                     radiusPicker: {
                         ...prevSettings?.radiusPicker,
@@ -630,6 +636,13 @@ const ContextWrapCore: React.FC<{ children: React.ReactNode }> = ({ children }) 
                         ...prevSettings?.lockAnglePicker,
                         ...lockAnglePickerSettings,
                     },
+                    enableStraightLinePicker: {
+                        ...prevSettings?.enableStraightLinePicker,
+                        ...enableStraightLinePickerSettings,
+                    },
+                    resizeFromCenter: {},
+                    maintainAspectRatio: {},
+                    rotateWithDiscreteAngle: {},
                 };
             } else if (group === AppSettingsGroup.DrawToolbarKeyEvent) {
                 newSettings = newSettings as AppSettingsData[typeof group];
@@ -789,6 +802,7 @@ const ContextWrapCore: React.FC<{ children: React.ReactNode }> = ({ children }) 
 
     const reloadAppSettings = useCallback(async () => {
         setAppSettingsLoadingPublisher(true);
+
         const groups = Object.keys(defaultAppSettingsData).filter(
             (group) => group in defaultAppSettingsData,
         );
@@ -831,7 +845,7 @@ const ContextWrapCore: React.FC<{ children: React.ReactNode }> = ({ children }) 
                     true,
                     // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 ) as any;
-                return;
+                continue;
             }
 
             const content = await readTextFile(getFileName(group), {
@@ -853,10 +867,20 @@ const ContextWrapCore: React.FC<{ children: React.ReactNode }> = ({ children }) 
         if (_.isEqual(appSettingsRef.current, settings)) {
             setAppSettings(settings);
         }
+
         setAppSettingsLoadingPublisher(false);
     }, [setAppSettingsLoadingPublisher, updateAppSettings, setAppSettings]);
+
+    const initLoading = useRef(false);
     useEffect(() => {
-        reloadAppSettings();
+        if (initLoading.current) {
+            return;
+        }
+
+        initLoading.current = true;
+        reloadAppSettings().finally(() => {
+            initLoading.current = false;
+        });
     }, [reloadAppSettings]);
 
     const [, antdLocale] = useMemo(() => {
@@ -906,7 +930,9 @@ const ContextWrapCore: React.FC<{ children: React.ReactNode }> = ({ children }) 
     );
 };
 
-export const ContextWrap = withStatePublisher(
-    withStatePublisher(ContextWrapCore, AppSettingsPublisher),
-    AppSettingsLoadingPublisher,
+export const ContextWrap = React.memo(
+    withStatePublisher(
+        withStatePublisher(ContextWrapCore, AppSettingsPublisher),
+        AppSettingsLoadingPublisher,
+    ),
 );

@@ -10,21 +10,32 @@ import { CanvasLayer, CaptureStep, DrawContext, DrawContextType, DrawState } fro
 import SelectLayer, { SelectLayerActionType } from './components/selectLayer';
 import DrawLayer, { DrawLayerActionType } from './components/drawLayer';
 import { Window as AppWindow, getCurrentWindow } from '@tauri-apps/api/window';
-import { switchLayer } from './extra';
+import {
+    CaptureLoadingPublisher,
+    DrawStatePublisher,
+    CaptureStepPublisher,
+    switchLayer,
+} from './extra';
 import { DrawToolbar, DrawToolbarActionType } from './components/drawToolbar';
 import { BaseLayerEventActionType } from './components/baseLayer';
 import { ColorPicker } from './components/colorPicker';
 import { HistoryContext, withCanvasHistory } from './components/historyContext';
-import { createPublisher, withStatePublisher } from '@/hooks/useStatePublisher';
+import { withStatePublisher } from '@/hooks/useStatePublisher';
 import { useStateSubscriber } from '@/hooks/useStateSubscriber';
 import StatusBar from './components/statusBar';
 import { MousePosition } from '@/utils/mousePosition';
 import { EnableKeyEventPublisher } from './components/drawToolbar/components/keyEventWrap/extra';
 import { zIndexs } from '@/utils/zIndex';
+import styles from './page.module.css';
+import dynamic from 'next/dynamic';
+import { DrawCacheLayerActionType } from './components/drawCacheLayer/extra';
 
-export const CaptureStepPublisher = createPublisher<CaptureStep>(CaptureStep.Select);
-export const DrawStatePublisher = createPublisher<DrawState>(DrawState.Idle);
-export const CaptureLoadingPublisher = createPublisher<boolean>(true);
+const DrawCacheLayer = dynamic(
+    async () => (await import('./components/drawCacheLayer')).DrawCacheLayer,
+    {
+        ssr: false,
+    },
+);
 
 const DrawPageCore: React.FC = () => {
     const appWindowRef = useRef<AppWindow>(undefined as unknown as AppWindow);
@@ -39,6 +50,7 @@ const DrawPageCore: React.FC = () => {
 
     // 层级
     const drawLayerActionRef = useRef<DrawLayerActionType | undefined>(undefined);
+    const drawCacheLayerActionRef = useRef<DrawCacheLayerActionType | undefined>(undefined);
     const selectLayerActionRef = useRef<SelectLayerActionType | undefined>(undefined);
     const drawToolbarActionRef = useRef<DrawToolbarActionType | undefined>(undefined);
 
@@ -73,6 +85,7 @@ const DrawPageCore: React.FC = () => {
         } else if (captureStep === CaptureStep.Draw) {
             if (drawState === DrawState.Select || drawState === DrawState.Idle) {
                 handleLayerSwitch(CanvasLayer.Select);
+                drawCacheLayerActionRef.current?.setEnable(false);
                 return;
             }
 
@@ -113,6 +126,7 @@ const DrawPageCore: React.FC = () => {
             await Promise.all([
                 drawLayerActionRef.current?.onCaptureReady(imageTexture, imageBuffer),
                 selectLayerActionRef.current?.onCaptureReady(imageTexture, imageBuffer),
+                drawCacheLayerActionRef.current?.onCaptureReady(),
             ]);
             setCaptureLoading(false);
 
@@ -146,6 +160,7 @@ const DrawPageCore: React.FC = () => {
         await Promise.all([
             drawLayerActionRef.current?.onCaptureFinish(),
             selectLayerActionRef.current?.onCaptureFinish(),
+            drawCacheLayerActionRef.current?.onCaptureFinish(),
         ]);
         imageBufferRef.current = undefined;
         resetCaptureStep();
@@ -202,6 +217,7 @@ const DrawPageCore: React.FC = () => {
             drawToolbarActionRef,
             mousePositionRef,
             circleCursorRef,
+            drawCacheLayerActionRef,
         };
     }, [finishCapture]);
 
@@ -220,14 +236,19 @@ const DrawPageCore: React.FC = () => {
     return (
         <DrawContext.Provider value={drawContextValue}>
             <DrawLayer actionRef={drawLayerActionRef} />
+            <DrawCacheLayer actionRef={drawCacheLayerActionRef} />
             <SelectLayer actionRef={selectLayerActionRef} />
             <DrawToolbar actionRef={drawToolbarActionRef} onCancel={finishCapture} />
-            <ColorPicker />
+            <ColorPicker
+                onCopyColor={() => {
+                    finishCapture();
+                }}
+            />
             <StatusBar />
 
             <div
                 ref={circleCursorRef}
-                className="draw-toolbar-cursor"
+                className={styles.drawToolbarCursor}
                 style={{ zIndex: zIndexs.Draw_Cursor }}
             />
         </DrawContext.Provider>

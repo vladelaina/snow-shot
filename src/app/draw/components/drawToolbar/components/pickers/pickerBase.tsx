@@ -48,7 +48,7 @@ export function withPickerBase<T extends object>(
     updateDebounce: number = 0,
 ) {
     return React.memo(function PickerBase(props: PickerProps<T>) {
-        const [getEnable] = useStateSubscriber(BaseToolEnablePublisher, () => {});
+        const [getEnable] = useStateSubscriber(BaseToolEnablePublisher, undefined);
 
         const { onChange, toolbarLocation, hidden } = props;
 
@@ -132,7 +132,7 @@ export function withPickerBase<T extends object>(
                 true,
                 false,
                 true,
-                true,
+                false,
             );
         }, [updateAppSettings, toolbarLocation]);
         const updateSettingsDebounce = useMemo(() => {

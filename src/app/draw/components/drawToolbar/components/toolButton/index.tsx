@@ -1,13 +1,11 @@
 import { DrawState } from '@/app/draw/types';
-import {
-    KeyEventKey,
-    KeyEventWrap,
-} from '@/app/draw/components/drawToolbar/components/keyEventWrap';
+import { KeyEventWrap } from '@/app/draw/components/drawToolbar/components/keyEventWrap';
 import React, { useCallback, useState } from 'react';
 import { Button } from 'antd';
-import { DrawStatePublisher } from '@/app/draw/page';
+import { DrawStatePublisher } from '@/app/draw/extra';
 import { useStateSubscriber } from '@/hooks/useStateSubscriber';
 import { getButtonTypeByState } from '../../extra';
+import { KeyEventKey } from '../keyEventWrap/extra';
 
 const ToolButtonCore: React.FC<{
     componentKey: KeyEventKey;
@@ -16,7 +14,16 @@ const ToolButtonCore: React.FC<{
     onClick: () => void;
     drawState: DrawState;
     disable?: boolean;
-}> = ({ componentKey, disableOnDrawing, icon, onClick, drawState: propDrawState, disable }) => {
+    confirmTip?: React.ReactNode;
+}> = ({
+    componentKey,
+    disableOnDrawing,
+    icon,
+    onClick,
+    drawState: propDrawState,
+    disable,
+    confirmTip,
+}) => {
     const [buttonType, setButtonType] = useState(getButtonTypeByState(false));
     const updateButtonType = useCallback(
         (drawState: DrawState) => {
@@ -31,6 +38,7 @@ const ToolButtonCore: React.FC<{
             onKeyDownEventPropName="onClick"
             componentKey={componentKey}
             disableOnDrawing={disableOnDrawing}
+            confirmTip={confirmTip}
         >
             <Button icon={icon} type={buttonType} onClick={onClick} disabled={disable} />
         </KeyEventWrap>

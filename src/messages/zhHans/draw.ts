@@ -55,4 +55,9 @@ export const draw = {
     'draw.colorPickerMoveRight': '光标右移',
     'draw.penDrawLine': '绘制直线',
     'draw.shiftKey': 'Shift',
+    'draw.enableStraightLinePicker': '切换直线绘制',
+    'draw.resizeFromCenterPicker': '从中心缩放',
+    'draw.maintainAspectRatioPicker': '保持宽高比例',
+    'draw.rotateWithDiscreteAnglePicker': '固定角度旋转',
+    'draw.autoAlignPicker': '自动对齐',
 };

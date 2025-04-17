@@ -5,13 +5,14 @@ import { zIndexs } from '@/utils/zIndex';
 import React, { useCallback, useContext, useEffect, useRef } from 'react';
 import { getCurrentWindow, Window as AppWindow, PhysicalPosition } from '@tauri-apps/api/window';
 import { CaptureStep, DrawContext, DrawState } from '@/app/draw/types';
-import { KeyEventKey, KeyEventWrap } from '../drawToolbar/components/keyEventWrap';
+import { KeyEventKey } from '../drawToolbar/components/keyEventWrap/extra';
 import { useCallbackRender, useCallbackRenderSlow } from '@/hooks/useCallbackRender';
 import { MousePosition } from '@/utils/mousePosition';
 import { useStateSubscriber } from '@/hooks/useStateSubscriber';
-import { CaptureLoadingPublisher, CaptureStepPublisher, DrawStatePublisher } from '../../page';
+import { CaptureLoadingPublisher, CaptureStepPublisher, DrawStatePublisher } from '../../extra';
 import { withStatePublisher } from '@/hooks/useStatePublisher';
 import { EnableKeyEventPublisher } from '../drawToolbar/components/keyEventWrap/extra';
+import { KeyEventWrap } from '../drawToolbar/components/keyEventWrap';
 
 const previewScale = 12;
 const previewPickerSize = 10 + 1;

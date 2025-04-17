@@ -12,8 +12,10 @@ export const zIndexs = {
     Draw_BlurImageLayer: 103,
     /** 截图绘制图层 */
     Draw_DrawLayer: 104,
+    /** 截图绘制图层 */
+    Draw_DrawCacheLayer: 105,
     /** 截图选择图层 */
-    Draw_SelectLayer: 105,
+    Draw_SelectLayer: 106,
 
     /** 截图绘制工具层 */
     Draw_BaseTool: 200,
@@ -24,6 +26,8 @@ export const zIndexs = {
     /** 截图颜色选择器 */
     Draw_ColorPicker: 203,
     /** 截图绘制工具栏 */
-    Draw_Toolbar: 204,
+    Draw_SubToolbar: 204,
+    /** 截图绘制工具栏 */
+    Draw_Toolbar: 205,
     // Draw 截图窗口 END
 };

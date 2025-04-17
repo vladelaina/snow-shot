@@ -38,7 +38,7 @@ import { MousePosition } from '@/utils/mousePosition';
 import { getMonitorRect } from '../../extra';
 import { CaptureStep, DrawContext } from '../../types';
 import { useStateSubscriber } from '@/hooks/useStateSubscriber';
-import { CaptureStepPublisher } from '../../page';
+import { CaptureStepPublisher } from '../../extra';
 
 export type SelectLayerActionType = BaseLayerActionType & {
     getSelectRect: () => ElementRect | undefined;
