@@ -36,6 +36,7 @@ export const zhHant = {
     'settings.performanceMode': '效能模式',
     'settings.performanceMode.tip1': '啟用效能模式後，會嘗試降低一定繪圖品質提升效能',
     'draw.mosaic': '馬賽克',
+    'draw.blur': '模糊',
     'draw.enableBlur': '模糊效果',
     'draw.regionBlur': '區域模糊',
     'draw.selectRect': '選取矩形',

@@ -8,8 +8,19 @@ import React from 'react';
 import { DragButton, DragButtonActionType } from './components/dragButton';
 import { DrawToolbarContext } from './extra';
 import { KeyEventKey } from './components/keyEventWrap/extra';
-import { CloseOutlined, DragOutlined, HighlightOutlined } from '@ant-design/icons';
-import { ArrowIcon, CircleIcon, PenIcon, RectIcon } from '@/components/icons';
+import { CloseOutlined, DragOutlined } from '@ant-design/icons';
+import {
+    ArrowIcon,
+    ArrowSelectIcon,
+    CircleIcon,
+    DiamondIcon,
+    EraserIcon,
+    LineIcon,
+    MosaicIcon,
+    PenIcon,
+    RectIcon,
+    TextIcon,
+} from '@/components/icons';
 import { CaptureStepPublisher, DrawStatePublisher } from '../../extra';
 import { useStateSubscriber } from '@/hooks/useStateSubscriber';
 import { createPublisher, withStatePublisher } from '@/hooks/useStatePublisher';
@@ -17,6 +28,7 @@ import { EnableKeyEventPublisher } from './components/keyEventWrap/extra';
 import { HistoryControls } from './components/historyControls';
 import { ToolButton } from './components/toolButton';
 import { FormattedMessage } from 'react-intl';
+import { BlurTool } from './components/tools/blurTool';
 
 export type DrawToolbarProps = {
     actionRef: React.RefObject<DrawToolbarActionType | undefined>;
@@ -99,6 +111,12 @@ const DrawToolbarCore: React.FC<DrawToolbarProps> = ({ actionRef, onCancel }) =>
                 case DrawState.Idle:
                     drawCacheLayerActionRef.current?.setEnable(false);
                     drawCacheLayerActionRef.current?.setActiveTool({
+                        type: 'hand',
+                    });
+                    break;
+                case DrawState.Select:
+                    drawCacheLayerActionRef.current?.setEnable(true);
+                    drawCacheLayerActionRef.current?.setActiveTool({
                         type: 'selection',
                     });
                     break;
@@ -106,6 +124,62 @@ const DrawToolbarCore: React.FC<DrawToolbarProps> = ({ actionRef, onCancel }) =>
                     drawCacheLayerActionRef.current?.setEnable(true);
                     drawCacheLayerActionRef.current?.setActiveTool({
                         type: 'rectangle',
+                        locked: true,
+                    });
+                    break;
+                case DrawState.Diamond:
+                    drawCacheLayerActionRef.current?.setEnable(true);
+                    drawCacheLayerActionRef.current?.setActiveTool({
+                        type: 'diamond',
+                        locked: true,
+                    });
+                    break;
+                case DrawState.Ellipse:
+                    drawCacheLayerActionRef.current?.setEnable(true);
+                    drawCacheLayerActionRef.current?.setActiveTool({
+                        type: 'ellipse',
+                        locked: true,
+                    });
+                    break;
+                case DrawState.Arrow:
+                    drawCacheLayerActionRef.current?.setEnable(true);
+                    drawCacheLayerActionRef.current?.setActiveTool({
+                        type: 'arrow',
+                        locked: true,
+                    });
+                    break;
+                case DrawState.Line:
+                    drawCacheLayerActionRef.current?.setEnable(true);
+                    drawCacheLayerActionRef.current?.setActiveTool({
+                        type: 'line',
+                        locked: true,
+                    });
+                    break;
+                case DrawState.Pen:
+                    drawCacheLayerActionRef.current?.setEnable(true);
+                    drawCacheLayerActionRef.current?.setActiveTool({
+                        type: 'freedraw',
+                        locked: true,
+                    });
+                    break;
+                case DrawState.Text:
+                    drawCacheLayerActionRef.current?.setEnable(true);
+                    drawCacheLayerActionRef.current?.setActiveTool({
+                        type: 'text',
+                        locked: true,
+                    });
+                    break;
+                case DrawState.Blur:
+                    drawCacheLayerActionRef.current?.setEnable(true);
+                    drawCacheLayerActionRef.current?.setActiveTool({
+                        type: 'blur',
+                        locked: true,
+                    });
+                    break;
+                case DrawState.Eraser:
+                    drawCacheLayerActionRef.current?.setEnable(true);
+                    drawCacheLayerActionRef.current?.setActiveTool({
+                        type: 'eraser',
                         locked: true,
                     });
                     break;
@@ -174,6 +248,17 @@ const DrawToolbarCore: React.FC<DrawToolbarProps> = ({ actionRef, onCancel }) =>
                             }}
                         />
 
+                        {/* 选择状态 */}
+                        <ToolButton
+                            componentKey={KeyEventKey.SelectTool}
+                            icon={<ArrowSelectIcon style={{ fontSize: '1.08em' }} />}
+                            disableOnDrawing
+                            drawState={DrawState.Select}
+                            onClick={() => {
+                                onToolClick(DrawState.Select);
+                            }}
+                        />
+
                         <div className="draw-toolbar-splitter" />
 
                         {/* 矩形 */}
@@ -184,6 +269,17 @@ const DrawToolbarCore: React.FC<DrawToolbarProps> = ({ actionRef, onCancel }) =>
                             drawState={DrawState.Rect}
                             onClick={() => {
                                 onToolClick(DrawState.Rect);
+                            }}
+                        />
+
+                        {/* 菱形 */}
+                        <ToolButton
+                            componentKey={KeyEventKey.DiamondTool}
+                            icon={<DiamondIcon style={{ fontSize: '1em' }} />}
+                            disableOnDrawing
+                            drawState={DrawState.Diamond}
+                            onClick={() => {
+                                onToolClick(DrawState.Diamond);
                             }}
                         />
 
@@ -209,6 +305,17 @@ const DrawToolbarCore: React.FC<DrawToolbarProps> = ({ actionRef, onCancel }) =>
                             }}
                         />
 
+                        {/* 线条 */}
+                        <ToolButton
+                            componentKey={KeyEventKey.LineTool}
+                            icon={<LineIcon style={{ fontSize: '1.16em' }} />}
+                            disableOnDrawing
+                            drawState={DrawState.Line}
+                            onClick={() => {
+                                onToolClick(DrawState.Line);
+                            }}
+                        />
+
                         {/* 画笔 */}
                         <ToolButton
                             componentKey={KeyEventKey.PenTool}
@@ -220,14 +327,36 @@ const DrawToolbarCore: React.FC<DrawToolbarProps> = ({ actionRef, onCancel }) =>
                             }}
                         />
 
-                        {/* 高亮 */}
+                        {/* 文本 */}
                         <ToolButton
-                            componentKey={KeyEventKey.HighlightTool}
-                            icon={<HighlightOutlined />}
+                            componentKey={KeyEventKey.TextTool}
+                            icon={<TextIcon style={{ fontSize: '1.08em' }} />}
                             disableOnDrawing
-                            drawState={DrawState.Highlight}
+                            drawState={DrawState.Text}
                             onClick={() => {
-                                onToolClick(DrawState.Highlight);
+                                onToolClick(DrawState.Text);
+                            }}
+                        />
+
+                        {/* 模糊 */}
+                        <ToolButton
+                            componentKey={KeyEventKey.BlurTool}
+                            icon={<MosaicIcon />}
+                            disableOnDrawing
+                            drawState={DrawState.Blur}
+                            onClick={() => {
+                                onToolClick(DrawState.Blur);
+                            }}
+                        />
+
+                        {/* 橡皮擦 */}
+                        <ToolButton
+                            componentKey={KeyEventKey.EraserTool}
+                            icon={<EraserIcon style={{ fontSize: '0.9em' }} />}
+                            disableOnDrawing
+                            drawState={DrawState.Eraser}
+                            onClick={() => {
+                                onToolClick(DrawState.Eraser);
                             }}
                         />
 
@@ -254,6 +383,8 @@ const DrawToolbarCore: React.FC<DrawToolbarProps> = ({ actionRef, onCancel }) =>
                         />
                     </Flex>
                 </div>
+
+                <BlurTool />
             </DrawToolbarContext.Provider>
             <style jsx>{`
                 .draw-toolbar-container {

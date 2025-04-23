@@ -23,16 +23,27 @@ export enum DrawState {
     Select = 1,
     // 矩形
     Rect = 2,
+    // 菱形
+    Diamond = 3,
     // 椭圆
-    Ellipse = 3,
+    Ellipse = 4,
     // 箭头
-    Arrow = 4,
+    Arrow = 5,
+    // 线条
+    Line = 6,
     // 画笔
-    Pen = 5,
-    // 高亮
-    Highlight = 6,
-    Redo = 101,
-    Undo = 102,
+    Pen = 7,
+    // 文本
+    Text = 8,
+    // 模糊
+    Blur = 9,
+    // 橡皮擦
+    Eraser = 10,
+    // 撤销
+    Undo = 101,
+    // 重做
+    Redo = 102,
+    // 取消
     Cancel = 103,
 }
 

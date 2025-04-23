@@ -5,7 +5,12 @@ import { Button } from 'antd';
 export const layerButtonRender: NonNullable<
     NonNullable<ExcalidrawPropsCustomOptions['pickerRenders']>['layerButtonRender']
 > = (props) => {
-    const { onClick, title, children } = props;
+    const { onClick, title, children, hidden, visible } = props;
+
+    if ((hidden !== undefined && hidden) || (visible !== undefined && !visible)) {
+        return <></>;
+    }
+
     return (
         <Button
             key={title}

@@ -560,3 +560,49 @@ const StraightLineSVG = () => (
 export const StraightLineIcon = (props: IconComponentProps) => (
     <Icon component={StraightLineSVG} {...props} />
 );
+
+const DiamondSVG = () => (
+    <svg
+        viewBox="0 0 1024 1024"
+        version="1.1"
+        xmlns="http://www.w3.org/2000/svg"
+        width="1em"
+        height="1em"
+        fill="currentColor"
+    >
+        <path
+            d="M512 967.111111c-22.755556 0-45.511111-8.533333-59.733333-25.6l-369.777778-369.777778c-34.133333-34.133333-34.133333-88.177778 0-122.311111l369.777778-369.777778c34.133333-34.133333 88.177778-34.133333 122.311111 0l369.777778 369.777778c17.066667 17.066667 25.6 36.977778 25.6 59.733334s-8.533333 45.511111-25.6 59.733333l-369.777778 369.777778c-17.066667 19.911111-39.822222 28.444444-62.577778 28.444444z m0-824.888889L142.222222 512l369.777778 369.777778 369.777778-369.777778L512 142.222222z"
+            p-id="7391"
+        ></path>
+    </svg>
+);
+
+export const DiamondIcon = (props: IconComponentProps) => (
+    <Icon component={DiamondSVG} {...props} />
+);
+
+const LineSVG = () => (
+    <svg
+        viewBox="0 0 1024 1024"
+        version="1.1"
+        xmlns="http://www.w3.org/2000/svg"
+        width="1em"
+        height="1em"
+        fill="currentColor"
+    >
+        <path
+            d="M226.4576 722.7904l485.12-485.12 72.3968 72.3968-485.12 485.12z"
+            p-id="13421"
+        ></path>
+        <path
+            d="M783.36 240.64m-102.4 0a102.4 102.4 0 1 0 204.8 0 102.4 102.4 0 1 0-204.8 0Z"
+            p-id="13422"
+        ></path>
+        <path
+            d="M240.64 783.36m-102.4 0a102.4 102.4 0 1 0 204.8 0 102.4 102.4 0 1 0-204.8 0Z"
+            p-id="13423"
+        ></path>
+    </svg>
+);
+
+export const LineIcon = (props: IconComponentProps) => <Icon component={LineSVG} {...props} />;

@@ -3,7 +3,8 @@ import { ExcalidrawPropsCustomOptions } from '@mg-chao/excalidraw/types';
 
 export const colorPickerPopoverRender: NonNullable<
     ExcalidrawPropsCustomOptions['pickerRenders']
->['colorPickerPopoverRender'] = ({ color, onChange }) => {
+>['colorPickerPopoverRender'] = ({ color: colorProp, onChange }) => {
+    const color = colorProp === 'transparent' ? '#00000000' : colorProp;
     return (
         <div title={color} className="color-picker-popover-render">
             <ColorPicker

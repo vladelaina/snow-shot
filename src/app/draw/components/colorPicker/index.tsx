@@ -337,6 +337,10 @@ const ColorPickerCore: React.FC<{
             <KeyEventWrap
                 componentKey={KeyEventKey.ColorPickerCopy}
                 onKeyDown={() => {
+                    if (!enableRef.current) {
+                        return;
+                    }
+
                     navigator.clipboard.writeText(
                         `rgb(${colorRef.current.red}, ${colorRef.current.green}, ${colorRef.current.blue})`,
                     );

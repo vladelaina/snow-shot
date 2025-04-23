@@ -3,6 +3,7 @@ import { DrawLayerActionType } from './components/drawLayer';
 import { SelectLayerActionType } from './components/selectLayer';
 import { ImageBuffer } from '@/commands';
 import { createPublisher } from '@/hooks/useStatePublisher';
+import { BaseLayerEventActionType } from './components/baseLayer';
 
 export const switchLayer = (
     layer: CanvasLayer,
@@ -34,6 +35,30 @@ export const getMonitorRect = (imageBuffer: ImageBuffer | undefined) => {
     };
 };
 
+export enum CaptureEvent {
+    onExecuteScreenshot = 'onExecuteScreenshot',
+    onCaptureReady = 'onCaptureReady',
+    onCaptureLoad = 'onCaptureLoad',
+    onCaptureFinish = 'onCaptureFinish',
+}
+
+export type CaptureEventParams =
+    | {
+          event: CaptureEvent.onExecuteScreenshot;
+      }
+    | {
+          event: CaptureEvent.onCaptureLoad;
+          params: Parameters<BaseLayerEventActionType['onCaptureLoad']>;
+      }
+    | {
+          event: CaptureEvent.onCaptureFinish;
+      }
+    | {
+          event: CaptureEvent.onCaptureReady;
+          params: Parameters<BaseLayerEventActionType['onCaptureReady']>;
+      };
+
 export const CaptureStepPublisher = createPublisher<CaptureStep>(CaptureStep.Select);
 export const DrawStatePublisher = createPublisher<DrawState>(DrawState.Idle);
 export const CaptureLoadingPublisher = createPublisher<boolean>(true);
+export const CaptureEventPublisher = createPublisher<CaptureEventParams | undefined>(undefined);

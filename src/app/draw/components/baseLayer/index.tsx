@@ -69,7 +69,7 @@ export type BaseLayerEventActionType = {
     /**
      * 截图加载完成
      */
-    onCaptureLoad: () => Promise<void>;
+    onCaptureLoad: (texture: PIXI.Texture, imageBuffer: ImageBuffer) => Promise<void>;
     /**
      * 截图完成
      */
@@ -86,6 +86,17 @@ export type BaseLayerEventActionType = {
      * 添加一个子元素到最上层的容器
      */
     addChildToTopContainer: (children: PIXI.Container<PIXI.ContainerChild>) => void;
+    /**
+     * 添加一个子元素到指定的容器
+     */
+    addChildToContainer: (
+        container: PIXI.Container<PIXI.ContainerChild>,
+        children: PIXI.Container<PIXI.ContainerChild>,
+    ) => void;
+    /**
+     * 创建一个新的画布容器
+     */
+    createNewCanvasContainer: () => PIXI.Container | undefined;
 };
 
 export type BaseLayerActionType = {
@@ -110,6 +121,8 @@ export const defaultBaseLayerActions: BaseLayerActionType = {
     getLayerContainerElement: () => null,
     addChildToTopContainer: () => {},
     changeCursor: () => 'auto',
+    createNewCanvasContainer: () => undefined,
+    addChildToContainer: () => {},
 };
 
 type BaseLayerCoreActionType = {
@@ -118,6 +131,10 @@ type BaseLayerCoreActionType = {
     getCanvasApp: () => PIXI.Application | undefined;
     getLayerContainerElement: () => HTMLDivElement | null;
     addChildToTopContainer: (children: PIXI.Container<PIXI.ContainerChild>) => void;
+    addChildToContainer: (
+        container: PIXI.Container<PIXI.ContainerChild>,
+        children: PIXI.Container<PIXI.ContainerChild>,
+    ) => void;
     changeCursor: (cursor: Required<React.CSSProperties>['cursor']) => string;
 };
 
@@ -232,6 +249,18 @@ export const BaseLayerCore: React.FC<
         [getTopContainer],
     );
 
+    const addChildToContainer = useCallback(
+        (
+            container: PIXI.Container<PIXI.ContainerChild>,
+            children: PIXI.Container<PIXI.ContainerChild>,
+        ) => {
+            children.zIndex = canvasContainerChildCountRef.current + 1;
+            container.addChild(children);
+            canvasContainerChildCountRef.current++;
+        },
+        [],
+    );
+
     const clearCanvas = useCallback<BaseLayerCoreActionType['clearCanvas']>(async () => {
         const canvasApp = canvasAppRef.current;
         if (!canvasApp) {
@@ -266,7 +295,9 @@ export const BaseLayerCore: React.FC<
             getCanvasApp,
             getLayerContainerElement,
             addChildToTopContainer,
+            addChildToContainer,
             changeCursor,
+            createNewCanvasContainer,
         }),
         [
             resizeCanvas,
@@ -274,7 +305,9 @@ export const BaseLayerCore: React.FC<
             getCanvasApp,
             getLayerContainerElement,
             addChildToTopContainer,
+            addChildToContainer,
             changeCursor,
+            createNewCanvasContainer,
         ],
     );
 
@@ -376,6 +409,15 @@ export function withBaseLayer<
             [],
         );
 
+        const addChildToContainer = useCallback(
+            (
+                container: PIXI.Container<PIXI.ContainerChild>,
+                children: PIXI.Container<PIXI.ContainerChild>,
+            ) => {
+                baseLayerCoreActionRef.current?.addChildToContainer(container, children);
+            },
+            [],
+        );
         const changeCursor = useCallback<BaseLayerActionType['changeCursor']>((cursor) => {
             return baseLayerCoreActionRef.current?.changeCursor(cursor) ?? 'auto';
         }, []);
@@ -390,6 +432,7 @@ export function withBaseLayer<
                 getCanvasApp,
                 getLayerContainerElement,
                 addChildToTopContainer,
+                addChildToContainer,
                 changeCursor,
             }),
             [
@@ -399,6 +442,7 @@ export function withBaseLayer<
                 getCanvasApp,
                 getLayerContainerElement,
                 addChildToTopContainer,
+                addChildToContainer,
                 changeCursor,
             ],
         );

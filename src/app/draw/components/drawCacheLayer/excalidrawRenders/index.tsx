@@ -7,7 +7,7 @@ import { buttonIconSelectRadioRender } from './buttonIconSelectRadioRender';
 import { buttonIconSelectRender } from './buttonIconSelectRender';
 import { rangeRender } from './rangeRender';
 import { layerButtonRender } from './layerButtonRender';
-import { Space } from 'antd';
+import { ButtonList } from './buttonList';
 
 export const pickerRenders: ExcalidrawPropsCustomOptions['pickerRenders'] = {
     colorPickerTopPickesButtonRender,
@@ -17,9 +17,9 @@ export const pickerRenders: ExcalidrawPropsCustomOptions['pickerRenders'] = {
     buttonIconSelectRender,
     rangeRender,
     layerButtonRender,
-    elementStrokeColors: ['#1f1f1f', '#f5222d', '#52c41a', '#1677ff', '#faad14'],
+    elementStrokeColors: ['#1e1e1e', '#f5222d', '#52c41a', '#1677ff', '#faad14'],
     elementBackgroundColors: ['transparent', '#ffccc7', '#d9f7be', '#bae0ff', '#fff1b8'],
-    ButtonList: Space,
+    ButtonList: ButtonList,
 };
 
 export const layoutRenders: ExcalidrawPropsCustomOptions['layoutRenders'] = {

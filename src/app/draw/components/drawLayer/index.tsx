@@ -12,7 +12,10 @@ import {
 import { zIndexs } from '@/utils/zIndex';
 import * as PIXI from 'pixi.js';
 
-export type DrawLayerActionType = BaseLayerActionType & {};
+export type DrawLayerActionType = BaseLayerActionType & {
+    getBlurContainer: () => PIXI.Container | undefined;
+    getDrawContainer: () => PIXI.Container | undefined;
+};
 
 export type DrawLayerProps = {
     actionRef: React.RefObject<DrawLayerActionType | undefined>;
@@ -35,6 +38,7 @@ const DrawLayerCore: React.FC<DrawLayerProps> = ({ actionRef }) => {
 
             // 模糊层和和绘制层独立处理
             imageTextureRef.current = texture;
+
             blurContainerRef.current = createNewCanvasContainer();
             drawContainerRef.current = createNewCanvasContainer();
         },
@@ -51,6 +55,8 @@ const DrawLayerCore: React.FC<DrawLayerProps> = ({ actionRef }) => {
             ...defaultBaseLayerActions,
             onCaptureReady,
             onCaptureFinish,
+            getBlurContainer: () => blurContainerRef.current,
+            getDrawContainer: () => drawContainerRef.current,
         }),
         [onCaptureFinish, onCaptureReady],
     );

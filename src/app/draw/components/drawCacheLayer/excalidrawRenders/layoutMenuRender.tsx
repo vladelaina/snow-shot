@@ -8,6 +8,8 @@ import { theme } from 'antd';
 import { useCallbackRender } from '@/hooks/useCallbackRender';
 import { HolderOutlined } from '@ant-design/icons';
 import { useIntl } from 'react-intl';
+import { useStateSubscriber } from '@/hooks/useStateSubscriber';
+import { ExcalidrawOnChangePublisher } from '../extra';
 
 const LayoutMenuRender: React.FC<{
     children: React.ReactNode;
@@ -64,6 +66,8 @@ const LayoutMenuRender: React.FC<{
     useEffect(() => {
         updateDrawToolbarStyleRender();
     }, [updateDrawToolbarStyleRender]);
+
+    useStateSubscriber(ExcalidrawOnChangePublisher, updateDrawToolbarStyleRender);
 
     const dragTitle = useMemo(() => {
         return intl.formatMessage({ id: 'draw.drag' });

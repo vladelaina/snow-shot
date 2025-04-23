@@ -15,6 +15,8 @@ import {
     DrawStatePublisher,
     CaptureStepPublisher,
     switchLayer,
+    CaptureEventPublisher,
+    CaptureEvent,
 } from './extra';
 import { DrawToolbar, DrawToolbarActionType } from './components/drawToolbar';
 import { BaseLayerEventActionType } from './components/baseLayer';
@@ -28,7 +30,11 @@ import { EnableKeyEventPublisher } from './components/drawToolbar/components/key
 import { zIndexs } from '@/utils/zIndex';
 import styles from './page.module.css';
 import dynamic from 'next/dynamic';
-import { DrawCacheLayerActionType } from './components/drawCacheLayer/extra';
+import {
+    DrawCacheLayerActionType,
+    ExcalidrawOnChangePublisher,
+    ExcalidrawOnHandleEraserPublisher,
+} from './components/drawCacheLayer/extra';
 
 const DrawCacheLayer = dynamic(
     async () => (await import('./components/drawCacheLayer')).DrawCacheLayer,
@@ -62,12 +68,21 @@ const DrawPageCore: React.FC = () => {
     );
     const [getDrawState, , resetDrawState] = useStateSubscriber(DrawStatePublisher, undefined);
     const [, setCaptureLoading] = useStateSubscriber(CaptureLoadingPublisher, undefined);
-    const onCaptureLoad = useCallback<BaseLayerEventActionType['onCaptureLoad']>(async () => {
-        await Promise.all([
-            drawLayerActionRef.current?.onCaptureLoad(),
-            selectLayerActionRef.current?.onCaptureLoad(),
-        ]);
-    }, []);
+    const [, setCaptureEvent] = useStateSubscriber(CaptureEventPublisher, undefined);
+    const onCaptureLoad = useCallback<BaseLayerEventActionType['onCaptureLoad']>(
+        async (texture: PIXI.Texture, imageBuffer: ImageBuffer) => {
+            await Promise.all([
+                drawLayerActionRef.current?.onCaptureLoad(texture, imageBuffer),
+                selectLayerActionRef.current?.onCaptureLoad(texture, imageBuffer),
+            ]);
+
+            setCaptureEvent({
+                event: CaptureEvent.onCaptureLoad,
+                params: [texture, imageBuffer],
+            });
+        },
+        [setCaptureEvent],
+    );
     const capturingRef = useRef(false);
     const { history } = useContext(HistoryContext);
     const circleCursorRef = useRef<HTMLDivElement>(null);
@@ -83,7 +98,7 @@ const DrawPageCore: React.FC = () => {
             handleLayerSwitch(CanvasLayer.Select);
             return;
         } else if (captureStep === CaptureStep.Draw) {
-            if (drawState === DrawState.Select || drawState === DrawState.Idle) {
+            if (drawState === DrawState.Idle) {
                 handleLayerSwitch(CanvasLayer.Select);
                 drawCacheLayerActionRef.current?.setEnable(false);
                 return;
@@ -128,11 +143,15 @@ const DrawPageCore: React.FC = () => {
                 selectLayerActionRef.current?.onCaptureReady(imageTexture, imageBuffer),
                 drawCacheLayerActionRef.current?.onCaptureReady(),
             ]);
+            setCaptureEvent({
+                event: CaptureEvent.onCaptureReady,
+                params: [imageTexture, imageBuffer],
+            });
             setCaptureLoading(false);
 
-            onCaptureLoad();
+            onCaptureLoad(imageTexture, imageBuffer);
         },
-        [onCaptureLoad, setCaptureLoading],
+        [onCaptureLoad, setCaptureLoading, setCaptureEvent],
     );
 
     /** 显示截图窗口 */
@@ -162,13 +181,16 @@ const DrawPageCore: React.FC = () => {
             selectLayerActionRef.current?.onCaptureFinish(),
             drawCacheLayerActionRef.current?.onCaptureFinish(),
         ]);
+        setCaptureEvent({
+            event: CaptureEvent.onCaptureFinish,
+        });
         imageBufferRef.current = undefined;
         resetCaptureStep();
         resetDrawState();
         drawToolbarActionRef.current?.setEnable(false);
         capturingRef.current = false;
         history.clear();
-    }, [hideWindow, resetCaptureStep, resetDrawState, history]);
+    }, [hideWindow, setCaptureEvent, resetCaptureStep, resetDrawState, history]);
 
     /** 执行截图 */
     const excuteScreenshot = useCallback(async () => {
@@ -176,6 +198,9 @@ const DrawPageCore: React.FC = () => {
             drawLayerActionRef.current?.onExecuteScreenshot(),
             selectLayerActionRef.current?.onExecuteScreenshot(),
         ]);
+        setCaptureEvent({
+            event: CaptureEvent.onExecuteScreenshot,
+        });
 
         // 发起截图
         const imageBuffer = await captureCurrentMonitor(ImageEncoder.WebP);
@@ -187,7 +212,7 @@ const DrawPageCore: React.FC = () => {
             readyCapture(imageBuffer),
             layerOnExecuteScreenshotPromise,
         ]);
-    }, [readyCapture, showWindow]);
+    }, [readyCapture, showWindow, setCaptureEvent]);
 
     useEffect(() => {
         // 监听截图命令
@@ -263,6 +288,9 @@ export default React.memo(
             DrawStatePublisher,
             CaptureLoadingPublisher,
             EnableKeyEventPublisher,
+            ExcalidrawOnChangePublisher,
+            CaptureEventPublisher,
+            ExcalidrawOnHandleEraserPublisher,
         ),
     ),
 );

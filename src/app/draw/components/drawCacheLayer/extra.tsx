@@ -1,6 +1,7 @@
-import { ExcalidrawActionType } from '@mg-chao/excalidraw/types';
+import { AppState, BinaryFiles, ExcalidrawActionType } from '@mg-chao/excalidraw/types';
 import { ExcalidrawImperativeAPI } from '@mg-chao/excalidraw/types';
 import { createPublisher } from '@/hooks/useStatePublisher';
+import { ExcalidrawElement, OrderedExcalidrawElement } from '@mg-chao/excalidraw/element/types';
 
 export type DrawCacheLayerActionType = {
     setActiveTool: ExcalidrawImperativeAPI['setActiveTool'];
@@ -37,3 +38,21 @@ export const convertLocalToLocalCode = (local: string) => {
             return local;
     }
 };
+
+export type ExcalidrawOnChangeParams = {
+    elements: readonly OrderedExcalidrawElement[];
+    appState: AppState;
+    files: BinaryFiles;
+};
+
+export const ExcalidrawOnChangePublisher = createPublisher<ExcalidrawOnChangeParams | undefined>(
+    undefined,
+);
+
+export type ExcalidrawOnHandleEraserParams = {
+    elements: Set<ExcalidrawElement['id']>;
+};
+
+export const ExcalidrawOnHandleEraserPublisher = createPublisher<
+    ExcalidrawOnHandleEraserParams | undefined
+>(undefined);

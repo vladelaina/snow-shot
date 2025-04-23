@@ -1,3 +1,4 @@
+import { ExcalidrawActionType } from '@mg-chao/excalidraw/types';
 import * as PIXI from 'pixi.js';
 
 /**
@@ -6,6 +7,10 @@ import * as PIXI from 'pixi.js';
 enum CanvasHistoryActionType {
     Add = 0,
     Remove = 1,
+    DrawCacheRedo = 11,
+    DrawCacheUndo = 12,
+    DrawCacheRecord = 13,
+    DrawCacheClear = 14,
 }
 
 /**
@@ -13,7 +18,7 @@ enum CanvasHistoryActionType {
  */
 type CanvasHistoryAction =
     | {
-          type: CanvasHistoryActionType;
+          type: CanvasHistoryActionType.Add;
           container: PIXI.Container;
           object: PIXI.Container;
       }
@@ -21,6 +26,10 @@ type CanvasHistoryAction =
           type: CanvasHistoryActionType.Remove;
           container: PIXI.Container;
           object: PIXI.Container;
+      }
+    | {
+          type: CanvasHistoryActionType.DrawCacheRecord;
+          excalidrawActionRef: React.RefObject<ExcalidrawActionType | undefined>;
       };
 
 export class CanvasHistory {
@@ -62,6 +71,27 @@ export class CanvasHistory {
         });
     }
 
+    public pushRemoveAction(container: PIXI.Container, object: PIXI.Container): void {
+        this.pushAction({
+            type: CanvasHistoryActionType.Remove,
+            container,
+            object,
+        });
+    }
+
+    /**
+     * 添加绘图缓存记录操作
+     * @param history Excalidraw历史记录对象
+     */
+    public pushDrawCacheRecordAction(
+        actionRef: React.RefObject<ExcalidrawActionType | undefined>,
+    ): void {
+        this.pushAction({
+            type: CanvasHistoryActionType.DrawCacheRecord,
+            excalidrawActionRef: actionRef,
+        });
+    }
+
     /**
      * 检查是否可以执行撤销操作
      * @returns {boolean} 如果有可撤销的操作返回 true，否则返回 false
@@ -94,6 +124,9 @@ export class CanvasHistory {
             case CanvasHistoryActionType.Remove:
                 action.container.addChild(action.object);
                 break;
+            case CanvasHistoryActionType.DrawCacheRecord:
+                action.excalidrawActionRef.current?.historyUndo();
+                break;
         }
 
         this.redoStack.push(action);
@@ -115,6 +148,9 @@ export class CanvasHistory {
                 break;
             case CanvasHistoryActionType.Remove:
                 action.container.removeChild(action.object);
+                break;
+            case CanvasHistoryActionType.DrawCacheRecord:
+                action.excalidrawActionRef.current?.historyRedo();
                 break;
         }
 

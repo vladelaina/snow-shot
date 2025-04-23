@@ -15,11 +15,13 @@ export enum KeyEventKey {
     MoveTool = 'moveTool',
     SelectTool = 'selectTool',
     RectTool = 'rectTool',
+    DiamondTool = 'diamondTool',
     EllipseTool = 'ellipseTool',
     ArrowTool = 'arrowTool',
+    LineTool = 'lineTool',
     PenTool = 'penTool',
-    HighlightTool = 'highlightTool',
-    MosaicTool = 'mosaicTool',
+    // HighlightTool = 'highlightTool',
+    BlurTool = 'blurTool',
     TextTool = 'textTool',
     EraserTool = 'eraserTool',
     UndoTool = 'undoTool',
@@ -54,28 +56,32 @@ export const defaultKeyEventSettings: Record<KeyEventKey, KeyEventValue> = {
         hotKey: '2',
         unique: true,
     },
-    [KeyEventKey.ArrowTool]: {
+    [KeyEventKey.DiamondTool]: {
         hotKey: '3',
         unique: true,
     },
-    [KeyEventKey.PenTool]: {
+    [KeyEventKey.ArrowTool]: {
         hotKey: '4',
         unique: true,
     },
-    [KeyEventKey.HighlightTool]: {
+    [KeyEventKey.LineTool]: {
         hotKey: '5',
         unique: true,
     },
-    [KeyEventKey.TextTool]: {
-        hotKey: '6, T',
+    [KeyEventKey.PenTool]: {
+        hotKey: '6',
         unique: true,
     },
-    [KeyEventKey.MosaicTool]: {
-        hotKey: '7',
+    [KeyEventKey.TextTool]: {
+        hotKey: '7, T',
+        unique: true,
+    },
+    [KeyEventKey.BlurTool]: {
+        hotKey: '8',
         unique: true,
     },
     [KeyEventKey.EraserTool]: {
-        hotKey: '8, E',
+        hotKey: '9, E',
         unique: true,
     },
     [KeyEventKey.UndoTool]: {

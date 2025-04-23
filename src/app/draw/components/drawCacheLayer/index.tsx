@@ -15,11 +15,18 @@ import '@mg-chao/excalidraw/index.css';
 import { useStateSubscriber } from '@/hooks/useStateSubscriber';
 import { withStatePublisher } from '@/hooks/useStatePublisher';
 import { ExcalidrawKeyEventHandler } from './components/excalidrawKeyEventHandler';
-import { layoutRenders, pickerRenders } from './excalidrawRenders';
-import { convertLocalToLocalCode, ExcalidrawKeyEventPublisher } from './extra';
+import {
+    convertLocalToLocalCode,
+    ExcalidrawKeyEventPublisher,
+    ExcalidrawOnChangePublisher,
+    ExcalidrawOnHandleEraserPublisher,
+} from './extra';
 import { DrawCacheLayerActionType } from './extra';
 import { useIntl } from 'react-intl';
 import { theme } from 'antd';
+import { useHistory } from '../historyContext';
+import { layoutRenders } from './excalidrawRenders';
+import { pickerRenders } from './excalidrawRenders';
 
 const DrawCacheLayerCore: React.FC<{
     actionRef: React.RefObject<DrawCacheLayerActionType | undefined>;
@@ -27,12 +34,22 @@ const DrawCacheLayerCore: React.FC<{
     const { token } = theme.useToken();
     const intl = useIntl();
 
+    const { history } = useHistory();
+
     const initialData = useMemo<ExcalidrawInitialDataState>(() => {
         return {
             appState: { viewBackgroundColor: '#00000000' },
         };
     }, []);
 
+    const [, setExcalidrawOnChangeEvent] = useStateSubscriber(
+        ExcalidrawOnChangePublisher,
+        undefined,
+    );
+    const [, setExcalidrawOnHandleEraserEvent] = useStateSubscriber(
+        ExcalidrawOnHandleEraserPublisher,
+        undefined,
+    );
     const [getExcalidrawKeyEvent] = useStateSubscriber(ExcalidrawKeyEventPublisher, undefined);
     const drawCacheLayerElementRef = useRef<HTMLDivElement>(null);
     const excalidrawAPIRef = useRef<ExcalidrawImperativeAPI>(undefined);
@@ -45,23 +62,18 @@ const DrawCacheLayerCore: React.FC<{
         excalidrawAPIRef.current?.updateScene(...args);
     }, []);
 
-    const setEnable = useCallback<DrawCacheLayerActionType['setEnable']>(
-        (enable: boolean) => {
-            if (!drawCacheLayerElementRef.current) {
-                return;
-            }
+    const setEnable = useCallback<DrawCacheLayerActionType['setEnable']>((enable: boolean) => {
+        if (!drawCacheLayerElementRef.current) {
+            return;
+        }
 
-            if (enable) {
-                drawCacheLayerElementRef.current.style.pointerEvents = 'auto';
-            } else {
-                updateScene({
-                    elements: [],
-                });
-                drawCacheLayerElementRef.current.style.pointerEvents = 'none';
-            }
-        },
-        [updateScene],
-    );
+        if (enable) {
+            drawCacheLayerElementRef.current.style.pointerEvents = 'auto';
+            drawCacheLayerElementRef.current.style.opacity = '1';
+        } else {
+            drawCacheLayerElementRef.current.style.pointerEvents = 'none';
+        }
+    }, []);
 
     useImperativeHandle(
         actionRef,
@@ -83,11 +95,17 @@ const DrawCacheLayerCore: React.FC<{
             onCaptureFinish: async () => {
                 setEnable(false);
                 excalidrawAPIRef.current?.setActiveTool({
-                    type: 'selection',
+                    type: 'hand',
                 });
+                updateScene({
+                    elements: [],
+                    captureUpdate: 'IMMEDIATELY',
+                });
+                excalidrawAPIRef.current?.history.clear();
+                history.clear();
             },
         }),
-        [setEnable, updateScene],
+        [history, setEnable, updateScene],
     );
 
     const shouldResizeFromCenter = useCallback<
@@ -114,6 +132,17 @@ const DrawCacheLayerCore: React.FC<{
         return getExcalidrawKeyEvent().autoAlign;
     }, [getExcalidrawKeyEvent]);
 
+    const onHistoryChange = useCallback<
+        NonNullable<ExcalidrawPropsCustomOptions['onHistoryChange']>
+    >(
+        (_, type) => {
+            if (type === 'record') {
+                history.pushDrawCacheRecordAction(excalidrawActionRef);
+            }
+        },
+        [history],
+    );
+
     return (
         <div ref={drawCacheLayerElementRef} className="draw-cache-layer">
             <Excalidraw
@@ -132,6 +161,19 @@ const DrawCacheLayerCore: React.FC<{
                     shouldRotateWithDiscreteAngle,
                     pickerRenders: pickerRenders,
                     layoutRenders: layoutRenders,
+                    onHistoryChange,
+                    onHandleEraser: (elements) => {
+                        setExcalidrawOnHandleEraserEvent({
+                            elements,
+                        });
+                    },
+                }}
+                onChange={(elements, appState, files) => {
+                    setExcalidrawOnChangeEvent({
+                        elements,
+                        appState,
+                        files,
+                    });
                 }}
                 langCode={convertLocalToLocalCode(intl.locale)}
             />
@@ -143,6 +185,7 @@ const DrawCacheLayerCore: React.FC<{
                     left: 0;
                     width: 100%;
                     height: 100%;
+                    opacity: 0;
                 }
 
                 .draw-cache-layer :global(.excalidraw .layer-ui__wrapper) {
@@ -160,6 +203,16 @@ const DrawCacheLayerCore: React.FC<{
                     box-shadow: 0 0 3px 0px ${token.colorPrimaryHover};
                     color: ${token.colorText};
                     border-radius: ${token.borderRadiusLG}px;
+                    animation: slideIn ${token.motionDurationFast} ${token.motionEaseInOut};
+                }
+
+                @keyframes slideIn {
+                    from {
+                        opacity: 0;
+                    }
+                    to {
+                        opacity: 1;
+                    }
                 }
 
                 .draw-cache-layer :global(.layout-menu-render-drag-button) {
