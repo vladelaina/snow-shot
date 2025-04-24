@@ -8,17 +8,19 @@ import React from 'react';
 import { DragButton, DragButtonActionType } from './components/dragButton';
 import { DrawToolbarContext } from './extra';
 import { KeyEventKey } from './components/keyEventWrap/extra';
-import { CloseOutlined, DragOutlined } from '@ant-design/icons';
+import { CloseOutlined, CopyOutlined, DragOutlined } from '@ant-design/icons';
 import {
     ArrowIcon,
     ArrowSelectIcon,
     CircleIcon,
     DiamondIcon,
     EraserIcon,
+    FixedIcon,
     LineIcon,
     MosaicIcon,
     PenIcon,
     RectIcon,
+    SaveIcon,
     TextIcon,
 } from '@/components/icons';
 import { CaptureStepPublisher, DrawStatePublisher } from '../../extra';
@@ -33,6 +35,9 @@ import { BlurTool } from './components/tools/blurTool';
 export type DrawToolbarProps = {
     actionRef: React.RefObject<DrawToolbarActionType | undefined>;
     onCancel: () => void;
+    onSave: () => void;
+    onFixed: () => void;
+    onCopyToClipboard: () => void;
 };
 
 export type DrawToolbarActionType = {
@@ -41,7 +46,13 @@ export type DrawToolbarActionType = {
 
 export const DrawingPublisher = createPublisher<boolean>(false);
 
-const DrawToolbarCore: React.FC<DrawToolbarProps> = ({ actionRef, onCancel }) => {
+const DrawToolbarCore: React.FC<DrawToolbarProps> = ({
+    actionRef,
+    onCancel,
+    onSave,
+    onFixed,
+    onCopyToClipboard,
+}) => {
     const { drawCacheLayerActionRef } = useContext(DrawContext);
 
     const [getDrawState, setDrawState] = useStateSubscriber(DrawStatePublisher, undefined);
@@ -98,7 +109,7 @@ const DrawToolbarCore: React.FC<DrawToolbarProps> = ({ actionRef, onCancel }) =>
 
             let next = drawState;
             if (prev === drawState) {
-                next = DrawState.Idle;
+                next = DrawState.Select;
             }
 
             if (next !== DrawState.Idle) {
@@ -366,6 +377,30 @@ const DrawToolbarCore: React.FC<DrawToolbarProps> = ({ actionRef, onCancel }) =>
 
                         <div className="draw-toolbar-splitter" />
 
+                        {/* 固定到屏幕 */}
+                        <ToolButton
+                            componentKey={KeyEventKey.FixedTool}
+                            icon={<FixedIcon style={{ fontSize: '1em' }} />}
+                            disableOnDrawing
+                            drawState={DrawState.Fixed}
+                            onClick={() => {
+                                onFixed();
+                            }}
+                        />
+
+                        {/* 保存截图 */}
+                        <ToolButton
+                            componentKey={KeyEventKey.SaveTool}
+                            icon={<SaveIcon style={{ fontSize: '1em' }} />}
+                            disableOnDrawing
+                            drawState={DrawState.Save}
+                            onClick={() => {
+                                onSave();
+                            }}
+                        />
+
+                        <div className="draw-toolbar-splitter" />
+
                         {/* 取消截图 */}
                         <ToolButton
                             componentKey={KeyEventKey.CancelTool}
@@ -379,6 +414,21 @@ const DrawToolbarCore: React.FC<DrawToolbarProps> = ({ actionRef, onCancel }) =>
                             drawState={DrawState.Cancel}
                             onClick={() => {
                                 onCancel();
+                            }}
+                        />
+
+                        {/* 复制截图 */}
+                        <ToolButton
+                            componentKey={KeyEventKey.CopyTool}
+                            icon={
+                                <CopyOutlined
+                                    style={{ fontSize: '0.92em', color: token.colorPrimary }}
+                                />
+                            }
+                            disableOnDrawing
+                            drawState={DrawState.Copy}
+                            onClick={() => {
+                                onCopyToClipboard();
                             }}
                         />
                     </Flex>

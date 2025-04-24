@@ -16,6 +16,13 @@
         "core:window:allow-set-always-on-top",
         "core:window:allow-set-position",
         "core:window:allow-set-size",
+        "core:window:allow-set-shadow",
+        "dialog:default",
+        "dialog:allow-ask",
+        "dialog:allow-confirm",
+        "dialog:allow-message",
+        "dialog:allow-save",
+        "dialog:allow-open",
         "log:default"
     ]
 }

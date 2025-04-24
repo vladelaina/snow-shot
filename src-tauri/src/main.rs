@@ -3,6 +3,7 @@
 
 mod app_error;
 mod app_log;
+mod file;
 mod ocr;
 mod os;
 mod screenshot;

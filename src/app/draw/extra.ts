@@ -6,7 +6,7 @@ import { createPublisher } from '@/hooks/useStatePublisher';
 import { BaseLayerEventActionType } from './components/baseLayer';
 
 export const switchLayer = (
-    layer: CanvasLayer,
+    layer: CanvasLayer | undefined,
     drawLayerAction: DrawLayerActionType | undefined,
     selectLayerAction: SelectLayerActionType | undefined,
 ) => {
@@ -19,6 +19,8 @@ export const switchLayer = (
             break;
         case CanvasLayer.Select:
             switchSelect = true;
+            break;
+        default:
             break;
     }
 

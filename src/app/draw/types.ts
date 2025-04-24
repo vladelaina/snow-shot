@@ -13,8 +13,8 @@ export enum CaptureStep {
     Select = 1,
     // 绘制阶段
     Draw = 2,
-    // 置顶阶段
-    TopUp = 3,
+    // 固定阶段
+    Fixed = 3,
 }
 
 export enum DrawState {
@@ -45,6 +45,12 @@ export enum DrawState {
     Redo = 102,
     // 取消
     Cancel = 103,
+    // 保存
+    Save = 104,
+    // 固定
+    Fixed = 105,
+    // 复制
+    Copy = 106,
 }
 
 export enum CanvasLayer {
@@ -55,7 +61,7 @@ export enum CanvasLayer {
 }
 
 export type DrawContextType = {
-    finishCapture: () => void;
+    finishCapture: () => Promise<void>;
     drawLayerActionRef: React.RefObject<DrawLayerActionType | undefined>;
     selectLayerActionRef: React.RefObject<SelectLayerActionType | undefined>;
     imageBufferRef: React.RefObject<ImageBuffer | undefined>;
@@ -68,7 +74,7 @@ export type DrawContextType = {
 export const DrawContext = React.createContext<DrawContextType>({
     mousePositionRef: { current: new MousePosition(0, 0) },
     imageBufferRef: { current: undefined },
-    finishCapture: () => {},
+    finishCapture: () => Promise.resolve(),
     drawLayerActionRef: { current: undefined },
     selectLayerActionRef: { current: undefined },
     drawToolbarActionRef: { current: undefined },

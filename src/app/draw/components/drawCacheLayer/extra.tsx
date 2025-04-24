@@ -2,7 +2,7 @@ import { AppState, BinaryFiles, ExcalidrawActionType } from '@mg-chao/excalidraw
 import { ExcalidrawImperativeAPI } from '@mg-chao/excalidraw/types';
 import { createPublisher } from '@/hooks/useStatePublisher';
 import { ExcalidrawElement, OrderedExcalidrawElement } from '@mg-chao/excalidraw/element/types';
-
+import { ElementRect } from '@/commands';
 export type DrawCacheLayerActionType = {
     setActiveTool: ExcalidrawImperativeAPI['setActiveTool'];
     syncActionResult: ExcalidrawActionType['syncActionResult'];
@@ -10,6 +10,9 @@ export type DrawCacheLayerActionType = {
     setEnable: (enable: boolean) => void;
     onCaptureReady: () => Promise<void>;
     onCaptureFinish: () => Promise<void>;
+    getImageData: (selectRect: ElementRect) => Promise<ImageData | undefined>;
+    getCanvasContext: () => CanvasRenderingContext2D | null | undefined;
+    getCanvas: () => HTMLCanvasElement | null;
 };
 
 export type ExcalidrawKeyEvent = {

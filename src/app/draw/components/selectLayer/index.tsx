@@ -98,9 +98,18 @@ const SelectLayerCore: React.FC<SelectLayerProps> = ({ actionRef }) => {
     const dragModeRef = useRef<DragMode | undefined>(undefined); // 拖动模式
     const dragRectRef = useRef<ElementRect | undefined>(undefined); // 拖动矩形
     const enableSelectRef = useRef(false); // 是否启用选择
-    const updateEnableSelect = useCallback((captureStep: CaptureStep) => {
-        enableSelectRef.current = captureStep === CaptureStep.Select;
-    }, []);
+    const updateEnableSelect = useCallback(
+        (captureStep: CaptureStep) => {
+            enableSelectRef.current = captureStep === CaptureStep.Select;
+
+            if (captureStep === CaptureStep.Fixed) {
+                if (layerContainerElementRef.current) {
+                    layerContainerElementRef.current.style.opacity = '0';
+                }
+            }
+        },
+        [layerContainerElementRef],
+    );
     useStateSubscriber(CaptureStepPublisher, updateEnableSelect);
 
     const getSelectRect = useCallback(() => {

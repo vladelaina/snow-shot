@@ -27,7 +27,7 @@ import { theme } from 'antd';
 import { useHistory } from '../historyContext';
 import { layoutRenders } from './excalidrawRenders';
 import { pickerRenders } from './excalidrawRenders';
-
+import { ElementRect } from '@/commands';
 const DrawCacheLayerCore: React.FC<{
     actionRef: React.RefObject<DrawCacheLayerActionType | undefined>;
 }> = ({ actionRef }) => {
@@ -75,6 +75,39 @@ const DrawCacheLayerCore: React.FC<{
         }
     }, []);
 
+    const getCanvas = useCallback<DrawCacheLayerActionType['getCanvas']>(() => {
+        const canvas = document.getElementById(
+            'excalidraw__content-canvas',
+        ) as HTMLCanvasElement | null;
+        return canvas;
+    }, []);
+
+    const getCanvasContext = useCallback<DrawCacheLayerActionType['getCanvasContext']>(() => {
+        const canvas = getCanvas();
+        if (!canvas) {
+            return;
+        }
+
+        return canvas.getContext('2d');
+    }, [getCanvas]);
+
+    const getImageData = useCallback<DrawCacheLayerActionType['getImageData']>(
+        async (selectRect: ElementRect) => {
+            const canvasContext = getCanvasContext();
+            if (!canvasContext) {
+                return;
+            }
+
+            return canvasContext.getImageData(
+                selectRect.min_x,
+                selectRect.min_y,
+                selectRect.max_x - selectRect.min_x,
+                selectRect.max_y - selectRect.min_y,
+            );
+        },
+        [getCanvasContext],
+    );
+
     useImperativeHandle(
         actionRef,
         () => ({
@@ -104,8 +137,11 @@ const DrawCacheLayerCore: React.FC<{
                 excalidrawAPIRef.current?.history.clear();
                 history.clear();
             },
+            getImageData,
+            getCanvasContext,
+            getCanvas,
         }),
-        [history, setEnable, updateScene],
+        [getCanvasContext, getImageData, history, setEnable, updateScene],
     );
 
     const shouldResizeFromCenter = useCallback<
@@ -190,6 +226,14 @@ const DrawCacheLayerCore: React.FC<{
 
                 .draw-cache-layer :global(.excalidraw .layer-ui__wrapper) {
                     z-index: unset !important;
+                }
+
+                .draw-cache-layer :global(.excalidraw .layout-menu-render) {
+                    --popup-bg-color: ${token.colorBgContainer};
+                }
+
+                .draw-cache-layer :global(.excalidraw .layout-menu-render .picker) {
+                    box-shadow: 0 0 3px 0px ${token.colorInfoHover};
                 }
 
                 .draw-cache-layer :global(.excalidraw .layout-menu-render) {

@@ -62,12 +62,6 @@ export type AppSettingsData = {
     [AppSettingsGroup.AppFunction]: Record<AppFunction, AppFunctionConfig>;
     [AppSettingsGroup.Render]: {
         antialias: boolean;
-        enableDrawLineSimplify: boolean;
-        drawLineSimplifyTolerance: number;
-        drawLineSimplifyHighQuality: boolean;
-        enableDrawLineSmooth: boolean;
-        drawLineSmoothRatio: number;
-        drawLineSmoothIterations: number;
     };
 };
 
@@ -88,12 +82,6 @@ export const defaultAppSettingsData: AppSettingsData = {
     [AppSettingsGroup.AppFunction]: defaultAppFunctionConfigs,
     [AppSettingsGroup.Render]: {
         antialias: true,
-        enableDrawLineSimplify: true,
-        drawLineSimplifyTolerance: 0.5,
-        drawLineSimplifyHighQuality: false,
-        enableDrawLineSmooth: true,
-        drawLineSmoothRatio: 0.25,
-        drawLineSmoothIterations: 3,
     },
 };
 
@@ -379,36 +367,6 @@ const ContextWrapCore: React.FC<{ children: React.ReactNode }> = ({ children }) 
                         typeof newSettings?.antialias === 'boolean'
                             ? newSettings.antialias
                             : (prevSettings?.antialias ?? defaultAppSettingsData[group].antialias),
-                    enableDrawLineSimplify:
-                        typeof newSettings?.enableDrawLineSimplify === 'boolean'
-                            ? newSettings.enableDrawLineSimplify
-                            : (prevSettings?.enableDrawLineSimplify ??
-                              defaultAppSettingsData[group].enableDrawLineSimplify),
-                    drawLineSimplifyTolerance:
-                        typeof newSettings?.drawLineSimplifyTolerance === 'number'
-                            ? Math.min(Math.max(newSettings.drawLineSimplifyTolerance, 0.1), 5)
-                            : (prevSettings?.drawLineSimplifyTolerance ??
-                              defaultAppSettingsData[group].drawLineSimplifyTolerance),
-                    drawLineSimplifyHighQuality:
-                        typeof newSettings?.drawLineSimplifyHighQuality === 'boolean'
-                            ? newSettings.drawLineSimplifyHighQuality
-                            : (prevSettings?.drawLineSimplifyHighQuality ??
-                              defaultAppSettingsData[group].drawLineSimplifyHighQuality),
-                    enableDrawLineSmooth:
-                        typeof newSettings?.enableDrawLineSmooth === 'boolean'
-                            ? newSettings.enableDrawLineSmooth
-                            : (prevSettings?.enableDrawLineSmooth ??
-                              defaultAppSettingsData[group].enableDrawLineSmooth),
-                    drawLineSmoothRatio:
-                        typeof newSettings?.drawLineSmoothRatio === 'number'
-                            ? Math.min(Math.max(newSettings.drawLineSmoothRatio, 0.1), 0.5)
-                            : (prevSettings?.drawLineSmoothRatio ??
-                              defaultAppSettingsData[group].drawLineSmoothRatio),
-                    drawLineSmoothIterations:
-                        typeof newSettings?.drawLineSmoothIterations === 'number'
-                            ? Math.min(Math.max(newSettings.drawLineSmoothIterations, 1), 8)
-                            : (prevSettings?.drawLineSmoothIterations ??
-                              defaultAppSettingsData[group].drawLineSmoothIterations),
                 };
             } else {
                 return defaultAppSettingsData[group];

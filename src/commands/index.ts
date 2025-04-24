@@ -91,3 +91,17 @@ export const getMousePosition = async () => {
     const result = await invoke<[number, number]>('get_mouse_position');
     return result;
 };
+
+export const saveFile = async (filePath: string, data: ArrayBuffer | Uint8Array) => {
+    const result = await invoke<void>('save_file', data, {
+        headers: {
+            'x-file-path': filePath,
+        },
+    });
+    return result;
+};
+
+export const createDrawWindow = async () => {
+    const result = await invoke<void>('create_draw_window');
+    return result;
+};

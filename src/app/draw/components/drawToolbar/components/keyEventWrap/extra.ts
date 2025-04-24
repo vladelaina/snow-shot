@@ -29,6 +29,9 @@ export enum KeyEventKey {
     CancelTool = 'cancelTool',
     RemoveTool = 'removeTool',
     ColorPickerCopy = 'colorPickerCopy',
+    SaveTool = 'saveTool',
+    CopyTool = 'copyTool',
+    FixedTool = 'fixedTool',
     ColorPickerMoveUp = 'colorPickerMoveUp',
     ColorPickerMoveDown = 'colorPickerMoveDown',
     ColorPickerMoveLeft = 'colorPickerMoveLeft',
@@ -45,7 +48,7 @@ export const defaultKeyEventSettings: Record<KeyEventKey, KeyEventValue> = {
         unique: true,
     },
     [KeyEventKey.SelectTool]: {
-        hotKey: 'S',
+        hotKey: 'V',
         unique: true,
     },
     [KeyEventKey.RectTool]: {
@@ -96,6 +99,22 @@ export const defaultKeyEventSettings: Record<KeyEventKey, KeyEventValue> = {
         hotKey: 'Escape',
         unique: true,
     },
+    [KeyEventKey.FixedTool]: {
+        hotKey: 'Control+F',
+        unique: true,
+    },
+    [KeyEventKey.CopyTool]: {
+        hotKey: 'Control+C',
+        unique: true,
+    },
+    [KeyEventKey.SaveTool]: {
+        hotKey: 'Control+S',
+        unique: true,
+    },
+    [KeyEventKey.ColorPickerCopy]: {
+        hotKey: 'C',
+        unique: true,
+    },
     [KeyEventKey.ResizeFromCenterPicker]: {
         hotKey: 'Alt',
     },
@@ -113,24 +132,20 @@ export const defaultKeyEventSettings: Record<KeyEventKey, KeyEventValue> = {
         hotKey: 'Delete',
         unique: true,
     },
-    [KeyEventKey.ColorPickerCopy]: {
-        hotKey: 'Control+C',
-        unique: true,
-    },
     [KeyEventKey.ColorPickerMoveUp]: {
-        hotKey: 'Control+W, ArrowUp',
+        hotKey: 'W, ArrowUp',
         unique: true,
     },
     [KeyEventKey.ColorPickerMoveDown]: {
-        hotKey: 'Control+S, ArrowDown',
+        hotKey: 'S, ArrowDown',
         unique: true,
     },
     [KeyEventKey.ColorPickerMoveLeft]: {
-        hotKey: 'Control+A, ArrowLeft',
+        hotKey: 'A, ArrowLeft',
         unique: true,
     },
     [KeyEventKey.ColorPickerMoveRight]: {
-        hotKey: 'Control+D, ArrowRight',
+        hotKey: 'D, ArrowRight',
         unique: true,
     },
 };

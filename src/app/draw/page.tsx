@@ -2,7 +2,7 @@
 
 import { captureCurrentMonitor, ImageBuffer, ImageEncoder } from '@/commands';
 import { EventListenerContext } from '@/components/eventListener';
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { useCallback, useContext, useEffect, useRef } from 'react';
 import { PhysicalPosition } from '@tauri-apps/api/dpi';
 import * as PIXI from 'pixi.js';
@@ -35,6 +35,8 @@ import {
     ExcalidrawOnChangePublisher,
     ExcalidrawOnHandleEraserPublisher,
 } from './components/drawCacheLayer/extra';
+import { copyToClipboard, fixedToScreen, saveToFile } from './actions';
+import { FixedImage, FixedImageActionType } from './components/fixedImage';
 
 const DrawCacheLayer = dynamic(
     async () => (await import('./components/drawCacheLayer')).DrawCacheLayer,
@@ -55,14 +57,17 @@ const DrawPageCore: React.FC = () => {
     const { addListener, removeListener } = useContext(EventListenerContext);
 
     // 层级
+    const layerContainerRef = useRef<HTMLDivElement>(null);
     const drawLayerActionRef = useRef<DrawLayerActionType | undefined>(undefined);
     const drawCacheLayerActionRef = useRef<DrawCacheLayerActionType | undefined>(undefined);
     const selectLayerActionRef = useRef<SelectLayerActionType | undefined>(undefined);
     const drawToolbarActionRef = useRef<DrawToolbarActionType | undefined>(undefined);
+    const [isFixed, setIsFixed] = useState(false);
+    const fixedImageActionRef = useRef<FixedImageActionType | undefined>(undefined);
 
     // 状态
     const mousePositionRef = useRef<MousePosition>(new MousePosition(0, 0));
-    const [getCaptureStep, , resetCaptureStep] = useStateSubscriber(
+    const [getCaptureStep, setCaptureStep, resetCaptureStep] = useStateSubscriber(
         CaptureStepPublisher,
         undefined,
     );
@@ -164,10 +169,11 @@ const DrawPageCore: React.FC = () => {
             appWindow.setAlwaysOnTop(true),
             appWindow.setPosition(new PhysicalPosition(monitorX, monitorY)),
         ]);
-        await Promise.all([appWindow.setFullscreen(true), appWindow.show()]);
-        if (process.env.NODE_ENV === 'development') {
-            appWindow.setAlwaysOnTop(false);
+        if (layerContainerRef.current) {
+            layerContainerRef.current.style.width = `${window.screen.width}px`;
+            layerContainerRef.current.style.height = `${window.screen.height}px`;
         }
+        await Promise.all([appWindow.setFullscreen(true), appWindow.show()]);
     }, []);
 
     const hideWindow = useCallback(async () => {
@@ -214,7 +220,75 @@ const DrawPageCore: React.FC = () => {
         ]);
     }, [readyCapture, showWindow, setCaptureEvent]);
 
+    const onSave = useCallback(async () => {
+        if (
+            !selectLayerActionRef.current ||
+            !drawLayerActionRef.current ||
+            !drawCacheLayerActionRef.current
+        ) {
+            return;
+        }
+
+        saveToFile(
+            selectLayerActionRef.current,
+            drawLayerActionRef.current,
+            drawCacheLayerActionRef.current,
+            async () => {
+                finishCapture();
+            },
+        );
+    }, [finishCapture]);
+
+    const onFixed = useCallback(async () => {
+        if (
+            !layerContainerRef.current ||
+            !selectLayerActionRef.current ||
+            !imageBufferRef.current ||
+            !drawLayerActionRef.current ||
+            !drawCacheLayerActionRef.current ||
+            !fixedImageActionRef.current
+        ) {
+            return;
+        }
+
+        await fixedToScreen(
+            imageBufferRef.current,
+            appWindowRef.current,
+            layerContainerRef.current,
+            selectLayerActionRef.current,
+            drawLayerActionRef.current,
+            drawCacheLayerActionRef.current,
+            fixedImageActionRef.current,
+            setCaptureStep,
+        );
+
+        switchLayer(undefined, drawLayerActionRef.current, selectLayerActionRef.current);
+    }, [setCaptureStep]);
+
+    const onCopyToClipboard = useCallback(async () => {
+        if (
+            !selectLayerActionRef.current ||
+            !drawLayerActionRef.current ||
+            !drawCacheLayerActionRef.current
+        ) {
+            return;
+        }
+
+        copyToClipboard(
+            selectLayerActionRef.current,
+            drawLayerActionRef.current,
+            drawCacheLayerActionRef.current,
+            async () => {
+                finishCapture();
+            },
+        );
+    }, [finishCapture]);
+
     useEffect(() => {
+        if (isFixed) {
+            return;
+        }
+
         // 监听截图命令
         const listenerId = addListener('execute-screenshot', () => {
             if (capturingRef.current) {
@@ -226,7 +300,7 @@ const DrawPageCore: React.FC = () => {
         return () => {
             removeListener(listenerId);
         };
-    }, [addListener, excuteScreenshot, removeListener]);
+    }, [addListener, excuteScreenshot, removeListener, isFixed]);
 
     // 默认隐藏
     useEffect(() => {
@@ -247,6 +321,10 @@ const DrawPageCore: React.FC = () => {
     }, [finishCapture]);
 
     useEffect(() => {
+        if (isFixed) {
+            return;
+        }
+
         const handleMouseMove = (e: MouseEvent) => {
             mousePositionRef.current = new MousePosition(e.clientX, e.clientY);
         };
@@ -256,26 +334,44 @@ const DrawPageCore: React.FC = () => {
         return () => {
             document.removeEventListener('mousemove', handleMouseMove);
         };
-    }, []);
+    }, [isFixed]);
 
     return (
         <DrawContext.Provider value={drawContextValue}>
-            <DrawLayer actionRef={drawLayerActionRef} />
-            <DrawCacheLayer actionRef={drawCacheLayerActionRef} />
-            <SelectLayer actionRef={selectLayerActionRef} />
-            <DrawToolbar actionRef={drawToolbarActionRef} onCancel={finishCapture} />
-            <ColorPicker
-                onCopyColor={() => {
-                    finishCapture();
-                }}
-            />
-            <StatusBar />
+            <div className={styles.layerContainer} ref={layerContainerRef}>
+                <FixedImage
+                    actionRef={fixedImageActionRef}
+                    onLoad={() => {
+                        setIsFixed(true);
+                    }}
+                />
+                {!isFixed && (
+                    <>
+                        <DrawLayer actionRef={drawLayerActionRef} />
+                        <DrawCacheLayer actionRef={drawCacheLayerActionRef} />
+                        <SelectLayer actionRef={selectLayerActionRef} />
+                        <DrawToolbar
+                            actionRef={drawToolbarActionRef}
+                            onCancel={finishCapture}
+                            onSave={onSave}
+                            onFixed={onFixed}
+                            onCopyToClipboard={onCopyToClipboard}
+                        />
+                        <ColorPicker
+                            onCopyColor={() => {
+                                finishCapture();
+                            }}
+                        />
+                        <StatusBar />
 
-            <div
-                ref={circleCursorRef}
-                className={styles.drawToolbarCursor}
-                style={{ zIndex: zIndexs.Draw_Cursor }}
-            />
+                        <div
+                            ref={circleCursorRef}
+                            className={styles.drawToolbarCursor}
+                            style={{ zIndex: zIndexs.Draw_Cursor }}
+                        />
+                    </>
+                )}
+            </div>
         </DrawContext.Provider>
     );
 };

@@ -2,12 +2,13 @@ use device_query::{DeviceQuery, DeviceState, MouseState};
 use image::codecs::png::{CompressionType, FilterType, PngEncoder};
 use image::codecs::webp::WebPEncoder;
 use std::sync::Mutex;
+use std::time::{SystemTime, UNIX_EPOCH};
 use tauri::command;
 use tauri::ipc::Response;
 use xcap::{Monitor, Window};
 
+use crate::os::ElementRect;
 use crate::os::ui_automation::UIElements;
-use crate::os::{ElementInfo, ElementRect};
 
 fn get_device_mouse_position() -> (i32, i32) {
     let device_state = DeviceState::new();
@@ -228,4 +229,35 @@ pub async fn get_mouse_position() -> Result<(i32, i32), ()> {
     let (mouse_x, mouse_y) = mouse.coords;
 
     Ok((mouse_x, mouse_y))
+}
+
+#[command]
+pub async fn create_draw_window(app: tauri::AppHandle) {
+    tauri::WebviewWindowBuilder::new(
+        &app,
+        format!(
+            "draw-{}",
+            SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .unwrap()
+                .as_secs()
+        ),
+        tauri::WebviewUrl::App("/draw".into()),
+    )
+    .resizable(false)
+    .maximizable(false)
+    .minimizable(false)
+    .fullscreen(false)
+    .title("Snow Shot - Draw")
+    .center()
+    .decorations(false)
+    .shadow(false)
+    .transparent(true)
+    .skip_taskbar(true)
+    .maximizable(false)
+    .minimizable(false)
+    .resizable(false)
+    .inner_size(0.0, 0.0)
+    .build()
+    .unwrap();
 }

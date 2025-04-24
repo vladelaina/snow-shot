@@ -11,7 +11,7 @@ import React, {
 } from 'react';
 import * as PIXI from 'pixi.js';
 import _ from 'lodash';
-import { ImageBuffer } from '@/commands';
+import { ElementRect, ImageBuffer } from '@/commands';
 import styles from './index.module.css';
 import { AppSettingsData, AppSettingsGroup } from '@/app/contextWrap';
 import { useAppSettingsLoad } from '@/hooks/useAppSettingsLoad';
@@ -97,6 +97,14 @@ export type BaseLayerEventActionType = {
      * 创建一个新的画布容器
      */
     createNewCanvasContainer: () => PIXI.Container | undefined;
+    /**
+     * 获取图片数据
+     */
+    getImageData: (selectRect: ElementRect) => Promise<ImageData | undefined>;
+    /**
+     * 获取画布
+     */
+    getCanvas: () => PIXI.ICanvas | undefined;
 };
 
 export type BaseLayerActionType = {
@@ -123,6 +131,8 @@ export const defaultBaseLayerActions: BaseLayerActionType = {
     changeCursor: () => 'auto',
     createNewCanvasContainer: () => undefined,
     addChildToContainer: () => {},
+    getImageData: () => Promise.resolve(undefined),
+    getCanvas: () => undefined,
 };
 
 type BaseLayerCoreActionType = {
@@ -136,6 +146,8 @@ type BaseLayerCoreActionType = {
         children: PIXI.Container<PIXI.ContainerChild>,
     ) => void;
     changeCursor: (cursor: Required<React.CSSProperties>['cursor']) => string;
+    getImageData: (selectRect: ElementRect) => Promise<ImageData | undefined>;
+    getCanvas: () => PIXI.ICanvas | undefined;
 };
 
 export type BaseLayerProps = {
@@ -287,6 +299,37 @@ export const BaseLayerCore: React.FC<
         BaseLayerCoreActionType['getLayerContainerElement']
     >(() => layerContainerElementRef.current, []);
 
+    const getImageData = useCallback<BaseLayerActionType['getImageData']>(
+        async (selectRect: ElementRect) => {
+            const canvasApp = canvasAppRef.current;
+            if (!canvasApp) {
+                return;
+            }
+            return canvasApp.renderer.extract
+                .canvas(canvasApp.stage)
+                .getContext('2d')
+                ?.getImageData(
+                    selectRect.min_x,
+                    selectRect.min_y,
+                    selectRect.max_x - selectRect.min_x,
+                    selectRect.max_y - selectRect.min_y,
+                    {
+                        colorSpace: 'srgb',
+                    },
+                );
+        },
+        [],
+    );
+
+    const getCanvas = useCallback<BaseLayerActionType['getCanvas']>(() => {
+        const canvasApp = canvasAppRef.current;
+        if (!canvasApp) {
+            return;
+        }
+
+        return canvasApp.renderer.extract.canvas(canvasApp.stage);
+    }, []);
+
     useImperativeHandle(
         actionRef,
         () => ({
@@ -298,6 +341,8 @@ export const BaseLayerCore: React.FC<
             addChildToContainer,
             changeCursor,
             createNewCanvasContainer,
+            getImageData,
+            getCanvas,
         }),
         [
             resizeCanvas,
@@ -308,6 +353,8 @@ export const BaseLayerCore: React.FC<
             addChildToContainer,
             changeCursor,
             createNewCanvasContainer,
+            getImageData,
+            getCanvas,
         ],
     );
 
@@ -422,6 +469,17 @@ export function withBaseLayer<
             return baseLayerCoreActionRef.current?.changeCursor(cursor) ?? 'auto';
         }, []);
 
+        const getImageData = useCallback<BaseLayerActionType['getImageData']>(
+            async (selectRect: ElementRect) => {
+                return baseLayerCoreActionRef.current?.getImageData(selectRect);
+            },
+            [],
+        );
+
+        const getCanvas = useCallback<BaseLayerActionType['getCanvas']>(() => {
+            return baseLayerCoreActionRef.current?.getCanvas();
+        }, []);
+
         useImperativeHandle(
             actionRef,
             () => ({
@@ -434,6 +492,8 @@ export function withBaseLayer<
                 addChildToTopContainer,
                 addChildToContainer,
                 changeCursor,
+                getImageData,
+                getCanvas,
             }),
             [
                 onCaptureReady,
@@ -444,6 +504,8 @@ export function withBaseLayer<
                 addChildToTopContainer,
                 addChildToContainer,
                 changeCursor,
+                getImageData,
+                getCanvas,
             ],
         );
 

@@ -1,6 +1,7 @@
 mod app_error;
 mod app_log;
 mod core;
+mod file;
 mod os;
 mod screenshot;
 
@@ -14,6 +15,7 @@ pub fn run() {
     let ui_elements = Mutex::new(UIElements::new());
 
     tauri::Builder::default()
+        .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_global_shortcut::Builder::new().build())
         .plugin(tauri_plugin_fs::init())
         .setup(|app| {
@@ -39,7 +41,9 @@ pub fn run() {
             screenshot::get_element_from_position,
             screenshot::init_ui_elements_cache,
             screenshot::get_mouse_position,
+            screenshot::create_draw_window,
             core::exit_app,
+            file::save_file,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
