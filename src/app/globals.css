@@ -28,6 +28,11 @@ body {
     }
 }
 
+.ant-app {
+    height: 100%;
+    width: 100%;
+}
+
 .excalidraw .App-menu_top .App-menu_top__left .dropdown-menu-button,
 .excalidraw .App-menu_top .shapes-section,
 .excalidraw .App-menu_top .layer-ui__wrapper__top-right {

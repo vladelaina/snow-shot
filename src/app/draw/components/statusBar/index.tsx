@@ -123,7 +123,12 @@ const StatusBar: React.FC = () => {
             });
         }
 
-        if (drawState === DrawState.Rect || drawState === DrawState.Ellipse) {
+        if (
+            drawState === DrawState.Rect ||
+            drawState === DrawState.Ellipse ||
+            drawState === DrawState.Blur ||
+            drawState === DrawState.Diamond
+        ) {
             items.push({
                 key: 'maintainAspectRatioPicker',
                 label: <FormattedMessage id="draw.maintainAspectRatioPicker" />,
@@ -141,7 +146,7 @@ const StatusBar: React.FC = () => {
             });
         }
 
-        if (drawState === DrawState.Arrow) {
+        if (drawState === DrawState.Arrow || drawState === DrawState.Line) {
             items.push({
                 key: 'rotateWithDiscreteAnglePicker',
                 label: <FormattedMessage id="draw.rotateWithDiscreteAnglePicker" />,
@@ -149,26 +154,6 @@ const StatusBar: React.FC = () => {
             });
         }
 
-        if (drawState === DrawState.Pen) {
-            items.push({
-                key: 'enableStraightLinePicker',
-                label: <FormattedMessage id="draw.enableStraightLinePicker" />,
-                children: <KeyLabel messageId="draw.shiftKey" />,
-            });
-        }
-
-        // if (
-        //     drawState === DrawState.Pen ||
-        //     drawState === DrawState.Eraser ||
-        //     drawState === DrawState.Highlight ||
-        //     drawState === DrawState.Mosaic
-        // ) {
-        //     items.push({
-        //         key: 'penDrawLine',
-        //         label: <FormattedMessage id="draw.penDrawLine" />,
-        //         children: <KeyLabel messageId="draw.shiftKey" />,
-        //     });
-        // }
         setDescriptionsItems(items);
     }, [getAppSettings, getCaptureStep, getDrawState]);
     useStateSubscriber(CaptureStepPublisher, updateDescriptionsItems);
@@ -252,6 +237,7 @@ const StatusBar: React.FC = () => {
                     z-index: ${zIndexs.Draw_StatusBar};
                     min-width: 383px;
                     box-sizing: border-box;
+                    user-select: none;
                 }
 
                 .status-bar-content {

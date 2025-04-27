@@ -7,7 +7,7 @@ import * as dialog from '@tauri-apps/plugin-dialog';
 import { Window as AppWindow, PhysicalPosition, PhysicalSize } from '@tauri-apps/api/window';
 import { CaptureStep } from './types';
 import { FixedImageActionType } from './components/fixedImage';
-
+import { OcrBlocksActionType } from './components/ocrBlocks';
 export const generateImageFileName = () => {
     return `SnowShot_${dayjs().format('YYYY-MM-DD_HH-mm-ss')}`;
 };
@@ -193,4 +193,24 @@ export const copyToClipboard = async (
     }
 
     await navigator.clipboard.write([new ClipboardItem({ 'image/png': imageData })]);
+};
+
+export const handleOcrDetect = async (
+    imageBuffer: ImageBuffer,
+    selectLayerAction: SelectLayerActionType,
+    drawLayerAction: DrawLayerActionType,
+    drawCacheLayerAction: DrawCacheLayerActionType,
+    ocrBlocksAction: OcrBlocksActionType,
+) => {
+    const selectRect = selectLayerAction.getSelectRect();
+    if (!selectRect) {
+        return;
+    }
+
+    const imageCanvas = await getCanvas(selectRect, drawLayerAction, drawCacheLayerAction);
+    if (!imageCanvas) {
+        return;
+    }
+
+    await ocrBlocksAction.init(selectRect, imageBuffer, imageCanvas);
 };

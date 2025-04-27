@@ -1,6 +1,5 @@
 import { useAppSettingsLoad } from '@/hooks/useAppSettingsLoad';
-import { Modal } from 'antd';
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { JSX } from 'react';
 import { useHotkeys } from 'react-hotkeys-hook';
 import { useIntl } from 'react-intl';
@@ -14,6 +13,7 @@ import {
     KeyEventValue,
 } from './extra';
 import { AppSettingsData } from '@/app/contextWrap';
+import { AntdContext } from '@/app/layout';
 
 const KeyEventHandleCore: React.FC<{
     keyEventValue: KeyEventValue;
@@ -86,7 +86,7 @@ const KeyEventWrapCore: React.FC<{
         enableRef.current = enable;
     }, [enable]);
 
-    const [modal, contextHolder] = Modal.useModal();
+    const { modal } = useContext(AntdContext);
 
     const [keyEventValue, setKeyEventValue] = useState<KeyEventValue | undefined>(undefined);
     const [getEnableKeyEvent] = useStateSubscriber(EnableKeyEventPublisher, () => {});
@@ -182,7 +182,6 @@ const KeyEventWrapCore: React.FC<{
             >
                 {children}
             </KeyEventHandle>
-            {contextHolder}
         </>
     );
 };

@@ -18,6 +18,7 @@ import {
     FixedIcon,
     LineIcon,
     MosaicIcon,
+    OcrDetectIcon,
     PenIcon,
     RectIcon,
     SaveIcon,
@@ -38,6 +39,7 @@ export type DrawToolbarProps = {
     onSave: () => void;
     onFixed: () => void;
     onCopyToClipboard: () => void;
+    onOcrDetect: () => void;
 };
 
 export type DrawToolbarActionType = {
@@ -52,6 +54,7 @@ const DrawToolbarCore: React.FC<DrawToolbarProps> = ({
     onSave,
     onFixed,
     onCopyToClipboard,
+    onOcrDetect,
 }) => {
     const { drawCacheLayerActionRef } = useContext(DrawContext);
 
@@ -194,13 +197,16 @@ const DrawToolbarCore: React.FC<DrawToolbarProps> = ({
                         locked: true,
                     });
                     break;
+                case DrawState.OcrDetect:
+                    onOcrDetect();
+                    break;
                 default:
                     break;
             }
 
             setDrawState(next);
         },
-        [drawCacheLayerActionRef, getDrawState, setCaptureStep, setDrawState],
+        [drawCacheLayerActionRef, getDrawState, onOcrDetect, setCaptureStep, setDrawState],
     );
 
     const drawToolbarContextValue = useMemo(() => {
@@ -388,6 +394,17 @@ const DrawToolbarCore: React.FC<DrawToolbarProps> = ({
                             }}
                         />
 
+                        {/* OCR */}
+                        <ToolButton
+                            componentKey={KeyEventKey.OcrDetectTool}
+                            icon={<OcrDetectIcon style={{ fontSize: '0.88em' }} />}
+                            disableOnDrawing
+                            drawState={DrawState.OcrDetect}
+                            onClick={() => {
+                                onToolClick(DrawState.OcrDetect);
+                            }}
+                        />
+
                         {/* 保存截图 */}
                         <ToolButton
                             componentKey={KeyEventKey.SaveTool}
@@ -438,6 +455,7 @@ const DrawToolbarCore: React.FC<DrawToolbarProps> = ({
             </DrawToolbarContext.Provider>
             <style jsx>{`
                 .draw-toolbar-container {
+                    user-select: none;
                     position: absolute;
                     z-index: ${zIndexs.Draw_Toolbar};
                     top: 0;

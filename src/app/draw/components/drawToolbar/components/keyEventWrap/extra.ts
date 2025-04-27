@@ -32,6 +32,7 @@ export enum KeyEventKey {
     SaveTool = 'saveTool',
     CopyTool = 'copyTool',
     FixedTool = 'fixedTool',
+    OcrDetectTool = 'ocrDetectTool',
     ColorPickerMoveUp = 'colorPickerMoveUp',
     ColorPickerMoveDown = 'colorPickerMoveDown',
     ColorPickerMoveLeft = 'colorPickerMoveLeft',
@@ -105,6 +106,10 @@ export const defaultKeyEventSettings: Record<KeyEventKey, KeyEventValue> = {
     },
     [KeyEventKey.CopyTool]: {
         hotKey: 'Control+C',
+        unique: true,
+    },
+    [KeyEventKey.OcrDetectTool]: {
+        hotKey: 'Control+D',
         unique: true,
     },
     [KeyEventKey.SaveTool]: {

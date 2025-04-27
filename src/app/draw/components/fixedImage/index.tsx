@@ -11,7 +11,6 @@ import { generateImageFileName } from '../../actions';
 import { CloseOutlined } from '@ant-design/icons';
 import { useStateRef } from '@/hooks/useStateRef';
 import { useCallbackRender } from '@/hooks/useCallbackRender';
-import { event } from '@tauri-apps/api';
 
 export type FixedImageActionType = {
     init: (
@@ -60,10 +59,11 @@ export const FixedImage: React.FC<{
                     scaleFactor: imageBuffer.monitorScaleFactor,
                 };
                 setImageUrl(
-                    await new Promise((resolve) => {
+                    await new Promise<string | undefined>((resolve) => {
                         canvas.toBlob(
                             (blob) => {
                                 if (!blob) {
+                                    resolve(undefined);
                                     return;
                                 }
                                 blobRef.current = blob;
@@ -94,7 +94,7 @@ export const FixedImage: React.FC<{
     const menuRef = useRef<Menu>(undefined);
 
     const initMenu = useCallback(async () => {
-        const window = await getCurrentWindow();
+        const window = getCurrentWindow();
         const menu = await Menu.new({
             items: [
                 {

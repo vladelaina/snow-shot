@@ -35,8 +35,9 @@ import {
     ExcalidrawOnChangePublisher,
     ExcalidrawOnHandleEraserPublisher,
 } from './components/drawCacheLayer/extra';
-import { copyToClipboard, fixedToScreen, saveToFile } from './actions';
+import { copyToClipboard, fixedToScreen, handleOcrDetect, saveToFile } from './actions';
 import { FixedImage, FixedImageActionType } from './components/fixedImage';
+import { OcrBlocks, OcrBlocksActionType } from './components/ocrBlocks';
 
 const DrawCacheLayer = dynamic(
     async () => (await import('./components/drawCacheLayer')).DrawCacheLayer,
@@ -64,6 +65,7 @@ const DrawPageCore: React.FC = () => {
     const drawToolbarActionRef = useRef<DrawToolbarActionType | undefined>(undefined);
     const [isFixed, setIsFixed] = useState(false);
     const fixedImageActionRef = useRef<FixedImageActionType | undefined>(undefined);
+    const ocrBlocksActionRef = useRef<OcrBlocksActionType | undefined>(undefined);
 
     // 状态
     const mousePositionRef = useRef<MousePosition>(new MousePosition(0, 0));
@@ -174,6 +176,9 @@ const DrawPageCore: React.FC = () => {
             layerContainerRef.current.style.height = `${window.screen.height}px`;
         }
         await Promise.all([appWindow.setFullscreen(true), appWindow.show()]);
+        if (process.env.NODE_ENV === 'development') {
+            await appWindow.setAlwaysOnTop(false);
+        }
     }, []);
 
     const hideWindow = useCallback(async () => {
@@ -264,6 +269,26 @@ const DrawPageCore: React.FC = () => {
 
         switchLayer(undefined, drawLayerActionRef.current, selectLayerActionRef.current);
     }, [setCaptureStep]);
+
+    const onOcrDetect = useCallback(async () => {
+        if (
+            !imageBufferRef.current ||
+            !selectLayerActionRef.current ||
+            !drawLayerActionRef.current ||
+            !drawCacheLayerActionRef.current ||
+            !ocrBlocksActionRef.current
+        ) {
+            return;
+        }
+
+        handleOcrDetect(
+            imageBufferRef.current,
+            selectLayerActionRef.current,
+            drawLayerActionRef.current,
+            drawCacheLayerActionRef.current,
+            ocrBlocksActionRef.current,
+        );
+    }, []);
 
     const onCopyToClipboard = useCallback(async () => {
         if (
@@ -356,6 +381,7 @@ const DrawPageCore: React.FC = () => {
                             onSave={onSave}
                             onFixed={onFixed}
                             onCopyToClipboard={onCopyToClipboard}
+                            onOcrDetect={onOcrDetect}
                         />
                         <ColorPicker
                             onCopyColor={() => {
@@ -363,6 +389,7 @@ const DrawPageCore: React.FC = () => {
                             }}
                         />
                         <StatusBar />
+                        <OcrBlocks actionRef={ocrBlocksActionRef} />
 
                         <div
                             ref={circleCursorRef}

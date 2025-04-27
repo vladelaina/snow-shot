@@ -396,6 +396,7 @@ const ColorPickerCore: React.FC<{
             <style jsx>
                 {`
                     .color-picker {
+                        user-select: none;
                         position: fixed;
                         top: 0;
                         left: 0;

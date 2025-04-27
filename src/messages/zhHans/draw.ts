@@ -51,6 +51,7 @@ export const draw = {
     'draw.copyTool': '复制到剪贴板',
     'draw.saveTool': '保存为文件',
     'draw.close': '关闭',
+    'draw.ocrDetectTool': '文字识别',
     'draw.fixedTool': '固定到屏幕',
     'draw.lockWidthHeightPicker': '切换锁定宽高',
     'draw.lockAnglePicker': '切换锁定角度',
@@ -67,4 +68,5 @@ export const draw = {
     'draw.maintainAspectRatioPicker': '保持宽高比例',
     'draw.rotateWithDiscreteAnglePicker': '固定角度旋转',
     'draw.autoAlignPicker': '自动对齐',
+    'draw.ocrLoading': 'OCR 识别中',
 };

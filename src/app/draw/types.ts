@@ -51,6 +51,8 @@ export enum DrawState {
     Fixed = 105,
     // 复制
     Copy = 106,
+    // OCR
+    OcrDetect = 107,
 }
 
 export enum CanvasLayer {
