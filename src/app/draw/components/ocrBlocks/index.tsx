@@ -192,11 +192,11 @@ export const OcrBlocks: React.FC<{
                 }}
                 className="ocr-result-container"
                 onContextMenu={(e) => {
+                    e.preventDefault();
+
                     if (getCaptureStep() !== CaptureStep.Fixed) {
                         return;
                     }
-
-                    e.preventDefault();
 
                     fixedImageActionRef.current?.popupMenu(
                         new LogicalPosition(e.clientX, e.clientY),
