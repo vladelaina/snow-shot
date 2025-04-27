@@ -1,53 +1,58 @@
 {
-  "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
-  "productName": "Snow Shot",
-  "version": "0.1.0",
-  "identifier": "com.chao.snowshot",
-  "build": {
-    "frontendDist": "../out",
-    "devUrl": "http://localhost:8301",
-    "beforeDevCommand": "pnpm dev",
-    "beforeBuildCommand": "pnpm build"
-  },
-  "app": {
-    "windows": [
-        {
-            "label": "main",
-            "fullscreen": false,
-            "height": 450,
-            "resizable": false,
-            "title": "Snow Shot",
-            "width": 728,
-            "center": true,
-            "decorations": false,
-            "url": "/"
-        },
-        {
-            "label": "draw",
-            "fullscreen": false,
-            "title": "Snow Shot - Draw",
-            "center": true,
-            "decorations": false,
-            "shadow": false,
-            "transparent": true,
-            "skipTaskbar": true,
-            "url": "/draw"
+    "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
+    "productName": "Snow Shot",
+    "version": "0.1.0",
+    "identifier": "com.chao.snowshot",
+    "build": {
+        "frontendDist": "../out",
+        "devUrl": "http://localhost:8301",
+        "beforeDevCommand": "pnpm dev",
+        "beforeBuildCommand": "pnpm build"
+    },
+    "app": {
+        "windows": [
+            {
+                "label": "main",
+                "fullscreen": false,
+                "height": 450,
+                "resizable": false,
+                "title": "Snow Shot",
+                "width": 728,
+                "center": true,
+                "decorations": false,
+                "url": "/"
+            },
+            {
+                "label": "draw",
+                "fullscreen": false,
+                "title": "Snow Shot - Draw",
+                "center": true,
+                "decorations": false,
+                "shadow": false,
+                "transparent": true,
+                "skipTaskbar": true,
+                "width": 0,
+                "height": 0,
+                "maximizable": false,
+                "minimizable": false,
+                "resizable": false,
+                "url": "/draw"
+            }
+        ],
+        "macOSPrivateApi": true,
+        "security": {
+            "csp": null
         }
-    ],
-    "macOSPrivateApi": true,
-    "security": {
-      "csp": null
+    },
+    "bundle": {
+        "active": true,
+        "targets": "all",
+        "icon": [
+            "icons/32x32.png",
+            "icons/128x128.png",
+            "icons/128x128@2x.png",
+            "icons/icon.icns",
+            "icons/icon.ico"
+        ]
     }
-  },
-  "bundle": {
-    "active": true,
-    "targets": "all",
-    "icon": [
-      "icons/32x32.png",
-      "icons/128x128.png",
-      "icons/128x128@2x.png",
-      "icons/icon.icns",
-      "icons/icon.ico"
-    ]
-  }
 }

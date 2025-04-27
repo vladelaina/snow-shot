@@ -4,7 +4,6 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { FormattedMessage } from 'react-intl';
 import { DeleteOutlined, PlusOutlined } from '@ant-design/icons';
 import _ from 'lodash';
-import { ToolbarTip } from '@/app/draw/components/toolbarTip';
 
 type KeyConfig = {
     anyKey: string;
@@ -14,15 +13,21 @@ type KeyConfig = {
     index: number;
 };
 
-const convertKeyConfigToString = (keyConfig: KeyConfig) => {
-    return [
-        keyConfig.selectCtrl ? 'Ctrl' : '',
+const convertKeyConfigToString = (keyConfig: KeyConfig, defaultKey = '') => {
+    const res = [
+        keyConfig.selectCtrl ? 'Control' : '',
         keyConfig.selectShift ? 'Shift' : '',
         keyConfig.selectAlt ? 'Alt' : '',
-        keyConfig.anyKey.toUpperCase(),
+        keyConfig.anyKey.charAt(0).toUpperCase() + keyConfig.anyKey.slice(1).toLowerCase(),
     ]
         .filter(Boolean)
         .join('+');
+
+    if (res === '') {
+        return defaultKey;
+    }
+
+    return res;
 };
 
 export const KeyButton: React.FC<{
@@ -72,7 +77,7 @@ export const KeyButton: React.FC<{
             let anyKey = '';
 
             value.split('+').forEach((key) => {
-                if (key === 'Ctrl') {
+                if (key === 'Control') {
                     selectCtrl = true;
                 } else if (key === 'Shift') {
                     selectShift = true;
@@ -92,7 +97,13 @@ export const KeyButton: React.FC<{
             };
         });
         setKeyConfigList(configList);
-        if (configList.length === 1 && configList[0].anyKey === '') {
+        if (
+            configList.length === 1 &&
+            configList[0].anyKey === '' &&
+            configList[0].selectAlt === false &&
+            configList[0].selectCtrl === false &&
+            configList[0].selectShift === false
+        ) {
             setTimeout(() => {
                 setInputAnyKeyConfigIndex(0);
             }, 0);
@@ -115,10 +126,19 @@ export const KeyButton: React.FC<{
                 return;
             }
 
-            keyConfigListRef.current[inputAnyKeyConfigIndexRef.current].anyKey =
-                e.key.toUpperCase();
+            if (e.key === 'Control') {
+                keyConfigListRef.current[inputAnyKeyConfigIndexRef.current].selectCtrl = true;
+            } else if (e.key === 'Shift') {
+                keyConfigListRef.current[inputAnyKeyConfigIndexRef.current].selectShift = true;
+            } else if (e.key === 'Alt') {
+                keyConfigListRef.current[inputAnyKeyConfigIndexRef.current].selectAlt = true;
+            } else {
+                keyConfigListRef.current[inputAnyKeyConfigIndexRef.current].anyKey =
+                    e.key.charAt(0).toUpperCase() + e.key.slice(1).toLowerCase();
+                setInputAnyKeyConfigIndex(undefined);
+            }
+
             updateKeyConfig();
-            setInputAnyKeyConfigIndex(undefined);
         };
 
         document.addEventListener('keydown', handleKeyDown);
@@ -146,12 +166,16 @@ export const KeyButton: React.FC<{
                 confirmLoading={confirmLoading}
                 onOk={() => {
                     setConfirmLoading(true);
-                    onKeyChange(keyConfigList.map(convertKeyConfigToString).join(', ')).finally(
-                        () => {
-                            setConfirmLoading(false);
-                            setOpen(false);
-                        },
-                    );
+                    onKeyChange(
+                        keyConfigList
+                            .map((item) => {
+                                return convertKeyConfigToString(item);
+                            })
+                            .join(', '),
+                    ).finally(() => {
+                        setConfirmLoading(false);
+                        setOpen(false);
+                    });
                 }}
             >
                 {keyConfigList.map((keyConfig) => {
@@ -170,7 +194,7 @@ export const KeyButton: React.FC<{
                                         updateKeyConfig();
                                     }}
                                 >
-                                    Ctrl
+                                    Control
                                 </Button>
                                 +
                                 <Button
@@ -198,6 +222,7 @@ export const KeyButton: React.FC<{
                                 <Button
                                     type={'dashed'}
                                     onClick={() => {
+                                        keyConfig.anyKey = '';
                                         setInputAnyKeyConfigIndex(keyConfig.index);
                                     }}
                                     loading={inputAnyKeyConfigIndex === keyConfig.index}
@@ -219,23 +244,22 @@ export const KeyButton: React.FC<{
                                 </Button>
                                 =
                                 <Button color="primary" variant="outlined">
-                                    {convertKeyConfigToString(keyConfig)}
+                                    {convertKeyConfigToString(keyConfig, ' ')}
                                 </Button>
-                                {keyConfig.index !== 0 &&
-                                    inputAnyKeyConfigIndex !== keyConfig.index && (
-                                        <Button
-                                            danger
-                                            onClick={() => {
-                                                setKeyConfigList((pre) => {
-                                                    return pre.filter(
-                                                        (item) => item.index !== keyConfig.index,
-                                                    );
-                                                });
-                                            }}
-                                        >
-                                            <DeleteOutlined />
-                                        </Button>
-                                    )}
+                                {inputAnyKeyConfigIndex !== keyConfig.index && (
+                                    <Button
+                                        danger
+                                        onClick={() => {
+                                            setKeyConfigList((pre) => {
+                                                return pre.filter(
+                                                    (item) => item.index !== keyConfig.index,
+                                                );
+                                            });
+                                        }}
+                                    >
+                                        <DeleteOutlined />
+                                    </Button>
+                                )}
                             </Space>
                         </Space>
                     );
@@ -275,29 +299,28 @@ export const KeyButton: React.FC<{
                     </Button>
                 )}
             </Modal>
-            <ToolbarTip title={keyValue}>
-                <Button
-                    {...buttonProps}
-                    icon={<KeyboardGrayIcon />}
-                    danger={keyValue ? undefined : true}
-                    onClick={(e) => {
-                        buttonProps?.onClick?.(e);
-                        setOpen(true);
+            <Button
+                {...buttonProps}
+                icon={<KeyboardGrayIcon />}
+                danger={keyValue ? undefined : true}
+                onClick={(e) => {
+                    buttonProps?.onClick?.(e);
+                    setOpen(true);
+                }}
+                title={keyValue}
+            >
+                <div
+                    style={{
+                        width,
+                        maxWidth,
+                        textOverflow: 'ellipsis',
+                        overflow: 'hidden',
                     }}
                 >
-                    <div
-                        style={{
-                            width,
-                            maxWidth,
-                            textOverflow: 'ellipsis',
-                            overflow: 'hidden',
-                        }}
-                    >
-                        {keyValue}
-                    </div>
-                    {buttonProps?.children}
-                </Button>
-            </ToolbarTip>
+                    {keyValue}
+                </div>
+                {buttonProps?.children}
+            </Button>
         </>
     );
 };

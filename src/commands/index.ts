@@ -52,19 +52,6 @@ export const captureCurrentMonitor = async (encoder: ImageEncoder): Promise<Imag
     };
 };
 
-export type WindowInfo = {
-    x: number;
-    y: number;
-    width: number;
-    height: number;
-    element_info: ElementInfo | undefined;
-};
-
-export type ElementInfo = {
-    rect_list: ElementRect[];
-    scale_factor: number;
-};
-
 export type ElementRect = {
     min_x: number;
     min_y: number;
@@ -72,8 +59,8 @@ export type ElementRect = {
     max_y: number;
 };
 
-export const getElementInfo = async () => {
-    const result = await invoke<ElementInfo>('get_element_info', {});
+export const getWindowElements = async () => {
+    const result = await invoke<ElementRect[]>('get_window_elements');
     return result;
 };
 
@@ -102,5 +89,19 @@ export const exitApp = async () => {
 
 export const getMousePosition = async () => {
     const result = await invoke<[number, number]>('get_mouse_position');
+    return result;
+};
+
+export const saveFile = async (filePath: string, data: ArrayBuffer | Uint8Array) => {
+    const result = await invoke<void>('save_file', data, {
+        headers: {
+            'x-file-path': filePath,
+        },
+    });
+    return result;
+};
+
+export const createDrawWindow = async () => {
+    const result = await invoke<void>('create_draw_window');
     return result;
 };

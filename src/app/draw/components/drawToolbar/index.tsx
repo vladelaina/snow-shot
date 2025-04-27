@@ -1,665 +1,474 @@
 'use client';
 
 import { zIndexs } from '@/utils/zIndex';
-import { CaptureStep, DrawState } from '../../types';
-import { useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
-import { Button, Flex, theme } from 'antd';
-import { FormattedMessage, useIntl } from 'react-intl';
-import {
-    CloseOutlined,
-    DeleteOutlined,
-    DragOutlined,
-    HighlightOutlined,
-    HolderOutlined,
-    RedoOutlined,
-    UndoOutlined,
-} from '@ant-design/icons';
+import { CaptureStep, DrawContext, DrawState } from '../../types';
+import { useCallback, useContext, useImperativeHandle, useMemo, useRef } from 'react';
+import { Flex, theme } from 'antd';
+import React from 'react';
+import { DragButton, DragButtonActionType } from './components/dragButton';
+import { DrawToolbarContext } from './extra';
+import { KeyEventKey } from './components/keyEventWrap/extra';
+import { CloseOutlined, CopyOutlined, DragOutlined } from '@ant-design/icons';
 import {
     ArrowIcon,
     ArrowSelectIcon,
     CircleIcon,
+    DiamondIcon,
     EraserIcon,
+    FixedIcon,
+    LineIcon,
     MosaicIcon,
+    OcrDetectIcon,
     PenIcon,
     RectIcon,
+    SaveIcon,
     TextIcon,
 } from '@/components/icons';
-import { PenTool } from './components/penTool';
-import { EllipseTool, RectTool } from './components/shapeTool';
-import React from 'react';
-import { DrawContext } from '../../context';
-import { MosaicTool } from './components/mosaicTool/mosaicTool';
-import { TextTool } from './components/textTool';
-import { HighlightTool } from './components/highlightTool';
-import { ArrowTool } from './components/arrowTool';
-import { EraserTool } from './components/eraserTool';
-import { KeyEventKey, KeyEventWrap } from './components/keyEventWrap';
-import { ToolbarTip } from '../toolbarTip';
-import * as fabric from 'fabric';
+import { CaptureStepPublisher, DrawStatePublisher } from '../../extra';
+import { useStateSubscriber } from '@/hooks/useStateSubscriber';
+import { createPublisher, withStatePublisher } from '@/hooks/useStatePublisher';
+import { EnableKeyEventPublisher } from './components/keyEventWrap/extra';
+import { HistoryControls } from './components/historyControls';
+import { ToolButton } from './components/toolButton';
+import { FormattedMessage } from 'react-intl';
+import { BlurTool } from './components/tools/blurTool';
 
 export type DrawToolbarProps = {
-    step: CaptureStep;
-    drawState: DrawState;
-    setDrawState: (val: DrawState | ((prev: DrawState) => DrawState)) => void;
+    actionRef: React.RefObject<DrawToolbarActionType | undefined>;
     onCancel: () => void;
-    enable: boolean;
+    onSave: () => void;
+    onFixed: () => void;
+    onCopyToClipboard: () => void;
+    onOcrDetect: () => void;
 };
 
-export const getButtonTypeByState = (active: boolean) => {
-    return active ? 'primary' : 'text';
+export type DrawToolbarActionType = {
+    setEnable: (enable: boolean) => void;
 };
+
+export const DrawingPublisher = createPublisher<boolean>(false);
 
 const DrawToolbarCore: React.FC<DrawToolbarProps> = ({
-    step,
-    drawState,
-    setDrawState,
+    actionRef,
     onCancel,
-    enable,
+    onSave,
+    onFixed,
+    onCopyToClipboard,
+    onOcrDetect,
 }) => {
-    const enableRef = useRef(enable);
-    useEffect(() => {
-        enableRef.current = enable;
-    }, [enable]);
+    const { drawCacheLayerActionRef } = useContext(DrawContext);
 
-    const intl = useIntl();
-
-    const { fabricRef, maskRectRef, maskRectClipPathRef, canvasHistoryRef } =
-        useContext(DrawContext);
-
+    const [getDrawState, setDrawState] = useStateSubscriber(DrawStatePublisher, undefined);
+    const [, setCaptureStep] = useStateSubscriber(CaptureStepPublisher, undefined);
     const { token } = theme.useToken();
 
-    const drawToolbarRef = useRef<HTMLDivElement>(null);
-    const drawSubToolbarRef = useRef<HTMLDivElement>(null);
-
-    // 保存 toolbar 位置
-    const draggedLeftRef = useRef(0);
-    const draggedTopRef = useRef(0);
-    const lastDraggedLeftRef = useRef(0);
-    const lastDraggedTopRef = useRef(0);
-    const drawToolbarStyleRef = useRef({
-        left: 0,
-        top: 0,
-    });
-    const drawSubToolbarStyleRef = useRef({
-        left: 0,
-        top: 0,
-        opacity: '0',
-    });
-    const renderedRef = useRef(true);
-    const updateDrawToolbarStyle = useCallback(
-        (hideSubToolbar: boolean = true) => {
-            if (
-                !drawToolbarRef.current ||
-                !drawSubToolbarRef.current ||
-                !maskRectClipPathRef.current
-            ) {
-                return;
-            }
-
-            const maskRectClipPath = maskRectClipPathRef.current;
-            const drawToolbar = drawToolbarRef.current;
-            const drawSubToolbar = drawSubToolbarRef.current;
-            const maskRect = maskRectRef.current;
-
-            let left = draggedLeftRef.current;
-            let top = draggedTopRef.current;
-
-            // 工具栏位于画布的右下角
-            const rectBottomRightPointLeft = maskRectClipPath
-                ? maskRectClipPath.left + maskRectClipPath.width
-                : 0;
-            const rectBottomRightPointTop = maskRectClipPath
-                ? maskRectClipPath.top + maskRectClipPath.height
-                : 0;
-
-            const toolbarWidth = drawToolbar.clientWidth;
-            const toolbarHeight = drawToolbar.clientHeight;
-            const subToolbarWidth = drawSubToolbar.clientWidth;
-            const subToolbarHeight = drawSubToolbar.clientHeight;
-
-            const toolbarLeft = rectBottomRightPointLeft - toolbarWidth;
-            const toolbarTop = rectBottomRightPointTop + token.marginXS;
-
-            left += toolbarLeft;
-            top += toolbarTop;
-
-            // 如果此时工具栏超出画布，则调整位置
-            const minLeft = Math.max(0, subToolbarWidth - toolbarWidth);
-            const maxLeft = maskRect ? 0 + maskRect.width - toolbarWidth : Number.MAX_SAFE_INTEGER;
-            const minTop = 0;
-            const maxTop = maskRect ? 0 + maskRect.height - toolbarHeight : Number.MAX_SAFE_INTEGER;
-
-            if (left < minLeft) {
-                left = minLeft;
-            } else if (left > maxLeft) {
-                left = maxLeft;
-            }
-
-            if (top < minTop) {
-                top = minTop;
-            } else if (top > maxTop) {
-                top = maxTop;
-            }
-
-            // 计算子工具栏位置
-            const subToolbarLeft = left + (toolbarWidth - subToolbarWidth);
-            let subToolbarTop = top + toolbarHeight + token.marginXS;
-
-            if (subToolbarTop + subToolbarHeight > maxTop) {
-                subToolbarTop = top - toolbarHeight - token.marginXS;
-            }
-
-            // 无变化则不更新拖动距离
-            if (left === drawToolbarStyleRef.current.left) {
-                draggedLeftRef.current = lastDraggedLeftRef.current;
-            }
-            if (top === drawToolbarStyleRef.current.top) {
-                draggedTopRef.current = lastDraggedTopRef.current;
-            }
-
-            drawToolbarStyleRef.current = {
-                left,
-                top,
-            };
-            drawSubToolbarStyleRef.current = {
-                left: subToolbarLeft,
-                top: subToolbarTop,
-                opacity: hideSubToolbar ? '0' : '1',
-            };
-
-            if (!renderedRef.current) {
-                return;
-            }
-
-            renderedRef.current = false;
-            requestAnimationFrame(() => {
-                renderedRef.current = true;
-                drawToolbar.style.willChange = 'transform';
-                drawSubToolbar.style.willChange = 'transform, opacity';
-                drawToolbar.style.transform = `translate(${drawToolbarStyleRef.current.left}px, ${drawToolbarStyleRef.current.top}px)`;
-                drawSubToolbar.style.transform = `translate(${drawSubToolbarStyleRef.current.left}px, ${drawSubToolbarStyleRef.current.top}px)`;
-                drawSubToolbar.style.opacity = drawSubToolbarStyleRef.current.opacity;
-            });
-        },
-        [maskRectClipPathRef, maskRectRef, token.marginXS],
-    );
-
-    // 追踪拖动状态
+    const enableRef = useRef(false);
+    const drawToolarContainerRef = useRef<HTMLDivElement | null>(null);
+    const drawToolbarRef = useRef<HTMLDivElement | null>(null);
+    const dragButtonActionRef = useRef<DragButtonActionType | undefined>(undefined);
+    const [, setEnableKeyEvent] = useStateSubscriber(EnableKeyEventPublisher, undefined);
     const draggingRef = useRef(false);
-    const [dragging, _setDragging] = useState(false);
-    const setDragging = useCallback(
+    const onDrawingChange = useCallback((drawing: boolean) => {
+        if (!drawToolarContainerRef.current) {
+            return;
+        }
+
+        if (drawing) {
+            drawToolarContainerRef.current.style.opacity = '0.32';
+            drawToolarContainerRef.current.style.pointerEvents = 'none';
+        } else {
+            drawToolarContainerRef.current.style.opacity = '1';
+            drawToolarContainerRef.current.style.pointerEvents = 'auto';
+        }
+    }, []);
+    useStateSubscriber(DrawingPublisher, onDrawingChange);
+
+    const updateEnableKeyEvent = useCallback(() => {
+        setEnableKeyEvent(enableRef.current && !draggingRef.current);
+    }, [setEnableKeyEvent]);
+
+    const onDraggingChange = useCallback(
         (dragging: boolean) => {
             draggingRef.current = dragging;
-            _setDragging(dragging);
+            updateEnableKeyEvent();
         },
-        [_setDragging],
+        [updateEnableKeyEvent],
     );
 
-    const lastX = useRef(0);
-    const lastY = useRef(0);
-
-    // 处理鼠标移动事件
-    const handleMouseMove = useCallback(
-        (event: MouseEvent) => {
-            if (!draggingRef.current) return;
-
-            // 计算新的位置，只记录增量
-            lastDraggedLeftRef.current = draggedLeftRef.current;
-            lastDraggedTopRef.current = draggedTopRef.current;
-            draggedLeftRef.current += event.clientX - lastX.current;
-            draggedTopRef.current += event.clientY - lastY.current;
-            lastX.current = event.clientX;
-            lastY.current = event.clientY;
-            updateDrawToolbarStyle();
-        },
-        [updateDrawToolbarStyle],
-    );
-
-    // 处理鼠标释放事件
-    const handleMouseUp = useCallback(() => {
-        setDragging(false);
-    }, [setDragging]);
-
-    // 处理鼠标按下事件
-    const handleMouseDown = useCallback(
-        (event: React.MouseEvent<HTMLDivElement>) => {
-            setDragging(true);
-            lastX.current = event.clientX;
-            lastY.current = event.clientY;
-        },
-        [setDragging],
-    );
-
-    useEffect(() => {
-        // 监听鼠标移动和释放事件
-        document.addEventListener('mousemove', handleMouseMove);
-        document.addEventListener('mouseup', handleMouseUp);
-
-        return () => {
-            document.removeEventListener('mousemove', handleMouseMove);
-            document.removeEventListener('mouseup', handleMouseUp);
-        };
-    }, [handleMouseMove, handleMouseUp]);
-
-    const visible = useMemo(() => {
-        if (step !== CaptureStep.Draw) {
-            return false;
-        }
-
-        if (drawState === DrawState.Resize) {
-            return false;
-        }
-
-        updateDrawToolbarStyle();
-        return true;
-    }, [step, drawState, updateDrawToolbarStyle]);
-
-    useEffect(() => {
-        draggedLeftRef.current = 0;
-        draggedTopRef.current = 0;
-        lastDraggedLeftRef.current = 0;
-        lastDraggedTopRef.current = 0;
-        if (drawToolbarRef.current) {
-            drawToolbarRef.current.style.transform = `unset`;
-        }
-        if (drawSubToolbarRef.current) {
-            drawSubToolbarRef.current.style.transform = `unset`;
-        }
-    }, [visible]);
-
-    useEffect(() => {
-        if (dragging) {
-            return;
-        }
-
-        let hideSubToolbar = true;
-        if (
-            drawState === DrawState.Pen ||
-            drawState === DrawState.Rect ||
-            drawState === DrawState.Ellipse ||
-            drawState === DrawState.Mosaic ||
-            drawState === DrawState.Eraser ||
-            drawState === DrawState.Highlight ||
-            drawState === DrawState.Text ||
-            drawState === DrawState.Arrow
-        ) {
-            hideSubToolbar = false;
-        }
-
-        updateDrawToolbarStyle(hideSubToolbar);
-    }, [drawState, updateDrawToolbarStyle, dragging]);
-
-    useEffect(() => {
-        if (!maskRectRef.current || !fabricRef.current) {
-            return;
-        }
-
-        fabricRef.current.set({
-            selection: drawState === DrawState.Select,
-        });
-        fabricRef.current.discardActiveObject();
-        fabricRef.current.renderAll();
-    }, [drawState, fabricRef, maskRectRef]);
-
-    const [canRedo, setCanRedo] = useState(false);
-    const [canUndo, setCanUndo] = useState(false);
-    useEffect(() => {
-        if (!visible) {
-            return;
-        }
-
-        const canvas = fabricRef.current;
-
-        if (!canvas) {
-            return;
-        }
-
-        setCanUndo(canvasHistoryRef.current?.canUndo() ?? false);
-        setCanRedo(canvasHistoryRef.current?.canRedo() ?? false);
-
-        const historyUpdatedUnlisten = canvas.on('history:updated', () => {
-            const canvasHistory = canvasHistoryRef.current;
-            if (!canvasHistory) {
+    const setDragging = useCallback(
+        (dragging: boolean) => {
+            if (draggingRef.current === dragging) {
                 return;
             }
 
-            setCanUndo(canvasHistory.canUndo());
-            setCanRedo(canvasHistory.canRedo());
-        });
-
-        const historyUndoUnlisten = canvas.on('history:undo', () => {
-            const canvasHistory = canvasHistoryRef.current;
-            if (!canvasHistory) {
-                return;
-            }
-
-            setCanUndo(canvasHistory.canUndo());
-            setCanRedo(canvasHistory.canRedo());
-        });
-        const historyRedoUnlisten = canvas.on('history:redo', () => {
-            const canvasHistory = canvasHistoryRef.current;
-            if (!canvasHistory) {
-                return;
-            }
-
-            setCanUndo(canvasHistory.canUndo());
-            setCanRedo(canvasHistory.canRedo());
-        });
-
-        return () => {
-            historyUpdatedUnlisten();
-            historyUndoUnlisten();
-            historyRedoUnlisten();
-        };
-    }, [canvasHistoryRef, fabricRef, visible]);
+            onDraggingChange(dragging);
+        },
+        [onDraggingChange],
+    );
 
     const onToolClick = useCallback(
-        (tool: DrawState) => {
-            setDrawState((prev) => {
-                if (prev === tool) {
-                    return DrawState.Idle;
-                }
+        (drawState: DrawState) => {
+            const prev = getDrawState();
 
-                return tool;
-            });
+            let next = drawState;
+            if (prev === drawState) {
+                next = DrawState.Select;
+            }
+
+            if (next !== DrawState.Idle) {
+                setCaptureStep(CaptureStep.Draw);
+            } else {
+                setCaptureStep(CaptureStep.Select);
+            }
+
+            switch (next) {
+                case DrawState.Idle:
+                    drawCacheLayerActionRef.current?.setEnable(false);
+                    drawCacheLayerActionRef.current?.setActiveTool({
+                        type: 'hand',
+                    });
+                    break;
+                case DrawState.Select:
+                    drawCacheLayerActionRef.current?.setEnable(true);
+                    drawCacheLayerActionRef.current?.setActiveTool({
+                        type: 'selection',
+                    });
+                    break;
+                case DrawState.Rect:
+                    drawCacheLayerActionRef.current?.setEnable(true);
+                    drawCacheLayerActionRef.current?.setActiveTool({
+                        type: 'rectangle',
+                        locked: true,
+                    });
+                    break;
+                case DrawState.Diamond:
+                    drawCacheLayerActionRef.current?.setEnable(true);
+                    drawCacheLayerActionRef.current?.setActiveTool({
+                        type: 'diamond',
+                        locked: true,
+                    });
+                    break;
+                case DrawState.Ellipse:
+                    drawCacheLayerActionRef.current?.setEnable(true);
+                    drawCacheLayerActionRef.current?.setActiveTool({
+                        type: 'ellipse',
+                        locked: true,
+                    });
+                    break;
+                case DrawState.Arrow:
+                    drawCacheLayerActionRef.current?.setEnable(true);
+                    drawCacheLayerActionRef.current?.setActiveTool({
+                        type: 'arrow',
+                        locked: true,
+                    });
+                    break;
+                case DrawState.Line:
+                    drawCacheLayerActionRef.current?.setEnable(true);
+                    drawCacheLayerActionRef.current?.setActiveTool({
+                        type: 'line',
+                        locked: true,
+                    });
+                    break;
+                case DrawState.Pen:
+                    drawCacheLayerActionRef.current?.setEnable(true);
+                    drawCacheLayerActionRef.current?.setActiveTool({
+                        type: 'freedraw',
+                        locked: true,
+                    });
+                    break;
+                case DrawState.Text:
+                    drawCacheLayerActionRef.current?.setEnable(true);
+                    drawCacheLayerActionRef.current?.setActiveTool({
+                        type: 'text',
+                        locked: true,
+                    });
+                    break;
+                case DrawState.Blur:
+                    drawCacheLayerActionRef.current?.setEnable(true);
+                    drawCacheLayerActionRef.current?.setActiveTool({
+                        type: 'blur',
+                        locked: true,
+                    });
+                    break;
+                case DrawState.Eraser:
+                    drawCacheLayerActionRef.current?.setEnable(true);
+                    drawCacheLayerActionRef.current?.setActiveTool({
+                        type: 'eraser',
+                        locked: true,
+                    });
+                    break;
+                case DrawState.OcrDetect:
+                    onOcrDetect();
+                    break;
+                default:
+                    break;
+            }
+
+            setDrawState(next);
         },
-        [setDrawState],
+        [drawCacheLayerActionRef, getDrawState, onOcrDetect, setCaptureStep, setDrawState],
     );
 
-    const selectedObjectListRef = useRef<fabric.Object[]>([]);
-    useEffect(() => {
-        const canvas = fabricRef.current;
-        if (!canvas) {
-            return;
-        }
-
-        const selectionCreatedUnlisten = canvas.on('selection:created', (e) => {
-            selectedObjectListRef.current = e.selected;
-        });
-
-        const selectionClearedUnlisten = canvas.on('selection:cleared', () => {
-            selectedObjectListRef.current = [];
-        });
-
-        return () => {
-            selectionCreatedUnlisten();
-            selectionClearedUnlisten();
+    const drawToolbarContextValue = useMemo(() => {
+        return {
+            drawToolbarRef,
+            draggingRef,
+            setDragging,
         };
-    }, [fabricRef]);
+    }, [drawToolbarRef, draggingRef, setDragging]);
 
+    const onEnableChange = useCallback((enable: boolean) => {
+        enableRef.current = enable;
+        dragButtonActionRef.current?.setEnable(enable);
+        drawToolarContainerRef.current!.style.pointerEvents = enable ? 'auto' : 'none';
+    }, []);
+
+    const setEnable = useCallback(
+        (enable: boolean) => {
+            if (enableRef.current === enable) {
+                return;
+            }
+
+            onEnableChange(enable);
+            updateEnableKeyEvent();
+        },
+        [onEnableChange, updateEnableKeyEvent],
+    );
+
+    useImperativeHandle(actionRef, () => {
+        return {
+            setEnable,
+        };
+    }, [setEnable]);
     return (
         <div
             className="draw-toolbar-container"
-            style={{
-                opacity: visible ? 1 : 0,
-                pointerEvents: visible ? 'auto' : 'none',
+            onMouseDown={(e) => {
+                e.stopPropagation();
+                e.preventDefault();
             }}
+            ref={drawToolarContainerRef}
         >
-            <div className="draw-toolbar" ref={drawToolbarRef}>
-                <Flex align="center" gap={token.paddingXS}>
-                    {/* 拖动按钮 */}
-                    <ToolbarTip
-                        destroyTooltipOnHide
-                        title={dragging ? '' : <FormattedMessage id="draw.drag" />}
-                    >
-                        <div className="draw-toolbar-drag" onMouseDown={handleMouseDown}>
-                            <HolderOutlined />
-                        </div>
-                    </ToolbarTip>
+            <DrawToolbarContext.Provider value={drawToolbarContextValue}>
+                <div className="draw-toolbar" ref={drawToolbarRef}>
+                    <Flex align="center" gap={token.paddingXS}>
+                        <DragButton actionRef={dragButtonActionRef} />
 
-                    {/* 移动物体 */}
-                    <KeyEventWrap
-                        onKeyDownEventPropName="onClick"
-                        componentKey={KeyEventKey.MoveTool}
-                        enable={visible}
-                    >
-                        <Button
+                        {/* 默认状态 */}
+                        <ToolButton
+                            componentKey={KeyEventKey.MoveTool}
                             icon={<DragOutlined />}
-                            type={getButtonTypeByState(drawState === DrawState.Idle)}
+                            disableOnDrawing
+                            drawState={DrawState.Idle}
                             onClick={() => {
                                 onToolClick(DrawState.Idle);
                             }}
                         />
-                    </KeyEventWrap>
 
-                    {/* 选择物体 */}
-                    <KeyEventWrap
-                        onKeyDownEventPropName="onClick"
-                        componentKey={KeyEventKey.SelectTool}
-                        enable={visible}
-                    >
-                        <Button
+                        {/* 选择状态 */}
+                        <ToolButton
+                            componentKey={KeyEventKey.SelectTool}
                             icon={<ArrowSelectIcon style={{ fontSize: '1.08em' }} />}
-                            type={getButtonTypeByState(drawState === DrawState.Select)}
+                            disableOnDrawing
+                            drawState={DrawState.Select}
                             onClick={() => {
-                                if (!maskRectRef.current) {
-                                    return;
-                                }
-
                                 onToolClick(DrawState.Select);
                             }}
                         />
-                    </KeyEventWrap>
 
-                    <div className="draw-toolbar-splitter" />
+                        <div className="draw-toolbar-splitter" />
 
-                    {/* 矩形 */}
-                    <KeyEventWrap
-                        onKeyDownEventPropName="onClick"
-                        componentKey={KeyEventKey.RectTool}
-                        enable={visible}
-                    >
-                        <Button
+                        {/* 矩形 */}
+                        <ToolButton
+                            componentKey={KeyEventKey.RectTool}
                             icon={<RectIcon style={{ fontSize: '1em' }} />}
-                            type={getButtonTypeByState(drawState === DrawState.Rect)}
+                            disableOnDrawing
+                            drawState={DrawState.Rect}
                             onClick={() => {
                                 onToolClick(DrawState.Rect);
                             }}
                         />
-                    </KeyEventWrap>
 
-                    {/* 椭圆 */}
-                    <KeyEventWrap
-                        onKeyDownEventPropName="onClick"
-                        componentKey={KeyEventKey.EllipseTool}
-                        enable={visible}
-                    >
-                        <Button
+                        {/* 菱形 */}
+                        <ToolButton
+                            componentKey={KeyEventKey.DiamondTool}
+                            icon={<DiamondIcon style={{ fontSize: '1em' }} />}
+                            disableOnDrawing
+                            drawState={DrawState.Diamond}
+                            onClick={() => {
+                                onToolClick(DrawState.Diamond);
+                            }}
+                        />
+
+                        {/* 椭圆 */}
+                        <ToolButton
+                            componentKey={KeyEventKey.EllipseTool}
                             icon={<CircleIcon style={{ fontSize: '1em' }} />}
-                            type={getButtonTypeByState(drawState === DrawState.Ellipse)}
+                            disableOnDrawing
+                            drawState={DrawState.Ellipse}
                             onClick={() => {
                                 onToolClick(DrawState.Ellipse);
                             }}
                         />
-                    </KeyEventWrap>
 
-                    {/* 箭头 */}
-                    <KeyEventWrap
-                        onKeyDownEventPropName="onClick"
-                        componentKey={KeyEventKey.ArrowTool}
-                        enable={visible}
-                    >
-                        <Button
+                        {/* 箭头 */}
+                        <ToolButton
+                            componentKey={KeyEventKey.ArrowTool}
                             icon={<ArrowIcon style={{ fontSize: '0.83em' }} />}
-                            type={getButtonTypeByState(drawState === DrawState.Arrow)}
+                            disableOnDrawing
+                            drawState={DrawState.Arrow}
                             onClick={() => {
                                 onToolClick(DrawState.Arrow);
                             }}
                         />
-                    </KeyEventWrap>
 
-                    {/* 画笔 */}
-                    <KeyEventWrap
-                        onKeyDownEventPropName="onClick"
-                        componentKey={KeyEventKey.PenTool}
-                        enable={visible}
-                    >
-                        <Button
+                        {/* 线条 */}
+                        <ToolButton
+                            componentKey={KeyEventKey.LineTool}
+                            icon={<LineIcon style={{ fontSize: '1.16em' }} />}
+                            disableOnDrawing
+                            drawState={DrawState.Line}
+                            onClick={() => {
+                                onToolClick(DrawState.Line);
+                            }}
+                        />
+
+                        {/* 画笔 */}
+                        <ToolButton
+                            componentKey={KeyEventKey.PenTool}
                             icon={<PenIcon style={{ fontSize: '1.08em' }} />}
-                            type={getButtonTypeByState(drawState === DrawState.Pen)}
+                            disableOnDrawing
+                            drawState={DrawState.Pen}
                             onClick={() => {
                                 onToolClick(DrawState.Pen);
                             }}
                         />
-                    </KeyEventWrap>
 
-                    {/* 高亮 */}
-                    <KeyEventWrap
-                        onKeyDownEventPropName="onClick"
-                        componentKey={KeyEventKey.HighlightTool}
-                        enable={visible}
-                    >
-                        <Button
-                            icon={<HighlightOutlined />}
-                            type={getButtonTypeByState(drawState === DrawState.Highlight)}
-                            onClick={() => {
-                                onToolClick(DrawState.Highlight);
-                            }}
-                        />
-                    </KeyEventWrap>
-
-                    {/* 文字 */}
-                    <KeyEventWrap
-                        onKeyDownEventPropName="onClick"
-                        componentKey={KeyEventKey.TextTool}
-                        enable={visible}
-                    >
-                        <Button
+                        {/* 文本 */}
+                        <ToolButton
+                            componentKey={KeyEventKey.TextTool}
                             icon={<TextIcon style={{ fontSize: '1.08em' }} />}
-                            type={getButtonTypeByState(drawState === DrawState.Text)}
+                            disableOnDrawing
+                            drawState={DrawState.Text}
                             onClick={() => {
                                 onToolClick(DrawState.Text);
                             }}
                         />
-                    </KeyEventWrap>
 
-                    {/* 马赛克 */}
-                    <KeyEventWrap
-                        onKeyDownEventPropName="onClick"
-                        componentKey={KeyEventKey.MosaicTool}
-                        enable={visible}
-                    >
-                        <Button
+                        {/* 模糊 */}
+                        <ToolButton
+                            componentKey={KeyEventKey.BlurTool}
                             icon={<MosaicIcon />}
-                            type={getButtonTypeByState(drawState === DrawState.Mosaic)}
+                            disableOnDrawing
+                            drawState={DrawState.Blur}
                             onClick={() => {
-                                onToolClick(DrawState.Mosaic);
+                                onToolClick(DrawState.Blur);
                             }}
                         />
-                    </KeyEventWrap>
 
-                    <KeyEventWrap
-                        onKeyDownEventPropName="onClick"
-                        componentKey={KeyEventKey.RemoveTool}
-                        enable={visible}
-                    >
-                        <Button
-                            icon={<DeleteOutlined style={{ fontSize: '0.96em' }} />}
-                            type="text"
-                            onClick={() => {
-                                selectedObjectListRef.current.forEach((obj) => {
-                                    fabricRef.current?.discardActiveObject();
-                                    fabricRef.current?.remove(obj);
-                                });
-                            }}
-                        />
-                    </KeyEventWrap>
-
-                    {/* 橡皮擦 */}
-                    <KeyEventWrap
-                        onKeyDownEventPropName="onClick"
-                        componentKey={KeyEventKey.EraserTool}
-                        enable={visible}
-                    >
-                        <Button
+                        {/* 橡皮擦 */}
+                        <ToolButton
+                            componentKey={KeyEventKey.EraserTool}
                             icon={<EraserIcon style={{ fontSize: '0.9em' }} />}
-                            type={getButtonTypeByState(drawState === DrawState.Eraser)}
+                            disableOnDrawing
+                            drawState={DrawState.Eraser}
                             onClick={() => {
                                 onToolClick(DrawState.Eraser);
                             }}
                         />
-                    </KeyEventWrap>
 
-                    <div className="draw-toolbar-splitter" />
+                        <div className="draw-toolbar-splitter" />
 
-                    {/* 撤销 */}
-                    <KeyEventWrap
-                        onKeyDownEventPropName="onClick"
-                        componentKey={KeyEventKey.UndoTool}
-                        enable={visible}
-                    >
-                        <Button
-                            disabled={!canUndo}
-                            icon={<UndoOutlined />}
-                            type={getButtonTypeByState(false)}
+                        <HistoryControls />
+
+                        <div className="draw-toolbar-splitter" />
+
+                        {/* 固定到屏幕 */}
+                        <ToolButton
+                            componentKey={KeyEventKey.FixedTool}
+                            icon={<FixedIcon style={{ fontSize: '1em' }} />}
+                            disableOnDrawing
+                            drawState={DrawState.Fixed}
                             onClick={() => {
-                                canvasHistoryRef.current?.undo();
+                                onFixed();
                             }}
                         />
-                    </KeyEventWrap>
 
-                    {/* 重做 */}
-                    <KeyEventWrap
-                        onKeyDownEventPropName="onClick"
-                        componentKey={KeyEventKey.RedoTool}
-                        enable={visible}
-                    >
-                        <Button
-                            disabled={!canRedo}
-                            icon={<RedoOutlined />}
-                            type={getButtonTypeByState(false)}
+                        {/* OCR */}
+                        <ToolButton
+                            componentKey={KeyEventKey.OcrDetectTool}
+                            icon={<OcrDetectIcon style={{ fontSize: '0.88em' }} />}
+                            disableOnDrawing
+                            drawState={DrawState.OcrDetect}
                             onClick={() => {
-                                canvasHistoryRef.current?.redo();
+                                onToolClick(DrawState.OcrDetect);
                             }}
                         />
-                    </KeyEventWrap>
 
-                    <div className="draw-toolbar-splitter" />
+                        {/* 保存截图 */}
+                        <ToolButton
+                            componentKey={KeyEventKey.SaveTool}
+                            icon={<SaveIcon style={{ fontSize: '1em' }} />}
+                            disableOnDrawing
+                            drawState={DrawState.Save}
+                            onClick={() => {
+                                onSave();
+                            }}
+                        />
 
-                    {/* 取消截图 */}
-                    <KeyEventWrap
-                        onKeyDownEventPropName="onClick"
-                        componentKey={KeyEventKey.CancelTool}
-                        confirmTip={<>{intl.formatMessage({ id: 'draw.cancel.tip1' })}</>}
-                        enable={visible}
-                    >
-                        <Button
+                        <div className="draw-toolbar-splitter" />
+
+                        {/* 取消截图 */}
+                        <ToolButton
+                            componentKey={KeyEventKey.CancelTool}
                             icon={
                                 <CloseOutlined
                                     style={{ fontSize: '0.83em', color: token.colorError }}
                                 />
                             }
-                            type="text"
+                            confirmTip={<FormattedMessage id="draw.cancel.tip1" />}
+                            disableOnDrawing
+                            drawState={DrawState.Cancel}
                             onClick={() => {
                                 onCancel();
                             }}
                         />
-                    </KeyEventWrap>
-                </Flex>
-            </div>
-            <div className="draw-subtoolbar" ref={drawSubToolbarRef}>
-                <Flex align="center" gap={token.paddingXS}>
-                    {drawState === DrawState.Pen && <PenTool />}
-                    {drawState === DrawState.Arrow && <ArrowTool />}
-                    {drawState === DrawState.Rect && <RectTool />}
-                    {drawState === DrawState.Ellipse && <EllipseTool />}
-                    {drawState === DrawState.Mosaic && <MosaicTool />}
-                    {drawState === DrawState.Eraser && <EraserTool />}
-                    {drawState === DrawState.Highlight && <HighlightTool />}
-                    {drawState === DrawState.Text && <TextTool />}
-                </Flex>
-            </div>
+
+                        {/* 复制截图 */}
+                        <ToolButton
+                            componentKey={KeyEventKey.CopyTool}
+                            icon={
+                                <CopyOutlined
+                                    style={{ fontSize: '0.92em', color: token.colorPrimary }}
+                                />
+                            }
+                            disableOnDrawing
+                            drawState={DrawState.Copy}
+                            onClick={() => {
+                                onCopyToClipboard();
+                            }}
+                        />
+                    </Flex>
+                </div>
+
+                <BlurTool />
+            </DrawToolbarContext.Provider>
             <style jsx>{`
                 .draw-toolbar-container {
+                    user-select: none;
                     position: absolute;
                     z-index: ${zIndexs.Draw_Toolbar};
                     top: 0;
                     left: 0;
+                    transition: opacity ${token.motionDurationFast} ${token.motionEaseInOut};
                 }
 
-                .draw-toolbar,
-                .draw-subtoolbar {
+                .draw-toolbar {
                     position: absolute;
+                    opacity: 0;
+                }
+
+                .draw-toolbar {
                     padding: ${token.paddingXXS}px ${token.paddingSM}px;
                     box-sizing: border-box;
                     background-color: ${token.colorBgContainer};
@@ -667,16 +476,27 @@ const DrawToolbarCore: React.FC<DrawToolbarProps> = ({
                     cursor: default; /* 防止非拖动区域也变成可拖动状态 */
                     color: ${token.colorText};
                     box-shadow: 0 0 3px 0px ${token.colorPrimaryHover};
+                    transition: opacity ${token.motionDurationFast} ${token.motionEaseInOut};
                 }
 
                 .draw-subtoolbar {
                     opacity: 0;
                 }
 
-                .draw-toolbar-drag {
-                    font-size: 18px;
+                .draw-subtoolbar-container {
+                    position: absolute;
+                    right: 0;
+                    bottom: calc(-100% - ${token.marginXXS}px);
+                    height: 100%;
+                }
+
+                :global(.drag-button) {
                     color: ${token.colorTextQuaternary};
                     cursor: move;
+                }
+
+                .draw-toolbar :global(.draw-toolbar-drag) {
+                    font-size: 18px;
                     margin-right: -3px;
                     margin-left: -3px;
                 }
@@ -702,4 +522,4 @@ const DrawToolbarCore: React.FC<DrawToolbarProps> = ({
     );
 };
 
-export const DrawToolbar = React.memo(DrawToolbarCore);
+export const DrawToolbar = React.memo(withStatePublisher(DrawToolbarCore, DrawingPublisher));

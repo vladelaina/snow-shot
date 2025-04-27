@@ -1,7 +1,11 @@
 import { Button, Popconfirm } from 'antd';
 import { ResetIcon } from '../icons';
 import { FormattedMessage } from 'react-intl';
-import { AppSettingsContext, AppSettingsGroup, defaultAppSettingsData } from '@/app/contextWrap';
+import {
+    AppSettingsActionContext,
+    AppSettingsGroup,
+    defaultAppSettingsData,
+} from '@/app/contextWrap';
 import { useContext } from 'react';
 
 export const ResetSettingsButton: React.FC<{
@@ -9,7 +13,7 @@ export const ResetSettingsButton: React.FC<{
     appSettingsGroup?: AppSettingsGroup;
     title: React.ReactNode;
 }> = ({ onReset, title, appSettingsGroup }) => {
-    const { updateAppSettings } = useContext(AppSettingsContext);
+    const { updateAppSettings } = useContext(AppSettingsActionContext);
     return (
         <Popconfirm
             title={<FormattedMessage id="settings.resetSettings" values={{ title }} />}

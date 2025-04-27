@@ -2,19 +2,25 @@ use device_query::{DeviceQuery, DeviceState, MouseState};
 use image::codecs::png::{CompressionType, FilterType, PngEncoder};
 use image::codecs::webp::WebPEncoder;
 use std::sync::Mutex;
+use std::time::{SystemTime, UNIX_EPOCH};
 use tauri::command;
 use tauri::ipc::Response;
 use xcap::{Monitor, Window};
 
+use crate::os::ElementRect;
 use crate::os::ui_automation::UIElements;
-use crate::os::{ElementInfo, ElementRect};
+
+fn get_device_mouse_position() -> (i32, i32) {
+    let device_state = DeviceState::new();
+    let mouse: MouseState = device_state.get_mouse();
+
+    mouse.coords
+}
 
 #[command]
 pub async fn capture_current_monitor(encoder: String) -> Response {
     // 获取当前鼠标的位置
-    let device_state = DeviceState::new();
-    let mouse: MouseState = device_state.get_mouse();
-    let (mouse_x, mouse_y) = mouse.coords;
+    let (mouse_x, mouse_y) = get_device_mouse_position();
 
     // 获取当前鼠标所在屏幕的截图图像
     let monitor = Monitor::from_point(mouse_x, mouse_y).unwrap();
@@ -114,19 +120,31 @@ pub async fn init_ui_elements(
 pub async fn init_ui_elements_cache(
     ui_elements: tauri::State<'_, Mutex<UIElements>>,
 ) -> Result<(), ()> {
+    // 获取当前鼠标的位置
+    let (mouse_x, mouse_y) = get_device_mouse_position();
+
     let mut ui_elements = match ui_elements.lock() {
         Ok(ui_elements) => ui_elements,
         Err(_) => return Err(()),
     };
 
     match ui_elements.init_cache() {
-        Ok(_) => Ok(()),
-        Err(_) => Err(()),
+        Ok(_) => (),
+        Err(_) => return Err(()),
     }
+
+    // 用当前鼠标位置初始化下
+    match ui_elements.get_element_from_point_walker(mouse_x, mouse_y) {
+        Ok(_) => (),
+        Err(_) => return Err(()),
+    }
+
+    Ok(())
 }
 
 #[command]
-pub async fn get_element_info() -> Result<ElementInfo, ()> {
+pub async fn get_window_elements() -> Result<Vec<ElementRect>, ()> {
+    // 获取当前鼠标的位置
     let device_state = DeviceState::new();
     let mouse: MouseState = device_state.get_mouse();
     let (mouse_x, mouse_y) = mouse.coords;
@@ -138,14 +156,18 @@ pub async fn get_element_info() -> Result<ElementInfo, ()> {
     let monitor_max_y = monitor_min_y + monitor.height().unwrap_or(0) as i32;
 
     // 获取所有窗口，简单筛选下需要的窗口，然后获取窗口所有元素
-    let mut windows = Window::all().unwrap_or_default();
-    // 获取窗口是，是从最顶层的窗口依次遍历，这里反转下便于后续查找
-    windows.reverse();
+    let windows = Window::all().unwrap_or_default();
 
     let mut rect_list = Vec::new();
     for window in windows {
         if window.is_minimized().unwrap_or(true) {
             continue;
+        }
+
+        if let Ok(title) = window.title() {
+            if title.eq("Shell Handwriting Canvas") {
+                continue;
+            }
         }
 
         let x = match window.x() {
@@ -180,10 +202,7 @@ pub async fn get_element_info() -> Result<ElementInfo, ()> {
         });
     }
 
-    Ok(ElementInfo {
-        scale_factor: monitor.scale_factor().unwrap_or(1.0),
-        rect_list,
-    })
+    Ok(rect_list)
 }
 
 #[command]
@@ -210,4 +229,35 @@ pub async fn get_mouse_position() -> Result<(i32, i32), ()> {
     let (mouse_x, mouse_y) = mouse.coords;
 
     Ok((mouse_x, mouse_y))
+}
+
+#[command]
+pub async fn create_draw_window(app: tauri::AppHandle) {
+    tauri::WebviewWindowBuilder::new(
+        &app,
+        format!(
+            "draw-{}",
+            SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .unwrap()
+                .as_secs()
+        ),
+        tauri::WebviewUrl::App("/draw".into()),
+    )
+    .resizable(false)
+    .maximizable(false)
+    .minimizable(false)
+    .fullscreen(false)
+    .title("Snow Shot - Draw")
+    .center()
+    .decorations(false)
+    .shadow(false)
+    .transparent(true)
+    .skip_taskbar(true)
+    .maximizable(false)
+    .minimizable(false)
+    .resizable(false)
+    .inner_size(0.0, 0.0)
+    .build()
+    .unwrap();
 }

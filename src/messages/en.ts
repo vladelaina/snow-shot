@@ -37,6 +37,7 @@ export const en = {
     'settings.performanceMode.tip1':
         'When performance mode is enabled, it will try to reduce drawing quality to improve performance',
     'draw.mosaic': 'Mosaic',
+    'draw.blur': 'Blur',
     'draw.enableBlur': 'Blur Effect',
     'draw.regionBlur': 'Region Blur',
     'draw.selectRect': 'Select Rectangle',

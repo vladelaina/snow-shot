@@ -1,14 +1,13 @@
 'use client';
 
 import { EventCallback, listen, UnlistenFn } from '@tauri-apps/api/event';
-import { createContext, useCallback, useContext, useEffect, useRef } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef } from 'react';
 import { attachConsole } from '@tauri-apps/plugin-log';
 import { appLog, LogMessageEvent } from '@/utils/appLog';
 import React from 'react';
 import { MenuLayoutContext } from '@/app/menuLayout';
 import { getCurrentWindow, Window as AppWindow } from '@tauri-apps/api/window';
-import { AppSettingsContext } from '@/app/contextWrap';
-import { initUiElements } from '@/commands';
+import { AppSettingsActionContext } from '@/app/contextWrap';
 
 type Listener = {
     event: string;
@@ -65,7 +64,7 @@ const EventListenerCore: React.FC<{ children: React.ReactNode }> = ({ children }
         return res;
     }, []);
 
-    const { reloadAppSettings } = useContext(AppSettingsContext);
+    const { reloadAppSettings } = useContext(AppSettingsActionContext);
 
     const inited = useRef(false);
     useEffect(() => {
@@ -102,8 +101,6 @@ const EventListenerCore: React.FC<{ children: React.ReactNode }> = ({ children }
                     event: 'execute-screenshot',
                     callback: async () => {},
                 });
-
-                initUiElements();
             }
         }
 
@@ -138,8 +135,12 @@ const EventListenerCore: React.FC<{ children: React.ReactNode }> = ({ children }
             });
         };
     }, [mainWindow, pathname, reloadAppSettings]);
+
+    const eventListenerContextValue = useMemo(() => {
+        return { addListener, removeListener };
+    }, [addListener, removeListener]);
     return (
-        <EventListenerContext.Provider value={{ addListener, removeListener }}>
+        <EventListenerContext.Provider value={eventListenerContextValue}>
             {children}
         </EventListenerContext.Provider>
     );

@@ -15,7 +15,14 @@ import { useRouter } from 'next/navigation';
 const { Content, Sider } = Layout;
 import { usePathname } from 'next/navigation';
 import RSC from 'react-scrollbars-custom';
-import { AppSettingsContext, AppSettingsGroup, AppSettingsLanguage } from './contextWrap';
+import {
+    AppSettingsActionContext,
+    AppSettingsData,
+    AppSettingsGroup,
+    AppSettingsLanguage,
+    AppSettingsPublisher,
+    defaultAppSettingsData,
+} from './contextWrap';
 import { Header } from 'antd/es/layout/layout';
 import { getCurrentWindow, Window as AppWindow } from '@tauri-apps/api/window';
 import '@ant-design/v5-patch-for-react-19';
@@ -29,6 +36,7 @@ import { en } from '@/messages/en';
 import { exitApp } from '@/commands';
 import { ItemType, MenuItemType } from 'antd/es/menu/interface';
 import { PageNav, PageNavActionType } from './components/pageNav';
+import { useStateSubscriber } from '@/hooks/useStateSubscriber';
 
 type MenuItem = ItemType<MenuItemType>;
 
@@ -50,6 +58,209 @@ type RouteItem = {
     children?: RouteItem[];
     tabs?: TabsProps['items'];
 };
+
+const MenuSiderCore: React.FC<{
+    menuItems: MenuItem[];
+    darkMode: boolean;
+    pathname: string;
+}> = ({ menuItems, darkMode, pathname }) => {
+    const { token } = theme.useToken();
+    const [collapsed, setCollapsed] = useState(false);
+    useAppSettingsLoad(
+        useCallback((settings: AppSettingsData) => {
+            setCollapsed(settings[AppSettingsGroup.Cache].menuCollapsed);
+        }, []),
+    );
+    const { updateAppSettings } = useContext(AppSettingsActionContext);
+    return (
+        <Sider
+            theme={darkMode ? 'dark' : 'light'}
+            collapsible
+            collapsed={collapsed}
+            onCollapse={(value) => {
+                setCollapsed(value);
+                updateAppSettings(
+                    AppSettingsGroup.Cache,
+                    { menuCollapsed: value },
+                    true,
+                    true,
+                    false,
+                );
+            }}
+        >
+            <div className="logo-wrap">
+                <div className="logo-text">
+                    {collapsed ? (
+                        <>
+                            <div className="logo-text-highlight">S</div>
+                            <div>now</div>
+                        </>
+                    ) : (
+                        <>
+                            <div className="logo-text-highlight">Snow</div>
+                            <div>Shot</div>
+                        </>
+                    )}
+                </div>
+            </div>
+            <Menu
+                defaultSelectedKeys={[menuItems[0]!.key?.toString() ?? '/']}
+                selectedKeys={[pathname]}
+                mode="inline"
+                items={menuItems}
+            />
+            <style jsx>{`
+                .logo-wrap {
+                    margin-top: 16px;
+                    margin-bottom: 10px;
+                    font-weight: 600;
+                    font-size: 21px;
+                    text-align: center;
+                    font-style: italic;
+                }
+
+                .logo-wrap .logo-text {
+                    color: ${darkMode ? '#fff' : '#000'};
+                    display: inline-block;
+                    padding: 0px 12px;
+                }
+
+                .logo-wrap .logo-text .logo-text-highlight {
+                    color: ${darkMode ? token['purple-7'] : token['purple-5']};
+                }
+
+                .logo-wrap .logo-text div {
+                    display: inline;
+                }
+            `}</style>
+        </Sider>
+    );
+};
+
+const MenuSider = React.memo(MenuSiderCore);
+
+const MenuContentCore: React.FC<{
+    pathname: string;
+    routeTabsMap: Record<string, TabsProps['items']>;
+    children: React.ReactNode;
+}> = ({ pathname, routeTabsMap, children }) => {
+    const { token } = theme.useToken();
+    const appWindowRef = useRef<AppWindow | undefined>(undefined);
+    useEffect(() => {
+        appWindowRef.current = getCurrentWindow();
+    }, []);
+
+    const tabItems = useMemo(() => {
+        return routeTabsMap[pathname] ?? routeTabsMap['/'] ?? [];
+    }, [pathname, routeTabsMap]);
+
+    const pageNavActionRef = useRef<PageNavActionType | null>(null);
+    const contentRef = useRef<HTMLDivElement>(null);
+    return (
+        <Layout>
+            <Header data-tauri-drag-region>
+                <Space>
+                    <Button
+                        type="text"
+                        size="small"
+                        icon={<MinusOutlined />}
+                        onClick={() => {
+                            if (process.env.NODE_ENV === 'development') {
+                                appWindowRef.current?.minimize();
+                            } else {
+                                appWindowRef.current?.hide();
+                            }
+                        }}
+                    />
+                    <Button
+                        type="text"
+                        size="small"
+                        icon={<CloseOutlined />}
+                        onClick={() => {
+                            if (process.env.NODE_ENV === 'development') {
+                                // appWindowRef.current?.close();
+                            } else {
+                                exitApp();
+                            }
+                        }}
+                    />
+                </Space>
+            </Header>
+            <Content>
+                <div className="content-wrap">
+                    <div data-tauri-drag-region></div>
+                    <div data-tauri-drag-region></div>
+                    <div data-tauri-drag-region></div>
+                    <div data-tauri-drag-region></div>
+                    <div className="center">
+                        <PageNav tabItems={tabItems} actionRef={pageNavActionRef} />
+                        <RSC
+                            onScroll={(e) => {
+                                if ('scrollTop' in e && typeof e.scrollTop === 'number') {
+                                    pageNavActionRef.current?.updateActiveKey(e.scrollTop);
+                                }
+                            }}
+                        >
+                            <div ref={contentRef} className="content-container">
+                                {children}
+                            </div>
+                        </RSC>
+                    </div>
+                    <div data-tauri-drag-region></div>
+                    <div data-tauri-drag-region></div>
+                    <div data-tauri-drag-region></div>
+                    <div data-tauri-drag-region></div>
+                </div>
+            </Content>
+
+            <style jsx>{`
+                .content-wrap {
+                    display: grid;
+                    grid-template-columns: ${token.padding}px auto ${token.padding}px;
+                    grid-template-rows: ${token.padding}px auto ${token.padding}px;
+                    height: 100%;
+                }
+
+                .center {
+                    grid-column: 2;
+                    grid-row: 2;
+                    overflow-y: hidden;
+                    overflow-x: hidden;
+                    border-radius: ${token.borderRadiusLG}px;
+                    background-color: ${token.colorBgContainer} !important;
+                    padding: ${token.padding}px ${token.borderRadiusLG}px;
+                    display: flex;
+                    flex-direction: column;
+                }
+
+                .center::-webkit-scrollbar {
+                    display: none;
+                }
+
+                .content-container {
+                    padding: 0 ${token.padding}px;
+                    width: 100%;
+                    overflow-x: hidden;
+                }
+
+                .center > :global(.ScrollbarsCustom) :global(.ScrollbarsCustom-Track) {
+                    background-color: rgba(0, 0, 0, 0.1) !important;
+                    width: 3px !important;
+                    border-radius: 1px !important;
+                    height: 100% !important;
+                    top: 0px !important;
+                }
+                .center > :global(.ScrollbarsCustom) :global(.ScrollbarsCustom-Thumb) {
+                    background-color: rgba(0, 0, 0, 0.4) !important;
+                    width: 100% !important;
+                    border-radius: 1px !important;
+                }
+            `}</style>
+        </Layout>
+    );
+};
+
+const MenuContent = React.memo(MenuContentCore);
 
 const MenuLayoutCore: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     useEffect(() => {
@@ -80,17 +291,22 @@ const MenuLayoutCore: React.FC<{ children: React.ReactNode }> = ({ children }) =
     }, []);
 
     const intl = useIntl();
-    const appSettings = useContext(AppSettingsContext);
+    const appSettings = useContext(AppSettingsActionContext);
     const { updateAppSettings } = appSettings;
-    const { darkMode } = appSettings[AppSettingsGroup.Common];
+    const [darkMode, setDarkMode] = useState(
+        defaultAppSettingsData[AppSettingsGroup.Common].darkMode,
+    );
+    useStateSubscriber(
+        AppSettingsPublisher,
+        useCallback((settings: AppSettingsData) => {
+            setDarkMode(settings[AppSettingsGroup.Common].darkMode);
+        }, []),
+    );
 
     const pathname = usePathname() || '/';
-    const [collapsed, setCollapsed] = useState(false);
     useAppSettingsLoad(
         useCallback(
             (settings) => {
-                setCollapsed(settings[AppSettingsGroup.Cache].menuCollapsed);
-
                 // 获取浏览器语言，判断是否需要切换语言
                 const settingBrowserLanguage = settings[AppSettingsGroup.Common].browserLanguage;
                 const browserLanguage = navigator.language;
@@ -171,6 +387,17 @@ const MenuLayoutCore: React.FC<{ children: React.ReactNode }> = ({ children }) =
                             },
                         ],
                     },
+                    {
+                        key: '/settings/systemSettings',
+                        path: '/settings/systemSettings',
+                        label: intl.formatMessage({ id: 'menu.settings.systemSettings' }),
+                        tabs: [
+                            {
+                                key: 'renderSettings',
+                                label: intl.formatMessage({ id: 'settings.renderSettings' }),
+                            },
+                        ],
+                    },
                 ],
             },
         ];
@@ -211,120 +438,15 @@ const MenuLayoutCore: React.FC<{ children: React.ReactNode }> = ({ children }) =
         return { menuItems, routeTabsMap };
     }, [router, routes]);
 
-    const appWindowRef = useRef<AppWindow | undefined>(undefined);
-    useEffect(() => {
-        appWindowRef.current = getCurrentWindow();
-    }, []);
-
-    const tabItems = useMemo(() => {
-        return routeTabsMap[pathname] ?? routeTabsMap['/'] ?? [];
-    }, [pathname, routeTabsMap]);
-
-    const contentRef = useRef<HTMLDivElement>(null);
-    const pageNavActionRef = useRef<PageNavActionType | null>(null);
     return (
         <>
             <TrayIconLoader />
             <div className="menu-layout-wrap">
                 <Layout>
-                    <Sider
-                        theme={darkMode ? 'dark' : 'light'}
-                        collapsible
-                        collapsed={collapsed}
-                        onCollapse={(value) => {
-                            setCollapsed(value);
-                            updateAppSettings(
-                                AppSettingsGroup.Cache,
-                                { menuCollapsed: value },
-                                true,
-                                true,
-                                false,
-                            );
-                        }}
-                    >
-                        <div className="logo-wrap">
-                            <div className="logo-text">
-                                {collapsed ? (
-                                    <>
-                                        <div className="logo-text-highlight">S</div>
-                                        <div>now</div>
-                                    </>
-                                ) : (
-                                    <>
-                                        <div className="logo-text-highlight">Snow</div>
-                                        <div>Shot</div>
-                                    </>
-                                )}
-                            </div>
-                        </div>
-                        <Menu
-                            defaultSelectedKeys={[menuItems[0]!.key?.toString() ?? '/']}
-                            selectedKeys={[pathname]}
-                            mode="inline"
-                            items={menuItems}
-                        />
-                    </Sider>
-                    <Layout>
-                        <Header data-tauri-drag-region>
-                            <Space>
-                                <Button
-                                    type="text"
-                                    size="small"
-                                    icon={<MinusOutlined />}
-                                    onClick={() => {
-                                        if (process.env.NODE_ENV === 'development') {
-                                            appWindowRef.current?.minimize();
-                                        } else {
-                                            appWindowRef.current?.hide();
-                                        }
-                                    }}
-                                />
-                                <Button
-                                    type="text"
-                                    size="small"
-                                    icon={<CloseOutlined />}
-                                    onClick={() => {
-                                        if (process.env.NODE_ENV === 'development') {
-                                            // appWindowRef.current?.close();
-                                        } else {
-                                            exitApp();
-                                        }
-                                    }}
-                                />
-                            </Space>
-                        </Header>
-                        <Content>
-                            <div className="content-wrap">
-                                <div data-tauri-drag-region></div>
-                                <div data-tauri-drag-region></div>
-                                <div data-tauri-drag-region></div>
-                                <div data-tauri-drag-region></div>
-                                <div className="center">
-                                    <PageNav tabItems={tabItems} actionRef={pageNavActionRef} />
-                                    <RSC
-                                        onScroll={(e) => {
-                                            if (
-                                                'scrollTop' in e &&
-                                                typeof e.scrollTop === 'number'
-                                            ) {
-                                                pageNavActionRef.current?.updateActiveKey(
-                                                    e.scrollTop,
-                                                );
-                                            }
-                                        }}
-                                    >
-                                        <div ref={contentRef} className="content-container">
-                                            {children}
-                                        </div>
-                                    </RSC>
-                                </div>
-                                <div data-tauri-drag-region></div>
-                                <div data-tauri-drag-region></div>
-                                <div data-tauri-drag-region></div>
-                                <div data-tauri-drag-region></div>
-                            </div>
-                        </Content>
-                    </Layout>
+                    <MenuSider menuItems={menuItems} darkMode={darkMode} pathname={pathname} />
+                    <MenuContent pathname={pathname} routeTabsMap={routeTabsMap}>
+                        {children}
+                    </MenuContent>
                 </Layout>
                 <style jsx>{`
                     .menu-layout-wrap {
@@ -335,6 +457,10 @@ const MenuLayoutCore: React.FC<{ children: React.ReactNode }> = ({ children }) =
 
                     .menu-layout-wrap :global(.ant-layout) {
                         height: 100% !important;
+                    }
+
+                    .menu-layout-wrap > :global(.ant-layout) {
+                        flex-direction: row !important;
                     }
 
                     .menu-layout-wrap :global(.ant-layout-sider-trigger) {
@@ -352,72 +478,6 @@ const MenuLayoutCore: React.FC<{ children: React.ReactNode }> = ({ children }) =
                         align-items: center;
                         justify-content: flex-end;
                         padding: 0 ${token.padding}px;
-                    }
-
-                    .menu-layout-wrap .logo-wrap {
-                        margin-top: 16px;
-                        margin-bottom: 10px;
-                        font-weight: 600;
-                        font-size: 21px;
-                        text-align: center;
-                        font-style: italic;
-                    }
-
-                    .menu-layout-wrap .logo-wrap .logo-text {
-                        color: ${darkMode ? '#fff' : '#000'};
-                        display: inline-block;
-                        padding: 0px 12px;
-                    }
-
-                    .menu-layout-wrap .logo-wrap .logo-text .logo-text-highlight {
-                        color: ${darkMode ? token['purple-7'] : token['purple-5']};
-                    }
-
-                    .menu-layout-wrap .logo-wrap .logo-text div {
-                        display: inline;
-                    }
-
-                    .content-wrap {
-                        display: grid;
-                        grid-template-columns: ${token.padding}px auto ${token.padding}px;
-                        grid-template-rows: ${token.padding}px auto ${token.padding}px;
-                        height: 100%;
-                    }
-
-                    .center {
-                        grid-column: 2;
-                        grid-row: 2;
-                        overflow-y: hidden;
-                        overflow-x: hidden;
-                        border-radius: ${token.borderRadiusLG}px;
-                        background-color: ${token.colorBgContainer} !important;
-                        padding: ${token.padding}px ${token.borderRadiusLG}px;
-                        display: flex;
-                        flex-direction: column;
-                    }
-
-                    .center::-webkit-scrollbar {
-                        display: none;
-                    }
-
-                    {/* 重写滚动条样式 */}
-                    .menu-layout-wrap .center>:global(.ScrollbarsCustom) :global(.ScrollbarsCustom-Track) {
-                        background-color: rgba(0, 0, 0, 0.1) !important;
-                        width: 3px !important;
-                        border-radius: 1px !important;
-                        height: 100% !important;
-                        top: 0px !important;
-                    }
-                    .menu-layout-wrap .center>:global(.ScrollbarsCustom) :global(.ScrollbarsCustom-Thumb) {
-                        background-color: rgba(0, 0, 0, 0.4) !important;
-                        width: 100% !important;
-                        border-radius: 1px !important;
-                    }
-
-                    .content-container {
-                        padding: 0 ${token.padding}px;
-                        width: 100%;
-                        overflow-x: hidden;
                     }
                 `}</style>
             </div>

@@ -1,6 +1,5 @@
 use std::cmp::Ordering;
 use std::collections::HashMap;
-use std::collections::HashSet;
 use std::collections::VecDeque;
 use std::mem;
 
@@ -148,11 +147,25 @@ impl UIElements {
         rect: uiautomation::types::Rect,
         parent_rect: uiautomation::types::Rect,
     ) -> uiautomation::types::Rect {
+        // 当前矩形的数据不可信，做个纠正
+        let mut rect_left = rect.get_left();
+        let mut rect_top = rect.get_top();
+        let mut rect_right = rect.get_right();
+        let mut rect_bottom = rect.get_bottom();
+
+        if rect_left > rect_right {
+            mem::swap(&mut rect_left, &mut rect_right);
+        }
+
+        if rect_top > rect_bottom {
+            mem::swap(&mut rect_top, &mut rect_bottom);
+        }
+
         uiautomation::types::Rect::new(
-            rect.get_left().max(parent_rect.get_left()),
-            rect.get_top().max(parent_rect.get_top()),
-            rect.get_right().min(parent_rect.get_right()),
-            rect.get_bottom().min(parent_rect.get_bottom()),
+            rect_left.max(parent_rect.get_left()),
+            rect_top.max(parent_rect.get_top()),
+            rect_right.min(parent_rect.get_right()),
+            rect_bottom.min(parent_rect.get_bottom()),
         )
     }
 
@@ -179,10 +192,21 @@ impl UIElements {
             root_tree_token,
         );
 
-        if let Ok(mut first_child) = automation_walker.get_first_child(&root_element) {
+        if let Ok(mut current_child) = automation_walker.get_first_child(&root_element) {
+            if current_child
+                .get_name()
+                .unwrap_or_default()
+                .eq("Shell Handwriting Canvas")
+            {
+                current_child = match automation_walker.get_next_sibling(&current_child) {
+                    Ok(sibling) => sibling,
+                    Err(_) => return Ok(()),
+                };
+            }
+
             if let Some(init_window_runtime_id) = self.init_window_runtime_id.as_ref() {
-                if first_child.get_runtime_id()?.eq(init_window_runtime_id) {
-                    first_child = match automation_walker.get_next_sibling(&first_child) {
+                if current_child.get_runtime_id()?.eq(init_window_runtime_id) {
+                    current_child = match automation_walker.get_next_sibling(&current_child) {
                         Ok(sibling) => sibling,
                         Err(_) => return Ok(()),
                     };
@@ -193,15 +217,25 @@ impl UIElements {
             current_level.next_element();
 
             self.insert_element_cache(
-                first_child.clone(),
-                first_child.get_bounding_rectangle()?,
+                current_child.clone(),
+                current_child.get_bounding_rectangle()?,
                 current_level,
                 parent_rtree_rect,
                 parent_tree_token,
             );
-            while let Ok(sibling) = automation_walker.get_next_sibling(&first_child) {
+            while let Ok(sibling) = automation_walker.get_next_sibling(&current_child) {
+                if sibling
+                    .get_name()
+                    .unwrap_or_default()
+                    .eq("Shell Handwriting Canvas")
+                {
+                    current_child = sibling;
+                    continue;
+                }
+
                 if let Some(init_window_runtime_id) = self.init_window_runtime_id.as_ref() {
                     if sibling.get_runtime_id()?.eq(init_window_runtime_id) {
+                        current_child = sibling;
                         continue;
                     }
                 }
@@ -217,7 +251,7 @@ impl UIElements {
                     parent_tree_token,
                 );
 
-                first_child = sibling;
+                current_child = sibling;
             }
         }
 
@@ -396,6 +430,12 @@ impl UIElements {
         for node in element_ancestors {
             let current_rect = ElementRect::from(node.data);
             if current_rect == previous_rect {
+                continue;
+            }
+
+            if current_rect.min_x == previous_rect.max_x
+                || current_rect.min_y == previous_rect.max_y
+            {
                 continue;
             }
 

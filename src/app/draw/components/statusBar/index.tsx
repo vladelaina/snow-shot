@@ -1,78 +1,108 @@
-import { Badge, Descriptions, theme } from 'antd';
-import { CaptureStep, DrawState, getMaskBackgroundColor } from '../../types';
+import { Descriptions, theme } from 'antd';
+import { CaptureStep, DrawContext, DrawState } from '../../types';
 import Color from 'color';
 import { FormattedMessage } from 'react-intl';
-import { AppSettingsContext, AppSettingsGroup } from '@/app/contextWrap';
-import { useContext, useEffect, useMemo, useRef, useState } from 'react';
-import { KeyboardIcon } from '@/components/icons';
+import {
+    AppSettingsData,
+    AppSettingsGroup,
+    AppSettingsLoadingPublisher,
+    AppSettingsPublisher,
+} from '@/app/contextWrap';
+import { useCallback, useContext, useEffect, useRef, useState } from 'react';
+import { KeyboardIcon, MouseIcon } from '@/components/icons';
 import { DescriptionsItemType } from 'antd/es/descriptions';
 import { zIndexs } from '@/utils/zIndex';
-import { DrawContext } from '../../context';
-import { isEnableColorPicker } from '../colorPicker';
+import { CaptureLoadingPublisher, CaptureStepPublisher, DrawStatePublisher } from '../../extra';
+import { useStateSubscriber } from '@/hooks/useStateSubscriber';
+import { getMaskBackgroundColor } from '../selectLayer/extra';
+import { MousePosition } from '@/utils/mousePosition';
+import { useCallbackRender } from '@/hooks/useCallbackRender';
 
 const KeyLabel: React.FC<{
     messageId?: string;
     hotKey?: string;
-}> = ({ messageId, hotKey }) => {
+    icon?: React.ReactNode;
+}> = ({ messageId, hotKey, icon }) => {
     return (
         <div className="descriptions-item-btn-label">
-            <div className="descriptions-item-btn-label-icon">
-                <KeyboardIcon />
-            </div>
+            <div className="descriptions-item-btn-label-icon">{icon ?? <KeyboardIcon />}</div>
             {messageId && <FormattedMessage id={messageId} />}
             {hotKey}
         </div>
     );
 };
 
-const StatusBar: React.FC<{
-    loadingElements: boolean;
-    captureStep: CaptureStep;
-    drawState: DrawState;
-    enable: boolean;
-}> = ({ loadingElements, captureStep, drawState, enable }) => {
-    const enableRef = useRef(enable);
-    useEffect(() => {
-        enableRef.current = enable;
-    }, [enable]);
-
+const StatusBar: React.FC = () => {
     const { token } = theme.useToken();
-    const appSettings = useContext(AppSettingsContext);
-    const { darkMode } = appSettings[AppSettingsGroup.Common];
-    const {
-        colorPickerCopy: { hotKey: colorPickerCopyHotKey },
-        colorPickerMoveUp: { hotKey: colorPickerMoveUpHotKey },
-        colorPickerMoveDown: { hotKey: colorPickerMoveDownHotKey },
-        colorPickerMoveLeft: { hotKey: colorPickerMoveLeftHotKey },
-        colorPickerMoveRight: { hotKey: colorPickerMoveRightHotKey },
-        lockWidthHeightPicker: { hotKey: lockWidthHeightPickerHotKey },
-    } = appSettings[AppSettingsGroup.DrawToolbarKeyEvent];
 
-    const { maskRectClipPathRef } = useContext(DrawContext);
+    const [darkMode, setDarkMode] = useState(false);
+    const [getAppSettingsLoading] = useStateSubscriber(AppSettingsLoadingPublisher, undefined);
+    const [getAppSettings] = useStateSubscriber(
+        AppSettingsPublisher,
+        useCallback(
+            (settings: AppSettingsData) => {
+                if (getAppSettingsLoading()) {
+                    return;
+                }
 
+                setDarkMode(settings[AppSettingsGroup.Common].darkMode);
+            },
+            [getAppSettingsLoading],
+        ),
+    );
+
+    const statusBarRef = useRef<HTMLDivElement>(null);
+    const { selectLayerActionRef, imageBufferRef } = useContext(DrawContext);
+    const [getCaptureStep] = useStateSubscriber(CaptureStepPublisher, undefined);
+    const [getDrawState] = useStateSubscriber(DrawStatePublisher, undefined);
     const [isHover, setIsHover] = useState(false);
+    const onCaptureLoadingChange = useCallback((captureLoading: boolean) => {
+        setIsHover(captureLoading);
+    }, []);
+    const [getCaptureLoading] = useStateSubscriber(CaptureLoadingPublisher, onCaptureLoadingChange);
 
-    const descriptionsItems = useMemo(() => {
-        const items: DescriptionsItemType[] = [];
+    const [descriptionsItems, setDescriptionsItems] = useState<DescriptionsItemType[]>([]);
+    const updateDescriptionsItems = useCallback(() => {
+        const {
+            colorPickerCopy: { hotKey: colorPickerCopyHotKey },
+            colorPickerMoveUp: { hotKey: colorPickerMoveUpHotKey },
+            colorPickerMoveDown: { hotKey: colorPickerMoveDownHotKey },
+            colorPickerMoveLeft: { hotKey: colorPickerMoveLeftHotKey },
+            colorPickerMoveRight: { hotKey: colorPickerMoveRightHotKey },
+            maintainAspectRatioPicker: { hotKey: maintainAspectRatioPickerHotKey },
+            rotateWithDiscreteAnglePicker: { hotKey: rotateWithDiscreteAnglePickerHotKey },
+            resizeFromCenterPicker: { hotKey: resizeFromCenterPickerHotKey },
+            autoAlignPicker: { hotKey: autoAlignPickerHotKey },
+        } = getAppSettings()[AppSettingsGroup.DrawToolbarKeyEvent];
+
+        const items: DescriptionsItemType[] = [
+            {
+                key: 'colorPickerMoveUp',
+                label: <FormattedMessage id="draw.colorPickerMoveUp" />,
+                children: <KeyLabel hotKey={colorPickerMoveUpHotKey} />,
+            },
+            {
+                key: 'colorPickerMoveDown',
+                label: <FormattedMessage id="draw.colorPickerMoveDown" />,
+                children: <KeyLabel hotKey={colorPickerMoveDownHotKey} />,
+            },
+            {
+                key: 'colorPickerMoveLeft',
+                label: <FormattedMessage id="draw.colorPickerMoveLeft" />,
+                children: <KeyLabel hotKey={colorPickerMoveLeftHotKey} />,
+            },
+            {
+                key: 'colorPickerMoveRight',
+                label: <FormattedMessage id="draw.colorPickerMoveRight" />,
+                children: <KeyLabel hotKey={colorPickerMoveRightHotKey} />,
+            },
+        ];
+
+        const captureStep = getCaptureStep();
+        const drawState = getDrawState();
 
         if (captureStep === CaptureStep.Select) {
             [
-                {
-                    key: 'autoSelectWindowElement',
-                    label: <FormattedMessage id="draw.autoSelectWindowElement" />,
-                    children: (
-                        <Badge
-                            status={loadingElements ? 'processing' : 'success'}
-                            text={
-                                loadingElements ? (
-                                    <FormattedMessage id="draw.autoSelectWindowElement.loading" />
-                                ) : (
-                                    <FormattedMessage id="draw.autoSelectWindowElement.loaded" />
-                                )
-                            }
-                        />
-                    ),
-                },
                 {
                     key: 'selectWindowOrElement',
                     label: <FormattedMessage id="draw.selectWindowOrElement" />,
@@ -81,138 +111,99 @@ const StatusBar: React.FC<{
                 {
                     key: 'changeSelectLevel',
                     label: <FormattedMessage id="draw.changeSelectLevel" />,
-                    children: <KeyLabel messageId="draw.mouseWheel" />,
+                    children: <KeyLabel icon={<MouseIcon />} messageId="draw.mouseWheel" />,
                 },
-            ].forEach((item) => {
-                items.push(item);
-            });
-        }
-
-        if (isEnableColorPicker(captureStep, drawState)) {
-            [
                 {
                     key: 'colorPickerCopy',
                     label: <FormattedMessage id="draw.colorPickerCopy" />,
                     children: <KeyLabel hotKey={colorPickerCopyHotKey} />,
                 },
-                {
-                    key: 'colorPickerMoveUp',
-                    label: <FormattedMessage id="draw.colorPickerMoveUp" />,
-                    children: <KeyLabel hotKey={colorPickerMoveUpHotKey} />,
-                },
-                {
-                    key: 'colorPickerMoveDown',
-                    label: <FormattedMessage id="draw.colorPickerMoveDown" />,
-                    children: <KeyLabel hotKey={colorPickerMoveDownHotKey} />,
-                },
-                {
-                    key: 'colorPickerMoveLeft',
-                    label: <FormattedMessage id="draw.colorPickerMoveLeft" />,
-                    children: <KeyLabel hotKey={colorPickerMoveLeftHotKey} />,
-                },
-                {
-                    key: 'colorPickerMoveRight',
-                    label: <FormattedMessage id="draw.colorPickerMoveRight" />,
-                    children: <KeyLabel hotKey={colorPickerMoveRightHotKey} />,
-                },
             ].forEach((item) => {
                 items.push(item);
             });
         }
 
-        if (drawState === DrawState.Rect || drawState === DrawState.Ellipse) {
-            items.push({
-                key: 'lockWidthHeightPicker',
-                label: <FormattedMessage id="draw.lockWidthHeightPicker" />,
-                children: <KeyLabel hotKey={lockWidthHeightPickerHotKey} />,
-            });
-        }
-
         if (
-            drawState === DrawState.Pen ||
-            drawState === DrawState.Eraser ||
-            drawState === DrawState.Highlight ||
-            drawState === DrawState.Mosaic
+            drawState === DrawState.Rect ||
+            drawState === DrawState.Ellipse ||
+            drawState === DrawState.Blur ||
+            drawState === DrawState.Diamond
         ) {
             items.push({
-                key: 'penDrawLine',
-                label: <FormattedMessage id="draw.penDrawLine" />,
-                children: <KeyLabel messageId="draw.shiftKey" />,
+                key: 'maintainAspectRatioPicker',
+                label: <FormattedMessage id="draw.maintainAspectRatioPicker" />,
+                children: <KeyLabel hotKey={maintainAspectRatioPickerHotKey} />,
+            });
+            items.push({
+                key: 'resizeFromCenterPicker',
+                label: <FormattedMessage id="draw.resizeFromCenterPicker" />,
+                children: <KeyLabel hotKey={resizeFromCenterPickerHotKey} />,
+            });
+            items.push({
+                key: 'autoAlignPicker',
+                label: <FormattedMessage id="draw.autoAlignPicker" />,
+                children: <KeyLabel hotKey={autoAlignPickerHotKey} />,
             });
         }
-        return items;
-    }, [
-        loadingElements,
-        captureStep,
-        drawState,
-        colorPickerCopyHotKey,
-        colorPickerMoveUpHotKey,
-        colorPickerMoveDownHotKey,
-        colorPickerMoveLeftHotKey,
-        colorPickerMoveRightHotKey,
-        lockWidthHeightPickerHotKey,
-    ]);
 
-    const statusBarRef = useRef<HTMLDivElement>(null);
-    const renderedRef = useRef(true);
-    useEffect(() => {
-        const handleMouseMove = (e: MouseEvent) => {
-            if (!renderedRef.current) {
+        if (drawState === DrawState.Arrow || drawState === DrawState.Line) {
+            items.push({
+                key: 'rotateWithDiscreteAnglePicker',
+                label: <FormattedMessage id="draw.rotateWithDiscreteAnglePicker" />,
+                children: <KeyLabel hotKey={rotateWithDiscreteAnglePickerHotKey} />,
+            });
+        }
+
+        setDescriptionsItems(items);
+    }, [getAppSettings, getCaptureStep, getDrawState]);
+    useStateSubscriber(CaptureStepPublisher, updateDescriptionsItems);
+    useStateSubscriber(DrawStatePublisher, updateDescriptionsItems);
+
+    const onMouseMove = useCallback(
+        (mousePosition: MousePosition) => {
+            const statusBar = statusBarRef.current;
+            if (!statusBar) {
                 return;
             }
 
-            requestAnimationFrame(() => {
-                renderedRef.current = true;
+            if (!imageBufferRef.current) {
+                return;
+            }
 
-                if (!enableRef.current) {
-                    return;
-                }
+            const statusBarMaxX = statusBar.clientWidth + statusBar.offsetLeft;
+            const statusBarMinY = statusBar.offsetTop;
 
-                const statusBar = statusBarRef.current;
-                if (!statusBar) {
-                    return;
-                }
+            if (mousePosition.mouseX < statusBarMaxX && mousePosition.mouseY > statusBarMinY) {
+                setIsHover(true);
+                return;
+            }
 
-                const { clientX, clientY } = e;
-
-                const statusBarMaxX = statusBar.clientWidth + statusBar.offsetLeft;
-                const statusBarMinY = statusBar.offsetTop;
-
-                if (clientX < statusBarMaxX && clientY > statusBarMinY) {
-                    setIsHover(true);
-                    return;
-                }
-
-                const maskRect = maskRectClipPathRef.current;
-                if (!maskRect) {
-                    setIsHover(false);
-                    return;
-                }
-
-                let maskRectLeft = maskRect.left;
-                let maskRectTop = maskRect.top;
-                let maskRectWidth = maskRect.width;
-                let maskRectHeight = maskRect.height;
-
-                // 可能是负宽度，这里转换下
-                if (maskRectWidth < 0) {
-                    maskRectLeft += maskRectWidth;
-                    maskRectWidth = -maskRectWidth;
-                }
-
-                if (maskRectHeight < 0) {
-                    maskRectTop += maskRectHeight;
-                    maskRectHeight = -maskRectHeight;
-                }
-
-                // 矩形现在是正的了，只判断左下角即可
-                if (maskRectLeft < statusBarMaxX && maskRectTop + maskRectHeight > statusBarMinY) {
-                    setIsHover(true);
-                    return;
-                }
-
+            const selectRect = selectLayerActionRef.current?.getSelectRect();
+            if (!selectRect) {
                 setIsHover(false);
-            });
+                return;
+            }
+            const minX = selectRect.min_x / imageBufferRef.current.monitorScaleFactor;
+            const maxY = selectRect.max_y / imageBufferRef.current.monitorScaleFactor;
+            // 矩形现在是正的了，只判断左下角即可
+            if (minX < statusBarMaxX && maxY > statusBarMinY) {
+                setIsHover(true);
+                return;
+            }
+
+            setIsHover(false);
+        },
+        [imageBufferRef, selectLayerActionRef],
+    );
+    const onMouseMoveRender = useCallbackRender(onMouseMove);
+
+    useEffect(() => {
+        const handleMouseMove = (e: MouseEvent) => {
+            if (getCaptureLoading()) {
+                return;
+            }
+
+            onMouseMoveRender(new MousePosition(e.clientX, e.clientY));
         };
 
         document.addEventListener('mousemove', handleMouseMove);
@@ -220,13 +211,13 @@ const StatusBar: React.FC<{
         return () => {
             document.removeEventListener('mousemove', handleMouseMove);
         };
-    }, [maskRectClipPathRef]);
+    }, [getCaptureLoading, onMouseMoveRender, selectLayerActionRef]);
 
     return (
         <div
             className="status-bar"
             ref={statusBarRef}
-            style={{ opacity: descriptionsItems.length === 0 || !enable || isHover ? 0 : 1 }}
+            style={{ opacity: descriptionsItems.length === 0 || isHover ? 0 : 1 }}
         >
             <div className="status-bar-content">
                 <Descriptions column={1} items={descriptionsItems} />
@@ -246,6 +237,7 @@ const StatusBar: React.FC<{
                     z-index: ${zIndexs.Draw_StatusBar};
                     min-width: 383px;
                     box-sizing: border-box;
+                    user-select: none;
                 }
 
                 .status-bar-content {

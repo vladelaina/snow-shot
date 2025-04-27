@@ -15,7 +15,6 @@ use std::hash::Hash;
 
 #[derive(PartialEq, Serialize, Clone, Debug)]
 pub struct ElementInfo {
-    pub scale_factor: f32,
     pub rect_list: Vec<ElementRect>,
 }
 
