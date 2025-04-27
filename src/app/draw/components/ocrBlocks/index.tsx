@@ -11,6 +11,8 @@ import { theme } from 'antd';
 import Color from 'color';
 import { DrawContext } from '../../types';
 import { LogicalPosition } from '@tauri-apps/api/window';
+import { CaptureStepPublisher } from '../../extra';
+import { CaptureStep } from '../../types';
 
 // 定义角度阈值常量（以度为单位）
 const ROTATION_THRESHOLD = 3; // 小于3度的旋转被视为误差，不进行旋转
@@ -68,6 +70,7 @@ export const OcrBlocks: React.FC<{
             [setEnable],
         ),
     );
+    const [getCaptureStep] = useStateSubscriber(CaptureStepPublisher, undefined);
 
     const updateOcrTextElements = useCallback(
         (selectRect: ElementRect, imageBuffer: ImageBuffer, ocrResult: OcrDetectResult) => {
@@ -189,6 +192,10 @@ export const OcrBlocks: React.FC<{
                 }}
                 className="ocr-result-container"
                 onContextMenu={(e) => {
+                    if (getCaptureStep() !== CaptureStep.Fixed) {
+                        return;
+                    }
+
                     e.preventDefault();
 
                     fixedImageActionRef.current?.popupMenu(
