@@ -186,12 +186,12 @@ const DrawPageCore: React.FC = () => {
     }, []);
 
     const finishCapture = useCallback<DrawContextType['finishCapture']>(async () => {
-        hideWindow();
         await Promise.all([
             drawLayerActionRef.current?.onCaptureFinish(),
             selectLayerActionRef.current?.onCaptureFinish(),
             drawCacheLayerActionRef.current?.onCaptureFinish(),
         ]);
+        hideWindow();
         setCaptureEvent({
             event: CaptureEvent.onCaptureFinish,
         });
@@ -251,7 +251,8 @@ const DrawPageCore: React.FC = () => {
             !imageBufferRef.current ||
             !drawLayerActionRef.current ||
             !drawCacheLayerActionRef.current ||
-            !fixedImageActionRef.current
+            !fixedImageActionRef.current ||
+            !ocrBlocksActionRef.current
         ) {
             return;
         }
@@ -264,6 +265,7 @@ const DrawPageCore: React.FC = () => {
             drawLayerActionRef.current,
             drawCacheLayerActionRef.current,
             fixedImageActionRef.current,
+            ocrBlocksActionRef.current,
             setCaptureStep,
         );
 
@@ -342,6 +344,8 @@ const DrawPageCore: React.FC = () => {
             mousePositionRef,
             circleCursorRef,
             drawCacheLayerActionRef,
+            ocrBlocksActionRef,
+            fixedImageActionRef,
         };
     }, [finishCapture]);
 
@@ -370,6 +374,7 @@ const DrawPageCore: React.FC = () => {
                         setIsFixed(true);
                     }}
                 />
+                <OcrBlocks actionRef={ocrBlocksActionRef} />
                 {!isFixed && (
                     <>
                         <DrawLayer actionRef={drawLayerActionRef} />
@@ -389,7 +394,6 @@ const DrawPageCore: React.FC = () => {
                             }}
                         />
                         <StatusBar />
-                        <OcrBlocks actionRef={ocrBlocksActionRef} />
 
                         <div
                             ref={circleCursorRef}

@@ -1,7 +1,47 @@
 use std::{io::Cursor, sync::Mutex};
 
 use paddle_ocr_rs::ocr_lite::OcrLite;
-use tauri::command;
+use tauri::{Manager, command, path::BaseDirectory};
+
+#[command]
+pub async fn ocr_init(
+    app: tauri::AppHandle,
+    ocr_instance: tauri::State<'_, Mutex<OcrLite>>,
+) -> Result<(), ()> {
+    let mut ocr_instance = match ocr_instance.lock() {
+        Ok(ocr_instance) => ocr_instance,
+        Err(_) => return Err(()),
+    };
+
+    let resource_path = match app.path().resolve("models", BaseDirectory::Resource) {
+        Ok(resource_path) => resource_path,
+        Err(_) => return Err(()),
+    };
+
+    ocr_instance
+        .init_models(
+            &resource_path
+                .join("ch_PP-OCRv4_det_infer.onnx")
+                .display()
+                .to_string(),
+            &resource_path
+                .join("ch_ppocr_mobile_v2.0_cls_infer.onnx")
+                .display()
+                .to_string(),
+            &resource_path
+                .join("ch_PP-OCRv4_rec_infer.onnx")
+                .display()
+                .to_string(),
+            &resource_path
+                .join("ppocr_keys_v1.txt")
+                .display()
+                .to_string(),
+            2,
+        )
+        .unwrap();
+
+    Ok(())
+}
 
 #[command]
 pub async fn ocr_detect(

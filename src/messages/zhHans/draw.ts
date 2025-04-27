@@ -52,6 +52,7 @@ export const draw = {
     'draw.saveTool': '保存为文件',
     'draw.close': '关闭',
     'draw.ocrDetectTool': '文字识别',
+    'draw.showOrHideOcrResult': '显示/隐藏 OCR 结果',
     'draw.fixedTool': '固定到屏幕',
     'draw.lockWidthHeightPicker': '切换锁定宽高',
     'draw.lockAnglePicker': '切换锁定角度',

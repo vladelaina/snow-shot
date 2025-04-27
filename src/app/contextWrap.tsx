@@ -21,6 +21,7 @@ import {
     KeyEventValue,
 } from './draw/components/drawToolbar/components/keyEventWrap/extra';
 import React from 'react';
+import * as appAutostart from '@tauri-apps/plugin-autostart';
 
 export enum AppSettingsGroup {
     Common = 'common',
@@ -29,6 +30,7 @@ export enum AppSettingsGroup {
     DrawToolbarKeyEvent = 'drawToolbarKeyEvent',
     AppFunction = 'appFunction',
     Render = 'render',
+    SystemCommon = 'systemCommon',
 }
 
 export enum AppSettingsLanguage {
@@ -63,6 +65,9 @@ export type AppSettingsData = {
     [AppSettingsGroup.Render]: {
         antialias: boolean;
     };
+    [AppSettingsGroup.SystemCommon]: {
+        autoStart: boolean;
+    };
 };
 
 export const defaultAppSettingsData: AppSettingsData = {
@@ -82,6 +87,9 @@ export const defaultAppSettingsData: AppSettingsData = {
     [AppSettingsGroup.AppFunction]: defaultAppFunctionConfigs,
     [AppSettingsGroup.Render]: {
         antialias: true,
+    },
+    [AppSettingsGroup.SystemCommon]: {
+        autoStart: true,
     },
 };
 
@@ -368,6 +376,30 @@ const ContextWrapCore: React.FC<{ children: React.ReactNode }> = ({ children }) 
                             ? newSettings.antialias
                             : (prevSettings?.antialias ?? defaultAppSettingsData[group].antialias),
                 };
+            } else if (group === AppSettingsGroup.SystemCommon) {
+                newSettings = newSettings as AppSettingsData[typeof group];
+                const prevSettings = appSettingsRef.current[group] as
+                    | AppSettingsData[typeof group]
+                    | undefined;
+
+                settings = {
+                    autoStart:
+                        typeof newSettings?.autoStart === 'boolean'
+                            ? newSettings.autoStart
+                            : (prevSettings?.autoStart ?? defaultAppSettingsData[group].autoStart),
+                };
+
+                if (saveToFile) {
+                    (async () => {
+                        if (settings.autoStart !== (await appAutostart.isEnabled())) {
+                            if (settings.autoStart) {
+                                await appAutostart.enable();
+                            } else {
+                                await appAutostart.disable();
+                            }
+                        }
+                    })();
+                }
             } else {
                 return defaultAppSettingsData[group];
             }

@@ -13,6 +13,7 @@ import ProForm from '@ant-design/pro-form';
 
 export default function SystemSettings() {
     const { updateAppSettings } = useContext(AppSettingsActionContext);
+    const [commonForm] = Form.useForm<AppSettingsData[AppSettingsGroup.SystemCommon]>();
     const [renderForm] = Form.useForm<AppSettingsData[AppSettingsGroup.Render]>();
 
     const [appSettingsLoading, setAppSettingsLoading] = useState(true);
@@ -27,13 +28,57 @@ export default function SystemSettings() {
                 ) {
                     renderForm.setFieldsValue(settings[AppSettingsGroup.Render]);
                 }
+
+                if (
+                    preSettings === undefined ||
+                    preSettings[AppSettingsGroup.SystemCommon] !==
+                        settings[AppSettingsGroup.SystemCommon]
+                ) {
+                    commonForm.setFieldsValue(settings[AppSettingsGroup.SystemCommon]);
+                }
             },
-            [setAppSettingsLoading, renderForm],
+            [setAppSettingsLoading, renderForm, commonForm],
         ),
         true,
     );
     return (
         <ContentWrap>
+            <GroupTitle
+                id="commonSettings"
+                extra={
+                    <ResetSettingsButton
+                        title={<FormattedMessage id="settings.systemSettings.commonSettings" />}
+                        appSettingsGroup={AppSettingsGroup.SystemCommon}
+                    />
+                }
+            >
+                <FormattedMessage id="settings.systemSettings.commonSettings" />
+            </GroupTitle>
+
+            <Spin spinning={appSettingsLoading}>
+                <ProForm
+                    form={commonForm}
+                    onValuesChange={(_, values) => {
+                        updateAppSettings(AppSettingsGroup.SystemCommon, values, true, true, true);
+                    }}
+                    submitter={false}
+                >
+                    <ProForm.Item
+                        label={
+                            <IconLabel
+                                label={
+                                    <FormattedMessage id="settings.systemSettings.commonSettings.autoStart" />
+                                }
+                            />
+                        }
+                        name="autoStart"
+                        valuePropName="checked"
+                    >
+                        <Switch />
+                    </ProForm.Item>
+                </ProForm>
+            </Spin>
+
             <GroupTitle
                 id="renderSettings"
                 extra={
