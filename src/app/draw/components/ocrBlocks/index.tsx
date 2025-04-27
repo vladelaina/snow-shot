@@ -9,6 +9,10 @@ import { FormattedMessage } from 'react-intl';
 import { AntdContext } from '@/app/layout';
 import { theme } from 'antd';
 import Color from 'color';
+import { DrawContext } from '../../types';
+import { LogicalPosition } from '@tauri-apps/api/window';
+import { CaptureStepPublisher } from '../../extra';
+import { CaptureStep } from '../../types';
 
 // 定义角度阈值常量（以度为单位）
 const ROTATION_THRESHOLD = 3; // 小于3度的旋转被视为误差，不进行旋转
@@ -19,6 +23,7 @@ export type OcrBlocksActionType = {
         imageBuffer: ImageBuffer,
         canvas: HTMLCanvasElement,
     ) => Promise<void>;
+    setEnable: (enable: boolean | ((enable: boolean) => boolean)) => void;
 };
 
 export const OcrBlocks: React.FC<{
@@ -27,24 +32,45 @@ export const OcrBlocks: React.FC<{
     const { token } = theme.useToken();
     const { message } = useContext(AntdContext);
 
+    const { fixedImageActionRef } = useContext(DrawContext);
+
     const containerElementRef = useRef<HTMLDivElement>(null);
+
+    const enableRef = useRef<boolean>(false);
+    const setEnable = useCallback((enable: boolean | ((enable: boolean) => boolean)) => {
+        if (!containerElementRef.current) {
+            return;
+        }
+
+        if (typeof enable === 'function') {
+            enableRef.current = enable(enableRef.current);
+        } else {
+            enableRef.current = enable;
+        }
+
+        if (enableRef.current) {
+            containerElementRef.current.style.opacity = '1';
+            containerElementRef.current.style.pointerEvents = 'auto';
+        } else {
+            containerElementRef.current.style.opacity = '0';
+            containerElementRef.current.style.pointerEvents = 'none';
+        }
+    }, []);
+
     useStateSubscriber(
         DrawStatePublisher,
-        useCallback((drawState: DrawState) => {
-            if (!containerElementRef.current) {
-                return;
-            }
+        useCallback(
+            (drawState: DrawState) => {
+                setEnable(drawState === DrawState.OcrDetect);
 
-            if (drawState === DrawState.OcrDetect) {
-                containerElementRef.current.style.opacity = '1';
-                containerElementRef.current.style.pointerEvents = 'auto';
-            } else {
-                containerElementRef.current.style.opacity = '0';
-                containerElementRef.current.style.pointerEvents = 'none';
-                containerElementRef.current.innerHTML = '';
-            }
-        }, []),
+                if (containerElementRef.current) {
+                    containerElementRef.current.innerHTML = '';
+                }
+            },
+            [setEnable],
+        ),
     );
+    const [getCaptureStep] = useStateSubscriber(CaptureStepPublisher, undefined);
 
     const updateOcrTextElements = useCallback(
         (selectRect: ElementRect, imageBuffer: ImageBuffer, ocrResult: OcrDetectResult) => {
@@ -79,7 +105,7 @@ export const OcrBlocks: React.FC<{
                     rectRightTopX - rectLeftTopX,
                 );
                 let rotationDeg = rotationRad * (180 / Math.PI);
-                
+
                 // 如果旋转角度小于阈值，则视为误差，不进行旋转
                 if (Math.abs(rotationDeg) < ROTATION_THRESHOLD) {
                     rotationDeg = 0;
@@ -148,8 +174,9 @@ export const OcrBlocks: React.FC<{
 
                 hideLoading();
             },
+            setEnable,
         }),
-        [message, updateOcrTextElements],
+        [message, setEnable, updateOcrTextElements],
     );
 
     return (
@@ -164,6 +191,17 @@ export const OcrBlocks: React.FC<{
                     height: '100%',
                 }}
                 className="ocr-result-container"
+                onContextMenu={(e) => {
+                    if (getCaptureStep() !== CaptureStep.Fixed) {
+                        return;
+                    }
+
+                    e.preventDefault();
+
+                    fixedImageActionRef.current?.popupMenu(
+                        new LogicalPosition(e.clientX, e.clientY),
+                    );
+                }}
                 ref={containerElementRef}
             />
         </>

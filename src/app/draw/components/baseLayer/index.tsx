@@ -417,6 +417,7 @@ export function withBaseLayer<
                 // 将画布调整为截图大小
                 const { monitorWidth, monitorHeight } = imageBuffer;
 
+                baseLayerCoreActionRef.current?.getCanvasApp()?.start();
                 baseLayerCoreActionRef.current?.resizeCanvas(monitorWidth, monitorHeight);
                 await layerActionRef.current?.onCaptureReady(...args);
             },
@@ -425,7 +426,14 @@ export function withBaseLayer<
         const onCaptureFinish = useCallback(
             async (...args: Parameters<BaseLayerActionType['onCaptureFinish']>) => {
                 await Promise.all([
-                    baseLayerCoreActionRef.current?.clearCanvas(),
+                    baseLayerCoreActionRef.current?.clearCanvas().then(() => {
+                        return new Promise((resolve) => {
+                            requestAnimationFrame(() => {
+                                baseLayerCoreActionRef.current?.getCanvasApp()?.stop();
+                                resolve(undefined);
+                            });
+                        });
+                    }),
                     layerActionRef.current?.onCaptureFinish(...args),
                 ]);
             },

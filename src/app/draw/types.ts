@@ -5,7 +5,8 @@ import { ImageBuffer } from '@/commands';
 import { DrawToolbarActionType } from './components/drawToolbar';
 import { MousePosition } from '@/utils/mousePosition';
 import { DrawCacheLayerActionType } from './components/drawCacheLayer/extra';
-
+import { OcrBlocksActionType } from './components/ocrBlocks';
+import { FixedImageActionType } from './components/fixedImage';
 export enum CaptureStep {
     // 选择阶段
     Pending = 0,
@@ -71,6 +72,8 @@ export type DrawContextType = {
     drawToolbarActionRef: React.RefObject<DrawToolbarActionType | undefined>;
     circleCursorRef: React.RefObject<HTMLDivElement | null>;
     drawCacheLayerActionRef: React.RefObject<DrawCacheLayerActionType | undefined>;
+    ocrBlocksActionRef: React.RefObject<OcrBlocksActionType | undefined>;
+    fixedImageActionRef: React.RefObject<FixedImageActionType | undefined>;
 };
 
 export const DrawContext = React.createContext<DrawContextType>({
@@ -82,4 +85,6 @@ export const DrawContext = React.createContext<DrawContextType>({
     drawToolbarActionRef: { current: undefined },
     circleCursorRef: { current: null },
     drawCacheLayerActionRef: { current: undefined },
+    ocrBlocksActionRef: { current: undefined },
+    fixedImageActionRef: { current: undefined },
 });

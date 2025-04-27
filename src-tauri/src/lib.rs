@@ -2,32 +2,27 @@ mod app_error;
 mod app_log;
 mod core;
 mod file;
+mod ocr;
 mod os;
 mod screenshot;
-mod ocr;
 use std::sync::Mutex;
 
 use os::ui_automation::UIElements;
-use tauri_plugin_log::{Target, TargetKind};
 use paddle_ocr_rs::ocr_lite::OcrLite;
-
+use tauri_plugin_log::{Target, TargetKind};
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-
-    let mut ocr_instance = OcrLite::new();
-    ocr_instance.init_models(
-        "./models/ch_PP-OCRv4_det_infer.onnx",
-        "./models/ch_ppocr_mobile_v2.0_cls_infer.onnx",
-        "./models/ch_PP-OCRv4_rec_infer.onnx",
-        "./models/ppocr_keys_v1.txt",
-        2,
-    ).unwrap();
+    let ocr_instance = OcrLite::new();
     let ocr_instance = Mutex::new(ocr_instance);
 
     let ui_elements = Mutex::new(UIElements::new());
 
     tauri::Builder::default()
+        .plugin(tauri_plugin_autostart::init(
+            tauri_plugin_autostart::MacosLauncher::LaunchAgent,
+            Some(vec![]),
+        ))
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_global_shortcut::Builder::new().build())
         .plugin(tauri_plugin_fs::init())
@@ -44,6 +39,7 @@ pub fn run() {
                         .build(),
                 )?;
             }
+
             Ok(())
         })
         .manage(ui_elements)
@@ -59,6 +55,7 @@ pub fn run() {
             core::exit_app,
             file::save_file,
             ocr::ocr_detect,
+            ocr::ocr_init,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

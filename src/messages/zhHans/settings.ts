@@ -31,4 +31,6 @@ export const settings = {
     'settings.drawLineSmoothRatio.tip': '比例越小，线条越平滑',
     'settings.drawLineSmoothIterations': '细分迭代次数',
     'settings.drawLineSmoothIterations.tip': '迭代次数越多，线条越平滑',
+    'settings.systemSettings.commonSettings': '常用设置',
+    'settings.systemSettings.commonSettings.autoStart': '开机自动启动',
 };

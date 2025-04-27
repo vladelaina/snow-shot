@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useImperativeHandle, useRef, useState } from 'react';
+import { useCallback, useEffect, useImperativeHandle, useRef, useState, useContext } from 'react';
 import Image from 'next/image';
 import { ElementRect, ImageBuffer, saveFile } from '@/commands';
 import { Menu } from '@tauri-apps/api/menu';
@@ -11,6 +11,8 @@ import { generateImageFileName } from '../../actions';
 import { CloseOutlined } from '@ant-design/icons';
 import { useStateRef } from '@/hooks/useStateRef';
 import { useCallbackRender } from '@/hooks/useCallbackRender';
+import { zIndexs } from '@/utils/zIndex';
+import { DrawContext } from '../../types';
 
 export type FixedImageActionType = {
     init: (
@@ -18,6 +20,7 @@ export type FixedImageActionType = {
         imageBuffer: ImageBuffer,
         canvas: HTMLCanvasElement,
     ) => Promise<void>;
+    popupMenu: (position: LogicalPosition) => void;
 };
 
 export const FixedImage: React.FC<{
@@ -26,6 +29,8 @@ export const FixedImage: React.FC<{
 }> = ({ actionRef, onLoad }) => {
     const intl = useIntl();
     const { token } = theme.useToken();
+
+    const { ocrBlocksActionRef } = useContext(DrawContext);
 
     const [style, setStyle, styleRef] = useStateRef<React.CSSProperties>({});
     const canvasPropsRef = useRef<{
@@ -74,6 +79,9 @@ export const FixedImage: React.FC<{
                         );
                     }),
                 );
+            },
+            popupMenu: (position: LogicalPosition) => {
+                menuRef.current?.popup(position);
             },
         }),
         [setStyle],
@@ -139,6 +147,13 @@ export const FixedImage: React.FC<{
                     },
                 },
                 {
+                    id: `${window.label}-ocrTool`,
+                    text: intl.formatMessage({ id: 'draw.showOrHideOcrResult' }),
+                    action: async () => {
+                        ocrBlocksActionRef.current?.setEnable((enable) => !enable);
+                    },
+                },
+                {
                     id: `${window.label}-closeTool`,
                     text: intl.formatMessage({ id: 'draw.close' }),
                     action: async () => {
@@ -148,7 +163,7 @@ export const FixedImage: React.FC<{
             ],
         });
         menuRef.current = menu;
-    }, [intl]);
+    }, [intl, ocrBlocksActionRef]);
 
     useEffect(() => {
         initMenu();
@@ -224,6 +239,8 @@ export const FixedImage: React.FC<{
             style={{
                 position: 'absolute',
                 ...style,
+                zIndex: zIndexs.Draw_FixedImage,
+                pointerEvents: imageUrl ? 'auto' : 'none',
             }}
         >
             {imageUrl && (

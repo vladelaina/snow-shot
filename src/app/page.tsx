@@ -33,6 +33,7 @@ import {
     defaultAppFunctionConfigs,
     ShortcutKeyStatus,
 } from './extra';
+import { ocrInit } from '@/commands/ocr';
 
 export default function Home() {
     const disableShortcutKeyRef = useRef(false);
@@ -165,6 +166,16 @@ export default function Home() {
 
         updateShortcutKeyStatus(appFunctionSettings);
     }, [appFunctionSettings, appSettingsLoading, updateShortcutKeyStatus]);
+
+    const ocrInitRef = useRef(false);
+    useEffect(() => {
+        if (ocrInitRef.current) {
+            return;
+        }
+
+        ocrInit();
+        ocrInitRef.current = true;
+    }, []);
 
     return (
         <ContentWrap className="home-wrap">

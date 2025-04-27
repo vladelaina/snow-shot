@@ -124,6 +124,7 @@ export const fixedToScreen = async (
     drawLayerAction: DrawLayerActionType,
     drawCacheLayerAction: DrawCacheLayerActionType,
     fixedImageAction: FixedImageActionType,
+    ocrBlocksAction: OcrBlocksActionType,
     setCaptureStep: (step: CaptureStep) => void,
 ) => {
     const selectRect = selectLayerAction.getSelectRect();
@@ -155,7 +156,10 @@ export const fixedToScreen = async (
         return;
     }
 
-    await fixedImageAction.init(selectRect, imageBuffer, imageCanvas);
+    await Promise.all([
+        fixedImageAction.init(selectRect, imageBuffer, imageCanvas),
+        ocrBlocksAction.init(selectRect, imageBuffer, imageCanvas),
+    ]);
 };
 
 export const copyToClipboard = async (

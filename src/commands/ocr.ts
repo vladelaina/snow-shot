@@ -19,3 +19,7 @@ export const ocrDetect = async (data: ArrayBuffer | Uint8Array): Promise<OcrDete
     const result = await invoke<string>('ocr_detect', data);
     return JSON.parse(result) as OcrDetectResult;
 };
+
+export const ocrInit = async (): Promise<void> => {
+    await invoke<void>('ocr_init');
+};

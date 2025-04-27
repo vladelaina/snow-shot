@@ -6,6 +6,8 @@ export const zIndexs = {
     // Main 窗口 END
 
     // Draw 截图窗口 BEGIN
+    /** 截图固定图片 */
+    Draw_FixedImage: 101,
     /** 截图底图层 */
     Draw_CaptureImageLayer: 102,
     /** 截图模糊图层 */
@@ -26,10 +28,11 @@ export const zIndexs = {
     /** 截图颜色选择器 */
     Draw_ColorPicker: 203,
     /** 截图 OCR 结果 */
-    Draw_OcrResult: 204,
+    Draw_OcrResult: 205,
     /** 截图绘制子工具栏 */
-    Draw_SubToolbar: 205,
+    Draw_SubToolbar: 206,
     /** 截图绘制工具栏 */
-    Draw_Toolbar: 206,
+    Draw_Toolbar: 207,
+
     // Draw 截图窗口 END
 };
