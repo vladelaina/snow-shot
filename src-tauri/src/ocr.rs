@@ -1,14 +1,18 @@
-use std::{io::Cursor, sync::Mutex};
-
+use num_cpus;
 use paddle_ocr_rs::ocr_lite::OcrLite;
+use std::{io::Cursor, sync::Mutex};
 use tauri::{Manager, command, path::BaseDirectory};
+
+pub struct OcrLiteWrap {
+    pub ocr_instance: Option<OcrLite>,
+}
 
 #[command]
 pub async fn ocr_init(
     app: tauri::AppHandle,
-    ocr_instance: tauri::State<'_, Mutex<OcrLite>>,
+    ocr_instance: tauri::State<'_, Mutex<OcrLiteWrap>>,
 ) -> Result<(), ()> {
-    let mut ocr_instance = match ocr_instance.lock() {
+    let mut ocr_wrap_instance = match ocr_instance.lock() {
         Ok(ocr_instance) => ocr_instance,
         Err(_) => return Err(()),
     };
@@ -16,6 +20,11 @@ pub async fn ocr_init(
     let resource_path = match app.path().resolve("models", BaseDirectory::Resource) {
         Ok(resource_path) => resource_path,
         Err(_) => return Err(()),
+    };
+
+    let ocr_instance = match &mut ocr_wrap_instance.ocr_instance {
+        Some(ocr_lite_instance) => ocr_lite_instance,
+        None => return Err(()),
     };
 
     ocr_instance
@@ -36,7 +45,7 @@ pub async fn ocr_init(
                 .join("ppocr_keys_v1.txt")
                 .display()
                 .to_string(),
-            2,
+            (num_cpus::get() / 2).max(1),
         )
         .unwrap();
 
@@ -45,12 +54,17 @@ pub async fn ocr_init(
 
 #[command]
 pub async fn ocr_detect(
-    ocr_instance: tauri::State<'_, Mutex<OcrLite>>,
+    ocr_instance: tauri::State<'_, Mutex<OcrLiteWrap>>,
     request: tauri::ipc::Request<'_>,
 ) -> Result<String, ()> {
-    let ocr_instance = match ocr_instance.lock() {
+    let ocr_wrap_instance = match ocr_instance.lock() {
         Ok(ocr_instance) => ocr_instance,
         Err(_) => return Err(()),
+    };
+
+    let ocr_instance = match &ocr_wrap_instance.ocr_instance {
+        Some(ocr_lite_instance) => ocr_lite_instance,
+        None => return Err(()),
     };
 
     let image_data = match request.body() {
@@ -79,4 +93,16 @@ pub async fn ocr_detect(
         Ok(ocr_result) => Ok(serde_json::to_string(&ocr_result).unwrap()),
         Err(_) => return Err(()),
     }
+}
+
+#[command]
+pub fn ocr_release(ocr_instance: tauri::State<'_, Mutex<OcrLiteWrap>>) -> Result<(), ()> {
+    let mut ocr_instance = match ocr_instance.lock() {
+        Ok(ocr_instance) => ocr_instance,
+        Err(_) => return Err(()),
+    };
+
+    ocr_instance.ocr_instance.take();
+
+    Ok(())
 }

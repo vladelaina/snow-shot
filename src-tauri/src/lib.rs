@@ -7,21 +7,25 @@ mod os;
 mod screenshot;
 use std::sync::Mutex;
 
-use os::ui_automation::UIElements;
+use ocr::OcrLiteWrap;
 use paddle_ocr_rs::ocr_lite::OcrLite;
+use os::ui_automation::UIElements;
 use tauri_plugin_log::{Target, TargetKind};
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    let ocr_instance = OcrLite::new();
+    let ocr_instance = OcrLiteWrap {
+        ocr_instance: Some(OcrLite::new()),
+    };
     let ocr_instance = Mutex::new(ocr_instance);
 
     let ui_elements = Mutex::new(UIElements::new());
+    let auto_start_hide_window = Mutex::new(false);
 
     tauri::Builder::default()
         .plugin(tauri_plugin_autostart::init(
             tauri_plugin_autostart::MacosLauncher::LaunchAgent,
-            Some(vec![]),
+            Some(vec!["--auto_start"]),
         ))
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_global_shortcut::Builder::new().build())
@@ -44,6 +48,7 @@ pub fn run() {
         })
         .manage(ui_elements)
         .manage(ocr_instance)
+        .manage(auto_start_hide_window)
         .invoke_handler(tauri::generate_handler![
             screenshot::capture_current_monitor,
             screenshot::get_window_elements,
@@ -56,6 +61,8 @@ pub fn run() {
             file::save_file,
             ocr::ocr_detect,
             ocr::ocr_init,
+            ocr::ocr_release,
+            core::auto_start_hide_window,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

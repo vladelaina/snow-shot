@@ -141,7 +141,7 @@ const DrawCacheLayerCore: React.FC<{
             getCanvasContext,
             getCanvas,
         }),
-        [getCanvasContext, getImageData, history, setEnable, updateScene],
+        [getCanvas, getCanvasContext, getImageData, history, setEnable, updateScene],
     );
 
     const shouldResizeFromCenter = useCallback<

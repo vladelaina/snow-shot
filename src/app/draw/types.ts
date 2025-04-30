@@ -7,6 +7,7 @@ import { MousePosition } from '@/utils/mousePosition';
 import { DrawCacheLayerActionType } from './components/drawCacheLayer/extra';
 import { OcrBlocksActionType } from './components/ocrBlocks';
 import { FixedImageActionType } from './components/fixedImage';
+import { ScreenshotType } from '@/functions/screenshot';
 export enum CaptureStep {
     // 选择阶段
     Pending = 0,
@@ -74,6 +75,7 @@ export type DrawContextType = {
     drawCacheLayerActionRef: React.RefObject<DrawCacheLayerActionType | undefined>;
     ocrBlocksActionRef: React.RefObject<OcrBlocksActionType | undefined>;
     fixedImageActionRef: React.RefObject<FixedImageActionType | undefined>;
+    excuteScreenshotTypeRef: React.RefObject<ScreenshotType | undefined>;
 };
 
 export const DrawContext = React.createContext<DrawContextType>({
@@ -87,4 +89,5 @@ export const DrawContext = React.createContext<DrawContextType>({
     drawCacheLayerActionRef: { current: undefined },
     ocrBlocksActionRef: { current: undefined },
     fixedImageActionRef: { current: undefined },
+    excuteScreenshotTypeRef: { current: undefined },
 });

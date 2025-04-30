@@ -3,6 +3,8 @@ import { FormattedMessage } from 'react-intl';
 
 export enum AppFunction {
     Screenshot = 'screenshot',
+    ScreenshotFixed = 'screenshotFixed',
+    ScreenshotOcr = 'screenshotOcr',
 }
 
 export type AppFunctionConfig = {
@@ -10,7 +12,8 @@ export type AppFunctionConfig = {
 };
 
 export type AppFunctionComponentConfig = AppFunctionConfig & {
-    messageId: string;
+    title: React.ReactNode;
+    icon?: React.ReactNode;
     onClick: () => Promise<void>;
     onKeyChange: (value: string, prevValue: string) => Promise<boolean>;
 };
@@ -18,6 +21,12 @@ export type AppFunctionComponentConfig = AppFunctionConfig & {
 export const defaultAppFunctionConfigs: Record<AppFunction, AppFunctionConfig> = {
     [AppFunction.Screenshot]: {
         shortcutKey: 'F1',
+    },
+    [AppFunction.ScreenshotFixed]: {
+        shortcutKey: 'Control+Alt+F',
+    },
+    [AppFunction.ScreenshotOcr]: {
+        shortcutKey: 'Control+Alt+D',
     },
 };
 

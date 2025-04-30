@@ -38,7 +38,9 @@ rtree_rs = "^0.1.4"
 atree = "^0.5.2"
 tauri-plugin-dialog = "^2"
 paddle-ocr-rs = "0.3.0"
+num_cpus = "^1.16.0"
 
 [target.'cfg(not(any(target_os = "android", target_os = "ios")))'.dependencies]
 tauri-plugin-autostart = "2"
 tauri-plugin-global-shortcut = "^2"
+

@@ -1,18 +1,20 @@
-import { useCallback, useContext, useImperativeHandle, useRef } from 'react';
+import { useCallback, useContext, useEffect, useImperativeHandle, useRef } from 'react';
 import { ElementRect, ImageBuffer } from '@/commands';
 import { ocrDetect, OcrDetectResult } from '@/commands/ocr';
 import { useStateSubscriber } from '@/hooks/useStateSubscriber';
 import { DrawStatePublisher } from '../../extra';
 import { DrawState } from '../../types';
 import { zIndexs } from '@/utils/zIndex';
-import { FormattedMessage } from 'react-intl';
+import { FormattedMessage, useIntl } from 'react-intl';
 import { AntdContext } from '@/app/layout';
 import { theme } from 'antd';
 import Color from 'color';
 import { DrawContext } from '../../types';
-import { LogicalPosition } from '@tauri-apps/api/window';
+import { getCurrentWindow, LogicalPosition } from '@tauri-apps/api/window';
 import { CaptureStepPublisher } from '../../extra';
 import { CaptureStep } from '../../types';
+import { Menu } from '@tauri-apps/api/menu';
+import { useHotkeys } from 'react-hotkeys-hook';
 
 // 定义角度阈值常量（以度为单位）
 const ROTATION_THRESHOLD = 3; // 小于3度的旋转被视为误差，不进行旋转
@@ -29,6 +31,7 @@ export type OcrBlocksActionType = {
 export const OcrBlocks: React.FC<{
     actionRef: React.RefObject<OcrBlocksActionType | undefined>;
 }> = ({ actionRef }) => {
+    const intl = useIntl();
     const { token } = theme.useToken();
     const { message } = useContext(AntdContext);
 
@@ -134,6 +137,9 @@ export const OcrBlocks: React.FC<{
                 textWrapElement.style.textAlign = 'center';
                 textWrapElement.style.transformOrigin = 'center';
                 textWrapElement.style.backdropFilter = 'blur(8px)';
+                textWrapElement.style.display = 'flex';
+                textWrapElement.style.alignItems = 'center';
+                textWrapElement.style.justifyContent = 'center';
                 textWrapElement.style.backgroundColor = Color(token.colorBgContainer)
                     .alpha(0.42)
                     .toString();
@@ -179,6 +185,51 @@ export const OcrBlocks: React.FC<{
         [message, setEnable, updateOcrTextElements],
     );
 
+    const menuRef = useRef<Menu>(undefined);
+
+    const initMenu = useCallback(async () => {
+        const appWindow = getCurrentWindow();
+        const menu = await Menu.new({
+            items: [
+                {
+                    id: `${appWindow.label}-copySelectedText`,
+                    text: intl.formatMessage({ id: 'draw.copySelectedText' }),
+                    action: async () => {
+                        navigator.clipboard.writeText(window.getSelection()?.toString() || '');
+                    },
+                },
+            ],
+        });
+        menuRef.current = menu;
+    }, [intl]);
+
+    useEffect(() => {
+        initMenu();
+
+        return () => {
+            menuRef.current?.close();
+            menuRef.current = undefined;
+        };
+    }, [initMenu]);
+
+    useHotkeys(
+        'Control+A',
+        () => {
+            const selection = window.getSelection();
+            if (containerElementRef.current && selection) {
+                const range = document.createRange();
+                range.selectNodeContents(containerElementRef.current);
+                selection.removeAllRanges();
+                selection.addRange(range);
+            }
+        },
+        {
+            preventDefault: true,
+            keyup: false,
+            keydown: true,
+        },
+    );
+
     return (
         <>
             <div
@@ -193,6 +244,11 @@ export const OcrBlocks: React.FC<{
                 className="ocr-result-container"
                 onContextMenu={(e) => {
                     e.preventDefault();
+
+                    if (window.getSelection()?.toString()) {
+                        menuRef.current?.popup(new LogicalPosition(e.clientX, e.clientY));
+                        return;
+                    }
 
                     if (getCaptureStep() !== CaptureStep.Fixed) {
                         return;

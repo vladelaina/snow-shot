@@ -5,9 +5,9 @@ import { GroupTitle } from '@/components/groupTitle';
 import { FormattedMessage } from 'react-intl';
 import { Space, Spin, Tooltip } from 'antd';
 import { ContentWrap } from '@/components/contentWrap';
-import { ScreenshotIcon } from '@/components/icons';
+import { FixedIcon, OcrDetectIcon, ScreenshotIcon } from '@/components/icons';
 import { FunctionButton } from '@/components/functionButton';
-import { executeScreenshot } from '@/functions/screenshot';
+import { executeScreenshot, ScreenshotType } from '@/functions/screenshot';
 import {
     isRegistered,
     register,
@@ -33,7 +33,7 @@ import {
     defaultAppFunctionConfigs,
     ShortcutKeyStatus,
 } from './extra';
-import { ocrInit } from '@/commands/ocr';
+import { autoStartHideWindow } from '@/commands';
 
 export default function Home() {
     const disableShortcutKeyRef = useRef(false);
@@ -42,50 +42,85 @@ export default function Home() {
             () =>
                 Object.keys(defaultAppFunctionConfigs).reduce(
                     (configs, key) => {
-                        if (key === AppFunction.Screenshot) {
-                            const onClick = async () => {
-                                if (disableShortcutKeyRef.current) {
-                                    return;
+                        let buttonTitle;
+                        let buttonIcon;
+                        let buttonOnClick;
+                        switch (key) {
+                            case AppFunction.ScreenshotFixed:
+                                buttonTitle = (
+                                    <FormattedMessage
+                                        id="home.screenshotAfter"
+                                        values={{
+                                            text: <FormattedMessage id="draw.fixedTool" />,
+                                        }}
+                                    />
+                                );
+                                buttonIcon = <FixedIcon style={{ fontSize: '1.1rem' }} />;
+                                buttonOnClick = () => executeScreenshot(ScreenshotType.Fixed);
+                                break;
+                            case AppFunction.ScreenshotOcr:
+                                buttonTitle = (
+                                    <FormattedMessage
+                                        id="home.screenshotAfter"
+                                        values={{
+                                            text: <FormattedMessage id="draw.ocrDetectTool" />,
+                                        }}
+                                    />
+                                );
+                                buttonIcon = <OcrDetectIcon />;
+                                buttonOnClick = () => executeScreenshot(ScreenshotType.OcrDetect);
+                                break;
+                            case AppFunction.Screenshot:
+                            default:
+                                buttonTitle = <FormattedMessage id="home.screenshot" />;
+                                buttonIcon = <ScreenshotIcon />;
+                                buttonOnClick = () => executeScreenshot();
+                                break;
+                        }
+
+                        const onClick = async () => {
+                            if (disableShortcutKeyRef.current) {
+                                return;
+                            }
+
+                            await buttonOnClick();
+                        };
+                        configs[key as AppFunction] = {
+                            ...defaultAppFunctionConfigs[key as AppFunction],
+                            title: buttonTitle,
+                            icon: buttonIcon,
+                            onClick,
+                            onKeyChange: async (value: string, prevValue: string) => {
+                                if (!value) {
+                                    return false;
                                 }
 
-                                await executeScreenshot();
-                            };
-                            configs[key as AppFunction] = {
-                                ...defaultAppFunctionConfigs[key as AppFunction],
-                                messageId: 'home.screenshot',
-                                onClick,
-                                onKeyChange: async (value: string, prevValue: string) => {
-                                    if (!value) {
-                                        return false;
+                                if (prevValue) {
+                                    if (await isRegistered(prevValue)) {
+                                        await unregister(prevValue);
                                     }
+                                }
 
-                                    if (prevValue) {
-                                        if (await isRegistered(prevValue)) {
-                                            await unregister(prevValue);
+                                if (await isRegistered(value)) {
+                                    return false;
+                                }
+
+                                try {
+                                    await register(value, (event) => {
+                                        if (event.state !== 'Released') {
+                                            return;
                                         }
-                                    }
 
-                                    if (await isRegistered(value)) {
-                                        return false;
-                                    }
+                                        onClick();
+                                    });
+                                } catch (error) {
+                                    // 将错误传给组件，组件捕获错误来判断快捷键状态
+                                    throw error;
+                                }
 
-                                    try {
-                                        await register(value, (event) => {
-                                            if (event.state !== 'Pressed') {
-                                                return;
-                                            }
-
-                                            onClick();
-                                        });
-                                    } catch (error) {
-                                        // 将错误传给组件，组件捕获错误来判断快捷键状态
-                                        throw error;
-                                    }
-
-                                    return true;
-                                },
-                            };
-                        }
+                                return true;
+                            },
+                        };
 
                         return configs;
                     },
@@ -167,14 +202,11 @@ export default function Home() {
         updateShortcutKeyStatus(appFunctionSettings);
     }, [appFunctionSettings, appSettingsLoading, updateShortcutKeyStatus]);
 
-    const ocrInitRef = useRef(false);
     useEffect(() => {
-        if (ocrInitRef.current) {
-            return;
+        if (!window.__APP_AUTO_START_HIDE_WINDOW__) {
+            autoStartHideWindow();
+            window.__APP_AUTO_START_HIDE_WINDOW__ = true;
         }
-
-        ocrInit();
-        ocrInitRef.current = true;
     }, []);
 
     return (
@@ -201,61 +233,54 @@ export default function Home() {
 
                         return (
                             <FunctionButton
-                                key={`${config.messageId}-${key}`}
-                                label={<FormattedMessage id={config.messageId} />}
-                                icon={<ScreenshotIcon />}
+                                key={`${key}`}
+                                label={config.title}
+                                icon={config.icon}
                                 onClick={config.onClick}
                             >
-                                {currentShortcutKey && (
-                                    <KeyButton
-                                        title={
-                                            <FormattedMessage
-                                                id={config.messageId}
-                                                key={`${config.messageId}-${key}`}
-                                            />
-                                        }
-                                        maxWidth={128}
-                                        keyValue={currentShortcutKey}
-                                        buttonProps={{
-                                            variant: 'outlined',
-                                            color: statusColor,
-                                            children: statusTip ? (
-                                                <Tooltip
-                                                    title={convertShortcutKeyStatusToTip(
-                                                        shortcutKeyStatus?.[key as AppFunction],
-                                                    )}
-                                                >
-                                                    <InfoCircleOutlined />
-                                                </Tooltip>
-                                            ) : (
-                                                <></>
-                                            ),
-                                            onClick: () => {
-                                                disableShortcutKeyRef.current = true;
-                                            },
-                                        }}
-                                        onCancel={() => {
-                                            disableShortcutKeyRef.current = false;
-                                        }}
-                                        onKeyChange={async (value) => {
-                                            disableShortcutKeyRef.current = false;
-                                            updateAppSettings(
-                                                AppSettingsGroup.AppFunction,
-                                                {
-                                                    [key as AppFunction]: {
-                                                        ...appFunctionSettings,
-                                                        shortcutKey: value,
-                                                    },
+                                <KeyButton
+                                    title={config.title}
+                                    maxWidth={128}
+                                    keyValue={currentShortcutKey ?? ''}
+                                    buttonProps={{
+                                        variant: 'outlined',
+                                        color: statusColor,
+                                        children: statusTip ? (
+                                            <Tooltip
+                                                title={convertShortcutKeyStatusToTip(
+                                                    shortcutKeyStatus?.[key as AppFunction],
+                                                )}
+                                            >
+                                                <InfoCircleOutlined />
+                                            </Tooltip>
+                                        ) : (
+                                            <></>
+                                        ),
+                                        onClick: () => {
+                                            disableShortcutKeyRef.current = true;
+                                        },
+                                    }}
+                                    onCancel={() => {
+                                        disableShortcutKeyRef.current = false;
+                                    }}
+                                    onKeyChange={async (value) => {
+                                        disableShortcutKeyRef.current = false;
+                                        updateAppSettings(
+                                            AppSettingsGroup.AppFunction,
+                                            {
+                                                [key as AppFunction]: {
+                                                    ...appFunctionSettings,
+                                                    shortcutKey: value,
                                                 },
-                                                false,
-                                                true,
-                                                false,
-                                                false,
-                                            );
-                                        }}
-                                        maxLength={1}
-                                    />
-                                )}
+                                            },
+                                            false,
+                                            true,
+                                            false,
+                                            false,
+                                        );
+                                    }}
+                                    maxLength={1}
+                                />
                             </FunctionButton>
                         );
                     })}

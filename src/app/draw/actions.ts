@@ -9,7 +9,7 @@ import { CaptureStep } from './types';
 import { FixedImageActionType } from './components/fixedImage';
 import { OcrBlocksActionType } from './components/ocrBlocks';
 export const generateImageFileName = () => {
-    return `SnowShot_${dayjs().format('YYYY-MM-DD_HH-mm-ss')}`;
+    return `SnowShot_${dayjs().format('yyyy-MM-dd_HH-mm-ss')}`;
 };
 
 export const getCanvas = async (
@@ -147,7 +147,6 @@ export const fixedToScreen = async (
         ),
         appWindow.setAlwaysOnTop(true),
     ]);
-    appWindow.setShadow(true);
 
     layerContainerElement.style.opacity = '1';
     // 创建一个固定的图片
