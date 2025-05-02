@@ -5,15 +5,25 @@ export enum AppFunction {
     Screenshot = 'screenshot',
     ScreenshotFixed = 'screenshotFixed',
     ScreenshotOcr = 'screenshotOcr',
+    Translation = 'translation',
+    TranslationSelectText = 'translationSelectText',
+}
+
+export enum AppFunctionGroup {
+    Screenshot = 'screenshot',
+    Translation = 'translation',
 }
 
 export type AppFunctionConfig = {
     shortcutKey: string;
+    group: AppFunctionGroup;
 };
 
 export type AppFunctionComponentConfig = AppFunctionConfig & {
+    configKey: AppFunction;
     title: React.ReactNode;
     icon?: React.ReactNode;
+    group: AppFunctionGroup;
     onClick: () => Promise<void>;
     onKeyChange: (value: string, prevValue: string) => Promise<boolean>;
 };
@@ -21,12 +31,23 @@ export type AppFunctionComponentConfig = AppFunctionConfig & {
 export const defaultAppFunctionConfigs: Record<AppFunction, AppFunctionConfig> = {
     [AppFunction.Screenshot]: {
         shortcutKey: 'F1',
+        group: AppFunctionGroup.Screenshot,
     },
     [AppFunction.ScreenshotFixed]: {
         shortcutKey: 'Control+Alt+F',
+        group: AppFunctionGroup.Screenshot,
     },
     [AppFunction.ScreenshotOcr]: {
         shortcutKey: 'Control+Alt+D',
+        group: AppFunctionGroup.Screenshot,
+    },
+    [AppFunction.TranslationSelectText]: {
+        shortcutKey: 'F3',
+        group: AppFunctionGroup.Translation,
+    },
+    [AppFunction.Translation]: {
+        shortcutKey: 'Control+Alt+T',
+        group: AppFunctionGroup.Translation,
     },
 };
 

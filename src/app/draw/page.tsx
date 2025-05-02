@@ -40,6 +40,7 @@ import { FixedImage, FixedImageActionType } from './components/fixedImage';
 import { OcrBlocks, OcrBlocksActionType } from './components/ocrBlocks';
 import { ocrInit } from '@/commands/ocr';
 import { ScreenshotType } from '@/functions/screenshot';
+import { showWindow as showCurrentWindow } from '@/utils/window';
 
 const DrawCacheLayer = dynamic(
     async () => (await import('./components/drawCacheLayer')).DrawCacheLayer,
@@ -179,7 +180,7 @@ const DrawPageCore: React.FC = () => {
             layerContainerRef.current.style.width = `${window.screen.width}px`;
             layerContainerRef.current.style.height = `${window.screen.height}px`;
         }
-        await appWindow.show();
+        await showCurrentWindow();
         if (process.env.NODE_ENV === 'development') {
             await appWindow.setAlwaysOnTop(false);
         }
@@ -303,7 +304,7 @@ const DrawPageCore: React.FC = () => {
 
     const onCopyToClipboard = useCallback(async () => {
         const selected = window.getSelection();
-        if (getDrawState() === DrawState.OcrDetect && selected) {
+        if (getDrawState() === DrawState.OcrDetect && selected && selected.toString()) {
             navigator.clipboard.writeText(selected.toString());
             finishCapture();
             return;

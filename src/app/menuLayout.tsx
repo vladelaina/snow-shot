@@ -33,12 +33,16 @@ import { TrayIconLoader } from './trayIcon';
 import { EventListener } from '@/components/eventListener';
 import { zhHant } from '@/messages/zhHant';
 import { en } from '@/messages/en';
-import { exitApp } from '@/commands';
 import { ItemType, MenuItemType } from 'antd/es/menu/interface';
 import { PageNav, PageNavActionType } from './components/pageNav';
 import { useStateSubscriber } from '@/hooks/useStateSubscriber';
 
 type MenuItem = ItemType<MenuItemType>;
+
+export type RouteMapItem = {
+    items: TabsProps['items'];
+    hideTabs?: boolean;
+};
 
 export const MenuLayoutContext = createContext<{
     noLayout: boolean;
@@ -55,6 +59,7 @@ type RouteItem = {
     path: string | undefined;
     label: string;
     icon?: React.ReactNode;
+    hideTabs?: boolean;
     children?: RouteItem[];
     tabs?: TabsProps['items'];
 };
@@ -141,7 +146,7 @@ const MenuSider = React.memo(MenuSiderCore);
 
 const MenuContentCore: React.FC<{
     pathname: string;
-    routeTabsMap: Record<string, TabsProps['items']>;
+    routeTabsMap: Record<string, RouteMapItem>;
     children: React.ReactNode;
 }> = ({ pathname, routeTabsMap, children }) => {
     const { token } = theme.useToken();
@@ -158,18 +163,14 @@ const MenuContentCore: React.FC<{
     const contentRef = useRef<HTMLDivElement>(null);
     return (
         <Layout>
-            <Header data-tauri-drag-region>
+            <Header data-tauri-drag-region className="app-tauri-drag-region">
                 <Space>
                     <Button
                         type="text"
                         size="small"
                         icon={<MinusOutlined />}
                         onClick={() => {
-                            if (process.env.NODE_ENV === 'development') {
-                                appWindowRef.current?.minimize();
-                            } else {
-                                appWindowRef.current?.hide();
-                            }
+                            appWindowRef.current?.minimize();
                         }}
                     />
                     <Button
@@ -180,7 +181,7 @@ const MenuContentCore: React.FC<{
                             if (process.env.NODE_ENV === 'development') {
                                 // appWindowRef.current?.close();
                             } else {
-                                exitApp();
+                                appWindowRef.current?.hide();
                             }
                         }}
                     />
@@ -188,10 +189,10 @@ const MenuContentCore: React.FC<{
             </Header>
             <Content>
                 <div className="content-wrap">
-                    <div data-tauri-drag-region></div>
-                    <div data-tauri-drag-region></div>
-                    <div data-tauri-drag-region></div>
-                    <div data-tauri-drag-region></div>
+                    <div data-tauri-drag-region className="app-tauri-drag-region"></div>
+                    <div data-tauri-drag-region className="app-tauri-drag-region"></div>
+                    <div data-tauri-drag-region className="app-tauri-drag-region"></div>
+                    <div data-tauri-drag-region className="app-tauri-drag-region"></div>
                     <div className="center">
                         <PageNav tabItems={tabItems} actionRef={pageNavActionRef} />
                         <RSC
@@ -206,10 +207,10 @@ const MenuContentCore: React.FC<{
                             </div>
                         </RSC>
                     </div>
-                    <div data-tauri-drag-region></div>
-                    <div data-tauri-drag-region></div>
-                    <div data-tauri-drag-region></div>
-                    <div data-tauri-drag-region></div>
+                    <div data-tauri-drag-region className="app-tauri-drag-region"></div>
+                    <div data-tauri-drag-region className="app-tauri-drag-region"></div>
+                    <div data-tauri-drag-region className="app-tauri-drag-region"></div>
+                    <div data-tauri-drag-region className="app-tauri-drag-region"></div>
                 </div>
             </Content>
 
@@ -349,8 +350,33 @@ const MenuLayoutCore: React.FC<{ children: React.ReactNode }> = ({ children }) =
                 icon: <AppstoreOutlined />,
                 tabs: [
                     {
-                        key: 'commonFunction',
-                        label: intl.formatMessage({ id: 'home.commonFunction' }),
+                        key: 'screenshotFunction',
+                        label: intl.formatMessage({ id: 'home.screenshotFunction' }),
+                    },
+                    {
+                        key: 'translationFunction',
+                        label: intl.formatMessage({ id: 'home.translationFunction' }),
+                    },
+                ],
+            },
+            {
+                key: '/tools',
+                path: undefined,
+                label: intl.formatMessage({ id: 'menu.tools' }),
+                icon: <AppstoreOutlined />,
+                tabs: [],
+                children: [
+                    {
+                        key: '/tools/translation',
+                        path: '/tools/translation',
+                        label: intl.formatMessage({ id: 'menu.tools.translation' }),
+                        hideTabs: true,
+                        tabs: [
+                            {
+                                key: 'translation',
+                                label: intl.formatMessage({ id: 'menu.tools.translation' }),
+                            },
+                        ],
                     },
                 ],
             },
@@ -405,7 +431,7 @@ const MenuLayoutCore: React.FC<{ children: React.ReactNode }> = ({ children }) =
         return routes;
     }, [intl]);
     const { menuItems, routeTabsMap } = useMemo(() => {
-        const routeTabsMap: Record<string, TabsProps['items']> = {};
+        const routeTabsMap: Record<string, RouteMapItem> = {};
 
         const convertToMenuItem = (route: RouteItem): MenuItem => {
             const menuItem: MenuItem = {
@@ -417,7 +443,7 @@ const MenuLayoutCore: React.FC<{ children: React.ReactNode }> = ({ children }) =
                         return;
                     }
 
-                    router.push(route.path);
+                    router.push(route.path!);
                 },
                 children: undefined as unknown as MenuItem[],
             };
@@ -426,8 +452,11 @@ const MenuLayoutCore: React.FC<{ children: React.ReactNode }> = ({ children }) =
                 menuItem.children = route.children.map((child) => convertToMenuItem(child));
             }
 
-            if (route.path && route.tabs?.length) {
-                routeTabsMap[route.path] = route.tabs;
+            if (route.path && route.tabs?.length !== undefined) {
+                routeTabsMap[route.path] = {
+                    items: route.tabs,
+                    hideTabs: route.hideTabs,
+                };
             }
 
             return menuItem;

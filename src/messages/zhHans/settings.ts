@@ -33,4 +33,6 @@ export const settings = {
     'settings.drawLineSmoothIterations.tip': '迭代次数越多，线条越平滑',
     'settings.systemSettings.commonSettings': '常用设置',
     'settings.systemSettings.commonSettings.autoStart': '开机自动启动',
+    'settings.hotKeySettings.translation': '翻译快捷键',
+    'settings.hotKeySettings.keyEventTooltip': '{message}（{key}）',
 };

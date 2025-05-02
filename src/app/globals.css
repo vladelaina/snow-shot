@@ -49,3 +49,12 @@ body {
 .excalidraw .Island.App-menu__left .FontPicker__container>div:nth-child(3) {
     display: none !important;
 }
+
+.app-tauri-drag-region {
+    cursor: grab;
+}
+
+.app-tauri-drag-region:active {
+    cursor: grabbing;
+}
+

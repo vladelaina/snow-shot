@@ -1,10 +1,21 @@
 use std::{env, sync::Mutex};
-
 use tauri::command;
 
 #[command]
-pub async fn exit_app(handle: tauri::AppHandle) {
+pub async fn exit_app(window: tauri::Window, handle: tauri::AppHandle) {
+    window.hide().unwrap();
     handle.exit(0);
+}
+
+#[command]
+pub async fn get_selected_text() -> String {
+    let text = match get_selected_text::get_selected_text() {
+        Ok(text) => text,
+        Err(_) => {
+            return String::new();
+        }
+    };
+    text
 }
 
 #[command]

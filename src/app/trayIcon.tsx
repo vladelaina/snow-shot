@@ -5,8 +5,14 @@ import { TrayIcon, TrayIconOptions } from '@tauri-apps/api/tray';
 import { useEffect } from 'react';
 import { getCurrentWindow } from '@tauri-apps/api/window';
 import React from 'react';
+import { Menu } from '@tauri-apps/api/menu';
+import { useIntl } from 'react-intl';
+import { exitApp } from '@/commands';
+import { showWindow } from '@/utils/window';
 
 const TrayIconLoaderComponent = () => {
+    const intl = useIntl();
+
     useEffect(() => {
         if (process.env.NODE_ENV === 'development') {
             return;
@@ -24,11 +30,22 @@ const TrayIconLoaderComponent = () => {
                     switch (event.type) {
                         case 'Click':
                             if (event.button === 'Left') {
-                                appWindow.show();
+                                showWindow();
                             }
                             break;
                     }
                 },
+                menu: await Menu.new({
+                    items: [
+                        {
+                            id: `${appWindow.label}-exit`,
+                            text: intl.formatMessage({ id: 'home.exit' }),
+                            action: async () => {
+                                exitApp();
+                            },
+                        },
+                    ],
+                }),
             };
 
             trayIcon = await TrayIcon.new(options);
@@ -41,6 +58,7 @@ const TrayIconLoaderComponent = () => {
             }
 
             trayIcon.close();
+            trayIcon = undefined;
         };
 
         window.onbeforeunload = () => {
@@ -51,7 +69,7 @@ const TrayIconLoaderComponent = () => {
             document.removeEventListener('DOMContentLoaded', init);
             closeTrayIcon();
         };
-    }, []);
+    }, [intl]);
 
     return null;
 };

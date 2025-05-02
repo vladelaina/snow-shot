@@ -8,8 +8,8 @@ mod screenshot;
 use std::sync::Mutex;
 
 use ocr::OcrLiteWrap;
-use paddle_ocr_rs::ocr_lite::OcrLite;
 use os::ui_automation::UIElements;
+use paddle_ocr_rs::ocr_lite::OcrLite;
 use tauri_plugin_log::{Target, TargetKind};
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -23,6 +23,7 @@ pub fn run() {
     let auto_start_hide_window = Mutex::new(false);
 
     tauri::Builder::default()
+        .plugin(tauri_plugin_http::init())
         .plugin(tauri_plugin_autostart::init(
             tauri_plugin_autostart::MacosLauncher::LaunchAgent,
             Some(vec!["--auto_start"]),
@@ -63,6 +64,7 @@ pub fn run() {
             ocr::ocr_init,
             ocr::ocr_release,
             core::auto_start_hide_window,
+            core::get_selected_text,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

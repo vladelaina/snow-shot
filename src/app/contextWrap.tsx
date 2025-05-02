@@ -16,18 +16,20 @@ import { AppFunction, AppFunctionConfig, defaultAppFunctionConfigs } from './ext
 import { createPublisher, withStatePublisher } from '@/hooks/useStatePublisher';
 import { useStateSubscriber } from '@/hooks/useStateSubscriber';
 import {
-    defaultKeyEventSettings,
-    KeyEventKey,
-    KeyEventValue,
+    defaultDrawToolbarKeyEventSettings,
+    KeyEventKey as DrawToolbarKeyEventKey,
+    KeyEventValue as DrawToolbarKeyEventValue,
 } from './draw/components/drawToolbar/components/keyEventWrap/extra';
 import React from 'react';
 import * as appAutostart from '@tauri-apps/plugin-autostart';
+import { defaultKeyEventSettings, KeyEventKey, KeyEventValue } from '@/core/hotKeys';
 
 export enum AppSettingsGroup {
     Common = 'common',
     Cache = 'cache',
     Screenshot = 'screenshot',
     DrawToolbarKeyEvent = 'drawToolbarKeyEvent',
+    KeyEvent = 'KeyEvent',
     AppFunction = 'appFunction',
     Render = 'render',
     SystemCommon = 'systemCommon',
@@ -60,7 +62,11 @@ export type AppSettingsData = {
     [AppSettingsGroup.Cache]: {
         menuCollapsed: boolean;
     };
-    [AppSettingsGroup.DrawToolbarKeyEvent]: Record<KeyEventKey, KeyEventValue>;
+    [AppSettingsGroup.DrawToolbarKeyEvent]: Record<
+        DrawToolbarKeyEventKey,
+        DrawToolbarKeyEventValue
+    >;
+    [AppSettingsGroup.KeyEvent]: Record<KeyEventKey, KeyEventValue>;
     [AppSettingsGroup.AppFunction]: Record<AppFunction, AppFunctionConfig>;
     [AppSettingsGroup.Render]: {
         antialias: boolean;
@@ -83,7 +89,8 @@ export const defaultAppSettingsData: AppSettingsData = {
     [AppSettingsGroup.Cache]: {
         menuCollapsed: false,
     },
-    [AppSettingsGroup.DrawToolbarKeyEvent]: defaultKeyEventSettings,
+    [AppSettingsGroup.DrawToolbarKeyEvent]: defaultDrawToolbarKeyEventSettings,
+    [AppSettingsGroup.KeyEvent]: defaultKeyEventSettings,
     [AppSettingsGroup.AppFunction]: defaultAppFunctionConfigs,
     [AppSettingsGroup.Render]: {
         antialias: true,
@@ -283,6 +290,54 @@ const ContextWrapCore: React.FC<{ children: React.ReactNode }> = ({ children }) 
                     | undefined;
 
                 const settingsKeySet = new Set<string>();
+                const settingKeys: DrawToolbarKeyEventKey[] = Object.keys(
+                    defaultDrawToolbarKeyEventSettings,
+                ) as DrawToolbarKeyEventKey[];
+                settingKeys.forEach((key) => {
+                    const keyEventSettings = newSettings as Record<
+                        DrawToolbarKeyEventKey,
+                        DrawToolbarKeyEventValue
+                    >;
+
+                    let keyEventSettingsKey =
+                        typeof keyEventSettings[key]?.hotKey === 'string'
+                            ? keyEventSettings[key].hotKey
+                            : (prevSettings?.[key]?.hotKey ??
+                              defaultDrawToolbarKeyEventSettings[key].hotKey);
+
+                    // 格式化处理下
+                    keyEventSettingsKey = keyEventSettingsKey
+                        .split(',')
+                        .map(trim)
+                        .filter((val) => {
+                            if (settingsKeySet.has(val)) {
+                                return false;
+                            }
+
+                            if (defaultDrawToolbarKeyEventSettings[key].unique) {
+                                settingsKeySet.add(val);
+                            }
+
+                            return true;
+                        })
+                        .join(', ');
+
+                    keyEventSettings[key] = {
+                        hotKey: keyEventSettingsKey,
+                    };
+                });
+
+                settings = {
+                    ...defaultDrawToolbarKeyEventSettings,
+                    ...newSettings,
+                };
+            } else if (group === AppSettingsGroup.KeyEvent) {
+                newSettings = newSettings as AppSettingsData[typeof group];
+                const prevSettings = appSettingsRef.current[group] as
+                    | AppSettingsData[typeof group]
+                    | undefined;
+
+                const settingsKeySet = new Set<string>();
                 const settingKeys: KeyEventKey[] = Object.keys(
                     defaultKeyEventSettings,
                 ) as KeyEventKey[];
@@ -313,11 +368,12 @@ const ContextWrapCore: React.FC<{ children: React.ReactNode }> = ({ children }) 
 
                     keyEventSettings[key] = {
                         hotKey: keyEventSettingsKey,
+                        group: defaultKeyEventSettings[key].group,
                     };
                 });
 
                 settings = {
-                    ...defaultKeyEventSettings,
+                    ...defaultDrawToolbarKeyEventSettings,
                     ...newSettings,
                 };
             } else if (group === AppSettingsGroup.AppFunction) {
@@ -357,6 +413,7 @@ const ContextWrapCore: React.FC<{ children: React.ReactNode }> = ({ children }) 
 
                     keyEventSettings[key] = {
                         shortcutKey: keyEventSettingsKey,
+                        group: defaultAppFunctionConfigs[key].group,
                     };
                 });
 

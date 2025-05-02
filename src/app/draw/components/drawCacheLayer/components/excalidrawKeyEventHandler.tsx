@@ -5,7 +5,7 @@ import { useStateSubscriber } from '@/hooks/useStateSubscriber';
 import { ExcalidrawKeyEvent, ExcalidrawKeyEventPublisher } from '../extra';
 import { AppSettingsGroup } from '@/app/contextWrap';
 import { useAppSettingsLoad } from '@/hooks/useAppSettingsLoad';
-import { defaultKeyEventSettings } from '../../drawToolbar/components/keyEventWrap/extra';
+import { defaultDrawToolbarKeyEventSettings } from '../../drawToolbar/components/keyEventWrap/extra';
 import { KeyEventKey } from '../../drawToolbar/components/keyEventWrap/extra';
 
 type HotKeys = {
@@ -14,10 +14,10 @@ type HotKeys = {
 
 const defaultHotKeys: HotKeys = {
     rotateWithDiscreteAngle:
-        defaultKeyEventSettings[KeyEventKey.RotateWithDiscreteAnglePicker].hotKey,
-    resizeFromCenter: defaultKeyEventSettings[KeyEventKey.ResizeFromCenterPicker].hotKey,
-    maintainAspectRatio: defaultKeyEventSettings[KeyEventKey.MaintainAspectRatioPicker].hotKey,
-    autoAlign: defaultKeyEventSettings[KeyEventKey.AutoAlignPicker].hotKey,
+        defaultDrawToolbarKeyEventSettings[KeyEventKey.RotateWithDiscreteAnglePicker].hotKey,
+    resizeFromCenter: defaultDrawToolbarKeyEventSettings[KeyEventKey.ResizeFromCenterPicker].hotKey,
+    maintainAspectRatio: defaultDrawToolbarKeyEventSettings[KeyEventKey.MaintainAspectRatioPicker].hotKey,
+    autoAlign: defaultDrawToolbarKeyEventSettings[KeyEventKey.AutoAlignPicker].hotKey,
 };
 
 const ExcalidrawKeyEventHandlerCore = () => {
