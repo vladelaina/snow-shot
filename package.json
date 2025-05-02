@@ -24,14 +24,10 @@
     "@tauri-apps/plugin-http": "~2",
     "@tauri-apps/plugin-log": "^2.4.0",
     "@tweenjs/tween.js": "^25.0.0",
-    "@types/fabric": "^5.3.10",
     "antd": "^5.24.8",
     "color": "^5.0.0",
     "dayjs": "1.11.13",
-    "defu": "^6.1.4",
-    "fabric": "^6.6.4",
     "flatbush": "^4.4.0",
-    "gl-matrix": "4.0.0-beta.2",
     "lodash": "^4.17.21",
     "next": "15.2.0",
     "pixi.js": "^8.9.1",
@@ -40,9 +36,7 @@
     "react-dom": "^19.1.0",
     "react-hotkeys-hook": "^4.6.2",
     "react-intl": "^7.1.11",
-    "react-scrollbars-custom": "^4.1.1",
-    "scroll-shadow-element": "^2.0.6",
-    "simplify-js": "^1.2.4"
+    "react-scrollbars-custom": "^4.1.1"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3.3.1",
