@@ -102,7 +102,7 @@ export default function Home() {
                         buttonIcon = <TranslationIcon />;
                         buttonOnClick = () => {
                             showWindow();
-                            router.push('/tools/translation');
+                            router.push(`/tools/translation?t=${Date.now()}`);
                         };
                         break;
                     case AppFunction.ChatSelectText:
@@ -118,7 +118,7 @@ export default function Home() {
                         buttonIcon = <ChatIcon />;
                         buttonOnClick = () => {
                             showWindow();
-                            router.push('/tools/chat');
+                            router.push(`/tools/chat?t=${Date.now()}`);
                         };
                         break;
                     case AppFunction.Screenshot:

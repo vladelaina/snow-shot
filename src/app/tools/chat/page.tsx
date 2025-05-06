@@ -21,7 +21,15 @@ import { MessageInfo } from '@ant-design/x/es/use-x-chat';
 import { Button, Drawer, Select, Space, Spin, Tag, theme, Typography } from 'antd';
 import dayjs from 'dayjs';
 import { debounce, last, throttle } from 'lodash';
-import React, { useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
+import React, {
+    useCallback,
+    useContext,
+    useEffect,
+    useMemo,
+    useRef,
+    useState,
+    Suspense,
+} from 'react';
 import { FormattedMessage, useIntl } from 'react-intl';
 import RSC, { Scrollbar } from 'react-scrollbars-custom';
 import { fetch as tauriFetch } from '@tauri-apps/plugin-http';
@@ -183,7 +191,7 @@ const fliterErrorMessages = (messages: BubbleDataType[] | undefined) => {
     return newMessages;
 };
 
-const Copilot = () => {
+const Chat = () => {
     const intl = useIntl();
     const { token } = theme.useToken();
     const { message, modal } = useContext(AntdContext);
@@ -781,8 +789,12 @@ const Copilot = () => {
             const text = await getSelectedText();
             hideLoading();
 
-            finishScreenshot();
-            getCurrentWindow().setFocus();
+            await finishScreenshot();
+            getCurrentWindow()
+                .setFocus()
+                .then(() => {
+                    senderRef.current?.focus();
+                });
 
             if (!text) {
                 message.error(intl.formatMessage({ id: 'tools.translation.getSelectText.failed' }));
@@ -793,7 +805,10 @@ const Copilot = () => {
                 await newSessionPromise;
             }
             setInputValue(text);
-            senderRef.current?.focus();
+        } else {
+            setTimeout(() => {
+                senderRef.current?.focus();
+            }, 128);
         }
     }, [
         createNewSession,
@@ -905,81 +920,83 @@ const Copilot = () => {
     );
 };
 
-const CopilotDemo = () => {
+const ChatPage = () => {
     return (
-        <div className="copilotWrapper">
-            <Copilot />
+        <Suspense>
+            <div className="copilotWrapper">
+                <Chat />
 
-            <style jsx>{`
-                :global(.copilotWrapper) {
-                    width: 100%;
-                    height: 100%;
-                    display: flex;
-                    position: fixed;
-                    top: 0;
-                    left: 0;
-                    right: 0;
-                    bottom: 0;
-                }
-                :global(.workarea) {
-                    flex: 1;
-                    background: var(--antd-color-bg-layout);
-                    display: flex;
-                    flex-direction: column;
-                }
-                :global(.workareaHeader) {
-                    box-sizing: border-box;
-                    height: 52px;
-                    display: flex;
-                    align-items: center;
-                    justify-content: space-between;
-                    padding: 0 48px 0 28px;
-                    border-bottom: 1px solid var(--antd-color-border);
-                }
-                :global(.headerTitle) {
-                    font-weight: 600;
-                    font-size: 15px;
-                    color: var(--antd-color-text);
-                    display: flex;
-                    align-items: center;
-                    gap: 8px;
-                }
-                :global(.headerButton) {
-                    background-image: linear-gradient(78deg, #8054f2 7%, #3895da 95%);
-                    border-radius: 12px;
-                    height: 24px;
-                    width: 93px;
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    color: #fff;
-                    cursor: pointer;
-                    font-size: 12px;
-                    font-weight: 600;
-                    transition: all 0.3s;
-                }
-                :global(.headerButton:hover) {
-                    opacity: 0.8;
-                }
-                :global(.workareaBody) {
-                    flex: 1;
-                    padding: 16px;
-                    background: var(--antd-color-bg-container);
-                    border-radius: 16px;
-                    min-height: 0;
-                }
-                :global(.bodyContent) {
-                    overflow: auto;
-                    height: 100%;
-                    padding-right: 10px;
-                }
-                :global(.bodyText) {
-                    color: var(--antd-color-text);
-                    padding: 8px;
-                }
-            `}</style>
-        </div>
+                <style jsx>{`
+                    :global(.copilotWrapper) {
+                        width: 100%;
+                        height: 100%;
+                        display: flex;
+                        position: fixed;
+                        top: 0;
+                        left: 0;
+                        right: 0;
+                        bottom: 0;
+                    }
+                    :global(.workarea) {
+                        flex: 1;
+                        background: var(--antd-color-bg-layout);
+                        display: flex;
+                        flex-direction: column;
+                    }
+                    :global(.workareaHeader) {
+                        box-sizing: border-box;
+                        height: 52px;
+                        display: flex;
+                        align-items: center;
+                        justify-content: space-between;
+                        padding: 0 48px 0 28px;
+                        border-bottom: 1px solid var(--antd-color-border);
+                    }
+                    :global(.headerTitle) {
+                        font-weight: 600;
+                        font-size: 15px;
+                        color: var(--antd-color-text);
+                        display: flex;
+                        align-items: center;
+                        gap: 8px;
+                    }
+                    :global(.headerButton) {
+                        background-image: linear-gradient(78deg, #8054f2 7%, #3895da 95%);
+                        border-radius: 12px;
+                        height: 24px;
+                        width: 93px;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        color: #fff;
+                        cursor: pointer;
+                        font-size: 12px;
+                        font-weight: 600;
+                        transition: all 0.3s;
+                    }
+                    :global(.headerButton:hover) {
+                        opacity: 0.8;
+                    }
+                    :global(.workareaBody) {
+                        flex: 1;
+                        padding: 16px;
+                        background: var(--antd-color-bg-container);
+                        border-radius: 16px;
+                        min-height: 0;
+                    }
+                    :global(.bodyContent) {
+                        overflow: auto;
+                        height: 100%;
+                        padding-right: 10px;
+                    }
+                    :global(.bodyText) {
+                        color: var(--antd-color-text);
+                        padding: 8px;
+                    }
+                `}</style>
+            </div>
+        </Suspense>
     );
 };
 
-export default CopilotDemo;
+export default ChatPage;

@@ -12,11 +12,23 @@ import { useStateRef } from '@/hooks/useStateRef';
 import { translate, TranslationDomain, TranslationType } from '@/services/tools/translation';
 import { SwapOutlined } from '@ant-design/icons';
 import { getCurrentWindow } from '@tauri-apps/api/window';
-import { Button, Col, Dropdown, Flex, Form, Row, Select, SelectProps, Spin, theme } from 'antd';
+import {
+    Button,
+    Col,
+    Dropdown,
+    Flex,
+    Form,
+    InputRef,
+    Row,
+    Select,
+    SelectProps,
+    Spin,
+    theme,
+} from 'antd';
 import TextArea from 'antd/es/input/TextArea';
 import { debounce } from 'lodash';
 import { useSearchParams } from 'next/navigation';
-import { useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useContext, useEffect, useMemo, useRef, useState, Suspense } from 'react';
 import { useHotkeys } from 'react-hotkeys-hook';
 import { FormattedMessage, useIntl } from 'react-intl';
 
@@ -90,7 +102,7 @@ const selectFilterOption: SelectProps['filterOption'] = (input, option) => {
     return regex.test(option.title.toString().toLowerCase());
 };
 
-export default function Translation() {
+const TranslationCore = () => {
     const intl = useIntl();
     const { token } = theme.useToken();
     const { message } = useContext(AntdContext);
@@ -181,6 +193,7 @@ export default function Translation() {
         ),
     );
 
+    const sourceContentRef = useRef<InputRef | null>(null);
     const [sourceContent, setSourceContent] = useState<string>('');
     const [translatedContent, setTranslatedContent, translatedContentRef] = useStateRef<string>('');
     const [autoLanguage, setAutoLanguage] = useState<string | undefined>(undefined);
@@ -204,8 +217,12 @@ export default function Translation() {
             const text = await getSelectedText();
             hideLoading();
 
-            finishScreenshot();
-            getCurrentWindow().setFocus();
+            await finishScreenshot();
+            getCurrentWindow()
+                .setFocus()
+                .then(() => {
+                    sourceContentRef.current?.focus();
+                });
 
             if (!text) {
                 message.error(intl.formatMessage({ id: 'tools.translation.getSelectText.failed' }));
@@ -214,6 +231,10 @@ export default function Translation() {
 
             setSourceContent(text);
             ignoreDebounce.current = true;
+        } else {
+            setTimeout(() => {
+                sourceContentRef.current?.focus();
+            }, 128);
         }
     }, [intl, message, searchParamsSign, searchParamsType]);
 
@@ -514,6 +535,7 @@ export default function Translation() {
                     <Row gutter={16} style={{ marginTop: token.marginXXS }}>
                         <Col span={12}>
                             <TextArea
+                                ref={sourceContentRef}
                                 rows={12}
                                 maxLength={10000}
                                 showCount
@@ -617,5 +639,13 @@ export default function Translation() {
                 }
             `}</style>
         </>
+    );
+};
+
+export default function TranslationPage() {
+    return (
+        <Suspense>
+            <TranslationCore />
+        </Suspense>
     );
 }
