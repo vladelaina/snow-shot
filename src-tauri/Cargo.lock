@@ -179,7 +179,6 @@ dependencies = [
  "rtree_rs",
  "serde",
  "serde_json",
- "static_aabb2d_index",
  "tauri",
  "tauri-build",
  "tauri-plugin-autostart",
@@ -188,6 +187,7 @@ dependencies = [
  "tauri-plugin-global-shortcut",
  "tauri-plugin-http",
  "tauri-plugin-log",
+ "tauri-plugin-store",
  "thiserror 2.0.12",
  "uiautomation",
  "windows 0.61.1",
@@ -5461,15 +5461,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a8f112729512f8e442d81f95a8a7ddf2b7c6b8a1a6f509a95864142b30cab2d3"
 
 [[package]]
-name = "static_aabb2d_index"
-version = "2.0.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1204bd3057a2225dc60d157bd921aaeaa4d318527bd32af4678cad39e5279849"
-dependencies = [
- "num-traits",
-]
-
-[[package]]
 name = "static_assertions"
 version = "1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5917,6 +5908,22 @@ dependencies = [
  "tauri-plugin",
  "thiserror 2.0.12",
  "time",
+]
+
+[[package]]
+name = "tauri-plugin-store"
+version = "2.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1c0c08fae6995909f5e9a0da6038273b750221319f2c0f3b526d6de1cde21505"
+dependencies = [
+ "dunce",
+ "serde",
+ "serde_json",
+ "tauri",
+ "tauri-plugin",
+ "thiserror 2.0.12",
+ "tokio",
+ "tracing",
 ]
 
 [[package]]

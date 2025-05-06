@@ -341,10 +341,16 @@ const DrawPageCore: React.FC = () => {
 
             excuteScreenshot((args as { payload: { type: ScreenshotType } }).payload.type);
         });
+
+        const finishListenerId = addListener('finish-screenshot', () => {
+            finishCapture();
+        });
+
         return () => {
             removeListener(listenerId);
+            removeListener(finishListenerId);
         };
-    }, [addListener, excuteScreenshot, removeListener, isFixed]);
+    }, [addListener, excuteScreenshot, removeListener, isFixed, finishCapture]);
 
     // 默认隐藏
     useEffect(() => {

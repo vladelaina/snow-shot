@@ -37,9 +37,12 @@ export const FetchErrorHandler: React.FC<{ children: React.ReactNode }> = ({ chi
     const { message } = useContext(AntdContext);
     useEffect(() => {
         window.__APP_HANDLE_HTTP_ERROR__ = (error) => {
-            message.error(`${error.response.status}: ${error.response.statusText}`);
+            message.error(`${error.response?.status}: ${error.response?.statusText}`);
         };
         window.__APP_HANDLE_SERVICE_ERROR__ = (error) => {
+            message.error(`${error.code}: ${error.message}`);
+        };
+        window.__APP_HANDLE_REQUEST_ERROR__ = (error) => {
             message.error(`${error.code}: ${error.message}`);
         };
     }, [message]);
@@ -56,6 +59,15 @@ export default function RootLayout({
             <head>
                 <Script id="load-env-variables" strategy="beforeInteractive">
                     {`window["EXCALIDRAW_ASSET_PATH"] = location.origin;`}
+                </Script>
+                <Script id="markdown-it-fix" strategy="beforeInteractive">
+                    {`
+                       if (typeof window !== 'undefined' && typeof window.isSpace === 'undefined') {
+                         window.isSpace = function(code) {
+                           return code === 0x20 || code === 0x09 || code === 0x0A || code === 0x0B || code === 0x0C || code === 0x0D;
+                         };
+                       }
+                    `}
                 </Script>
             </head>
             <body>

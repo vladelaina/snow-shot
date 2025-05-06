@@ -5,6 +5,8 @@ export enum AppFunction {
     Screenshot = 'screenshot',
     ScreenshotFixed = 'screenshotFixed',
     ScreenshotOcr = 'screenshotOcr',
+    Chat = 'chat',
+    ChatSelectText = 'chatSelectText',
     Translation = 'translation',
     TranslationSelectText = 'translationSelectText',
 }
@@ -12,6 +14,7 @@ export enum AppFunction {
 export enum AppFunctionGroup {
     Screenshot = 'screenshot',
     Translation = 'translation',
+    Chat = 'chat',
 }
 
 export type AppFunctionConfig = {
@@ -41,8 +44,16 @@ export const defaultAppFunctionConfigs: Record<AppFunction, AppFunctionConfig> =
         shortcutKey: 'Control+Alt+D',
         group: AppFunctionGroup.Screenshot,
     },
-    [AppFunction.TranslationSelectText]: {
+    [AppFunction.ChatSelectText]: {
         shortcutKey: 'F3',
+        group: AppFunctionGroup.Chat,
+    },
+    [AppFunction.Chat]: {
+        shortcutKey: 'Control+Alt+C',
+        group: AppFunctionGroup.Chat,
+    },
+    [AppFunction.TranslationSelectText]: {
+        shortcutKey: 'F4',
         group: AppFunctionGroup.Translation,
     },
     [AppFunction.Translation]: {

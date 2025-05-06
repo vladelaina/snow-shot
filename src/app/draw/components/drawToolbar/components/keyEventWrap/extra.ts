@@ -15,8 +15,8 @@ export enum KeyEventKey {
     MoveTool = 'moveTool',
     SelectTool = 'selectTool',
     RectTool = 'rectTool',
-    DiamondTool = 'diamondTool',
     EllipseTool = 'ellipseTool',
+    DiamondTool = 'diamondTool',
     ArrowTool = 'arrowTool',
     LineTool = 'lineTool',
     PenTool = 'penTool',
@@ -56,11 +56,11 @@ export const defaultDrawToolbarKeyEventSettings: Record<KeyEventKey, KeyEventVal
         hotKey: '1',
         unique: true,
     },
-    [KeyEventKey.EllipseTool]: {
+    [KeyEventKey.DiamondTool]: {
         hotKey: '2',
         unique: true,
     },
-    [KeyEventKey.DiamondTool]: {
+    [KeyEventKey.EllipseTool]: {
         hotKey: '3',
         unique: true,
     },

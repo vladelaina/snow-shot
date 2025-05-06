@@ -9,7 +9,13 @@ import React, {
     useRef,
     useState,
 } from 'react';
-import { AppstoreOutlined, CloseOutlined, MinusOutlined, SettingOutlined } from '@ant-design/icons';
+import {
+    AppstoreOutlined,
+    CloseOutlined,
+    MinusOutlined,
+    SettingOutlined,
+    ToolOutlined,
+} from '@ant-design/icons';
 import { Button, Layout, Menu, Space, TabsProps, theme } from 'antd';
 import { useRouter } from 'next/navigation';
 const { Content, Sider } = Layout;
@@ -178,11 +184,7 @@ const MenuContentCore: React.FC<{
                         size="small"
                         icon={<CloseOutlined />}
                         onClick={() => {
-                            if (process.env.NODE_ENV === 'development') {
-                                // appWindowRef.current?.close();
-                            } else {
-                                appWindowRef.current?.hide();
-                            }
+                            appWindowRef.current?.hide();
                         }}
                     />
                 </Space>
@@ -232,6 +234,7 @@ const MenuContentCore: React.FC<{
                     padding: ${token.padding}px ${token.borderRadiusLG}px;
                     display: flex;
                     flex-direction: column;
+                    transform: translateY(0px);
                 }
 
                 .center::-webkit-scrollbar {
@@ -241,20 +244,8 @@ const MenuContentCore: React.FC<{
                 .content-container {
                     padding: 0 ${token.padding}px;
                     width: 100%;
+                    height: 100%;
                     overflow-x: hidden;
-                }
-
-                .center > :global(.ScrollbarsCustom) :global(.ScrollbarsCustom-Track) {
-                    background-color: rgba(0, 0, 0, 0.1) !important;
-                    width: 3px !important;
-                    border-radius: 1px !important;
-                    height: 100% !important;
-                    top: 0px !important;
-                }
-                .center > :global(.ScrollbarsCustom) :global(.ScrollbarsCustom-Thumb) {
-                    background-color: rgba(0, 0, 0, 0.4) !important;
-                    width: 100% !important;
-                    border-radius: 1px !important;
                 }
             `}</style>
         </Layout>
@@ -354,6 +345,10 @@ const MenuLayoutCore: React.FC<{ children: React.ReactNode }> = ({ children }) =
                         label: intl.formatMessage({ id: 'home.screenshotFunction' }),
                     },
                     {
+                        key: 'chatFunction',
+                        label: intl.formatMessage({ id: 'home.chatFunction' }),
+                    },
+                    {
                         key: 'translationFunction',
                         label: intl.formatMessage({ id: 'home.translationFunction' }),
                     },
@@ -363,9 +358,21 @@ const MenuLayoutCore: React.FC<{ children: React.ReactNode }> = ({ children }) =
                 key: '/tools',
                 path: undefined,
                 label: intl.formatMessage({ id: 'menu.tools' }),
-                icon: <AppstoreOutlined />,
+                icon: <ToolOutlined />,
                 tabs: [],
                 children: [
+                    {
+                        key: '/tools/chat',
+                        path: '/tools/chat',
+                        label: intl.formatMessage({ id: 'menu.tools.chat' }),
+                        hideTabs: true,
+                        tabs: [
+                            {
+                                key: 'chat',
+                                label: intl.formatMessage({ id: 'menu.tools.chat' }),
+                            },
+                        ],
+                    },
                     {
                         key: '/tools/translation',
                         path: '/tools/translation',
@@ -408,7 +415,13 @@ const MenuLayoutCore: React.FC<{ children: React.ReactNode }> = ({ children }) =
                         label: intl.formatMessage({ id: 'menu.settings.hotKeySettings' }),
                         tabs: [
                             {
-                                key: 'drawToolbarKeyEvent',
+                                key: 'translation',
+                                label: intl.formatMessage({
+                                    id: 'settings.hotKeySettings.translation',
+                                }),
+                            },
+                            {
+                                key: 'drawingHotKey',
                                 label: intl.formatMessage({ id: 'settings.drawingHotKey' }),
                             },
                         ],
@@ -419,8 +432,16 @@ const MenuLayoutCore: React.FC<{ children: React.ReactNode }> = ({ children }) =
                         label: intl.formatMessage({ id: 'menu.settings.systemSettings' }),
                         tabs: [
                             {
+                                key: 'commonSettings',
+                                label: intl.formatMessage({ id: 'settings.commonSettings' }),
+                            },
+                            {
                                 key: 'renderSettings',
                                 label: intl.formatMessage({ id: 'settings.renderSettings' }),
+                            },
+                            {
+                                key: 'chatSettings',
+                                label: intl.formatMessage({ id: 'settings.chatSettings' }),
                             },
                         ],
                     },

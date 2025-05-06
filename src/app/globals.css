@@ -58,3 +58,53 @@ body {
     cursor: grabbing;
 }
 
+.ScrollbarsCustom .ScrollbarsCustom-Track {
+    --scrollbar-width: 3px;
+    --scrollbar-width-hover: 12px;
+    --border-radius: 1px;
+
+    background-color: unset !important;
+    width: var(--scrollbar-width-hover) !important;
+    border-radius: 1px !important;
+    height: 100% !important;
+    top: 0px !important;
+    transition: all 0.2s ease-in-out;
+    transform-origin: right;
+}
+
+.ScrollbarsCustom .ScrollbarsCustom-Track::before {
+    content: '';
+    display: block;
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: var(--scrollbar-width);
+    height: 100%;
+    transition: width 0.2s ease-in-out, border-radius 0.2s ease-in-out;
+    pointer-events: none;
+    background-color: rgba(0, 0, 0, 0.1);
+    border-radius: var(--border-radius);
+}
+
+.ScrollbarsCustom .ScrollbarsCustom-Thumb {
+    background-color: rgba(0, 0, 0, 0.4) !important;
+    width: var(--scrollbar-width) !important;
+    right: 0 !important;
+    position: absolute;
+    transition: width 0.2s ease-in-out, border-radius 0.2s ease-in-out;
+    border-radius: var(--border-radius) !important;
+}
+
+.ScrollbarsCustom .ScrollbarsCustom-Track:hover,
+.ScrollbarsCustom .ScrollbarsCustom-Track:active {
+    --scrollbar-width: var(--scrollbar-width-hover);
+    --border-radius: 8px;
+}
+
+.app-dark .ScrollbarsCustom .ScrollbarsCustom-Thumb {
+    background-color: rgba(255, 255, 255, 0.4) !important;
+}
+
+.app-dark .ScrollbarsCustom .ScrollbarsCustom-Track::before {
+    background-color: rgba(255, 255, 255, 0.1);
+}

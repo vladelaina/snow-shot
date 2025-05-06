@@ -1,17 +1,18 @@
 'use client';
 
-import { AppSettingsGroup, AppSettingsLanguage } from '@/app/contextWrap';
+import { AppSettingsActionContext, AppSettingsGroup, AppSettingsLanguage } from '@/app/contextWrap';
 import { AntdContext } from '@/app/layout';
 import { getSelectedText } from '@/commands/core';
 import { ContentWrap } from '@/components/contentWrap';
 import { KeyboardIcon } from '@/components/icons';
 import { KeyEventKey, KeyEventValue } from '@/core/hotKeys';
+import { finishScreenshot } from '@/functions/screenshot';
 import { useAppSettingsLoad } from '@/hooks/useAppSettingsLoad';
 import { useStateRef } from '@/hooks/useStateRef';
-import translate from '@/services/tools/translation';
+import { translate, TranslationDomain, TranslationType } from '@/services/tools/translation';
 import { SwapOutlined } from '@ant-design/icons';
 import { getCurrentWindow } from '@tauri-apps/api/window';
-import { Button, Dropdown, Flex, Form, Select, SelectProps, Spin, theme } from 'antd';
+import { Button, Col, Dropdown, Flex, Form, Row, Select, SelectProps, Spin, theme } from 'antd';
 import TextArea from 'antd/es/input/TextArea';
 import { debounce } from 'lodash';
 import { useSearchParams } from 'next/navigation';
@@ -164,15 +165,31 @@ export default function Translation() {
 
     const [sourceLanguage, setSourceLanguage] = useState<string>('auto');
     const [targetLanguage, setTargetLanguage] = useState<string>('zh-CHS');
+    const [translationType, setTranslationType] = useState<TranslationType>(TranslationType.Youdao);
+    const [translationDomain, setTranslationDomain] = useState<TranslationDomain>(
+        TranslationDomain.General,
+    );
+
+    const { updateAppSettings } = useContext(AppSettingsActionContext);
+    useAppSettingsLoad(
+        useCallback(
+            (settings) => {
+                setTranslationDomain(settings[AppSettingsGroup.Cache].translationDomain);
+                setTranslationType(settings[AppSettingsGroup.Cache].translationType);
+            },
+            [setTranslationType, setTranslationDomain],
+        ),
+    );
+
     const [sourceContent, setSourceContent] = useState<string>('');
     const [translatedContent, setTranslatedContent, translatedContentRef] = useStateRef<string>('');
     const [autoLanguage, setAutoLanguage] = useState<string | undefined>(undefined);
 
     const searchParams = useSearchParams();
     const searchParamsSign = searchParams.get('t');
+    const searchParamsType = searchParams.get('type');
     const prevSearchParamsSign = useRef<string | null>(null);
     const ignoreDebounce = useRef<boolean>(false);
-    const searchParamsType = searchParams.get('type');
     const updateSourceContentBySelectedText = useCallback(async () => {
         if (prevSearchParamsSign.current === searchParamsSign) {
             return;
@@ -187,6 +204,7 @@ export default function Translation() {
             const text = await getSelectedText();
             hideLoading();
 
+            finishScreenshot();
             getCurrentWindow().setFocus();
 
             if (!text) {
@@ -210,6 +228,8 @@ export default function Translation() {
             sourceContent: string;
             sourceLanguage: string;
             targetLanguage: string;
+            translationType: TranslationType;
+            translationDomain: TranslationDomain;
         }) => {
             setLoading(true);
             currentRequestSignRef.current++;
@@ -218,7 +238,8 @@ export default function Translation() {
                 content: params.sourceContent,
                 from: params.sourceLanguage,
                 to: params.targetLanguage,
-                domain: 'general',
+                domain: params.translationDomain,
+                type: params.translationType,
             });
 
             if (currentRequestSignRef.current !== requestSign) {
@@ -255,15 +276,27 @@ export default function Translation() {
                 sourceContent: sourceContent,
                 sourceLanguage: sourceLanguage,
                 targetLanguage: targetLanguage,
+                translationType,
+                translationDomain,
             });
         } else {
             requestTranslateDebounce({
                 sourceContent: sourceContent,
                 sourceLanguage: sourceLanguage,
                 targetLanguage: targetLanguage,
+                translationType,
+                translationDomain,
             });
         }
-    }, [sourceContent, sourceLanguage, targetLanguage, requestTranslateDebounce, requestTranslate]);
+    }, [
+        sourceContent,
+        sourceLanguage,
+        targetLanguage,
+        requestTranslateDebounce,
+        requestTranslate,
+        translationType,
+        translationDomain,
+    ]);
 
     useEffect(() => {
         setAutoLanguage(undefined);
@@ -317,87 +350,195 @@ export default function Translation() {
             <ContentWrap className="settings-wrap">
                 {/* 用表单处理下样式，但不用表单处理数据验证 */}
                 <Form layout="vertical">
-                    <Flex gap={8} align="center">
-                        <Form.Item
-                            style={{ flex: 1, marginBottom: token.marginXS }}
-                            label={<FormattedMessage id="tools.translation.sourceLanguage" />}
-                        >
-                            <Select
-                                value={sourceLanguage}
-                                showSearch
-                                onChange={setSourceLanguage}
-                                options={[
-                                    {
-                                        label:
-                                            intl.formatMessage({
+                    <Flex gap={0} justify="space-between">
+                        <Flex gap={0} align="center">
+                            <Form.Item
+                                style={{ marginBottom: token.marginXS }}
+                                label={<FormattedMessage id="tools.translation.sourceLanguage" />}
+                            >
+                                <Select
+                                    value={sourceLanguage}
+                                    showSearch
+                                    onChange={setSourceLanguage}
+                                    options={[
+                                        {
+                                            label:
+                                                intl.formatMessage({
+                                                    id: 'tools.translation.language.auto',
+                                                }) +
+                                                (autoLanguage
+                                                    ? ` (${languageCodeLabelMap.get(autoLanguage)})`
+                                                    : ''),
+                                            title: intl.formatMessage({
                                                 id: 'tools.translation.language.auto',
-                                            }) +
-                                            (autoLanguage
-                                                ? ` (${languageCodeLabelMap.get(autoLanguage)})`
-                                                : ''),
-                                        title: intl.formatMessage({
-                                            id: 'tools.translation.language.auto',
-                                        }),
-                                        value: 'auto',
-                                    },
-                                    ...(languageOptions ?? []),
-                                ]}
-                                filterOption={selectFilterOption}
-                            />
-                        </Form.Item>
-                        <Button
-                            type="link"
-                            disabled={
-                                (sourceLanguage === 'auto' && !autoLanguage) ||
-                                autoLanguage === targetLanguage ||
-                                sourceLanguage === targetLanguage
-                            }
-                            icon={<SwapOutlined />}
-                            style={{ marginTop: token.margin }}
-                            onClick={() => {
-                                let sourceValue = sourceLanguage;
-                                if (sourceLanguage === 'auto') {
-                                    if (!autoLanguage) {
-                                        return;
-                                    }
-                                    sourceValue = autoLanguage;
+                                            }),
+                                            value: 'auto',
+                                        },
+                                        ...(languageOptions ?? []),
+                                    ]}
+                                    variant="underlined"
+                                    dropdownStyle={{ minWidth: 200 }}
+                                    filterOption={selectFilterOption}
+                                />
+                            </Form.Item>
+                            <Button
+                                type="link"
+                                disabled={
+                                    (sourceLanguage === 'auto' && !autoLanguage) ||
+                                    autoLanguage === targetLanguage ||
+                                    sourceLanguage === targetLanguage
                                 }
+                                icon={<SwapOutlined />}
+                                style={{ marginTop: token.margin }}
+                                onClick={() => {
+                                    let sourceValue = sourceLanguage;
+                                    if (sourceLanguage === 'auto') {
+                                        if (!autoLanguage) {
+                                            return;
+                                        }
+                                        sourceValue = autoLanguage;
+                                    }
 
-                                setSourceLanguage(targetLanguage);
-                                setTargetLanguage(sourceValue);
-                            }}
-                        />
-                        <Form.Item
-                            style={{ flex: 1, marginBottom: token.marginXS }}
-                            label={<FormattedMessage id="tools.translation.targetLanguage" />}
-                        >
-                            <Select
-                                showSearch
-                                value={targetLanguage}
-                                onChange={setTargetLanguage}
-                                options={languageOptions}
-                                filterOption={selectFilterOption}
+                                    setSourceLanguage(targetLanguage);
+                                    setTargetLanguage(sourceValue);
+                                }}
                             />
-                        </Form.Item>
+                            <Form.Item
+                                style={{ marginBottom: token.marginXS }}
+                                label={<FormattedMessage id="tools.translation.targetLanguage" />}
+                            >
+                                <Select
+                                    showSearch
+                                    value={targetLanguage}
+                                    onChange={setTargetLanguage}
+                                    options={languageOptions}
+                                    filterOption={selectFilterOption}
+                                    dropdownStyle={{ minWidth: 200 }}
+                                    variant="underlined"
+                                />
+                            </Form.Item>
+                        </Flex>
+                        <Flex gap={token.margin}>
+                            <Form.Item
+                                style={{ marginBottom: token.marginXS }}
+                                label={<FormattedMessage id="tools.translation.type" />}
+                            >
+                                <Select
+                                    showSearch
+                                    value={translationType}
+                                    onChange={(value) => {
+                                        setTranslationType(value);
+                                        updateAppSettings(
+                                            AppSettingsGroup.Cache,
+                                            { translationType: value },
+                                            true,
+                                            true,
+                                            false,
+                                        );
+                                    }}
+                                    options={[
+                                        {
+                                            label: intl.formatMessage({
+                                                id: 'tools.translation.type.youdao',
+                                            }),
+                                            value: TranslationType.Youdao,
+                                        },
+                                        {
+                                            label: intl.formatMessage({
+                                                id: 'tools.translation.type.deepseek',
+                                            }),
+                                            value: TranslationType.DeepSeek,
+                                        },
+                                    ]}
+                                    filterOption={selectFilterOption}
+                                    dropdownStyle={{ minWidth: 200 }}
+                                    variant="underlined"
+                                />
+                            </Form.Item>
+                            <Form.Item
+                                style={{ marginBottom: token.marginXS }}
+                                label={<FormattedMessage id="tools.translation.domain" />}
+                            >
+                                <Select
+                                    showSearch
+                                    value={translationDomain}
+                                    onChange={(value) => {
+                                        setTranslationDomain(value);
+                                        updateAppSettings(
+                                            AppSettingsGroup.Cache,
+                                            { translationDomain: value },
+                                            true,
+                                            true,
+                                            false,
+                                        );
+                                    }}
+                                    options={[
+                                        {
+                                            label: intl.formatMessage({
+                                                id: 'tools.translation.domain.general',
+                                            }),
+                                            value: TranslationDomain.General,
+                                        },
+                                        {
+                                            label: intl.formatMessage({
+                                                id: 'tools.translation.domain.computers',
+                                            }),
+                                            value: TranslationDomain.Computers,
+                                        },
+                                        {
+                                            label: intl.formatMessage({
+                                                id: 'tools.translation.domain.medicine',
+                                            }),
+                                            value: TranslationDomain.Medicine,
+                                        },
+                                        {
+                                            label: intl.formatMessage({
+                                                id: 'tools.translation.domain.finance',
+                                            }),
+                                            value: TranslationDomain.Finance,
+                                        },
+                                        {
+                                            label: intl.formatMessage({
+                                                id: 'tools.translation.domain.game',
+                                            }),
+                                            value: TranslationDomain.Game,
+                                        },
+                                    ]}
+                                    filterOption={selectFilterOption}
+                                    dropdownStyle={{ minWidth: 200 }}
+                                    variant="underlined"
+                                />
+                            </Form.Item>
+                        </Flex>
                     </Flex>
-                    <TextArea
-                        maxLength={10000}
-                        showCount
-                        autoSize={{ minRows: 1, maxRows: 6 }}
-                        placeholder={intl.formatMessage({ id: 'tools.translation.placeholder' })}
-                        value={sourceContent}
-                        onChange={(e) => setSourceContent(e.target.value)}
-                    />
-                    <Spin spinning={loading}>
-                        <TextArea
-                            style={{ marginTop: token.marginLG }}
-                            rows={6}
-                            variant="filled"
-                            autoSize={{ minRows: 6 }}
-                            readOnly
-                            value={translatedContent}
-                        />
-                    </Spin>
+                    <Row gutter={16} style={{ marginTop: token.marginXXS }}>
+                        <Col span={12}>
+                            <TextArea
+                                rows={12}
+                                maxLength={10000}
+                                showCount
+                                autoSize={{ minRows: 12 }}
+                                placeholder={intl.formatMessage({
+                                    id: 'tools.translation.placeholder',
+                                })}
+                                value={sourceContent}
+                                style={{ flex: 1 }}
+                                onChange={(e) => setSourceContent(e.target.value)}
+                            />
+                        </Col>
+                        <Col span={12}>
+                            <Spin spinning={loading}>
+                                <TextArea
+                                    rows={12}
+                                    variant="filled"
+                                    style={{ flex: 1 }}
+                                    autoSize={{ minRows: 12 }}
+                                    readOnly
+                                    value={translatedContent}
+                                />
+                            </Spin>
+                        </Col>
+                    </Row>
                 </Form>
             </ContentWrap>
 
@@ -442,7 +583,11 @@ export default function Translation() {
                     }}
                     placement="topRight"
                 >
-                    <Button icon={<KeyboardIcon />} shape="circle" />
+                    <Button
+                        className="translation-footer-button"
+                        icon={<KeyboardIcon />}
+                        shape="circle"
+                    />
                 </Dropdown>
             </div>
 
@@ -460,8 +605,15 @@ export default function Translation() {
                     position: fixed;
                     bottom: 0;
                     right: 0;
-                    padding: ${token.padding + token.padding}px;
-                    transition: opacity ${token.motionDurationFast} ${token.motionEaseInOut};
+                    padding: ${token.padding}px;
+                }
+
+                .translation-footer :global(.translation-footer-button) {
+                    opacity: 0.42;
+                }
+
+                .translation-footer :global(.translation-footer-button:hover) {
+                    opacity: 1;
                 }
             `}</style>
         </>

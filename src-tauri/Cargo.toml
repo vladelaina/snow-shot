@@ -3,7 +3,6 @@ name = "app"
 version = "0.1.0"
 description = "A Tauri App"
 authors = ["mg-chao <chao@mgchao.top>"]
-license = "Apache-2.0"
 repository = "https://github.com/mg-chao/snow-shot"
 edition = "2024"
 rust-version = "1.85.0"
@@ -32,7 +31,6 @@ windows = { version = "0.61.1", features = [
     "UI_UIAutomation",
 ] }
 thiserror = "2.0.12"
-static_aabb2d_index = "^2.0.0"
 uiautomation = "^0.17"
 rtree_rs = "^0.1.4"
 atree = "^0.5.2"
@@ -41,6 +39,7 @@ paddle-ocr-rs = "0.3.0"
 num_cpus = "^1.16.0"
 tauri-plugin-http = "2"
 get-selected-text = "0.1.6"
+tauri-plugin-store = "2"
 
 [target.'cfg(not(any(target_os = "android", target_os = "ios")))'.dependencies]
 tauri-plugin-autostart = "2"

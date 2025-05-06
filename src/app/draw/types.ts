@@ -10,8 +10,6 @@ import { FixedImageActionType } from './components/fixedImage';
 import { ScreenshotType } from '@/functions/screenshot';
 export enum CaptureStep {
     // 选择阶段
-    Pending = 0,
-    // 选择阶段
     Select = 1,
     // 绘制阶段
     Draw = 2,

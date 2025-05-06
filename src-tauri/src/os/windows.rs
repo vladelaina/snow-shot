@@ -435,6 +435,8 @@ impl UIElements {
 
             if current_rect.min_x == previous_rect.max_x
                 || current_rect.min_y == previous_rect.max_y
+                || current_rect.min_x > previous_rect.max_x
+                || current_rect.min_y > previous_rect.max_y
             {
                 continue;
             }

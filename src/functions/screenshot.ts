@@ -11,3 +11,7 @@ export const executeScreenshot = async (type: ScreenshotType = ScreenshotType.De
         type,
     });
 };
+
+export const finishScreenshot = async () => {
+    await emit('finish-screenshot');
+};

@@ -29,12 +29,12 @@ export interface ResponseData<T> {
 }
 
 export class ServiceResponse<T> {
-    public readonly response: Response;
+    public readonly response: Response | undefined;
     public readonly code: number | undefined;
     public readonly message: string | undefined;
     public readonly data: T | undefined;
 
-    private constructor(response: Response, code?: number, message?: string, data?: T) {
+    private constructor(response: Response | undefined, code?: number, message?: string, data?: T) {
         this.response = response;
         this.code = code;
         this.message = message;
@@ -43,6 +43,10 @@ export class ServiceResponse<T> {
 
     static success<T>(response: Response, message: string, data: T): ServiceResponse<T> {
         return new ServiceResponse(response, 0, message, data);
+    }
+
+    static requestError(error: Error): ServiceResponse<undefined> {
+        return new ServiceResponse(undefined, -1, error.message, undefined);
     }
 
     static httpError(response: Response): ServiceResponse<undefined> {
@@ -58,6 +62,15 @@ export class ServiceResponse<T> {
     }
 
     public success(): T | undefined {
+        if (!this.response) {
+            try {
+                window.__APP_HANDLE_REQUEST_ERROR__?.(this);
+            } catch (error) {
+                console.error(error);
+            }
+            return undefined;
+        }
+
         if (this.response.status !== 200) {
             try {
                 window.__APP_HANDLE_HTTP_ERROR__?.(this);
@@ -89,14 +102,25 @@ export const serviceFetch = async <R>(
         headers?: Record<string, string>;
     },
 ): Promise<ServiceResponse<R | undefined>> => {
-    const response = await tauriFetch(getUrl(url, options.params), {
-        method: options.method,
-        headers: {
-            'Content-Type': 'application/json',
-            ...options.headers,
-        },
-        body: JSON.stringify(options.data),
-    });
+    let response: Response;
+    try {
+        response = await tauriFetch(getUrl(url, options.params), {
+            method: options.method,
+            headers: {
+                'Content-Type': 'application/json',
+                ...options.headers,
+            },
+            body: JSON.stringify(options.data),
+        });
+    } catch (e) {
+        if (e instanceof Error) {
+            return ServiceResponse.requestError(e);
+        } else if (typeof e === 'string') {
+            return ServiceResponse.requestError(new Error(e));
+        }
+
+        return ServiceResponse.requestError(new Error(`Unknown error: ${e}`));
+    }
 
     if (response.status !== 200) {
         return ServiceResponse.httpError(response);

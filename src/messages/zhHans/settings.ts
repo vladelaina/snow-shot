@@ -35,4 +35,10 @@ export const settings = {
     'settings.systemSettings.commonSettings.autoStart': '开机自动启动',
     'settings.hotKeySettings.translation': '翻译快捷键',
     'settings.hotKeySettings.keyEventTooltip': '{message}（{key}）',
+    'settings.chatSettings': 'Chat 设置',
+    'settings.chatSettings.maxTokens': '最大 Token 数',
+    'settings.chatSettings.maxTokens.tip': '限制一次请求中模型生成 completion 的最大 token 数',
+    'settings.chatSettings.temperature': 'Temperature',
+    'settings.chatSettings.temperature.tip':
+        '更高的值，如 0.8，会使输出更随机，而更低的值，如 0.2，会使其更加集中和确定',
 };

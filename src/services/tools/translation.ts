@@ -1,5 +1,18 @@
 import { serviceFetch } from '.';
 
+export enum TranslationType {
+    Youdao = 0,
+    DeepSeek = 1,
+}
+
+export enum TranslationDomain {
+    General = 'general',
+    Computers = 'computers',
+    Medicine = 'medicine',
+    Finance = 'finance',
+    Game = 'game',
+}
+
 export interface TranslateParams {
     /**
      * 需要翻译的内容
@@ -16,7 +29,11 @@ export interface TranslateParams {
     /**
      * 领域
      */
-    domain: string;
+    domain: TranslationDomain;
+    /**
+     * 翻译类型
+     */
+    type: TranslationType;
 }
 
 export interface TranslateData {
@@ -34,11 +51,9 @@ export interface TranslateData {
     to: string;
 }
 
-const translate = async (params: TranslateParams) => {
+export const translate = async (params: TranslateParams) => {
     return serviceFetch<TranslateData>('/api/v1/translation/translate', {
         method: 'POST',
         data: params,
     });
 };
-
-export default translate;

@@ -5,6 +5,7 @@ import { FormattedMessage } from 'react-intl';
 import { Space, Spin, Tooltip } from 'antd';
 import { ContentWrap } from '@/components/contentWrap';
 import {
+    ChatIcon,
     FixedIcon,
     OcrDetectIcon,
     ScreenshotIcon,
@@ -44,6 +45,7 @@ import { useRouter } from 'next/navigation';
 import { GroupTitle } from '@/components/groupTitle';
 import { theme } from 'antd';
 import { showWindow } from '@/utils/window';
+import { ResetSettingsButton } from '@/components/resetSettingsButton';
 
 export default function Home() {
     const { token } = theme.useToken();
@@ -101,6 +103,22 @@ export default function Home() {
                         buttonOnClick = () => {
                             showWindow();
                             router.push('/tools/translation');
+                        };
+                        break;
+                    case AppFunction.ChatSelectText:
+                        buttonTitle = <FormattedMessage id="home.chatSelectText" />;
+                        buttonIcon = <SelectTextIcon style={{ fontSize: '1em' }} />;
+                        buttonOnClick = async () => {
+                            showWindow(true);
+                            router.push(`/tools/chat?type=selectText&t=${Date.now()}`);
+                        };
+                        break;
+                    case AppFunction.Chat:
+                        buttonTitle = <FormattedMessage id="home.chat" />;
+                        buttonIcon = <ChatIcon />;
+                        buttonOnClick = () => {
+                            showWindow();
+                            router.push('/tools/chat');
                         };
                         break;
                     case AppFunction.Screenshot:
@@ -258,6 +276,22 @@ export default function Home() {
         }
     }, []);
 
+    const resetFliter = useCallback((group: AppFunctionGroup) => {
+        return (settings: Record<string, unknown>) => {
+            const newSettings: Partial<AppSettingsData[AppSettingsGroup.AppFunction]> = {};
+
+            Object.keys(settings).forEach((key) => {
+                if ((settings[key] as AppFunctionConfig).group !== group) {
+                    return;
+                }
+
+                newSettings[key as AppFunction] = settings[key] as AppFunctionConfig;
+            });
+
+            return newSettings;
+        };
+    }, []);
+
     return (
         <ContentWrap className="home-wrap">
             {Object.keys(defaultAppFunctionComponentGroupConfigs).map((group) => {
@@ -267,7 +301,21 @@ export default function Home() {
                 switch (group) {
                     case AppFunctionGroup.Screenshot:
                         groupTitle = (
-                            <GroupTitle id="screenshotFunction">
+                            <GroupTitle
+                                id="screenshotFunction"
+                                extra={
+                                    <ResetSettingsButton
+                                        title={
+                                            <FormattedMessage
+                                                id="home.screenshotFunction"
+                                                key="screenshotFunction"
+                                            />
+                                        }
+                                        appSettingsGroup={AppSettingsGroup.AppFunction}
+                                        filter={resetFliter(AppFunctionGroup.Screenshot)}
+                                    />
+                                }
+                            >
                                 <FormattedMessage
                                     id="home.screenshotFunction"
                                     key="screenshotFunction"
@@ -277,11 +325,36 @@ export default function Home() {
                         break;
                     case AppFunctionGroup.Translation:
                         groupTitle = (
-                            <GroupTitle id="translationFunction">
+                            <GroupTitle
+                                id="translationFunction"
+                                extra={
+                                    <ResetSettingsButton
+                                        title={<FormattedMessage id="home.translationFunction" />}
+                                        appSettingsGroup={AppSettingsGroup.AppFunction}
+                                        filter={resetFliter(AppFunctionGroup.Translation)}
+                                    />
+                                }
+                            >
                                 <FormattedMessage
                                     id="home.translationFunction"
                                     key="translationFunction"
                                 />
+                            </GroupTitle>
+                        );
+                        break;
+                    case AppFunctionGroup.Chat:
+                        groupTitle = (
+                            <GroupTitle
+                                id="chatFunction"
+                                extra={
+                                    <ResetSettingsButton
+                                        title={<FormattedMessage id="home.chatFunction" />}
+                                        appSettingsGroup={AppSettingsGroup.AppFunction}
+                                        filter={resetFliter(AppFunctionGroup.Chat)}
+                                    />
+                                }
+                            >
+                                <FormattedMessage id="home.chatFunction" key="chatFunction" />
                             </GroupTitle>
                         );
                         break;
@@ -322,7 +395,7 @@ export default function Home() {
                                                     maxWidth={128}
                                                     keyValue={currentShortcutKey ?? ''}
                                                     buttonProps={{
-                                                        variant: 'outlined',
+                                                        variant: 'dashed',
                                                         color: statusColor,
                                                         children: statusTip ? (
                                                             <Tooltip

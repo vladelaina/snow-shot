@@ -39,7 +39,7 @@ import { getMonitorRect } from '../../extra';
 import { CaptureStep, DrawContext } from '../../types';
 import { useStateSubscriber } from '@/hooks/useStateSubscriber';
 import { CaptureStepPublisher } from '../../extra';
-
+import { ResizeToolbar, ResizeToolbarActionType } from './components/resizeToolbar';
 export type SelectLayerActionType = BaseLayerActionType & {
     getSelectRect: () => ElementRect | undefined;
 };
@@ -50,6 +50,7 @@ export type SelectLayerProps = {
 
 const SelectLayerCore: React.FC<SelectLayerProps> = ({ actionRef }) => {
     const imageBufferRef = useRef<ImageBuffer | undefined>(undefined);
+    const resizeToolbarActionRef = useRef<ResizeToolbarActionType | undefined>(undefined);
 
     const { finishCapture, drawToolbarActionRef } = useContext(DrawContext);
     const { isEnable, addChildToTopContainer, changeCursor, layerContainerElementRef } =
@@ -202,6 +203,10 @@ const SelectLayerCore: React.FC<SelectLayerProps> = ({ actionRef }) => {
                 getAppSettings()[AppSettingsGroup.Common].darkMode,
                 imageBuffer.monitorScaleFactor,
             );
+            // 和 canvas 同步下
+            requestAnimationFrame(() => {
+                resizeToolbarActionRef.current?.updateStyle(rect);
+            });
         },
         [getAppSettings],
     );
@@ -224,7 +229,7 @@ const SelectLayerCore: React.FC<SelectLayerProps> = ({ actionRef }) => {
                     max_y: imageBuffer.monitorHeight,
                 },
                 TWEEN.Easing.Quadratic.Out,
-                1 * 100,
+                100,
                 (rect) => {
                     updateSelectRect(rect, imageBuffer, overlayRect, overlayMaskRectControls);
                 },
@@ -307,6 +312,11 @@ const SelectLayerCore: React.FC<SelectLayerProps> = ({ actionRef }) => {
         [changeCursor, getSelectRect],
     );
 
+    const setSelectRect = useCallback((rect: ElementRect, ignoreAnimation: boolean = false) => {
+        drawSelectRectAnimationRef.current?.update(rect, ignoreAnimation);
+        resizeToolbarActionRef.current?.setSize(rect.max_x - rect.min_x, rect.max_y - rect.min_y);
+    }, []);
+
     const onMouseDown = useCallback(
         (mousePosition: MousePosition) => {
             mouseDownPositionRef.current = mousePosition;
@@ -334,16 +344,13 @@ const SelectLayerCore: React.FC<SelectLayerProps> = ({ actionRef }) => {
                     }
                 }
 
-                drawSelectRectAnimationRef.current?.update(await autoSelect(mousePosition));
+                setSelectRect(await autoSelect(mousePosition));
             } else if (selectStateRef.current === SelectState.Manual) {
                 if (!mouseDownPositionRef.current) {
                     return;
                 }
 
-                drawSelectRectAnimationRef.current?.update(
-                    mouseDownPositionRef.current.toElementRect(mousePosition),
-                    true,
-                );
+                setSelectRect(mouseDownPositionRef.current.toElementRect(mousePosition), true);
             } else if (selectStateRef.current === SelectState.Selected) {
                 updateDragMode(mousePosition);
             } else if (selectStateRef.current === SelectState.Drag) {
@@ -351,7 +358,7 @@ const SelectLayerCore: React.FC<SelectLayerProps> = ({ actionRef }) => {
                     return;
                 }
 
-                drawSelectRectAnimationRef.current?.update(
+                setSelectRect(
                     dragRect(
                         dragModeRef.current!,
                         dragRectRef.current!,
@@ -362,7 +369,7 @@ const SelectLayerCore: React.FC<SelectLayerProps> = ({ actionRef }) => {
                 );
             }
         },
-        [autoSelect, setSelectState, updateDragMode],
+        [autoSelect, setSelectRect, setSelectState, updateDragMode],
     );
     const onMouseUp = useCallback(() => {
         if (!mouseDownPositionRef.current) {
@@ -375,17 +382,12 @@ const SelectLayerCore: React.FC<SelectLayerProps> = ({ actionRef }) => {
             setSelectState(SelectState.Selected);
         } else if (selectStateRef.current === SelectState.Drag) {
             setSelectState(SelectState.Selected);
-            drawSelectRectAnimationRef.current?.update(
-                limitRect(
-                    drawSelectRectAnimationRef.current.getTargetObject(),
-                    getMonitorRect(imageBufferRef.current),
-                ),
-            );
+            setSelectRect(limitRect(getSelectRect()!, getMonitorRect(imageBufferRef.current)));
             dragRectRef.current = undefined;
         }
 
         mouseDownPositionRef.current = undefined;
-    }, [setSelectState]);
+    }, [getSelectRect, setSelectRect, setSelectState]);
 
     const onMouseMoveRenderCallback = useCallbackRender(onMouseMove);
     // 用上一次的鼠标移动事件触发 onMouseMove 来更新一些状态
@@ -576,7 +578,11 @@ const SelectLayerCore: React.FC<SelectLayerProps> = ({ actionRef }) => {
         };
     }, [finishCapture, isEnable, refreshMouseMove, setSelectState]);
 
-    return <></>;
+    return (
+        <>
+            <ResizeToolbar actionRef={resizeToolbarActionRef} />
+        </>
+    );
 };
 
 export default withBaseLayer(SelectLayerCore, zIndexs.Draw_SelectLayer);

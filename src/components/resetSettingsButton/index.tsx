@@ -12,7 +12,8 @@ export const ResetSettingsButton: React.FC<{
     onReset?: () => void;
     appSettingsGroup?: AppSettingsGroup;
     title: React.ReactNode;
-}> = ({ onReset, title, appSettingsGroup }) => {
+    filter?: (groupSettings: Record<string, unknown>) => Record<string, unknown>;
+}> = ({ onReset, title, appSettingsGroup, filter }) => {
     const { updateAppSettings } = useContext(AppSettingsActionContext);
     return (
         <Popconfirm
@@ -23,7 +24,9 @@ export const ResetSettingsButton: React.FC<{
                 if (appSettingsGroup) {
                     updateAppSettings(
                         appSettingsGroup,
-                        defaultAppSettingsData[appSettingsGroup],
+                        filter
+                            ? filter(defaultAppSettingsData[appSettingsGroup])
+                            : defaultAppSettingsData[appSettingsGroup],
                         false,
                         true,
                         true,
