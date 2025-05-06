@@ -46,6 +46,7 @@ import { GroupTitle } from '@/components/groupTitle';
 import { theme } from 'antd';
 import { showWindow } from '@/utils/window';
 import { ResetSettingsButton } from '@/components/resetSettingsButton';
+import { getSelectedText } from '@/commands/core';
 
 export default function Home() {
     const { token } = theme.useToken();
@@ -93,8 +94,11 @@ export default function Home() {
                         buttonTitle = <FormattedMessage id="home.translationSelectText" />;
                         buttonIcon = <SelectTextIcon style={{ fontSize: '1em' }} />;
                         buttonOnClick = async () => {
-                            showWindow(true);
-                            router.push(`/tools/translation?type=selectText&t=${Date.now()}`);
+                            const text = (await getSelectedText()).substring(0, 10000);
+                            await showWindow();
+                            router.push(
+                                `/tools/translation?selectText=${encodeURIComponent(text)}&t=${Date.now()}`,
+                            );
                         };
                         break;
                     case AppFunction.Translation:
@@ -109,8 +113,11 @@ export default function Home() {
                         buttonTitle = <FormattedMessage id="home.chatSelectText" />;
                         buttonIcon = <SelectTextIcon style={{ fontSize: '1em' }} />;
                         buttonOnClick = async () => {
-                            showWindow(true);
-                            router.push(`/tools/chat?type=selectText&t=${Date.now()}`);
+                            const text = (await getSelectedText()).substring(0, 10000);
+                            await showWindow();
+                            router.push(
+                                `/tools/chat?selectText=${encodeURIComponent(text)}&t=${Date.now()}`,
+                            );
                         };
                         break;
                     case AppFunction.Chat:

@@ -44,9 +44,7 @@ import {
 import Markdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { useSearchParams } from 'next/navigation';
-import { getSelectedText } from '@/commands/core';
 import { finishScreenshot } from '@/functions/screenshot';
-import { getCurrentWindow } from '@tauri-apps/api/window';
 import { SenderRef } from '@ant-design/x/es/sender';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { oneLight, oneDark } from 'react-syntax-highlighter/dist/esm/styles/prism';
@@ -662,14 +660,17 @@ const Chat = () => {
         <div className="chatSend">
             {/** 输入框 */}
             <Suggestion items={[]} onSelect={(itemVal) => setInputValue(`[${itemVal}]:`)}>
-                {({ onTrigger, onKeyDown }) => (
+                {({ onKeyDown }) => (
                     <Sender
                         ref={senderRef}
                         loading={loading}
                         value={inputValue}
                         onChange={(v) => {
-                            onTrigger(v === '/');
-                            setInputValue(v);
+                            if (v.length > 10000) {
+                                setInputValue(v.substring(0, 10000));
+                            } else {
+                                setInputValue(v);
+                            }
                         }}
                         disabled={sessionStoreLoading}
                         onSubmit={async () => {
@@ -764,7 +765,7 @@ const Chat = () => {
 
     const searchParams = useSearchParams();
     const searchParamsSign = searchParams.get('t');
-    const searchParamsType = searchParams.get('type');
+    const searchParamsSelectText = searchParams.get('selectText');
     const prevSearchParamsSign = useRef<string | null>(null);
     const handleSelectedText = useCallback(async () => {
         if (prevSearchParamsSign.current === searchParamsSign) {
@@ -773,7 +774,7 @@ const Chat = () => {
 
         prevSearchParamsSign.current = searchParamsSign;
 
-        if (searchParamsType === 'selectText') {
+        if (searchParamsSelectText) {
             let newSessionPromise: Promise<void> | undefined = undefined;
             if (
                 messageHistoryRef.current &&
@@ -783,41 +784,23 @@ const Chat = () => {
                 newSessionPromise = createNewSession();
             }
 
-            const hideLoading = message.loading(
-                intl.formatMessage({ id: 'tools.translation.getSelectText.loading' }),
-            );
-            const text = await getSelectedText();
-            hideLoading();
-
             await finishScreenshot();
-            getCurrentWindow()
-                .setFocus()
-                .then(() => {
-                    senderRef.current?.focus();
-                });
-
-            if (!text) {
-                message.error(intl.formatMessage({ id: 'tools.translation.getSelectText.failed' }));
-                return;
-            }
 
             if (newSessionPromise) {
                 await newSessionPromise;
             }
-            setInputValue(text);
-        } else {
-            setTimeout(() => {
-                senderRef.current?.focus();
-            }, 128);
+            setInputValue(decodeURIComponent(searchParamsSelectText).substring(0, 10000));
         }
+
+        setTimeout(() => {
+            senderRef.current?.focus();
+        }, 64);
     }, [
-        createNewSession,
-        curSessionRef,
-        intl,
-        message,
-        messageHistoryRef,
         searchParamsSign,
-        searchParamsType,
+        searchParamsSelectText,
+        messageHistoryRef,
+        curSessionRef,
+        createNewSession,
     ]);
     useEffect(() => {
         handleSelectedText();

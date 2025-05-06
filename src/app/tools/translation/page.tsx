@@ -1,8 +1,6 @@
 'use client';
 
 import { AppSettingsActionContext, AppSettingsGroup, AppSettingsLanguage } from '@/app/contextWrap';
-import { AntdContext } from '@/app/layout';
-import { getSelectedText } from '@/commands/core';
 import { ContentWrap } from '@/components/contentWrap';
 import { KeyboardIcon } from '@/components/icons';
 import { KeyEventKey, KeyEventValue } from '@/core/hotKeys';
@@ -105,7 +103,6 @@ const selectFilterOption: SelectProps['filterOption'] = (input, option) => {
 const TranslationCore = () => {
     const intl = useIntl();
     const { token } = theme.useToken();
-    const { message } = useContext(AntdContext);
 
     const [languageOptions, languageCodeLabelMap] = useMemo(() => {
         const languageCodeLabelMap = new Map<string, string>();
@@ -200,7 +197,7 @@ const TranslationCore = () => {
 
     const searchParams = useSearchParams();
     const searchParamsSign = searchParams.get('t');
-    const searchParamsType = searchParams.get('type');
+    const searchParamsSelectText = searchParams.get('selectText');
     const prevSearchParamsSign = useRef<string | null>(null);
     const ignoreDebounce = useRef<boolean>(false);
     const updateSourceContentBySelectedText = useCallback(async () => {
@@ -210,33 +207,17 @@ const TranslationCore = () => {
 
         prevSearchParamsSign.current = searchParamsSign;
 
-        if (searchParamsType === 'selectText') {
-            const hideLoading = message.loading(
-                intl.formatMessage({ id: 'tools.translation.getSelectText.loading' }),
-            );
-            const text = await getSelectedText();
-            hideLoading();
-
+        if (searchParamsSelectText) {
             await finishScreenshot();
-            getCurrentWindow()
-                .setFocus()
-                .then(() => {
-                    sourceContentRef.current?.focus();
-                });
 
-            if (!text) {
-                message.error(intl.formatMessage({ id: 'tools.translation.getSelectText.failed' }));
-                return;
-            }
-
-            setSourceContent(text);
+            setSourceContent(decodeURIComponent(searchParamsSelectText).substring(0, 5000));
             ignoreDebounce.current = true;
-        } else {
-            setTimeout(() => {
-                sourceContentRef.current?.focus();
-            }, 128);
         }
-    }, [intl, message, searchParamsSign, searchParamsType]);
+
+        setTimeout(() => {
+            sourceContentRef.current?.focus();
+        }, 0);
+    }, [searchParamsSign, searchParamsSelectText]);
 
     useEffect(() => {
         updateSourceContentBySelectedText();
@@ -537,7 +518,7 @@ const TranslationCore = () => {
                             <TextArea
                                 ref={sourceContentRef}
                                 rows={12}
-                                maxLength={10000}
+                                maxLength={5000}
                                 showCount
                                 autoSize={{ minRows: 12 }}
                                 placeholder={intl.formatMessage({
