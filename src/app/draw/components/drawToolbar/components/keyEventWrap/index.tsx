@@ -6,8 +6,8 @@ import { useIntl } from 'react-intl';
 import { useStateSubscriber } from '@/hooks/useStateSubscriber';
 import { DrawingPublisher } from '../..';
 import {
-    defaultKeyEventComponentConfig,
-    defaultKeyEventSettings,
+    defaultDrawToolbarKeyEventComponentConfig,
+    defaultDrawToolbarKeyEventSettings,
     EnableKeyEventPublisher,
     KeyEventKey,
     KeyEventValue,
@@ -41,7 +41,7 @@ const KeyEventHandleCore: React.FC<{
             },
             {
                 message: intl.formatMessage({
-                    id: defaultKeyEventComponentConfig[componentKey].messageId,
+                    id: defaultDrawToolbarKeyEventComponentConfig[componentKey].messageId,
                 }),
                 key: keyEventValue.hotKey,
             },
@@ -103,7 +103,7 @@ const KeyEventWrapCore: React.FC<{
             (appSettings: AppSettingsData) => {
                 setKeyEventValue(
                     appSettings?.drawToolbarKeyEvent?.[componentKey] ??
-                        defaultKeyEventSettings[componentKey],
+                        defaultDrawToolbarKeyEventSettings[componentKey],
                 );
             },
             [componentKey],

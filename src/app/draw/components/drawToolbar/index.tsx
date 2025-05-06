@@ -32,6 +32,7 @@ import { HistoryControls } from './components/historyControls';
 import { ToolButton } from './components/toolButton';
 import { FormattedMessage } from 'react-intl';
 import { BlurTool } from './components/tools/blurTool';
+import { ScreenshotType } from '@/functions/screenshot';
 
 export type DrawToolbarProps = {
     actionRef: React.RefObject<DrawToolbarActionType | undefined>;
@@ -56,7 +57,7 @@ const DrawToolbarCore: React.FC<DrawToolbarProps> = ({
     onCopyToClipboard,
     onOcrDetect,
 }) => {
-    const { drawCacheLayerActionRef } = useContext(DrawContext);
+    const { drawCacheLayerActionRef, excuteScreenshotTypeRef } = useContext(DrawContext);
 
     const [getDrawState, setDrawState] = useStateSubscriber(DrawStatePublisher, undefined);
     const [, setCaptureStep] = useStateSubscriber(CaptureStepPublisher, undefined);
@@ -217,11 +218,24 @@ const DrawToolbarCore: React.FC<DrawToolbarProps> = ({
         };
     }, [drawToolbarRef, draggingRef, setDragging]);
 
-    const onEnableChange = useCallback((enable: boolean) => {
-        enableRef.current = enable;
-        dragButtonActionRef.current?.setEnable(enable);
-        drawToolarContainerRef.current!.style.pointerEvents = enable ? 'auto' : 'none';
-    }, []);
+    const onEnableChange = useCallback(
+        (enable: boolean) => {
+            enableRef.current = enable;
+            dragButtonActionRef.current?.setEnable(enable);
+            drawToolarContainerRef.current!.style.pointerEvents = enable ? 'auto' : 'none';
+
+            if (excuteScreenshotTypeRef.current) {
+                if (excuteScreenshotTypeRef.current === ScreenshotType.Fixed) {
+                    onFixed();
+                } else if (excuteScreenshotTypeRef.current === ScreenshotType.OcrDetect) {
+                    onToolClick(DrawState.OcrDetect);
+                }
+
+                excuteScreenshotTypeRef.current = undefined;
+            }
+        },
+        [excuteScreenshotTypeRef, onFixed, onToolClick],
+    );
 
     const setEnable = useCallback(
         (enable: boolean) => {

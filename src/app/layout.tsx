@@ -7,7 +7,7 @@ import { ContextWrap } from './contextWrap';
 import { MenuLayout } from './menuLayout';
 import Script from 'next/dist/client/script';
 import { App as AntdApp, message, Modal } from 'antd';
-import React from 'react';
+import React, { useEffect, useContext } from 'react';
 import { MessageInstance } from 'antd/es/message/interface';
 import { HookAPI } from 'antd/es/modal/useModal';
 
@@ -33,6 +33,22 @@ export const AntdContextWrap: React.FC<{ children: React.ReactNode }> = ({ child
     );
 };
 
+export const FetchErrorHandler: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+    const { message } = useContext(AntdContext);
+    useEffect(() => {
+        window.__APP_HANDLE_HTTP_ERROR__ = (error) => {
+            message.error(`${error.response?.status}: ${error.response?.statusText}`);
+        };
+        window.__APP_HANDLE_SERVICE_ERROR__ = (error) => {
+            message.error(`${error.code}: ${error.message}`);
+        };
+        window.__APP_HANDLE_REQUEST_ERROR__ = (error) => {
+            message.error(`${error.code}: ${error.message}`);
+        };
+    }, [message]);
+    return <>{children}</>;
+};
+
 export default function RootLayout({
     children,
 }: Readonly<{
@@ -44,6 +60,15 @@ export default function RootLayout({
                 <Script id="load-env-variables" strategy="beforeInteractive">
                     {`window["EXCALIDRAW_ASSET_PATH"] = location.origin;`}
                 </Script>
+                <Script id="markdown-it-fix" strategy="beforeInteractive">
+                    {`
+                       if (typeof window !== 'undefined' && typeof window.isSpace === 'undefined') {
+                         window.isSpace = function(code) {
+                           return code === 0x20 || code === 0x09 || code === 0x0A || code === 0x0B || code === 0x0C || code === 0x0D;
+                         };
+                       }
+                    `}
+                </Script>
             </head>
             <body>
                 <AntdApp>
@@ -51,7 +76,9 @@ export default function RootLayout({
                         <AntdRegistry>
                             <ContextWrap>
                                 <AntdContextWrap>
-                                    <MenuLayout>{children}</MenuLayout>
+                                    <FetchErrorHandler>
+                                        <MenuLayout>{children}</MenuLayout>
+                                    </FetchErrorHandler>
                                 </AntdContextWrap>
                             </ContextWrap>
                         </AntdRegistry>

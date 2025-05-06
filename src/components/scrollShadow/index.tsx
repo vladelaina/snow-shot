@@ -14,8 +14,6 @@ const ScrollShadow: React.FC<ScrollShadowProps> = ({ children, className, style 
     const [showRightShadow, setShowRightShadow] = useState(false);
 
     const checkScroll = () => {
-        console.log('checkScroll');
-
         const container = containerRef.current;
         if (!container) return;
 

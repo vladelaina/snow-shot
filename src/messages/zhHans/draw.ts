@@ -70,4 +70,5 @@ export const draw = {
     'draw.rotateWithDiscreteAnglePicker': '固定角度旋转',
     'draw.autoAlignPicker': '自动对齐',
     'draw.ocrLoading': 'OCR 识别中',
+    'draw.copySelectedText': '复制选中文本',
 };

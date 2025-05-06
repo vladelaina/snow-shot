@@ -30,9 +30,11 @@ export const zIndexs = {
     /** 截图 OCR 结果 */
     Draw_OcrResult: 205,
     /** 截图绘制子工具栏 */
-    Draw_SubToolbar: 206,
+    Draw_ResizeToolbar: 206,
+    /** 截图绘制子工具栏 */
+    Draw_SubToolbar: 207,
     /** 截图绘制工具栏 */
-    Draw_Toolbar: 207,
+    Draw_Toolbar: 208,
 
     // Draw 截图窗口 END
 };

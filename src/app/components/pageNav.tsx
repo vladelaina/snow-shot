@@ -1,20 +1,21 @@
 import { Tabs, TabsProps, theme } from 'antd';
 import { debounce } from 'lodash';
 import { useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react';
+import { RouteMapItem } from '../menuLayout';
 
 export type PageNavActionType = {
     updateActiveKey: (scrollTop: number) => void;
 };
 
 export const PageNav: React.FC<{
-    tabItems: TabsProps['items'];
+    tabItems: RouteMapItem;
     actionRef: React.RefObject<PageNavActionType | null>;
 }> = ({ tabItems, actionRef }) => {
     const { token } = theme.useToken();
-    const [activeKey, setActiveKey] = useState<string | undefined>(tabItems?.[0]?.key);
-    const tabItemsRef = useRef<TabsProps['items']>(tabItems);
+    const [activeKey, setActiveKey] = useState<string | undefined>(tabItems.items?.[0]?.key);
+    const tabItemsRef = useRef<TabsProps['items']>(tabItems.items);
     useEffect(() => {
-        tabItemsRef.current = tabItems;
+        tabItemsRef.current = tabItems.items;
     }, [tabItems]);
     const anchorTopListRef = useRef<{ key: string; offsetTop: number }[]>([]);
 
@@ -51,7 +52,7 @@ export const PageNav: React.FC<{
             return;
         }
 
-        const tabs = tabItems;
+        const tabs = tabItems.items;
         if (!tabs || tabs.length === 0) {
             return;
         }
@@ -79,10 +80,10 @@ export const PageNav: React.FC<{
     );
 
     return (
-        <div className="page-nav">
+        <div className="page-nav" style={{ display: tabItems.hideTabs ? 'none' : undefined }}>
             <Tabs
                 activeKey={activeKey}
-                items={tabItems}
+                items={tabItems.items}
                 size="small"
                 onChange={(key) => {
                     const target = document.getElementById(key);

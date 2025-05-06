@@ -16,7 +16,7 @@ type Listener = {
 };
 
 export type EventListenerContextType = {
-    addListener: (event: string, listener: () => void) => number;
+    addListener: (event: string, listener: (payload: unknown) => void) => number;
     removeListener: (id: number) => boolean;
 };
 
@@ -37,7 +37,7 @@ const EventListenerCore: React.FC<{ children: React.ReactNode }> = ({ children }
     const listenerCount = useRef<number>(0);
     const listenerMapRef = useRef<Map<number, Listener>>(new Map());
     const listenerEventMapRef = useRef<Map<string, Set<number>>>(new Map());
-    const addListener = useCallback((event: string, listener: () => void) => {
+    const addListener = useCallback((event: string, listener: (payload: unknown) => void) => {
         listenerCount.current++;
         const listenerId = listenerCount.current;
         listenerMapRef.current.set(listenerId, { event, callback: listener });

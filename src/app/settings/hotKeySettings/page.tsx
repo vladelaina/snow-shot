@@ -2,13 +2,18 @@
 
 import { AppSettingsActionContext, AppSettingsData, AppSettingsGroup } from '@/app/contextWrap';
 import {
-    defaultKeyEventComponentConfig,
-    defaultKeyEventSettings,
-    KeyEventKey,
+    defaultDrawToolbarKeyEventComponentConfig,
+    defaultDrawToolbarKeyEventSettings,
+    KeyEventKey as DrawToolbarKeyEventKey,
 } from '@/app/draw/components/drawToolbar/components/keyEventWrap/extra';
 import { GroupTitle } from '@/components/groupTitle';
 import { KeyButton } from '@/components/keyButton';
 import { ResetSettingsButton } from '@/components/resetSettingsButton';
+import {
+    defaultKeyEventComponentConfig,
+    defaultKeyEventSettings,
+    KeyEventKey,
+} from '@/core/hotKeys';
 import { useAppSettingsLoad } from '@/hooks/useAppSettingsLoad';
 import { Col, Form, Row, Spin, theme } from 'antd';
 import { useCallback, useContext, useMemo, useState } from 'react';
@@ -23,9 +28,13 @@ export default function HotKeySettings() {
 
     const [drawToolbarKeyEventForm] =
         Form.useForm<AppSettingsData[AppSettingsGroup.DrawToolbarKeyEvent]>();
+    const [keyEventForm] = Form.useForm<AppSettingsData[AppSettingsGroup.KeyEvent]>();
 
-    const [drawToolbarKeyEvent, setDrawToolbarKeyEvent] =
-        useState<AppSettingsData[AppSettingsGroup.DrawToolbarKeyEvent]>(defaultKeyEventSettings);
+    const [drawToolbarKeyEvent, setDrawToolbarKeyEvent] = useState<
+        AppSettingsData[AppSettingsGroup.DrawToolbarKeyEvent]
+    >(defaultDrawToolbarKeyEventSettings);
+    const [keyEvent, setKeyEvent] =
+        useState<AppSettingsData[AppSettingsGroup.KeyEvent]>(defaultKeyEventSettings);
     useAppSettingsLoad(
         useCallback(
             (settings: AppSettingsData, preSettings?: AppSettingsData) => {
@@ -38,6 +47,13 @@ export default function HotKeySettings() {
                 ) {
                     setDrawToolbarKeyEvent(settings[AppSettingsGroup.DrawToolbarKeyEvent]);
                 }
+
+                if (
+                    preSettings === undefined ||
+                    preSettings[AppSettingsGroup.KeyEvent] !== settings[AppSettingsGroup.KeyEvent]
+                ) {
+                    setKeyEvent(settings[AppSettingsGroup.KeyEvent]);
+                }
             },
             [setAppSettingsLoading],
         ),
@@ -45,10 +61,11 @@ export default function HotKeySettings() {
     );
 
     const drawToolbarKeyEventFormItemList = useMemo(() => {
-        return Object.keys(defaultKeyEventSettings).map((key) => {
+        return Object.keys(defaultDrawToolbarKeyEventSettings).map((key) => {
             const span = 12;
-            const config = drawToolbarKeyEvent[key as KeyEventKey];
-            const componentConfig = defaultKeyEventComponentConfig[key as KeyEventKey];
+            const config = drawToolbarKeyEvent[key as DrawToolbarKeyEventKey];
+            const componentConfig =
+                defaultDrawToolbarKeyEventComponentConfig[key as DrawToolbarKeyEventKey];
             return (
                 <Col key={`draw-toolbar-key-event_col-${key}`} span={span}>
                     <Form.Item
@@ -80,8 +97,84 @@ export default function HotKeySettings() {
             );
         });
     }, [drawToolbarKeyEvent, updateAppSettings]);
+
+    const keyEventFormItemList = useMemo(() => {
+        const groupFormItemMap: Record<string, React.ReactNode[]> = {};
+
+        Object.keys(defaultKeyEventSettings).forEach((key) => {
+            const span = 12;
+            const config = keyEvent[key as KeyEventKey];
+            const componentConfig = defaultKeyEventComponentConfig[key as KeyEventKey];
+
+            if (!groupFormItemMap[config.group]) {
+                groupFormItemMap[config.group] = [];
+            }
+
+            groupFormItemMap[config.group].push(
+                <Col key={`key-event_col-${key}`} span={span}>
+                    <Form.Item
+                        label={<FormattedMessage id={componentConfig.messageId} />}
+                        name={key}
+                    >
+                        <KeyButton
+                            title={<FormattedMessage key={key} id={componentConfig.messageId} />}
+                            keyValue={config.hotKey}
+                            maxWidth={100}
+                            onKeyChange={async (value) => {
+                                updateAppSettings(
+                                    AppSettingsGroup.KeyEvent,
+                                    {
+                                        [key]: {
+                                            ...config,
+                                            hotKey: value,
+                                        },
+                                    },
+                                    false,
+                                    true,
+                                    true,
+                                );
+                            }}
+                            maxLength={2}
+                        />
+                    </Form.Item>
+                </Col>,
+            );
+        });
+
+        return groupFormItemMap;
+    }, [keyEvent, updateAppSettings]);
+
     return (
         <div className="settings-wrap">
+            {/* 这里用 form 控制值的更新和保存的话反而很麻烦，所以 */}
+            <Form className="settings-form common-settings-form" form={keyEventForm}>
+                {Object.keys(keyEventFormItemList).map((key) => {
+                    return (
+                        <div key={key}>
+                            <GroupTitle
+                                id={key}
+                                extra={
+                                    <ResetSettingsButton
+                                        title={
+                                            <FormattedMessage
+                                                id={`settings.hotKeySettings.${key}`}
+                                                key={key}
+                                            />
+                                        }
+                                        appSettingsGroup={AppSettingsGroup.KeyEvent}
+                                    />
+                                }
+                            >
+                                <FormattedMessage id={`settings.hotKeySettings.${key}`} />
+                            </GroupTitle>
+                            <Spin spinning={appSettingsLoading}>
+                                <Row gutter={token.margin}>{keyEventFormItemList[key]}</Row>
+                            </Spin>
+                        </div>
+                    );
+                })}
+            </Form>
+
             <GroupTitle
                 id="drawingHotKey"
                 extra={
@@ -94,7 +187,6 @@ export default function HotKeySettings() {
                 <FormattedMessage id="settings.drawingHotKey" />
             </GroupTitle>
 
-            {/* 这里用 form 控制值的更新和保存的话反而很麻烦，所以 */}
             <Form className="settings-form common-settings-form" form={drawToolbarKeyEventForm}>
                 <Spin spinning={appSettingsLoading}>
                     <Row gutter={token.margin}>{drawToolbarKeyEventFormItemList}</Row>

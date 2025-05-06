@@ -3,14 +3,30 @@ import { FormattedMessage } from 'react-intl';
 
 export enum AppFunction {
     Screenshot = 'screenshot',
+    ScreenshotFixed = 'screenshotFixed',
+    ScreenshotOcr = 'screenshotOcr',
+    Chat = 'chat',
+    ChatSelectText = 'chatSelectText',
+    Translation = 'translation',
+    TranslationSelectText = 'translationSelectText',
+}
+
+export enum AppFunctionGroup {
+    Screenshot = 'screenshot',
+    Translation = 'translation',
+    Chat = 'chat',
 }
 
 export type AppFunctionConfig = {
     shortcutKey: string;
+    group: AppFunctionGroup;
 };
 
 export type AppFunctionComponentConfig = AppFunctionConfig & {
-    messageId: string;
+    configKey: AppFunction;
+    title: React.ReactNode;
+    icon?: React.ReactNode;
+    group: AppFunctionGroup;
     onClick: () => Promise<void>;
     onKeyChange: (value: string, prevValue: string) => Promise<boolean>;
 };
@@ -18,6 +34,31 @@ export type AppFunctionComponentConfig = AppFunctionConfig & {
 export const defaultAppFunctionConfigs: Record<AppFunction, AppFunctionConfig> = {
     [AppFunction.Screenshot]: {
         shortcutKey: 'F1',
+        group: AppFunctionGroup.Screenshot,
+    },
+    [AppFunction.ScreenshotFixed]: {
+        shortcutKey: 'Control+Alt+F',
+        group: AppFunctionGroup.Screenshot,
+    },
+    [AppFunction.ScreenshotOcr]: {
+        shortcutKey: 'Control+Alt+D',
+        group: AppFunctionGroup.Screenshot,
+    },
+    [AppFunction.ChatSelectText]: {
+        shortcutKey: 'F3',
+        group: AppFunctionGroup.Chat,
+    },
+    [AppFunction.Chat]: {
+        shortcutKey: 'Control+Alt+C',
+        group: AppFunctionGroup.Chat,
+    },
+    [AppFunction.TranslationSelectText]: {
+        shortcutKey: 'F4',
+        group: AppFunctionGroup.Translation,
+    },
+    [AppFunction.Translation]: {
+        shortcutKey: 'Control+Alt+T',
+        group: AppFunctionGroup.Translation,
     },
 };
 

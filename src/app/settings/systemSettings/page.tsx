@@ -9,12 +9,13 @@ import { FormattedMessage } from 'react-intl';
 import { ContentWrap } from '@/components/contentWrap';
 import { IconLabel } from '@/components/iconLable';
 import { ResetSettingsButton } from '@/components/resetSettingsButton';
-import ProForm from '@ant-design/pro-form';
+import ProForm, { ProFormSlider } from '@ant-design/pro-form';
 
 export default function SystemSettings() {
     const { updateAppSettings } = useContext(AppSettingsActionContext);
     const [commonForm] = Form.useForm<AppSettingsData[AppSettingsGroup.SystemCommon]>();
     const [renderForm] = Form.useForm<AppSettingsData[AppSettingsGroup.Render]>();
+    const [chatForm] = Form.useForm<AppSettingsData[AppSettingsGroup.SystemChat]>();
 
     const [appSettingsLoading, setAppSettingsLoading] = useState(true);
     useAppSettingsLoad(
@@ -36,8 +37,16 @@ export default function SystemSettings() {
                 ) {
                     commonForm.setFieldsValue(settings[AppSettingsGroup.SystemCommon]);
                 }
+
+                if (
+                    preSettings === undefined ||
+                    preSettings[AppSettingsGroup.SystemChat] !==
+                        settings[AppSettingsGroup.SystemChat]
+                ) {
+                    chatForm.setFieldsValue(settings[AppSettingsGroup.SystemChat]);
+                }
             },
-            [setAppSettingsLoading, renderForm, commonForm],
+            [setAppSettingsLoading, renderForm, commonForm, chatForm],
         ),
         true,
     );
@@ -59,7 +68,7 @@ export default function SystemSettings() {
                 <ProForm
                     form={commonForm}
                     onValuesChange={(_, values) => {
-                        updateAppSettings(AppSettingsGroup.SystemCommon, values, true, true, true);
+                        updateAppSettings(AppSettingsGroup.SystemCommon, values, true, true, false);
                     }}
                     submitter={false}
                 >
@@ -108,6 +117,68 @@ export default function SystemSettings() {
                     >
                         <Switch />
                     </ProForm.Item>
+                </ProForm>
+            </Spin>
+
+            <GroupTitle
+                id="chatSettings"
+                extra={
+                    <ResetSettingsButton
+                        title={<FormattedMessage id="settings.chatSettings" key="chatSettings" />}
+                        appSettingsGroup={AppSettingsGroup.SystemChat}
+                    />
+                }
+            >
+                <FormattedMessage id="settings.chatSettings" />
+            </GroupTitle>
+
+            <Spin spinning={appSettingsLoading}>
+                <ProForm
+                    form={chatForm}
+                    onValuesChange={(_, values) => {
+                        updateAppSettings(AppSettingsGroup.SystemChat, values, true, true, false);
+                    }}
+                    submitter={false}
+                >
+                    <ProFormSlider
+                        label={
+                            <IconLabel
+                                label={<FormattedMessage id="settings.chatSettings.maxTokens" />}
+                                tooltipTitle={
+                                    <FormattedMessage id="settings.chatSettings.maxTokens.tip" />
+                                }
+                            />
+                        }
+                        name="maxTokens"
+                        min={512}
+                        max={8192}
+                        step={128}
+                        marks={{
+                            512: '512',
+                            4096: '4096',
+                            8192: '8192',
+                        }}
+                    />
+
+                    <ProFormSlider
+                        label={
+                            <IconLabel
+                                label={<FormattedMessage id="settings.chatSettings.temperature" />}
+                                tooltipTitle={
+                                    <FormattedMessage id="settings.chatSettings.temperature.tip" />
+                                }
+                            />
+                        }
+                        name="temperature"
+                        min={0}
+                        max={2}
+                        step={0.1}
+                        marks={{
+                            0: '0',
+                            1: '1',
+                            2: '2',
+                        }}
+                    />
                 </ProForm>
             </Spin>
         </ContentWrap>

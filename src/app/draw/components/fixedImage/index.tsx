@@ -13,6 +13,7 @@ import { useStateRef } from '@/hooks/useStateRef';
 import { useCallbackRender } from '@/hooks/useCallbackRender';
 import { zIndexs } from '@/utils/zIndex';
 import { DrawContext } from '../../types';
+import { closeWindow } from '@/utils/window';
 
 export type FixedImageActionType = {
     init: (
@@ -157,7 +158,7 @@ export const FixedImage: React.FC<{
                     id: `${window.label}-closeTool`,
                     text: intl.formatMessage({ id: 'draw.close' }),
                     action: async () => {
-                        await getCurrentWindow().close();
+                        await closeWindow();
                     },
                 },
             ],
@@ -259,17 +260,7 @@ export const FixedImage: React.FC<{
                 />
             )}
             <div
-                style={{
-                    width: 'calc(100vw - 4px)',
-                    height: 'calc(100vh - 4px)',
-                    position: 'absolute',
-                    top: 0,
-                    left: 0,
-                    cursor: 'grab',
-                    boxSizing: 'border-box',
-                    boxShadow: `0 0 2px 2px ${token.colorBorder}`,
-                    margin: 2,
-                }}
+                className="fixed-image-container-inner"
                 onContextMenu={async (e) => {
                     e.preventDefault();
 
@@ -295,7 +286,7 @@ export const FixedImage: React.FC<{
                         backgroundColor: token.colorBgMask,
                     }}
                     onClick={() => {
-                        getCurrentWindow().close();
+                        closeWindow();
                     }}
                 />
 
@@ -326,6 +317,22 @@ export const FixedImage: React.FC<{
 
                 .fixed-image-container :global(.ant-btn.fixed-image-close-button):hover {
                     background-color: ${token.colorError} !important;
+                }
+
+                .fixed-image-container-inner {
+                    width: calc(100vw - 4px);
+                    height: calc(100vh - 4px);
+                    position: absolute;
+                    top: 0;
+                    left: 0;
+                    cursor: grab;
+                    box-sizing: border-box;
+                    box-shadow: 0 0 2px 2px ${token.colorBorder};
+                    margin: 2px;
+                }
+
+                .fixed-image-container-inner:active {
+                    cursor: grabbing;
                 }
             `}</style>
         </div>

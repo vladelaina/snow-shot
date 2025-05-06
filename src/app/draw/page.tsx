@@ -4,7 +4,7 @@ import { captureCurrentMonitor, ImageBuffer, ImageEncoder } from '@/commands';
 import { EventListenerContext } from '@/components/eventListener';
 import React, { useMemo, useState } from 'react';
 import { useCallback, useContext, useEffect, useRef } from 'react';
-import { PhysicalPosition } from '@tauri-apps/api/dpi';
+import { PhysicalPosition, PhysicalSize } from '@tauri-apps/api/dpi';
 import * as PIXI from 'pixi.js';
 import { CanvasLayer, CaptureStep, DrawContext, DrawContextType, DrawState } from './types';
 import SelectLayer, { SelectLayerActionType } from './components/selectLayer';
@@ -38,6 +38,9 @@ import {
 import { copyToClipboard, fixedToScreen, handleOcrDetect, saveToFile } from './actions';
 import { FixedImage, FixedImageActionType } from './components/fixedImage';
 import { OcrBlocks, OcrBlocksActionType } from './components/ocrBlocks';
+import { ocrInit } from '@/commands/ocr';
+import { ScreenshotType } from '@/functions/screenshot';
+import { showWindow as showCurrentWindow } from '@/utils/window';
 
 const DrawCacheLayer = dynamic(
     async () => (await import('./components/drawCacheLayer')).DrawCacheLayer,
@@ -68,6 +71,7 @@ const DrawPageCore: React.FC = () => {
     const ocrBlocksActionRef = useRef<OcrBlocksActionType | undefined>(undefined);
 
     // 状态
+    const excuteScreenshotTypeRef = useRef<ScreenshotType | undefined>(undefined);
     const mousePositionRef = useRef<MousePosition>(new MousePosition(0, 0));
     const [getCaptureStep, setCaptureStep, resetCaptureStep] = useStateSubscriber(
         CaptureStepPublisher,
@@ -165,17 +169,18 @@ const DrawPageCore: React.FC = () => {
     const showWindow = useCallback(async (imageBuffer: ImageBuffer) => {
         const appWindow = appWindowRef.current;
 
-        const { monitorX, monitorY } = imageBuffer;
+        const { monitorX, monitorY, monitorWidth, monitorHeight } = imageBuffer;
 
         await Promise.all([
             appWindow.setAlwaysOnTop(true),
             appWindow.setPosition(new PhysicalPosition(monitorX, monitorY)),
+            appWindow.setSize(new PhysicalSize(monitorWidth, monitorHeight)),
         ]);
         if (layerContainerRef.current) {
             layerContainerRef.current.style.width = `${window.screen.width}px`;
             layerContainerRef.current.style.height = `${window.screen.height}px`;
         }
-        await Promise.all([appWindow.setFullscreen(true), appWindow.show()]);
+        await showCurrentWindow();
         if (process.env.NODE_ENV === 'development') {
             await appWindow.setAlwaysOnTop(false);
         }
@@ -186,6 +191,7 @@ const DrawPageCore: React.FC = () => {
     }, []);
 
     const finishCapture = useCallback<DrawContextType['finishCapture']>(async () => {
+        window.getSelection()?.removeAllRanges();
         await Promise.all([
             drawLayerActionRef.current?.onCaptureFinish(),
             selectLayerActionRef.current?.onCaptureFinish(),
@@ -204,26 +210,30 @@ const DrawPageCore: React.FC = () => {
     }, [hideWindow, setCaptureEvent, resetCaptureStep, resetDrawState, history]);
 
     /** 执行截图 */
-    const excuteScreenshot = useCallback(async () => {
-        const layerOnExecuteScreenshotPromise = Promise.all([
-            drawLayerActionRef.current?.onExecuteScreenshot(),
-            selectLayerActionRef.current?.onExecuteScreenshot(),
-        ]);
-        setCaptureEvent({
-            event: CaptureEvent.onExecuteScreenshot,
-        });
+    const excuteScreenshot = useCallback(
+        async (excuteScreenshotType: ScreenshotType) => {
+            excuteScreenshotTypeRef.current = excuteScreenshotType;
+            const layerOnExecuteScreenshotPromise = Promise.all([
+                drawLayerActionRef.current?.onExecuteScreenshot(),
+                selectLayerActionRef.current?.onExecuteScreenshot(),
+            ]);
+            setCaptureEvent({
+                event: CaptureEvent.onExecuteScreenshot,
+            });
 
-        // 发起截图
-        const imageBuffer = await captureCurrentMonitor(ImageEncoder.WebP);
-        imageBufferRef.current = imageBuffer;
+            // 发起截图
+            const imageBuffer = await captureCurrentMonitor(ImageEncoder.WebP);
+            imageBufferRef.current = imageBuffer;
 
-        // 因为窗口是空的，所以窗口显示和图片显示先后顺序倒无所谓
-        await Promise.all([
-            showWindow(imageBuffer),
-            readyCapture(imageBuffer),
-            layerOnExecuteScreenshotPromise,
-        ]);
-    }, [readyCapture, showWindow, setCaptureEvent]);
+            // 因为窗口是空的，所以窗口显示和图片显示先后顺序倒无所谓
+            await Promise.all([
+                showWindow(imageBuffer),
+                readyCapture(imageBuffer),
+                layerOnExecuteScreenshotPromise,
+            ]);
+        },
+        [readyCapture, showWindow, setCaptureEvent],
+    );
 
     const onSave = useCallback(async () => {
         if (
@@ -293,6 +303,13 @@ const DrawPageCore: React.FC = () => {
     }, []);
 
     const onCopyToClipboard = useCallback(async () => {
+        const selected = window.getSelection();
+        if (getDrawState() === DrawState.OcrDetect && selected && selected.toString()) {
+            navigator.clipboard.writeText(selected.toString());
+            finishCapture();
+            return;
+        }
+
         if (
             !selectLayerActionRef.current ||
             !drawLayerActionRef.current ||
@@ -309,7 +326,7 @@ const DrawPageCore: React.FC = () => {
                 finishCapture();
             },
         );
-    }, [finishCapture]);
+    }, [finishCapture, getDrawState]);
 
     useEffect(() => {
         if (isFixed) {
@@ -317,17 +334,23 @@ const DrawPageCore: React.FC = () => {
         }
 
         // 监听截图命令
-        const listenerId = addListener('execute-screenshot', () => {
+        const listenerId = addListener('execute-screenshot', (args) => {
             if (capturingRef.current) {
                 return;
             }
 
-            excuteScreenshot();
+            excuteScreenshot((args as { payload: { type: ScreenshotType } }).payload.type);
         });
+
+        const finishListenerId = addListener('finish-screenshot', () => {
+            finishCapture();
+        });
+
         return () => {
             removeListener(listenerId);
+            removeListener(finishListenerId);
         };
-    }, [addListener, excuteScreenshot, removeListener, isFixed]);
+    }, [addListener, excuteScreenshot, removeListener, isFixed, finishCapture]);
 
     // 默认隐藏
     useEffect(() => {
@@ -346,6 +369,7 @@ const DrawPageCore: React.FC = () => {
             drawCacheLayerActionRef,
             ocrBlocksActionRef,
             fixedImageActionRef,
+            excuteScreenshotTypeRef,
         };
     }, [finishCapture]);
 
@@ -364,6 +388,22 @@ const DrawPageCore: React.FC = () => {
             document.removeEventListener('mousemove', handleMouseMove);
         };
     }, [isFixed]);
+
+    const ocrInitRef = useRef(false);
+    useEffect(() => {
+        if (ocrInitRef.current) {
+            return;
+        }
+
+        ocrInit();
+        ocrInitRef.current = true;
+    }, []);
+
+    useEffect(() => {
+        document.oncopy = function () {
+            return false;
+        };
+    }, []);
 
     return (
         <DrawContext.Provider value={drawContextValue}>

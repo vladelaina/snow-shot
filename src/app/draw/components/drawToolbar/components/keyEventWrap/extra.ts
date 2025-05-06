@@ -15,8 +15,8 @@ export enum KeyEventKey {
     MoveTool = 'moveTool',
     SelectTool = 'selectTool',
     RectTool = 'rectTool',
-    DiamondTool = 'diamondTool',
     EllipseTool = 'ellipseTool',
+    DiamondTool = 'diamondTool',
     ArrowTool = 'arrowTool',
     LineTool = 'lineTool',
     PenTool = 'penTool',
@@ -43,7 +43,7 @@ export enum KeyEventKey {
     AutoAlignPicker = 'autoAlignPicker',
 }
 
-export const defaultKeyEventSettings: Record<KeyEventKey, KeyEventValue> = {
+export const defaultDrawToolbarKeyEventSettings: Record<KeyEventKey, KeyEventValue> = {
     [KeyEventKey.MoveTool]: {
         hotKey: 'M',
         unique: true,
@@ -56,11 +56,11 @@ export const defaultKeyEventSettings: Record<KeyEventKey, KeyEventValue> = {
         hotKey: '1',
         unique: true,
     },
-    [KeyEventKey.EllipseTool]: {
+    [KeyEventKey.DiamondTool]: {
         hotKey: '2',
         unique: true,
     },
-    [KeyEventKey.DiamondTool]: {
+    [KeyEventKey.EllipseTool]: {
         hotKey: '3',
         unique: true,
     },
@@ -155,15 +155,17 @@ export const defaultKeyEventSettings: Record<KeyEventKey, KeyEventValue> = {
     },
 };
 
-export const keyEventSettingsKeys = Object.keys(defaultKeyEventSettings);
-export const defaultKeyEventComponentConfig: Record<KeyEventKey, KeyEventComponentValue> =
-    keyEventSettingsKeys.reduce(
-        (acc, key) => {
-            acc[key as KeyEventKey] = {
-                ...defaultKeyEventSettings[key as KeyEventKey],
-                messageId: `draw.${key}`,
-            };
-            return acc;
-        },
-        {} as Record<KeyEventKey, KeyEventComponentValue>,
-    );
+const keyEventSettingsKeys = Object.keys(defaultDrawToolbarKeyEventSettings);
+export const defaultDrawToolbarKeyEventComponentConfig: Record<
+    KeyEventKey,
+    KeyEventComponentValue
+> = keyEventSettingsKeys.reduce(
+    (acc, key) => {
+        acc[key as KeyEventKey] = {
+            ...defaultDrawToolbarKeyEventSettings[key as KeyEventKey],
+            messageId: `draw.${key}`,
+        };
+        return acc;
+    },
+    {} as Record<KeyEventKey, KeyEventComponentValue>,
+);

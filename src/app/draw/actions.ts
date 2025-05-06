@@ -8,8 +8,9 @@ import { Window as AppWindow, PhysicalPosition, PhysicalSize } from '@tauri-apps
 import { CaptureStep } from './types';
 import { FixedImageActionType } from './components/fixedImage';
 import { OcrBlocksActionType } from './components/ocrBlocks';
+import { showWindow } from '@/utils/window';
 export const generateImageFileName = () => {
-    return `SnowShot_${dayjs().format('YYYY-MM-DD_HH-mm-ss')}`;
+    return `SnowShot_${dayjs().format('yyyy-MM-dd_HH-mm-ss')}`;
 };
 
 export const getCanvas = async (
@@ -135,7 +136,7 @@ export const fixedToScreen = async (
     setCaptureStep(CaptureStep.Fixed);
     createDrawWindow();
 
-    layerContainerElement.style.opacity = '0';
+    await appWindow.hide();
     layerContainerElement.style.transform = `translate(-${selectRect.min_x / imageBuffer.monitorScaleFactor}px, -${selectRect.min_y / imageBuffer.monitorScaleFactor}px)`;
     await Promise.all([
         appWindow.setPosition(new PhysicalPosition(selectRect.min_x, selectRect.min_y)),
@@ -147,7 +148,7 @@ export const fixedToScreen = async (
         ),
         appWindow.setAlwaysOnTop(true),
     ]);
-    appWindow.setShadow(true);
+    await showWindow();
 
     layerContainerElement.style.opacity = '1';
     // 创建一个固定的图片

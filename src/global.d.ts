@@ -1,16 +1,13 @@
-// import { CanvasEvents } from 'fabric';
+/* eslint-disable @typescript-eslint/no-explicit-any */
+import { ServiceResponse } from './services/tools';
 
 export {};
 
 declare global {
-    interface Window {}
-}
-
-declare module 'fabric' {
-    interface CanvasEvents {
-        'history:updated': undefined;
-        'history:undo': undefined;
-        'history:redo': undefined;
-        'history:cleared': undefined;
+    interface Window {
+        __APP_AUTO_START_HIDE_WINDOW__: boolean;
+        __APP_HANDLE_HTTP_ERROR__: ((response: ServiceResponse<any>) => void) | undefined;
+        __APP_HANDLE_SERVICE_ERROR__: ((response: ServiceResponse<any>) => void) | undefined;
+        __APP_HANDLE_REQUEST_ERROR__: ((response: ServiceResponse<any>) => void) | undefined;
     }
 }

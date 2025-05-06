@@ -1,7 +1,7 @@
 'use client';
 
 import { GroupTitle } from '@/components/groupTitle';
-import { Divider, Form, Select, Spin, Switch } from 'antd';
+import { Col, Divider, Form, Row, Select, Spin, Switch, theme } from 'antd';
 import {
     AppSettingsActionContext,
     AppSettingsControlNode,
@@ -22,6 +22,7 @@ const { Option } = Select;
 
 export default function GeneralSettings() {
     const intl = useIntl();
+    const { token } = theme.useToken();
 
     const { updateAppSettings } = useContext(AppSettingsActionContext);
     const [commonForm] = Form.useForm<AppSettingsData[AppSettingsGroup.Common]>();
@@ -67,46 +68,52 @@ export default function GeneralSettings() {
                 <FormattedMessage id="settings.commonSettings" />
             </GroupTitle>
 
-            <Spin spinning={appSettingsLoading}>
-                <Form
-                    className="settings-form common-settings-form"
-                    form={commonForm}
-                    onValuesChange={(_, values) => {
-                        updateAppSettings(AppSettingsGroup.Common, values, true, true, true);
-                    }}
-                >
-                    <Form.Item
-                        label={
-                            <IconLabel
-                                icon={<DarkModeIcon />}
-                                label={<FormattedMessage id="settings.darkMode" />}
-                            />
-                        }
-                        name="darkMode"
-                        valuePropName="checked"
-                    >
-                        <Switch />
-                    </Form.Item>
-                    <Form.Item
-                        className="settings-wrap-language"
-                        name="language"
-                        label={
-                            <IconLabel
-                                icon={<LanguageIcon />}
-                                label={<FormattedMessage id="settings.language" />}
-                            />
-                        }
-                        required={false}
-                        rules={[{ required: true }]}
-                    >
-                        <Select>
-                            <Option value={AppSettingsLanguage.EN}>English</Option>
-                            <Option value={AppSettingsLanguage.ZHHant}>繁体中文</Option>
-                            <Option value={AppSettingsLanguage.ZHHans}>简体中文</Option>
-                        </Select>
-                    </Form.Item>
-                </Form>
-            </Spin>
+            <Form
+                className="settings-form common-settings-form"
+                form={commonForm}
+                onValuesChange={(_, values) => {
+                    updateAppSettings(AppSettingsGroup.Common, values, true, true, true);
+                }}
+            >
+                <Spin spinning={appSettingsLoading}>
+                    <Row gutter={token.margin}>
+                        <Col span={12}>
+                            <Form.Item
+                                label={
+                                    <IconLabel
+                                        icon={<DarkModeIcon />}
+                                        label={<FormattedMessage id="settings.darkMode" />}
+                                    />
+                                }
+                                name="darkMode"
+                                valuePropName="checked"
+                            >
+                                <Switch />
+                            </Form.Item>
+                        </Col>
+                        <Col span={12}>
+                            <Form.Item
+                                className="settings-wrap-language"
+                                name="language"
+                                label={
+                                    <IconLabel
+                                        icon={<LanguageIcon />}
+                                        label={<FormattedMessage id="settings.language" />}
+                                    />
+                                }
+                                required={false}
+                                rules={[{ required: true }]}
+                            >
+                                <Select>
+                                    <Option value={AppSettingsLanguage.EN}>English</Option>
+                                    <Option value={AppSettingsLanguage.ZHHant}>繁体中文</Option>
+                                    <Option value={AppSettingsLanguage.ZHHans}>简体中文</Option>
+                                </Select>
+                            </Form.Item>
+                        </Col>
+                    </Row>
+                </Spin>
+            </Form>
 
             <Divider />
 
@@ -130,35 +137,47 @@ export default function GeneralSettings() {
                 }}
             >
                 <Spin spinning={appSettingsLoading}>
-                    <Form.Item
-                        className="settings-wrap-language"
-                        name="controlNode"
-                        label={<IconLabel label={<FormattedMessage id="settings.controlNode" />} />}
-                        required={false}
-                        rules={[{ required: true }]}
-                    >
-                        <Select>
-                            <Option value={AppSettingsControlNode.Circle}>
-                                <FormattedMessage id="settings.controlNode.circle" />
-                            </Option>
-                            {/* <Option value={AppSettingsControlNode.Polyline}>
+                    <Row gutter={token.margin}>
+                        <Col span={12}>
+                            <Form.Item
+                                className="settings-wrap-language"
+                                name="controlNode"
+                                label={
+                                    <IconLabel
+                                        label={<FormattedMessage id="settings.controlNode" />}
+                                    />
+                                }
+                                required={false}
+                                rules={[{ required: true }]}
+                            >
+                                <Select>
+                                    <Option value={AppSettingsControlNode.Circle}>
+                                        <FormattedMessage id="settings.controlNode.circle" />
+                                    </Option>
+                                    {/* <Option value={AppSettingsControlNode.Polyline}>
                                 <FormattedMessage id="settings.controlNode.polyline" />
                             </Option> */}
-                        </Select>
-                    </Form.Item>
-                    <Form.Item
-                        name="findChildrenElements"
-                        label={
-                            <IconLabel
-                                label={<FormattedMessage id="settings.findChildrenElements" />}
-                            />
-                        }
-                        valuePropName="checked"
-                        required={false}
-                        rules={[{ required: true }]}
-                    >
-                        <Switch />
-                    </Form.Item>
+                                </Select>
+                            </Form.Item>
+                        </Col>
+                        <Col span={12}>
+                            <Form.Item
+                                name="findChildrenElements"
+                                label={
+                                    <IconLabel
+                                        label={
+                                            <FormattedMessage id="settings.findChildrenElements" />
+                                        }
+                                    />
+                                }
+                                valuePropName="checked"
+                                required={false}
+                                rules={[{ required: true }]}
+                            >
+                                <Switch />
+                            </Form.Item>
+                        </Col>
+                    </Row>
                 </Spin>
             </Form>
 

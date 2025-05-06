@@ -9,7 +9,13 @@ import React, {
     useRef,
     useState,
 } from 'react';
-import { AppstoreOutlined, CloseOutlined, MinusOutlined, SettingOutlined } from '@ant-design/icons';
+import {
+    AppstoreOutlined,
+    CloseOutlined,
+    MinusOutlined,
+    SettingOutlined,
+    ToolOutlined,
+} from '@ant-design/icons';
 import { Button, Layout, Menu, Space, TabsProps, theme } from 'antd';
 import { useRouter } from 'next/navigation';
 const { Content, Sider } = Layout;
@@ -33,12 +39,16 @@ import { TrayIconLoader } from './trayIcon';
 import { EventListener } from '@/components/eventListener';
 import { zhHant } from '@/messages/zhHant';
 import { en } from '@/messages/en';
-import { exitApp } from '@/commands';
 import { ItemType, MenuItemType } from 'antd/es/menu/interface';
 import { PageNav, PageNavActionType } from './components/pageNav';
 import { useStateSubscriber } from '@/hooks/useStateSubscriber';
 
 type MenuItem = ItemType<MenuItemType>;
+
+export type RouteMapItem = {
+    items: TabsProps['items'];
+    hideTabs?: boolean;
+};
 
 export const MenuLayoutContext = createContext<{
     noLayout: boolean;
@@ -55,6 +65,7 @@ type RouteItem = {
     path: string | undefined;
     label: string;
     icon?: React.ReactNode;
+    hideTabs?: boolean;
     children?: RouteItem[];
     tabs?: TabsProps['items'];
 };
@@ -141,7 +152,7 @@ const MenuSider = React.memo(MenuSiderCore);
 
 const MenuContentCore: React.FC<{
     pathname: string;
-    routeTabsMap: Record<string, TabsProps['items']>;
+    routeTabsMap: Record<string, RouteMapItem>;
     children: React.ReactNode;
 }> = ({ pathname, routeTabsMap, children }) => {
     const { token } = theme.useToken();
@@ -158,18 +169,14 @@ const MenuContentCore: React.FC<{
     const contentRef = useRef<HTMLDivElement>(null);
     return (
         <Layout>
-            <Header data-tauri-drag-region>
+            <Header data-tauri-drag-region className="app-tauri-drag-region">
                 <Space>
                     <Button
                         type="text"
                         size="small"
                         icon={<MinusOutlined />}
                         onClick={() => {
-                            if (process.env.NODE_ENV === 'development') {
-                                appWindowRef.current?.minimize();
-                            } else {
-                                appWindowRef.current?.hide();
-                            }
+                            appWindowRef.current?.minimize();
                         }}
                     />
                     <Button
@@ -177,21 +184,17 @@ const MenuContentCore: React.FC<{
                         size="small"
                         icon={<CloseOutlined />}
                         onClick={() => {
-                            if (process.env.NODE_ENV === 'development') {
-                                // appWindowRef.current?.close();
-                            } else {
-                                exitApp();
-                            }
+                            appWindowRef.current?.hide();
                         }}
                     />
                 </Space>
             </Header>
             <Content>
                 <div className="content-wrap">
-                    <div data-tauri-drag-region></div>
-                    <div data-tauri-drag-region></div>
-                    <div data-tauri-drag-region></div>
-                    <div data-tauri-drag-region></div>
+                    <div data-tauri-drag-region className="app-tauri-drag-region"></div>
+                    <div data-tauri-drag-region className="app-tauri-drag-region"></div>
+                    <div data-tauri-drag-region className="app-tauri-drag-region"></div>
+                    <div data-tauri-drag-region className="app-tauri-drag-region"></div>
                     <div className="center">
                         <PageNav tabItems={tabItems} actionRef={pageNavActionRef} />
                         <RSC
@@ -206,10 +209,10 @@ const MenuContentCore: React.FC<{
                             </div>
                         </RSC>
                     </div>
-                    <div data-tauri-drag-region></div>
-                    <div data-tauri-drag-region></div>
-                    <div data-tauri-drag-region></div>
-                    <div data-tauri-drag-region></div>
+                    <div data-tauri-drag-region className="app-tauri-drag-region"></div>
+                    <div data-tauri-drag-region className="app-tauri-drag-region"></div>
+                    <div data-tauri-drag-region className="app-tauri-drag-region"></div>
+                    <div data-tauri-drag-region className="app-tauri-drag-region"></div>
                 </div>
             </Content>
 
@@ -231,6 +234,7 @@ const MenuContentCore: React.FC<{
                     padding: ${token.padding}px ${token.borderRadiusLG}px;
                     display: flex;
                     flex-direction: column;
+                    transform: translateY(0px);
                 }
 
                 .center::-webkit-scrollbar {
@@ -240,20 +244,8 @@ const MenuContentCore: React.FC<{
                 .content-container {
                     padding: 0 ${token.padding}px;
                     width: 100%;
+                    height: 100%;
                     overflow-x: hidden;
-                }
-
-                .center > :global(.ScrollbarsCustom) :global(.ScrollbarsCustom-Track) {
-                    background-color: rgba(0, 0, 0, 0.1) !important;
-                    width: 3px !important;
-                    border-radius: 1px !important;
-                    height: 100% !important;
-                    top: 0px !important;
-                }
-                .center > :global(.ScrollbarsCustom) :global(.ScrollbarsCustom-Thumb) {
-                    background-color: rgba(0, 0, 0, 0.4) !important;
-                    width: 100% !important;
-                    border-radius: 1px !important;
                 }
             `}</style>
         </Layout>
@@ -349,8 +341,49 @@ const MenuLayoutCore: React.FC<{ children: React.ReactNode }> = ({ children }) =
                 icon: <AppstoreOutlined />,
                 tabs: [
                     {
-                        key: 'commonFunction',
-                        label: intl.formatMessage({ id: 'home.commonFunction' }),
+                        key: 'screenshotFunction',
+                        label: intl.formatMessage({ id: 'home.screenshotFunction' }),
+                    },
+                    {
+                        key: 'chatFunction',
+                        label: intl.formatMessage({ id: 'home.chatFunction' }),
+                    },
+                    {
+                        key: 'translationFunction',
+                        label: intl.formatMessage({ id: 'home.translationFunction' }),
+                    },
+                ],
+            },
+            {
+                key: '/tools',
+                path: undefined,
+                label: intl.formatMessage({ id: 'menu.tools' }),
+                icon: <ToolOutlined />,
+                tabs: [],
+                children: [
+                    {
+                        key: '/tools/chat',
+                        path: '/tools/chat',
+                        label: intl.formatMessage({ id: 'menu.tools.chat' }),
+                        hideTabs: true,
+                        tabs: [
+                            {
+                                key: 'chat',
+                                label: intl.formatMessage({ id: 'menu.tools.chat' }),
+                            },
+                        ],
+                    },
+                    {
+                        key: '/tools/translation',
+                        path: '/tools/translation',
+                        label: intl.formatMessage({ id: 'menu.tools.translation' }),
+                        hideTabs: true,
+                        tabs: [
+                            {
+                                key: 'translation',
+                                label: intl.formatMessage({ id: 'menu.tools.translation' }),
+                            },
+                        ],
                     },
                 ],
             },
@@ -382,7 +415,13 @@ const MenuLayoutCore: React.FC<{ children: React.ReactNode }> = ({ children }) =
                         label: intl.formatMessage({ id: 'menu.settings.hotKeySettings' }),
                         tabs: [
                             {
-                                key: 'drawToolbarKeyEvent',
+                                key: 'translation',
+                                label: intl.formatMessage({
+                                    id: 'settings.hotKeySettings.translation',
+                                }),
+                            },
+                            {
+                                key: 'drawingHotKey',
                                 label: intl.formatMessage({ id: 'settings.drawingHotKey' }),
                             },
                         ],
@@ -393,8 +432,16 @@ const MenuLayoutCore: React.FC<{ children: React.ReactNode }> = ({ children }) =
                         label: intl.formatMessage({ id: 'menu.settings.systemSettings' }),
                         tabs: [
                             {
+                                key: 'commonSettings',
+                                label: intl.formatMessage({ id: 'settings.commonSettings' }),
+                            },
+                            {
                                 key: 'renderSettings',
                                 label: intl.formatMessage({ id: 'settings.renderSettings' }),
+                            },
+                            {
+                                key: 'chatSettings',
+                                label: intl.formatMessage({ id: 'settings.chatSettings' }),
                             },
                         ],
                     },
@@ -405,7 +452,7 @@ const MenuLayoutCore: React.FC<{ children: React.ReactNode }> = ({ children }) =
         return routes;
     }, [intl]);
     const { menuItems, routeTabsMap } = useMemo(() => {
-        const routeTabsMap: Record<string, TabsProps['items']> = {};
+        const routeTabsMap: Record<string, RouteMapItem> = {};
 
         const convertToMenuItem = (route: RouteItem): MenuItem => {
             const menuItem: MenuItem = {
@@ -417,7 +464,7 @@ const MenuLayoutCore: React.FC<{ children: React.ReactNode }> = ({ children }) =
                         return;
                     }
 
-                    router.push(route.path);
+                    router.push(route.path!);
                 },
                 children: undefined as unknown as MenuItem[],
             };
@@ -426,8 +473,11 @@ const MenuLayoutCore: React.FC<{ children: React.ReactNode }> = ({ children }) =
                 menuItem.children = route.children.map((child) => convertToMenuItem(child));
             }
 
-            if (route.path && route.tabs?.length) {
-                routeTabsMap[route.path] = route.tabs;
+            if (route.path && route.tabs?.length !== undefined) {
+                routeTabsMap[route.path] = {
+                    items: route.tabs,
+                    hideTabs: route.hideTabs,
+                };
             }
 
             return menuItem;
