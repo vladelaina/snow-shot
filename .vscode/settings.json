@@ -2,4 +2,5 @@
     "files.exclude": {
         "**/src-tauri": true,
     },
+    "typescript.tsdk": "node_modules\\typescript\\lib",
 }

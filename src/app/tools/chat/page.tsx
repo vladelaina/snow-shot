@@ -314,21 +314,26 @@ const Copilot = () => {
                         content: originMessage.content,
                         response_error: false,
                     },
-                    role: originMessage.role,
+                    role: originMessage.role as ChatMessage['role'],
                 };
             }
 
-            const messageContent = originMessage?.content ?? {
+            const messageContent = (originMessage?.content ?? {
                 reasoning_content: '',
                 content: '',
                 response_error: false,
-            };
+            }) as ChatMessage['content'];
+            if (typeof messageContent === 'string') {
+                throw new Error('messageContent is string');
+            }
+
             try {
                 if (chunk?.data && !chunk?.data.includes('DONE')) {
                     const message = JSON.parse(chunk?.data);
 
                     if (message?.choices?.[0].delta?.reasoning_content) {
-                        messageContent.reasoning_content +=
+                        messageContent.reasoning_content =
+                            messageContent.reasoning_content +
                             message?.choices?.[0].delta?.reasoning_content;
                     } else {
                         messageContent.content += message?.choices?.[0].delta?.content ?? '';
@@ -503,19 +508,21 @@ const Copilot = () => {
             },
         };
         const list = messages.map((i): BubbleDataType => {
+            const itemMessage = i.message as ChatMessage;
+
             const content =
-                typeof i.message.content === 'string'
-                    ? i.message.content
+                typeof itemMessage.content === 'string'
+                    ? itemMessage.content
                     : `${
-                          i.message.content.reasoning_content
-                              ? `${i.message.content.reasoning_content
+                          itemMessage.content.reasoning_content
+                              ? `${itemMessage.content.reasoning_content
                                     .split('\n')
                                     .map((line) => {
                                         return `> ${line}`;
                                     })
                                     .join('\n')}\n\n`
                               : ''
-                      }${i.message.content.content}`;
+                      }${itemMessage.content.content}`;
 
             return {
                 role: i.message.role,
