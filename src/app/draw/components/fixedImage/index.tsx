@@ -213,6 +213,7 @@ export const FixedImage: React.FC<{
             }
 
             setScale(targetScale);
+            ocrBlocksActionRef.current?.setScale(targetScale);
             showScaleInfoTemporary();
 
             window.setSize(
@@ -222,7 +223,7 @@ export const FixedImage: React.FC<{
                 ),
             );
         },
-        [scaleRef, setScale, styleRef, showScaleInfoTemporary],
+        [styleRef, scaleRef, setScale, ocrBlocksActionRef, showScaleInfoTemporary],
     );
     const scaleWindowRender = useCallbackRender(scaleWindow);
 

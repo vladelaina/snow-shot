@@ -401,9 +401,13 @@ const DrawPageCore: React.FC = () => {
 
     useEffect(() => {
         document.oncopy = function () {
+            if (getCaptureStep() === CaptureStep.Fixed) {
+                return true;
+            }
+
             return false;
         };
-    }, []);
+    }, [getCaptureStep, onCopyToClipboard]);
 
     return (
         <DrawContext.Provider value={drawContextValue}>

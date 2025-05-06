@@ -26,6 +26,7 @@ export type OcrBlocksActionType = {
         canvas: HTMLCanvasElement,
     ) => Promise<void>;
     setEnable: (enable: boolean | ((enable: boolean) => boolean)) => void;
+    setScale: (scale: number) => void;
 };
 
 export const OcrBlocks: React.FC<{
@@ -38,6 +39,7 @@ export const OcrBlocks: React.FC<{
     const { fixedImageActionRef } = useContext(DrawContext);
 
     const containerElementRef = useRef<HTMLDivElement>(null);
+    const textContainerElementRef = useRef<HTMLDivElement>(null);
 
     const enableRef = useRef<boolean>(false);
     const setEnable = useCallback((enable: boolean | ((enable: boolean) => boolean)) => {
@@ -66,8 +68,8 @@ export const OcrBlocks: React.FC<{
             (drawState: DrawState) => {
                 setEnable(drawState === DrawState.OcrDetect);
 
-                if (containerElementRef.current) {
-                    containerElementRef.current.innerHTML = '';
+                if (textContainerElementRef.current) {
+                    textContainerElementRef.current.innerHTML = '';
                 }
             },
             [setEnable],
@@ -81,6 +83,14 @@ export const OcrBlocks: React.FC<{
 
             const baseX = selectRect.min_x * transformScale;
             const baseY = selectRect.min_y * transformScale;
+
+            const textContainerElement = textContainerElementRef.current;
+            if (!textContainerElement) {
+                return;
+            }
+
+            textContainerElement.style.left = `${baseX}px`;
+            textContainerElement.style.top = `${baseY}px`;
 
             ocrResult.text_blocks.map((block) => {
                 if (isNaN(block.text_score) || block.text_score < 0.3) {
@@ -145,19 +155,26 @@ export const OcrBlocks: React.FC<{
                     .toString();
 
                 textWrapElement.appendChild(textElement);
-                containerElementRef.current?.appendChild(textWrapElement);
+                textContainerElement.appendChild(textWrapElement);
 
                 setTimeout(() => {
                     const textWidth = textElement.getBoundingClientRect().width;
                     const textHeight = textElement.getBoundingClientRect().height;
                     const scale = Math.min(height / textHeight, width / textWidth);
                     textElement.style.transform = `scale(${scale})`;
-                    textWrapElement.style.transform = `translate(${centerX - width * 0.5 + baseX}px, ${centerY - height * 0.5 + baseY}px) rotate(${rotationDeg}deg)`;
+                    textWrapElement.style.transform = `translate(${centerX - width * 0.5}px, ${centerY - height * 0.5}px) rotate(${rotationDeg}deg)`;
                 }, 0);
             });
         },
         [token.colorBgContainer, token.colorText],
     );
+    const setScale = useCallback((scale: number) => {
+        if (!textContainerElementRef.current) {
+            return;
+        }
+
+        textContainerElementRef.current.style.transform = `scale(${scale / 100})`;
+    }, []);
 
     useImperativeHandle(
         actionRef,
@@ -181,8 +198,9 @@ export const OcrBlocks: React.FC<{
                 hideLoading();
             },
             setEnable,
+            setScale,
         }),
-        [message, setEnable, updateOcrTextElements],
+        [message, setEnable, setScale, updateOcrTextElements],
     );
 
     const menuRef = useRef<Menu>(undefined);
@@ -259,7 +277,17 @@ export const OcrBlocks: React.FC<{
                     );
                 }}
                 ref={containerElementRef}
-            />
+            >
+                <div
+                    ref={textContainerElementRef}
+                    style={{
+                        transformOrigin: 'top left',
+                        position: 'absolute',
+                        top: 0,
+                        left: 0,
+                    }}
+                />
+            </div>
         </>
     );
 };

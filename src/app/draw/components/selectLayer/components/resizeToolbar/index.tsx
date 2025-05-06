@@ -52,18 +52,22 @@ export const ResizeToolbar: React.FC<{
         [imageBufferRef, token.marginXXS],
     );
 
-    const setEnable = useCallback((enable: boolean) => {
-        const resizeToolbar = resizeToolbarRef.current;
-        if (!resizeToolbar) {
-            return;
-        }
+    const setEnable = useCallback(
+        (enable: boolean) => {
+            const resizeToolbar = resizeToolbarRef.current;
+            if (!resizeToolbar) {
+                return;
+            }
 
-        if (enable) {
-            resizeToolbar.style.opacity = '1';
-        } else {
-            resizeToolbar.style.opacity = '0';
-        }
-    }, []);
+            if (enable) {
+                resizeToolbar.style.opacity = '1';
+                updateStyle({ min_x: 0, min_y: 0, max_x: 0, max_y: 0 });
+            } else {
+                resizeToolbar.style.opacity = '0';
+            }
+        },
+        [updateStyle],
+    );
 
     useStateSubscriber(CaptureEventPublisher, (event) => {
         if (!event) {
