@@ -181,4 +181,9 @@ export const zhHant = {
     'tools.translation.domain.medicine': '醫學領域',
     'tools.translation.domain.finance': '金融領域',
     'tools.translation.domain.game': '遊戲領域',
+    'settings.systemSettings.networkSettings': '網路設定',
+    'settings.systemSettings.networkSettings.proxy': '系統代理',
+    'settings.chatSettings.thinkingBudgetTokens': '思考預算 Token 數',
+    'settings.chatSettings.thinkingBudgetTokens.tip':
+        '對於如 Claude 模型的推理模式，思考預算決定其內部推理過程的最大 Token 數。注意，思考預算 Token 數不能小於"最大 Token 數"，所以如果該值有效，"最大 Token 數字"可能由伺服器決定',
 };

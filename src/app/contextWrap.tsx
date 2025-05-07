@@ -24,6 +24,7 @@ import React from 'react';
 import * as appAutostart from '@tauri-apps/plugin-autostart';
 import { defaultKeyEventSettings, KeyEventKey, KeyEventValue } from '@/core/hotKeys';
 import { TranslationDomain, TranslationType } from '@/services/tools/translation';
+import { setEnableProxy } from '@/commands/core';
 
 export enum AppSettingsGroup {
     Common = 'common',
@@ -35,6 +36,7 @@ export enum AppSettingsGroup {
     Render = 'render',
     SystemCommon = 'systemCommon',
     SystemChat = 'systemChat',
+    SystemNetwork = 'systemNetwork',
 }
 
 export enum AppSettingsLanguage {
@@ -82,6 +84,10 @@ export type AppSettingsData = {
     [AppSettingsGroup.SystemChat]: {
         maxTokens: number;
         temperature: number;
+        thinkingBudgetTokens: number;
+    };
+    [AppSettingsGroup.SystemNetwork]: {
+        enableProxy: boolean;
     };
 };
 
@@ -113,6 +119,10 @@ export const defaultAppSettingsData: AppSettingsData = {
     [AppSettingsGroup.SystemChat]: {
         maxTokens: 4096,
         temperature: 1,
+        thinkingBudgetTokens: 4096,
+    },
+    [AppSettingsGroup.SystemNetwork]: {
+        enableProxy: false,
     },
 };
 
@@ -481,14 +491,17 @@ const ContextWrapCore: React.FC<{ children: React.ReactNode }> = ({ children }) 
                             : (prevSettings?.autoStart ?? defaultAppSettingsData[group].autoStart),
                 };
 
-                if (saveToFile) {
+                if (process.env.NODE_ENV === 'development') {
+                }
+
+                if (saveToFile && process.env.NODE_ENV !== 'development') {
                     (async () => {
-                        if (settings.autoStart !== (await appAutostart.isEnabled())) {
-                            if (settings.autoStart) {
-                                await appAutostart.enable();
-                            } else {
-                                await appAutostart.disable();
-                            }
+                        // 每次启动都重新注册一下
+                        await appAutostart.enable();
+                        if (settings.autoStart) {
+                            // await appAutostart.enable();
+                        } else {
+                            await appAutostart.disable();
                         }
                     })();
                 }
@@ -508,7 +521,29 @@ const ContextWrapCore: React.FC<{ children: React.ReactNode }> = ({ children }) 
                             ? Math.min(Math.max(newSettings.temperature, 0), 2)
                             : (prevSettings?.temperature ??
                               defaultAppSettingsData[group].temperature),
+                    thinkingBudgetTokens:
+                        typeof newSettings?.thinkingBudgetTokens === 'number'
+                            ? Math.min(Math.max(newSettings.thinkingBudgetTokens, 1024), 8192)
+                            : (prevSettings?.thinkingBudgetTokens ??
+                              defaultAppSettingsData[group].thinkingBudgetTokens),
                 };
+            } else if (group === AppSettingsGroup.SystemNetwork) {
+                newSettings = newSettings as AppSettingsData[typeof group];
+                const prevSettings = appSettingsRef.current[group] as
+                    | AppSettingsData[typeof group]
+                    | undefined;
+
+                settings = {
+                    enableProxy:
+                        typeof newSettings?.enableProxy === 'boolean'
+                            ? newSettings.enableProxy
+                            : (prevSettings?.enableProxy ??
+                              defaultAppSettingsData[group].enableProxy),
+                };
+
+                if (saveToFile) {
+                    setEnableProxy(settings.enableProxy);
+                }
             } else {
                 return defaultAppSettingsData[group];
             }

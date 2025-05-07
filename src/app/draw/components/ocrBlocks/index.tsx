@@ -92,6 +92,8 @@ export const OcrBlocks: React.FC<{
             textContainerElement.style.left = `${baseX}px`;
             textContainerElement.style.top = `${baseY}px`;
 
+            textContainerElement.innerHTML = '';
+
             ocrResult.text_blocks.map((block) => {
                 if (isNaN(block.text_score) || block.text_score < 0.3) {
                     return null;

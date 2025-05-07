@@ -32,8 +32,7 @@ import React, {
 } from 'react';
 import { FormattedMessage, useIntl } from 'react-intl';
 import RSC, { Scrollbar } from 'react-scrollbars-custom';
-import { fetch as tauriFetch } from '@tauri-apps/plugin-http';
-import { getUrl, ServiceResponse } from '@/services/tools';
+import { appFetch, getUrl, ServiceResponse } from '@/services/tools';
 import { ChatModel, getChatModels } from '@/services/tools/chat';
 import {
     AppSettingsActionContext,
@@ -109,7 +108,7 @@ const MarkdownContent: React.FC<{
 
 const modelRequest = XRequest({
     baseURL: getUrl('/api/v1/chat/chat/completions'),
-    fetch: tauriFetch,
+    fetch: appFetch,
 });
 
 type ChatMessage = {
@@ -261,6 +260,8 @@ const Chat = () => {
                             model: selectedModelRef.current,
                             temperature: getAppSettings()[AppSettingsGroup.SystemChat].temperature,
                             max_tokens: getAppSettings()[AppSettingsGroup.SystemChat].maxTokens,
+                            thinking_budget_tokens:
+                                getAppSettings()[AppSettingsGroup.SystemChat].thinkingBudgetTokens,
                             stream: true,
                         },
                         callbacks,
@@ -273,7 +274,8 @@ const Chat = () => {
 
     const { messages, onRequest, setMessages } = useXChat({
         agent,
-        requestFallback: (_, { error }): ChatMessage => {
+        requestFallback: (...params): ChatMessage => {
+            const [, { error }] = params;
             if (error.name === 'AbortError') {
                 return {
                     content: {
@@ -287,7 +289,7 @@ const Chat = () => {
             return {
                 content: {
                     reasoning_content: '',
-                    content: intl.formatMessage({ id: 'tools.chat.requestFailed' }),
+                    content: `${intl.formatMessage({ id: 'tools.chat.requestFailed' })}: ${error.message}`,
                     response_error: true,
                 },
                 role: 'assistant',
@@ -337,12 +339,27 @@ const Chat = () => {
                 if (chunk?.data && !chunk?.data.includes('DONE')) {
                     const message = JSON.parse(chunk?.data);
 
-                    if (message?.choices?.[0].delta?.reasoning_content) {
-                        messageContent.reasoning_content =
-                            messageContent.reasoning_content +
-                            message?.choices?.[0].delta?.reasoning_content;
+                    if (
+                        'type' in message &&
+                        message.type === 'content_block_delta' &&
+                        'delta' in message
+                    ) {
+                        // Claude 格式的响应
+                        if (message.delta.type === 'text_delta') {
+                            messageContent.content += message.delta.text ?? '';
+                        } else if (message.delta.type === 'thinking_delta') {
+                            messageContent.reasoning_content += message.delta.thinking ?? '';
+                        }
                     } else {
-                        messageContent.content += message?.choices?.[0].delta?.content ?? '';
+                        // OpenAI 格式的响应
+
+                        if (message?.choices?.[0].delta?.reasoning_content) {
+                            messageContent.reasoning_content =
+                                messageContent.reasoning_content +
+                                message?.choices?.[0].delta?.reasoning_content;
+                        } else {
+                            messageContent.content += message?.choices?.[0].delta?.content ?? '';
+                        }
                     }
                 }
             } catch (error) {
@@ -895,7 +912,7 @@ const Chat = () => {
                     opacity: 1;
                 }
 
-                :global(.ant-bubble-content .ant-typography > div > p):first-child {
+                :global(.ant-bubble-content .ant-typography > p):first-child {
                     margin-top: ${token.marginXXS}px;
                 }
             `}</style>
