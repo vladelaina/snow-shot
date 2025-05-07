@@ -66,6 +66,7 @@ pub fn run() {
             ocr::ocr_release,
             core::auto_start_hide_window,
             core::get_selected_text,
+            core::set_enable_proxy,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

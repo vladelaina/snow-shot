@@ -183,4 +183,9 @@ export const en = {
     'tools.translation.domain.medicine': 'Medicine',
     'tools.translation.domain.finance': 'Finance',
     'tools.translation.domain.game': 'Gaming',
+    'settings.systemSettings.networkSettings': 'Network Settings',
+    'settings.systemSettings.networkSettings.proxy': 'System Proxy',
+    'settings.chatSettings.thinkingBudgetTokens': 'Thinking Budget Tokens',
+    'settings.chatSettings.thinkingBudgetTokens.tip':
+        'For reasoning modes like Claude models, the thinking budget determines the maximum number of tokens for their internal reasoning process. Note: The thinking budget tokens cannot be less than "Max Tokens", therefore if this value is effective, the "Max Tokens" may be determined by the server',
 };

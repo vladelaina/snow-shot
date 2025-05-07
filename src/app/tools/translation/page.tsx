@@ -430,6 +430,7 @@ const TranslationCore = () => {
                                     value={translationType}
                                     onChange={(value) => {
                                         setTranslationType(value);
+                                        setAutoLanguage(undefined);
                                         updateAppSettings(
                                             AppSettingsGroup.Cache,
                                             { translationType: value },

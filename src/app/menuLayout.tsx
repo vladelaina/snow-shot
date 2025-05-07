@@ -119,6 +119,9 @@ const MenuSiderCore: React.FC<{
                 selectedKeys={[pathname]}
                 mode="inline"
                 items={menuItems}
+                defaultOpenKeys={menuItems
+                    .map((item) => item?.key as string)
+                    .filter((key) => !!key)}
             />
             <style jsx>{`
                 .logo-wrap {
@@ -438,6 +441,12 @@ const MenuLayoutCore: React.FC<{ children: React.ReactNode }> = ({ children }) =
                             {
                                 key: 'renderSettings',
                                 label: intl.formatMessage({ id: 'settings.renderSettings' }),
+                            },
+                            {
+                                key: 'networkSettings',
+                                label: intl.formatMessage({
+                                    id: 'settings.systemSettings.networkSettings',
+                                }),
                             },
                             {
                                 key: 'chatSettings',

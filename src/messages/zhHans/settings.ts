@@ -41,4 +41,9 @@ export const settings = {
     'settings.chatSettings.temperature': 'Temperature',
     'settings.chatSettings.temperature.tip':
         '更高的值，如 0.8，会使输出更随机，而更低的值，如 0.2，会使其更加集中和确定',
+    'settings.systemSettings.networkSettings': '网络设置',
+    'settings.systemSettings.networkSettings.proxy': '系统代理',
+    'settings.chatSettings.thinkingBudgetTokens': '思考预算 Token 数',
+    'settings.chatSettings.thinkingBudgetTokens.tip':
+        '对于如 Claude 模型的推理模式，思考预算决定其内部推理过程的最大 Token 数。注意，思考预算 Token 数不能小于\"最大 Token 数\"，所以如果该值有效，\"最大 Token 数\"可能由服务器决定',
 };

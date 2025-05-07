@@ -16,6 +16,7 @@ export default function SystemSettings() {
     const [commonForm] = Form.useForm<AppSettingsData[AppSettingsGroup.SystemCommon]>();
     const [renderForm] = Form.useForm<AppSettingsData[AppSettingsGroup.Render]>();
     const [chatForm] = Form.useForm<AppSettingsData[AppSettingsGroup.SystemChat]>();
+    const [networkForm] = Form.useForm<AppSettingsData[AppSettingsGroup.SystemNetwork]>();
 
     const [appSettingsLoading, setAppSettingsLoading] = useState(true);
     useAppSettingsLoad(
@@ -45,8 +46,16 @@ export default function SystemSettings() {
                 ) {
                     chatForm.setFieldsValue(settings[AppSettingsGroup.SystemChat]);
                 }
+
+                if (
+                    preSettings === undefined ||
+                    preSettings[AppSettingsGroup.SystemNetwork] !==
+                        settings[AppSettingsGroup.SystemNetwork]
+                ) {
+                    networkForm.setFieldsValue(settings[AppSettingsGroup.SystemNetwork]);
+                }
             },
-            [setAppSettingsLoading, renderForm, commonForm, chatForm],
+            [renderForm, commonForm, chatForm, networkForm],
         ),
         true,
     );
@@ -121,6 +130,42 @@ export default function SystemSettings() {
             </Spin>
 
             <GroupTitle
+                id="networkSettings"
+                extra={
+                    <ResetSettingsButton
+                        title={<FormattedMessage id="settings.systemSettings.networkSettings" />}
+                        appSettingsGroup={AppSettingsGroup.SystemNetwork}
+                    />
+                }
+            >
+                <FormattedMessage id="settings.systemSettings.networkSettings" />
+            </GroupTitle>
+
+            <Spin spinning={appSettingsLoading}>
+                <ProForm
+                    form={networkForm}
+                    onValuesChange={(_, values) => {
+                        updateAppSettings(AppSettingsGroup.SystemNetwork, values, true, true, true);
+                    }}
+                    submitter={false}
+                >
+                    <ProForm.Item
+                        label={
+                            <IconLabel
+                                label={
+                                    <FormattedMessage id="settings.systemSettings.networkSettings.proxy" />
+                                }
+                            />
+                        }
+                        name="enableProxy"
+                        valuePropName="checked"
+                    >
+                        <Switch />
+                    </ProForm.Item>
+                </ProForm>
+            </Spin>
+
+            <GroupTitle
                 id="chatSettings"
                 extra={
                     <ResetSettingsButton
@@ -177,6 +222,28 @@ export default function SystemSettings() {
                             0: '0',
                             1: '1',
                             2: '2',
+                        }}
+                    />
+
+                    <ProFormSlider
+                        label={
+                            <IconLabel
+                                label={
+                                    <FormattedMessage id="settings.chatSettings.thinkingBudgetTokens" />
+                                }
+                                tooltipTitle={
+                                    <FormattedMessage id="settings.chatSettings.thinkingBudgetTokens.tip" />
+                                }
+                            />
+                        }
+                        name="thinkingBudgetTokens"
+                        min={1024}
+                        max={8192}
+                        step={128}
+                        marks={{
+                            1024: '1024',
+                            4096: '4096',
+                            8192: '8192',
                         }}
                     />
                 </ProForm>

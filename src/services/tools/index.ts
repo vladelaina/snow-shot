@@ -135,3 +135,27 @@ export const serviceFetch = async <R>(
 
     return ServiceResponse.success(response, data.message, data.data);
 };
+
+export const appFetch = (async (...params: Parameters<typeof tauriFetch>) => {
+    const response = await tauriFetch(...params);
+
+    try {
+        if (response.status !== 200) {
+            const data = (await response.json()) as {
+                error: {
+                    message: string;
+                };
+            };
+
+            if ('error' in data && typeof data.error === 'object') {
+                ServiceResponse.serviceError(
+                    { status: 200, statusText: response.statusText } as Response,
+                    response.status,
+                    data.error.message ? data.error.message : response.statusText,
+                ).success();
+            }
+        }
+    } catch {}
+
+    return response;
+}) as typeof tauriFetch;
