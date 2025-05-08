@@ -1,6 +1,7 @@
 import { BubbleDataType } from '@ant-design/x/es/bubble/BubbleList';
 import { Conversation } from '@ant-design/x/es/conversations';
 import { MessageInfo } from '@ant-design/x/es/use-x-chat';
+import { AppState } from '@mg-chao/excalidraw/types';
 import { load, Store } from '@tauri-apps/plugin-store';
 
 class BaseStore<Value> {
@@ -56,5 +57,13 @@ export class ChatHistoryStore extends BaseStore<{
 }> {
     constructor() {
         super('chat-history', 1000);
+    }
+}
+
+export class ExcalidrawAppStateStore extends BaseStore<{
+    appState: Partial<AppState>;
+}> {
+    constructor() {
+        super('excalidraw-app-state', 0);
     }
 }

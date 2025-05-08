@@ -68,6 +68,7 @@ export type AppSettingsData = {
         chatModel: string;
         translationType: TranslationType;
         translationDomain: TranslationDomain;
+        targetLanguage: string;
     };
     [AppSettingsGroup.DrawToolbarKeyEvent]: Record<
         DrawToolbarKeyEventKey,
@@ -106,6 +107,7 @@ export const defaultAppSettingsData: AppSettingsData = {
         chatModel: 'deepseek-reasoner',
         translationType: TranslationType.Youdao,
         translationDomain: TranslationDomain.General,
+        targetLanguage: '',
     },
     [AppSettingsGroup.DrawToolbarKeyEvent]: defaultDrawToolbarKeyEventSettings,
     [AppSettingsGroup.KeyEvent]: defaultKeyEventSettings,
@@ -280,6 +282,10 @@ const ContextWrapCore: React.FC<{ children: React.ReactNode }> = ({ children }) 
                             ? newSettings.browserLanguage
                             : (prevSettings?.browserLanguage ?? ''),
                 };
+
+                window.__APP_ACCEPT_LANGUAGE__ = settings.language.startsWith('en')
+                    ? 'en-US'
+                    : 'zh-CN';
             } else if (group === AppSettingsGroup.Cache) {
                 newSettings = newSettings as AppSettingsData[typeof group];
                 const prevSettings = appSettingsRef.current[group] as
@@ -302,6 +308,10 @@ const ContextWrapCore: React.FC<{ children: React.ReactNode }> = ({ children }) 
                         typeof newSettings?.translationDomain === 'string'
                             ? newSettings.translationDomain
                             : (prevSettings?.translationDomain ?? TranslationDomain.General),
+                    targetLanguage:
+                        typeof newSettings?.targetLanguage === 'string'
+                            ? newSettings.targetLanguage
+                            : (prevSettings?.targetLanguage ?? ''),
                 };
             } else if (group === AppSettingsGroup.Screenshot) {
                 newSettings = newSettings as AppSettingsData[typeof group];

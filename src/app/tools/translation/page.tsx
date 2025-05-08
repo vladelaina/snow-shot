@@ -7,7 +7,13 @@ import { KeyEventKey, KeyEventValue } from '@/core/hotKeys';
 import { finishScreenshot } from '@/functions/screenshot';
 import { useAppSettingsLoad } from '@/hooks/useAppSettingsLoad';
 import { useStateRef } from '@/hooks/useStateRef';
-import { translate, TranslationDomain, TranslationType } from '@/services/tools/translation';
+import {
+    getTranslationTypes,
+    translate,
+    TranslationDomain,
+    TranslationType,
+    TranslationTypeOption,
+} from '@/services/tools/translation';
 import { SwapOutlined } from '@ant-design/icons';
 import { getCurrentWindow } from '@tauri-apps/api/window';
 import {
@@ -102,6 +108,21 @@ const selectFilterOption: SelectProps['filterOption'] = (input, option) => {
 
 const TranslationCore = () => {
     const intl = useIntl();
+
+    const defaultTranslationTypes: TranslationTypeOption[] = useMemo(
+        () => [
+            {
+                type: TranslationType.Youdao,
+                name: intl.formatMessage({ id: 'tools.translation.type.youdao' }),
+            },
+            {
+                type: TranslationType.DeepSeek,
+                name: intl.formatMessage({ id: 'tools.translation.type.deepseek' }),
+            },
+        ],
+        [intl],
+    );
+
     const { token } = theme.useToken();
 
     const [languageOptions, languageCodeLabelMap] = useMemo(() => {
@@ -190,6 +211,29 @@ const TranslationCore = () => {
         ),
     );
 
+    const [supportedTranslationTypes, setSupportedTranslationTypes] =
+        useState<TranslationTypeOption[]>(defaultTranslationTypes);
+    const [
+        supportedTranslationTypesLoading,
+        setSupportedTranslationTypesLoading,
+        supportedTranslationTypesLoadingRef,
+    ] = useStateRef(false);
+    useEffect(() => {
+        if (supportedTranslationTypesLoadingRef.current) {
+            return;
+        }
+
+        setSupportedTranslationTypesLoading(true);
+        getTranslationTypes().then((res) => {
+            setSupportedTranslationTypesLoading(false);
+            if (!res.success()) {
+                return;
+            }
+
+            setSupportedTranslationTypes(res.data ?? []);
+        });
+    }, [setSupportedTranslationTypesLoading, supportedTranslationTypesLoadingRef]);
+
     const sourceContentRef = useRef<InputRef | null>(null);
     const [sourceContent, setSourceContent] = useState<string>('');
     const [translatedContent, setTranslatedContent, translatedContentRef] = useStateRef<string>('');
@@ -236,29 +280,39 @@ const TranslationCore = () => {
             setLoading(true);
             currentRequestSignRef.current++;
             const requestSign = currentRequestSignRef.current;
-            const response = await translate({
-                content: params.sourceContent,
-                from: params.sourceLanguage,
-                to: params.targetLanguage,
-                domain: params.translationDomain,
-                type: params.translationType,
-            });
+            await translate(
+                {
+                    isInvalid: () => currentRequestSignRef.current !== requestSign,
+                    onStart: () => {
+                        setTranslatedContent('');
+                    },
+                    onData: (response) => {
+                        const data = response.success();
+                        if (!data) {
+                            return;
+                        }
 
-            if (currentRequestSignRef.current !== requestSign) {
-                return;
-            }
-
-            setLoading(false);
-
-            const data = response.success();
-            if (!data) {
-                return;
-            }
-
-            setTranslatedContent(data.content);
-            if (params.sourceLanguage === 'auto' && languageCodeLabelMap.has(data.from)) {
-                setAutoLanguage(data.from);
-            }
+                        setTranslatedContent((prev) => `${prev}${data.delta_content}`);
+                        if (
+                            params.sourceLanguage === 'auto' &&
+                            data.from &&
+                            languageCodeLabelMap.has(data.from)
+                        ) {
+                            setAutoLanguage(data.from);
+                        }
+                    },
+                    onComplete: () => {
+                        setLoading(false);
+                    },
+                },
+                {
+                    content: params.sourceContent,
+                    from: params.sourceLanguage,
+                    to: params.targetLanguage,
+                    domain: params.translationDomain,
+                    type: params.translationType,
+                },
+            );
         },
         [languageCodeLabelMap, setTranslatedContent],
     );
@@ -309,7 +363,12 @@ const TranslationCore = () => {
         useCallback((appSettings) => {
             setHotKeys(appSettings[AppSettingsGroup.KeyEvent]);
 
-            if (appSettings[AppSettingsGroup.Common].language === AppSettingsLanguage.ZHHant) {
+            const targetLanguage = appSettings[AppSettingsGroup.Cache].targetLanguage;
+            if (targetLanguage) {
+                setTargetLanguage(targetLanguage);
+            } else if (
+                appSettings[AppSettingsGroup.Common].language === AppSettingsLanguage.ZHHant
+            ) {
                 setTargetLanguage('zh-CHT');
             } else if (
                 appSettings[AppSettingsGroup.Common].language === AppSettingsLanguage.ZHHans
@@ -412,7 +471,16 @@ const TranslationCore = () => {
                                 <Select
                                     showSearch
                                     value={targetLanguage}
-                                    onChange={setTargetLanguage}
+                                    onChange={(value) => {
+                                        setTargetLanguage(value);
+                                        updateAppSettings(
+                                            AppSettingsGroup.Cache,
+                                            { targetLanguage: value },
+                                            true,
+                                            true,
+                                            false,
+                                        );
+                                    }}
                                     options={languageOptions}
                                     filterOption={selectFilterOption}
                                     dropdownStyle={{ minWidth: 200 }}
@@ -439,20 +507,11 @@ const TranslationCore = () => {
                                             false,
                                         );
                                     }}
-                                    options={[
-                                        {
-                                            label: intl.formatMessage({
-                                                id: 'tools.translation.type.youdao',
-                                            }),
-                                            value: TranslationType.Youdao,
-                                        },
-                                        {
-                                            label: intl.formatMessage({
-                                                id: 'tools.translation.type.deepseek',
-                                            }),
-                                            value: TranslationType.DeepSeek,
-                                        },
-                                    ]}
+                                    options={supportedTranslationTypes.map((item) => ({
+                                        label: item.name,
+                                        value: item.type,
+                                    }))}
+                                    loading={supportedTranslationTypesLoading}
                                     filterOption={selectFilterOption}
                                     dropdownStyle={{ minWidth: 200 }}
                                     variant="underlined"
@@ -531,7 +590,15 @@ const TranslationCore = () => {
                             />
                         </Col>
                         <Col span={12}>
-                            <Spin spinning={loading}>
+                            <div style={{ position: 'relative' }}>
+                                <Spin
+                                    spinning={loading}
+                                    style={{
+                                        position: 'absolute',
+                                        bottom: token.margin,
+                                        right: token.marginLG,
+                                    }}
+                                />
                                 <TextArea
                                     rows={12}
                                     variant="filled"
@@ -540,7 +607,7 @@ const TranslationCore = () => {
                                     readOnly
                                     value={translatedContent}
                                 />
-                            </Spin>
+                            </div>
                         </Col>
                     </Row>
                 </Form>
