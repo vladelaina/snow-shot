@@ -9,5 +9,6 @@ declare global {
         __APP_HANDLE_HTTP_ERROR__: ((response: ServiceResponse<any>) => void) | undefined;
         __APP_HANDLE_SERVICE_ERROR__: ((response: ServiceResponse<any>) => void) | undefined;
         __APP_HANDLE_REQUEST_ERROR__: ((response: ServiceResponse<any>) => void) | undefined;
+        __APP_ACCEPT_LANGUAGE__: string;
     }
 }

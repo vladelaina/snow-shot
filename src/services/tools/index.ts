@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
-import { fetch as tauriFetch } from '@tauri-apps/plugin-http';
+import { fetch } from '@tauri-apps/plugin-http';
 
 export const getUrl = (url: string, params?: Record<string, any>) => {
     let baseUrl;
@@ -105,10 +105,11 @@ export const serviceFetch = async <R>(
 ): Promise<ServiceResponse<R | undefined>> => {
     let response: Response;
     try {
-        response = await tauriFetch(getUrl(url, options.params), {
+        response = await fetch(getUrl(url, options.params), {
             method: options.method,
             headers: {
                 'Content-Type': 'application/json',
+                'Accept-Language': window.__APP_ACCEPT_LANGUAGE__,
                 ...options.headers,
             },
             body: JSON.stringify(options.data),
@@ -136,8 +137,14 @@ export const serviceFetch = async <R>(
     return ServiceResponse.success(response, data.message, data.data);
 };
 
-export const appFetch = (async (...params: Parameters<typeof tauriFetch>) => {
-    const response = await tauriFetch(...params);
+export const appFetch = (async (...params: Parameters<typeof fetch>) => {
+    const response = await fetch(params[0], {
+        ...params[1],
+        headers: {
+            'Accept-Language': window.__APP_ACCEPT_LANGUAGE__,
+            ...params[1]?.headers,
+        },
+    });
 
     try {
         if (response.status !== 200) {
@@ -158,4 +165,86 @@ export const appFetch = (async (...params: Parameters<typeof tauriFetch>) => {
     } catch {}
 
     return response;
-}) as typeof tauriFetch;
+}) as typeof fetch;
+
+export type StreamFetchEventOptions<R> = {
+    isInvalid?: () => boolean;
+    onStart?: () => void;
+    onData: (chunk: ServiceResponse<R | undefined>) => void;
+    onComplete?: () => void;
+};
+
+export const streamFetch = async <R>(
+    url: string,
+    options: {
+        method: 'POST' | 'GET';
+        params?: Record<string, any>;
+        data?: any;
+        headers?: Record<string, string>;
+    } & StreamFetchEventOptions<R>,
+) => {
+    try {
+        const response = await fetch(getUrl(url, options.params), {
+            method: options.method,
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept-Language': window.__APP_ACCEPT_LANGUAGE__,
+                ...options.headers,
+            },
+            body: options.data ? JSON.stringify(options.data) : undefined,
+        });
+
+        if (response.status !== 200) {
+            ServiceResponse.httpError(response).success();
+            return;
+        }
+
+        const reader = response.body?.getReader();
+        if (!reader) {
+            ServiceResponse.requestError(new Error('Failed to get response body reader')).success();
+            return;
+        }
+
+        if (!options.isInvalid?.()) {
+            options.onStart?.();
+        }
+
+        const decoder = new TextDecoder();
+        while (true) {
+            const { value, done } = await reader.read();
+            if (done) break;
+
+            const chunk = decoder.decode(value, { stream: true });
+
+            if (options.isInvalid?.()) {
+                break;
+            }
+
+            try {
+                if (!chunk.startsWith('data: ')) {
+                    const errorData = JSON.parse(chunk) as ResponseData<R>;
+                    options.onData(
+                        ServiceResponse.serviceError(response, errorData.code, errorData.message),
+                    );
+                    break;
+                }
+
+                const data = JSON.parse(chunk.substring(6)) as ResponseData<R>;
+                options.onData(ServiceResponse.success(response, data.message, data.data));
+            } catch {
+                options.onData(
+                    ServiceResponse.requestError(new Error('Failed to parse response data')),
+                );
+            }
+        }
+
+        if (!options.isInvalid?.()) {
+            options.onComplete?.();
+        }
+
+        return;
+    } catch {
+        ServiceResponse.requestError(new Error('Stream request error')).success();
+        return;
+    }
+};

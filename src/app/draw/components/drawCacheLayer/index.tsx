@@ -1,7 +1,7 @@
 'use client';
 /** pixijs 的绘制效果很差，没找到成熟的绘制方案，自己写绘制的太烂了，用 excalidraw 作为绘制缓存层实现绘制效果 */
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useCallback, useImperativeHandle, useMemo, useRef } from 'react';
 import { zIndexs } from '@/utils/zIndex';
 import { Excalidraw } from '@mg-chao/excalidraw';
@@ -10,6 +10,7 @@ import {
     ExcalidrawImperativeAPI,
     ExcalidrawActionType,
     ExcalidrawPropsCustomOptions,
+    AppState,
 } from '@mg-chao/excalidraw/types';
 import '@mg-chao/excalidraw/index.css';
 import { useStateSubscriber } from '@/hooks/useStateSubscriber';
@@ -28,6 +29,10 @@ import { useHistory } from '../historyContext';
 import { layoutRenders } from './excalidrawRenders';
 import { pickerRenders } from './excalidrawRenders';
 import { ElementRect } from '@/commands';
+import { CaptureEvent, CaptureEventParams, CaptureEventPublisher } from '../../extra';
+import { ExcalidrawAppStateStore } from '@/utils/appStore';
+
+const storageKey = 'global';
 const DrawCacheLayerCore: React.FC<{
     actionRef: React.RefObject<DrawCacheLayerActionType | undefined>;
 }> = ({ actionRef }) => {
@@ -108,6 +113,42 @@ const DrawCacheLayerCore: React.FC<{
         [getCanvasContext],
     );
 
+    const excalidrawAppStateStoreRef = useRef<ExcalidrawAppStateStore>(undefined);
+    const excalidrawAppStateStoreValue = useRef<
+        | {
+              appState: Partial<AppState>;
+          }
+        | undefined
+    >(undefined);
+    useEffect(() => {
+        if (excalidrawAppStateStoreRef.current) {
+            return;
+        }
+
+        excalidrawAppStateStoreRef.current = new ExcalidrawAppStateStore();
+        excalidrawAppStateStoreRef.current.init().then(() => {
+            excalidrawAppStateStoreRef.current!.get(storageKey).then((value) => {
+                if (value) {
+                    if (excalidrawAPIRef.current) {
+                        excalidrawAPIRef.current.updateScene({
+                            appState: {
+                                ...(value.appState as AppState),
+                                viewBackgroundColor: '#00000000',
+                            },
+                        });
+                    } else {
+                        excalidrawAppStateStoreValue.current = {
+                            appState: {
+                                ...(value.appState as AppState),
+                                viewBackgroundColor: '#00000000',
+                            },
+                        };
+                    }
+                }
+            });
+        });
+    }, []);
+
     useImperativeHandle(
         actionRef,
         () => ({
@@ -179,13 +220,53 @@ const DrawCacheLayerCore: React.FC<{
         [history],
     );
 
+    useStateSubscriber(
+        CaptureEventPublisher,
+        useCallback(async (params: CaptureEventParams | undefined) => {
+            if (params?.event !== CaptureEvent.onCaptureFinish) {
+                return;
+            }
+
+            const appState = excalidrawAPIRef.current?.getAppState();
+            if (!appState) {
+                return;
+            }
+
+            const storageAppState: Partial<AppState> = {};
+            Object.keys(appState)
+                .filter((item) => item.startsWith('currentItem'))
+                .forEach((item) => {
+                    const value = appState[item as keyof AppState];
+                    if (!value) {
+                        return;
+                    }
+
+                    storageAppState[item as keyof AppState] = value;
+                });
+
+            await excalidrawAppStateStoreRef.current!.set(storageKey, {
+                appState: storageAppState,
+            });
+        }, []),
+    );
+
     return (
         <div ref={drawCacheLayerElementRef} className="draw-cache-layer">
             <Excalidraw
                 actionRef={excalidrawActionRef}
                 initialData={initialData}
                 handleKeyboardGlobally
-                excalidrawAPI={excalidrawAPI}
+                excalidrawAPI={(api) => {
+                    excalidrawAPI(api);
+                    if (excalidrawAppStateStoreValue.current) {
+                        api.updateScene({
+                            appState: {
+                                ...(excalidrawAppStateStoreValue.current.appState as AppState),
+                            },
+                        });
+                        excalidrawAppStateStoreValue.current = undefined;
+                    }
+                }}
                 customOptions={{
                     disableKeyEvents: true,
                     hideFooter: true,

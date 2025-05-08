@@ -352,13 +352,15 @@ const Chat = () => {
                         }
                     } else {
                         // OpenAI 格式的响应
-
-                        if (message?.choices?.[0].delta?.reasoning_content) {
-                            messageContent.reasoning_content =
-                                messageContent.reasoning_content +
-                                message?.choices?.[0].delta?.reasoning_content;
-                        } else {
-                            messageContent.content += message?.choices?.[0].delta?.content ?? '';
+                        const choiceDelta = message?.choices?.[0]?.delta;
+                        if (choiceDelta) {
+                            if (choiceDelta?.reasoning_content) {
+                                messageContent.reasoning_content =
+                                    messageContent.reasoning_content +
+                                    choiceDelta?.reasoning_content;
+                            } else {
+                                messageContent.content += choiceDelta?.content ?? '';
+                            }
                         }
                     }
                 }
