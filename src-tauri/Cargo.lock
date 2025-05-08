@@ -3009,9 +3009,9 @@ dependencies = [
 
 [[package]]
 name = "libm"
-version = "0.2.13"
+version = "0.2.15"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c9627da5196e5d8ed0b0495e61e518847578da83483c37288316d9b2e03a7f72"
+checksum = "f9fbbcab51052fe104eb5e5d351cf728d30a5be1fe14d9be8a3b097481fb97de"
 
 [[package]]
 name = "libredox"
@@ -3912,9 +3912,9 @@ dependencies = [
 
 [[package]]
 name = "paddle-ocr-rs"
-version = "0.3.0"
+version = "0.3.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4bc1d96244653d69c377980958af1632d2fa4283971753eafcd7450cfa6c9f4f"
+checksum = "5792ea7e6e912730506ad3752dbcf1afb82e52c7f27613083a3751ec585baa42"
 dependencies = [
  "clipper-sys",
  "geo-clipper",
