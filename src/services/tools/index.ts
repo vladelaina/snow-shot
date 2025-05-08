@@ -6,6 +6,7 @@ export const getUrl = (url: string, params?: Record<string, any>) => {
     let baseUrl;
     if (process.env.NODE_ENV === 'development') {
         baseUrl = 'http://127.0.0.1:5101/';
+        // baseUrl = 'http://120.79.232.67/';
     } else {
         // baseUrl = 'https://api.snowshot.top/';
         baseUrl = 'http://120.79.232.67/';
@@ -214,23 +215,29 @@ export const streamFetch = async <R>(
             const { value, done } = await reader.read();
             if (done) break;
 
-            const chunk = decoder.decode(value, { stream: true });
+            const chunksText = decoder.decode(value, { stream: true });
 
             if (options.isInvalid?.()) {
                 break;
             }
 
             try {
-                if (!chunk.startsWith('data: ')) {
-                    const errorData = JSON.parse(chunk) as ResponseData<R>;
+                if (!chunksText.startsWith('data: ')) {
+                    const errorData = JSON.parse(chunksText) as ResponseData<R>;
                     options.onData(
                         ServiceResponse.serviceError(response, errorData.code, errorData.message),
                     );
                     break;
                 }
 
-                const data = JSON.parse(chunk.substring(6)) as ResponseData<R>;
-                options.onData(ServiceResponse.success(response, data.message, data.data));
+                const chunks = chunksText.split('\n\n');
+
+                for (const chunk of chunks) {
+                    if (chunk.startsWith('data: ')) {
+                        const data = JSON.parse(chunk.substring(6)) as ResponseData<R>;
+                        options.onData(ServiceResponse.success(response, data.message, data.data));
+                    }
+                }
             } catch {
                 options.onData(
                     ServiceResponse.requestError(new Error('Failed to parse response data')),
