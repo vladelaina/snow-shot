@@ -48,6 +48,7 @@ import { SenderRef } from '@ant-design/x/es/sender';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { oneLight, oneDark } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import { useStateSubscriber } from '@/hooks/useStateSubscriber';
+import { decodeParamsValue } from '@/utils';
 
 const MarkdownContent: React.FC<{
     content: string;
@@ -791,8 +792,6 @@ const Chat = () => {
             return;
         }
 
-        prevSearchParamsSign.current = searchParamsSign;
-
         if (searchParamsSelectText) {
             let newSessionPromise: Promise<void> | undefined = undefined;
             if (
@@ -808,11 +807,12 @@ const Chat = () => {
             if (newSessionPromise) {
                 await newSessionPromise;
             }
-            setInputValue(decodeURIComponent(searchParamsSelectText).substring(0, 10000));
+            setInputValue(decodeParamsValue(searchParamsSelectText).substring(0, 10000));
         }
 
         setTimeout(() => {
             senderRef.current?.focus();
+            prevSearchParamsSign.current = searchParamsSign;
         }, 64);
     }, [
         searchParamsSign,

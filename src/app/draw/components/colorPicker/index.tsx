@@ -9,7 +9,14 @@ import { KeyEventKey } from '../drawToolbar/components/keyEventWrap/extra';
 import { useCallbackRender, useCallbackRenderSlow } from '@/hooks/useCallbackRender';
 import { MousePosition } from '@/utils/mousePosition';
 import { useStateSubscriber } from '@/hooks/useStateSubscriber';
-import { CaptureLoadingPublisher, CaptureStepPublisher, DrawStatePublisher } from '../../extra';
+import {
+    CaptureEvent,
+    CaptureEventParams,
+    CaptureEventPublisher,
+    CaptureLoadingPublisher,
+    CaptureStepPublisher,
+    DrawStatePublisher,
+} from '../../extra';
 import { withStatePublisher } from '@/hooks/useStatePublisher';
 import { EnableKeyEventPublisher } from '../drawToolbar/components/keyEventWrap/extra';
 import { KeyEventWrap } from '../drawToolbar/components/keyEventWrap';
@@ -21,12 +28,15 @@ const previewCanvasSize = previewPickerSize * previewScale;
 export const isEnableColorPicker = (
     captureStep: CaptureStep,
     drawState: DrawState,
-    captureLoading: boolean,
+    captureEvent: CaptureEventParams | undefined,
 ) => {
+    if (captureEvent?.event !== CaptureEvent.onCaptureLoad) {
+        return false;
+    }
+
     return (
-        (captureStep === CaptureStep.Select ||
-            (captureStep === CaptureStep.Draw && drawState === DrawState.Idle)) &&
-        !captureLoading
+        captureStep === CaptureStep.Select ||
+        (captureStep === CaptureStep.Draw && drawState === DrawState.Idle)
     );
 };
 
@@ -36,7 +46,7 @@ const ColorPickerCore: React.FC<{
     const [getCaptureStep] = useStateSubscriber(CaptureStepPublisher, undefined);
     const [getDrawState] = useStateSubscriber(DrawStatePublisher, undefined);
     const [, setEnableKeyEvent] = useStateSubscriber(EnableKeyEventPublisher, undefined);
-    const [getCaptureLoading] = useStateSubscriber(CaptureLoadingPublisher, undefined);
+    const [getCaptureEvent] = useStateSubscriber(CaptureEventPublisher, undefined);
 
     const { token } = theme.useToken();
 
@@ -66,16 +76,16 @@ const ColorPickerCore: React.FC<{
         }
     }, []);
     const updateEnable = useCallback(() => {
-        const enable = isEnableColorPicker(getCaptureStep(), getDrawState(), getCaptureLoading());
+        const enable = isEnableColorPicker(getCaptureStep(), getDrawState(), getCaptureEvent());
         if (enableRef.current === enable) {
             return;
         }
 
         onEnableChange(enable);
-    }, [getCaptureLoading, getCaptureStep, getDrawState, onEnableChange]);
+    }, [getCaptureEvent, getCaptureStep, getDrawState, onEnableChange]);
     useStateSubscriber(CaptureStepPublisher, updateEnable);
     useStateSubscriber(DrawStatePublisher, updateEnable);
-    useStateSubscriber(CaptureLoadingPublisher, updateEnable);
+    useStateSubscriber(CaptureEventPublisher, updateEnable);
 
     const currentCanvasImageDataRef = useRef<ImageData | undefined>(undefined);
 
@@ -413,6 +423,7 @@ const ColorPickerCore: React.FC<{
                         display: flex;
                         flex-direction: column;
                         padding: ${token.paddingXXS}px;
+                        transition: opacity ${token.motionDurationFast} ${token.motionEaseInOut};
                     }
 
                     .color-picker-container {

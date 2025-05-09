@@ -14,6 +14,7 @@ import {
     TranslationType,
     TranslationTypeOption,
 } from '@/services/tools/translation';
+import { decodeParamsValue } from '@/utils';
 import { SwapOutlined } from '@ant-design/icons';
 import { getCurrentWindow } from '@tauri-apps/api/window';
 import {
@@ -254,13 +255,14 @@ const TranslationCore = () => {
         if (searchParamsSelectText) {
             await finishScreenshot();
 
-            setSourceContent(decodeURIComponent(searchParamsSelectText).substring(0, 5000));
+            setSourceContent(decodeParamsValue(searchParamsSelectText).substring(0, 5000));
             ignoreDebounce.current = true;
         }
 
         setTimeout(() => {
             sourceContentRef.current?.focus();
-        }, 0);
+            prevSearchParamsSign.current = searchParamsSign;
+        }, 64);
     }, [searchParamsSign, searchParamsSelectText]);
 
     useEffect(() => {
@@ -269,6 +271,7 @@ const TranslationCore = () => {
 
     const currentRequestSignRef = useRef<number>(0);
     const [loading, setLoading] = useState(false);
+    const [startLoading, setStartLoading] = useState<boolean>(false);
     const requestTranslate = useCallback(
         async (params: {
             sourceContent: string;
@@ -277,13 +280,15 @@ const TranslationCore = () => {
             translationType: TranslationType;
             translationDomain: TranslationDomain;
         }) => {
-            setLoading(true);
+            setStartLoading(true);
             currentRequestSignRef.current++;
             const requestSign = currentRequestSignRef.current;
             await translate(
                 {
                     isInvalid: () => currentRequestSignRef.current !== requestSign,
                     onStart: () => {
+                        setStartLoading(false);
+                        setLoading(true);
                         setTranslatedContent('');
                     },
                     onData: (response) => {
@@ -590,24 +595,26 @@ const TranslationCore = () => {
                             />
                         </Col>
                         <Col span={12}>
-                            <div style={{ position: 'relative' }}>
-                                <Spin
-                                    spinning={loading}
-                                    style={{
-                                        position: 'absolute',
-                                        bottom: token.margin,
-                                        right: token.marginLG,
-                                    }}
-                                />
-                                <TextArea
-                                    rows={12}
-                                    variant="filled"
-                                    style={{ flex: 1 }}
-                                    autoSize={{ minRows: 12 }}
-                                    readOnly
-                                    value={translatedContent}
-                                />
-                            </div>
+                            <Spin spinning={startLoading}>
+                                <div style={{ position: 'relative' }}>
+                                    <Spin
+                                        spinning={loading}
+                                        style={{
+                                            position: 'absolute',
+                                            bottom: token.margin,
+                                            right: token.marginLG,
+                                        }}
+                                    />
+                                    <TextArea
+                                        rows={12}
+                                        variant="filled"
+                                        style={{ flex: 1 }}
+                                        autoSize={{ minRows: 12 }}
+                                        readOnly
+                                        value={translatedContent}
+                                    />
+                                </div>
+                            </Spin>
                         </Col>
                     </Row>
                 </Form>
