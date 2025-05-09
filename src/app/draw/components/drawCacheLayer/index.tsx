@@ -130,12 +130,15 @@ const DrawCacheLayerCore: React.FC<{
             excalidrawAppStateStoreRef.current!.get(storageKey).then((value) => {
                 if (value) {
                     if (excalidrawAPIRef.current) {
-                        excalidrawAPIRef.current.updateScene({
-                            appState: {
-                                ...(value.appState as AppState),
-                                viewBackgroundColor: '#00000000',
-                            },
-                        });
+                        // 未初始化 setstate 报错，未发现具体原因，延迟处理下
+                        setTimeout(() => {
+                            excalidrawAPIRef.current!.updateScene({
+                                appState: {
+                                    ...(value.appState as AppState),
+                                    viewBackgroundColor: '#00000000',
+                                },
+                            });
+                        }, 0);
                     } else {
                         excalidrawAppStateStoreValue.current = {
                             appState: {
@@ -259,12 +262,18 @@ const DrawCacheLayerCore: React.FC<{
                 excalidrawAPI={(api) => {
                     excalidrawAPI(api);
                     if (excalidrawAppStateStoreValue.current) {
-                        api.updateScene({
-                            appState: {
-                                ...(excalidrawAppStateStoreValue.current.appState as AppState),
-                            },
-                        });
-                        excalidrawAppStateStoreValue.current = undefined;
+                        // 未初始化 setstate 报错，未发现具体原因，延迟处理下
+                        setTimeout(() => {
+                            if (!excalidrawAppStateStoreValue.current) {
+                                return;
+                            }
+
+                            excalidrawAPIRef.current?.updateScene({
+                                appState: {
+                                    ...(excalidrawAppStateStoreValue.current!.appState as AppState),
+                                },
+                            });
+                        }, 0);
                     }
                 }}
                 customOptions={{

@@ -211,32 +211,66 @@ export const streamFetch = async <R>(
         }
 
         const decoder = new TextDecoder();
+        let buffer = '';
+        const lineBreakRegex = /\r\n|\n|\r/gm;
+
         while (true) {
             const { value, done } = await reader.read();
             if (done) break;
-
-            const chunksText = decoder.decode(value, { stream: true });
 
             if (options.isInvalid?.()) {
                 break;
             }
 
+            const chunksText = decoder.decode(value, { stream: true });
+            buffer += chunksText;
+
+            let startIndex = 0;
+            let result;
+
+            while ((result = lineBreakRegex.exec(buffer)) !== null) {
+                const line = buffer.substring(startIndex, result.index);
+                startIndex = lineBreakRegex.lastIndex;
+
+                if (line.trim() === '') continue;
+
+                try {
+                    if (line.startsWith('data: ')) {
+                        const data = JSON.parse(line.substring(6)) as ResponseData<R>;
+                        options.onData(ServiceResponse.success(response, data.message, data.data));
+                    } else if (line.includes('{') && line.includes('}')) {
+                        // 尝试将整行解析为JSON
+                        const errorData = JSON.parse(line) as ResponseData<R>;
+                        options.onData(
+                            ServiceResponse.serviceError(
+                                response,
+                                errorData.code,
+                                errorData.message,
+                            ),
+                        );
+                    }
+                } catch {
+                    options.onData(
+                        ServiceResponse.requestError(new Error(`Failed to parse line: ${line}`)),
+                    );
+                }
+            }
+
+            // 保留未处理完的数据到下一个循环
+            buffer = buffer.substring(startIndex);
+        }
+
+        // 处理缓冲区中剩余的最后一行（如果有）
+        if (buffer.trim() !== '') {
             try {
-                if (!chunksText.startsWith('data: ')) {
-                    const errorData = JSON.parse(chunksText) as ResponseData<R>;
+                if (buffer.startsWith('data: ')) {
+                    const data = JSON.parse(buffer.substring(6)) as ResponseData<R>;
+                    options.onData(ServiceResponse.success(response, data.message, data.data));
+                } else if (buffer.includes('{') && buffer.includes('}')) {
+                    const errorData = JSON.parse(buffer) as ResponseData<R>;
                     options.onData(
                         ServiceResponse.serviceError(response, errorData.code, errorData.message),
                     );
-                    break;
-                }
-
-                const chunks = chunksText.split('\n\n');
-
-                for (const chunk of chunks) {
-                    if (chunk.startsWith('data: ')) {
-                        const data = JSON.parse(chunk.substring(6)) as ResponseData<R>;
-                        options.onData(ServiceResponse.success(response, data.message, data.data));
-                    }
                 }
             } catch {
                 options.onData(

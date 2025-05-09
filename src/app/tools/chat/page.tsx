@@ -791,8 +791,6 @@ const Chat = () => {
             return;
         }
 
-        prevSearchParamsSign.current = searchParamsSign;
-
         if (searchParamsSelectText) {
             let newSessionPromise: Promise<void> | undefined = undefined;
             if (
@@ -813,6 +811,7 @@ const Chat = () => {
 
         setTimeout(() => {
             senderRef.current?.focus();
+            prevSearchParamsSign.current = searchParamsSign;
         }, 64);
     }, [
         searchParamsSign,
