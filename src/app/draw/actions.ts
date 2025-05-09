@@ -10,7 +10,7 @@ import { FixedImageActionType } from './components/fixedImage';
 import { OcrBlocksActionType } from './components/ocrBlocks';
 import { showWindow } from '@/utils/window';
 export const generateImageFileName = () => {
-    return `SnowShot_${dayjs().format('yyyy-MM-dd_HH-mm-ss')}`;
+    return `SnowShot_${dayjs().format('YYYY-MM-DD_HH-mm-ss')}`;
 };
 
 export const getCanvas = async (
