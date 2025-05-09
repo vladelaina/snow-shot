@@ -1,3 +1,4 @@
+use base64::prelude::*;
 use std::fs;
 
 use tauri::command;
@@ -9,8 +10,11 @@ pub fn save_file(request: tauri::ipc::Request<'_>) -> bool {
         _ => return false,
     };
 
-    let file_path = match request.headers().get("x-file-path") {
-        Some(header) => header.to_str().unwrap(),
+    let file_path: String = match request.headers().get("x-file-path") {
+        Some(header) => match BASE64_STANDARD.decode(header.to_str().unwrap()) {
+            Ok(file_path) => String::from_utf8(file_path).unwrap(),
+            Err(_) => return false,
+        },
         None => return false,
     };
 

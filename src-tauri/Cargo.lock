@@ -170,6 +170,7 @@ name = "app"
 version = "0.1.0"
 dependencies = [
  "atree",
+ "base64 0.22.1",
  "device_query",
  "get-selected-text",
  "image 0.25.6",
