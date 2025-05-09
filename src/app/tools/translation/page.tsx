@@ -14,6 +14,7 @@ import {
     TranslationType,
     TranslationTypeOption,
 } from '@/services/tools/translation';
+import { decodeParamsValue } from '@/utils';
 import { SwapOutlined } from '@ant-design/icons';
 import { getCurrentWindow } from '@tauri-apps/api/window';
 import {
@@ -254,7 +255,7 @@ const TranslationCore = () => {
         if (searchParamsSelectText) {
             await finishScreenshot();
 
-            setSourceContent(decodeURIComponent(searchParamsSelectText).substring(0, 5000));
+            setSourceContent(decodeParamsValue(searchParamsSelectText).substring(0, 5000));
             ignoreDebounce.current = true;
         }
 

@@ -47,6 +47,7 @@ import { theme } from 'antd';
 import { showWindow } from '@/utils/window';
 import { ResetSettingsButton } from '@/components/resetSettingsButton';
 import { getSelectedText } from '@/commands/core';
+import { encodeParamsValue } from '@/utils';
 
 export default function Home() {
     const { token } = theme.useToken();
@@ -97,7 +98,7 @@ export default function Home() {
                             const text = (await getSelectedText()).substring(0, 10000);
                             await showWindow();
                             router.push(
-                                `/tools/translation?selectText=${encodeURIComponent(text)}&t=${Date.now()}`,
+                                `/tools/translation?selectText=${encodeParamsValue(text)}&t=${Date.now()}`,
                             );
                         };
                         break;
@@ -116,7 +117,7 @@ export default function Home() {
                             const text = (await getSelectedText()).substring(0, 10000);
                             await showWindow();
                             router.push(
-                                `/tools/chat?selectText=${encodeURIComponent(text)}&t=${Date.now()}`,
+                                `/tools/chat?selectText=${encodeParamsValue(text)}&t=${Date.now()}`,
                             );
                         };
                         break;
