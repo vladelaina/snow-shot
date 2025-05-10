@@ -226,6 +226,12 @@ const DrawCacheLayerCore: React.FC<{
     useStateSubscriber(
         CaptureEventPublisher,
         useCallback(async (params: CaptureEventParams | undefined) => {
+            if (params?.event === CaptureEvent.onCaptureLoad) {
+                excalidrawAPIRef.current?.setActiveTool({
+                    type: 'hand',
+                });
+            }
+
             if (params?.event !== CaptureEvent.onCaptureFinish) {
                 return;
             }
