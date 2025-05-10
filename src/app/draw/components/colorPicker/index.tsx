@@ -2,7 +2,7 @@
 
 import { theme } from 'antd';
 import { zIndexs } from '@/utils/zIndex';
-import React, { useCallback, useContext, useEffect, useRef } from 'react';
+import React, { useCallback, useContext, useEffect, useMemo, useRef } from 'react';
 import { getCurrentWindow, Window as AppWindow, PhysicalPosition } from '@tauri-apps/api/window';
 import { CaptureStep, DrawContext, DrawState } from '@/app/draw/types';
 import { KeyEventKey } from '../drawToolbar/components/keyEventWrap/extra';
@@ -20,6 +20,7 @@ import {
 import { withStatePublisher } from '@/hooks/useStatePublisher';
 import { EnableKeyEventPublisher } from '../drawToolbar/components/keyEventWrap/extra';
 import { KeyEventWrap } from '../drawToolbar/components/keyEventWrap';
+import { debounce } from 'lodash';
 
 const previewScale = 12;
 const previewPickerSize = 10 + 1;
@@ -71,8 +72,14 @@ const ColorPickerCore: React.FC<{
     const onEnableChange = useCallback((enable: boolean) => {
         enableRef.current = enable;
 
-        if (!enable && colorPickerRef.current) {
+        if (!colorPickerRef.current) {
+            return;
+        }
+
+        if (!enable) {
             colorPickerRef.current.style.opacity = '0';
+        } else {
+            colorPickerRef.current.style.opacity = '1';
         }
     }, []);
     const updateEnable = useCallback(() => {
@@ -83,9 +90,10 @@ const ColorPickerCore: React.FC<{
 
         onEnableChange(enable);
     }, [getCaptureEvent, getCaptureStep, getDrawState, onEnableChange]);
-    useStateSubscriber(CaptureStepPublisher, updateEnable);
-    useStateSubscriber(DrawStatePublisher, updateEnable);
-    useStateSubscriber(CaptureEventPublisher, updateEnable);
+    const updateEnableDebounce = useMemo(() => debounce(updateEnable, 17), [updateEnable]);
+    useStateSubscriber(CaptureStepPublisher, updateEnableDebounce);
+    useStateSubscriber(DrawStatePublisher, updateEnableDebounce);
+    useStateSubscriber(CaptureEventPublisher, updateEnableDebounce);
 
     const currentCanvasImageDataRef = useRef<ImageData | undefined>(undefined);
 
@@ -206,7 +214,6 @@ const ColorPickerCore: React.FC<{
         const colorPickerTop = Math.min(Math.max(mouseY, 0), maxTop);
 
         colorPickerElement.style.transform = `translate(${colorPickerLeft}px, ${colorPickerTop}px)`;
-        colorPickerElement.style.opacity = '1';
     }, []);
     const updateTransformRender = useCallbackRender(updateTransform);
     const update = useCallback(
@@ -276,10 +283,6 @@ const ColorPickerCore: React.FC<{
 
     useEffect(() => {
         const handleMouseMove = (e: MouseEvent) => {
-            if (!enableRef.current) {
-                return;
-            }
-
             if (!moveCursorFinishedRef.current) {
                 return;
             }
