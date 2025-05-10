@@ -141,6 +141,7 @@ export const OcrBlocks: React.FC<{
                 textElement.style.fontSize = '12px';
                 textElement.style.color = token.colorText;
                 textElement.style.display = 'inline-block';
+                textElement.style.whiteSpace = 'nowrap';
 
                 const textWrapElement = document.createElement('div');
                 textWrapElement.style.position = 'absolute';
