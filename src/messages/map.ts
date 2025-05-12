@@ -4,6 +4,6 @@ import { zhHant } from './zhHant';
 
 export const messages = {
     'zh-Hans': zhHans,
-    'zh-Hant': zhHant,
-    en: en,
+    'zh-Hant': { ...zhHans, ...zhHant },
+    en: { ...zhHans, ...en },
 };

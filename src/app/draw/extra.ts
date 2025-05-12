@@ -4,6 +4,7 @@ import { SelectLayerActionType } from './components/selectLayer';
 import { ImageBuffer } from '@/commands';
 import { createPublisher } from '@/hooks/useStatePublisher';
 import { BaseLayerEventActionType } from './components/baseLayer';
+import { ScreenshotType } from '@/functions/screenshot';
 
 export const switchLayer = (
     layer: CanvasLayer | undefined,
@@ -64,3 +65,4 @@ export const CaptureStepPublisher = createPublisher<CaptureStep>(CaptureStep.Sel
 export const DrawStatePublisher = createPublisher<DrawState>(DrawState.Idle);
 export const CaptureLoadingPublisher = createPublisher<boolean>(true);
 export const CaptureEventPublisher = createPublisher<CaptureEventParams | undefined>(undefined);
+export const ScreenshotTypePublisher = createPublisher<ScreenshotType>(ScreenshotType.Default);

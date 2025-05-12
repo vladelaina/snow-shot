@@ -139,8 +139,12 @@ const MenuSiderCore: React.FC<{
                     padding: 0px 12px;
                 }
 
+                :global(body) {
+                    --snow-shot-purple-color: ${darkMode ? token['purple-7'] : token['purple-5']};
+                }
+
                 .logo-wrap .logo-text .logo-text-highlight {
-                    color: ${darkMode ? token['purple-7'] : token['purple-5']};
+                    color: var(--snow-shot-purple-color);
                 }
 
                 .logo-wrap .logo-text div {
@@ -355,6 +359,10 @@ const MenuLayoutCore: React.FC<{ children: React.ReactNode }> = ({ children }) =
                         key: 'translationFunction',
                         label: intl.formatMessage({ id: 'home.translationFunction' }),
                     },
+                    {
+                        key: 'otherFunction',
+                        label: intl.formatMessage({ id: 'home.otherFunction' }),
+                    },
                 ],
             },
             {
@@ -413,6 +421,19 @@ const MenuLayoutCore: React.FC<{ children: React.ReactNode }> = ({ children }) =
                         ],
                     },
                     {
+                        key: '/settings/functionSettings',
+                        path: '/settings/functionSettings',
+                        label: intl.formatMessage({ id: 'menu.settings.functionSettings' }),
+                        tabs: [
+                            {
+                                key: 'functionSettings',
+                                label: intl.formatMessage({
+                                    id: 'settings.functionSettings.chatSettings',
+                                }),
+                            },
+                        ],
+                    },
+                    {
                         key: '/settings/hotKeySettings',
                         path: '/settings/hotKeySettings',
                         label: intl.formatMessage({ id: 'menu.settings.hotKeySettings' }),
@@ -422,6 +443,10 @@ const MenuLayoutCore: React.FC<{ children: React.ReactNode }> = ({ children }) =
                                 label: intl.formatMessage({
                                     id: 'settings.hotKeySettings.translation',
                                 }),
+                            },
+                            {
+                                key: 'chat',
+                                label: intl.formatMessage({ id: 'settings.hotKeySettings.chat' }),
                             },
                             {
                                 key: 'drawingHotKey',

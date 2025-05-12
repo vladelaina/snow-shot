@@ -9,12 +9,14 @@ export enum AppFunction {
     ChatSelectText = 'chatSelectText',
     Translation = 'translation',
     TranslationSelectText = 'translationSelectText',
+    TopWindow = 'topWindow',
 }
 
 export enum AppFunctionGroup {
     Screenshot = 'screenshot',
     Translation = 'translation',
     Chat = 'chat',
+    Other = 'other',
 }
 
 export type AppFunctionConfig = {
@@ -37,11 +39,11 @@ export const defaultAppFunctionConfigs: Record<AppFunction, AppFunctionConfig> =
         group: AppFunctionGroup.Screenshot,
     },
     [AppFunction.ScreenshotFixed]: {
-        shortcutKey: 'Control+Alt+F',
+        shortcutKey: 'Ctrl+Alt+F',
         group: AppFunctionGroup.Screenshot,
     },
     [AppFunction.ScreenshotOcr]: {
-        shortcutKey: 'Control+Alt+D',
+        shortcutKey: 'Ctrl+Alt+D',
         group: AppFunctionGroup.Screenshot,
     },
     [AppFunction.ChatSelectText]: {
@@ -49,7 +51,7 @@ export const defaultAppFunctionConfigs: Record<AppFunction, AppFunctionConfig> =
         group: AppFunctionGroup.Chat,
     },
     [AppFunction.Chat]: {
-        shortcutKey: 'Control+Alt+C',
+        shortcutKey: 'Ctrl+Alt+C',
         group: AppFunctionGroup.Chat,
     },
     [AppFunction.TranslationSelectText]: {
@@ -57,8 +59,12 @@ export const defaultAppFunctionConfigs: Record<AppFunction, AppFunctionConfig> =
         group: AppFunctionGroup.Translation,
     },
     [AppFunction.Translation]: {
-        shortcutKey: 'Control+Alt+T',
+        shortcutKey: 'Ctrl+Alt+T',
         group: AppFunctionGroup.Translation,
+    },
+    [AppFunction.TopWindow]: {
+        shortcutKey: 'Ctrl+Alt+W',
+        group: AppFunctionGroup.Other,
     },
 };
 

@@ -16,11 +16,13 @@ import {
     CaptureLoadingPublisher,
     CaptureStepPublisher,
     DrawStatePublisher,
+    ScreenshotTypePublisher,
 } from '../../extra';
 import { withStatePublisher } from '@/hooks/useStatePublisher';
 import { EnableKeyEventPublisher } from '../drawToolbar/components/keyEventWrap/extra';
 import { KeyEventWrap } from '../drawToolbar/components/keyEventWrap';
 import { debounce } from 'lodash';
+import { ScreenshotType } from '@/functions/screenshot';
 
 const previewScale = 12;
 const previewPickerSize = 10 + 1;
@@ -48,6 +50,7 @@ const ColorPickerCore: React.FC<{
     const [getDrawState] = useStateSubscriber(DrawStatePublisher, undefined);
     const [, setEnableKeyEvent] = useStateSubscriber(EnableKeyEventPublisher, undefined);
     const [getCaptureEvent] = useStateSubscriber(CaptureEventPublisher, undefined);
+    const [getScreenshotType] = useStateSubscriber(ScreenshotTypePublisher, undefined);
 
     const { token } = theme.useToken();
 
@@ -76,24 +79,27 @@ const ColorPickerCore: React.FC<{
             return;
         }
 
-        if (!enable) {
-            colorPickerRef.current.style.opacity = '0';
-        } else {
+        if (enable) {
             colorPickerRef.current.style.opacity = '1';
+        } else {
+            colorPickerRef.current.style.opacity = '0';
         }
     }, []);
     const updateEnable = useCallback(() => {
-        const enable = isEnableColorPicker(getCaptureStep(), getDrawState(), getCaptureEvent());
+        const enable =
+            getScreenshotType() !== ScreenshotType.TopWindow &&
+            isEnableColorPicker(getCaptureStep(), getDrawState(), getCaptureEvent());
         if (enableRef.current === enable) {
             return;
         }
 
         onEnableChange(enable);
-    }, [getCaptureEvent, getCaptureStep, getDrawState, onEnableChange]);
+    }, [getCaptureEvent, getCaptureStep, getDrawState, getScreenshotType, onEnableChange]);
     const updateEnableDebounce = useMemo(() => debounce(updateEnable, 17), [updateEnable]);
     useStateSubscriber(CaptureStepPublisher, updateEnableDebounce);
     useStateSubscriber(DrawStatePublisher, updateEnableDebounce);
     useStateSubscriber(CaptureEventPublisher, updateEnableDebounce);
+    useStateSubscriber(ScreenshotTypePublisher, updateEnableDebounce);
 
     const currentCanvasImageDataRef = useRef<ImageData | undefined>(undefined);
 

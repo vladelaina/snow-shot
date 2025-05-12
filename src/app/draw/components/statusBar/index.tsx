@@ -8,15 +8,22 @@ import {
     AppSettingsLoadingPublisher,
     AppSettingsPublisher,
 } from '@/app/contextWrap';
-import { useCallback, useContext, useEffect, useRef, useState } from 'react';
+import { useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { KeyboardIcon, MouseIcon } from '@/components/icons';
 import { DescriptionsItemType } from 'antd/es/descriptions';
 import { zIndexs } from '@/utils/zIndex';
-import { CaptureLoadingPublisher, CaptureStepPublisher, DrawStatePublisher } from '../../extra';
+import {
+    CaptureLoadingPublisher,
+    CaptureStepPublisher,
+    DrawStatePublisher,
+    ScreenshotTypePublisher,
+} from '../../extra';
 import { useStateSubscriber } from '@/hooks/useStateSubscriber';
 import { getMaskBackgroundColor } from '../selectLayer/extra';
 import { MousePosition } from '@/utils/mousePosition';
 import { useCallbackRender } from '@/hooks/useCallbackRender';
+import { debounce } from 'lodash';
+import { ScreenshotType } from '@/functions/screenshot';
 
 const KeyLabel: React.FC<{
     messageId?: string;
@@ -62,7 +69,14 @@ const StatusBar: React.FC = () => {
     const [getCaptureLoading] = useStateSubscriber(CaptureLoadingPublisher, onCaptureLoadingChange);
 
     const [descriptionsItems, setDescriptionsItems] = useState<DescriptionsItemType[]>([]);
+
+    const [getScreenshotType] = useStateSubscriber(ScreenshotTypePublisher, undefined);
     const updateDescriptionsItems = useCallback(() => {
+        if (getScreenshotType() === ScreenshotType.TopWindow) {
+            setDescriptionsItems([]);
+            return;
+        }
+
         const {
             colorPickerCopy: { hotKey: colorPickerCopyHotKey },
             colorPickerMoveUp: { hotKey: colorPickerMoveUpHotKey },
@@ -155,9 +169,14 @@ const StatusBar: React.FC = () => {
         }
 
         setDescriptionsItems(items);
-    }, [getAppSettings, getCaptureStep, getDrawState]);
-    useStateSubscriber(CaptureStepPublisher, updateDescriptionsItems);
-    useStateSubscriber(DrawStatePublisher, updateDescriptionsItems);
+    }, [getAppSettings, getCaptureStep, getDrawState, getScreenshotType]);
+    const updateDescriptionsItemsDebounce = useMemo(
+        () => debounce(updateDescriptionsItems, 0),
+        [updateDescriptionsItems],
+    );
+    useStateSubscriber(CaptureStepPublisher, updateDescriptionsItemsDebounce);
+    useStateSubscriber(DrawStatePublisher, updateDescriptionsItemsDebounce);
+    useStateSubscriber(ScreenshotTypePublisher, updateDescriptionsItemsDebounce);
 
     const onMouseMove = useCallback(
         (mousePosition: MousePosition) => {

@@ -234,7 +234,7 @@ export const OcrBlocks: React.FC<{
     }, [initMenu]);
 
     useHotkeys(
-        'Control+A',
+        'Ctrl+A',
         () => {
             const selection = window.getSelection();
             if (containerElementRef.current && selection) {

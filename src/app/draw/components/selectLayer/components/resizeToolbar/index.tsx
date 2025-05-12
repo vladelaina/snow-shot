@@ -5,8 +5,9 @@ import { Flex, theme } from 'antd';
 import React, { useCallback, useContext, useImperativeHandle, useRef, useState } from 'react';
 import { updateElementPosition } from '../../../drawToolbar/components/dragButton/extra';
 import { ElementRect } from '@/commands';
-import { CaptureEvent, CaptureEventPublisher } from '@/app/draw/extra';
+import { CaptureEvent, CaptureEventPublisher, ScreenshotTypePublisher } from '@/app/draw/extra';
 import { useStateSubscriber } from '@/hooks/useStateSubscriber';
+import { ScreenshotType } from '@/functions/screenshot';
 
 export type ResizeToolbarActionType = {
     updateStyle: (selectedRect: ElementRect) => void;
@@ -69,8 +70,14 @@ export const ResizeToolbar: React.FC<{
         [updateStyle],
     );
 
+    const [getScreenshotType] = useStateSubscriber(ScreenshotTypePublisher, undefined);
     useStateSubscriber(CaptureEventPublisher, (event) => {
         if (!event) {
+            return;
+        }
+
+        if (getScreenshotType() === ScreenshotType.TopWindow) {
+            setEnable(false);
             return;
         }
 

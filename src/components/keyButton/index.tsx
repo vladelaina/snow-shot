@@ -1,33 +1,22 @@
-import { Button, ButtonProps, Modal, Space, theme } from 'antd';
+import { Button, ButtonProps, Flex, Modal, Space, theme } from 'antd';
 import { KeyboardGrayIcon } from '../icons';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { FormattedMessage } from 'react-intl';
-import { DeleteOutlined, PlusOutlined } from '@ant-design/icons';
+import { CheckOutlined, DeleteOutlined, PlusOutlined } from '@ant-design/icons';
 import _ from 'lodash';
+import { useRecordHotkeys } from 'react-hotkeys-hook';
 
 type KeyConfig = {
-    anyKey: string;
-    selectCtrl: boolean;
-    selectShift: boolean;
-    selectAlt: boolean;
+    recordKeys: string;
     index: number;
 };
 
-const convertKeyConfigToString = (keyConfig: KeyConfig, defaultKey = '') => {
-    const res = [
-        keyConfig.selectCtrl ? 'Control' : '',
-        keyConfig.selectShift ? 'Shift' : '',
-        keyConfig.selectAlt ? 'Alt' : '',
-        keyConfig.anyKey.charAt(0).toUpperCase() + keyConfig.anyKey.slice(1).toLowerCase(),
-    ]
-        .filter(Boolean)
+const convertKeyConfigToString = (keys: Set<string>) => {
+    return Array.from(keys)
+        .map((item) => {
+            return `${item[0].toUpperCase()}${item.slice(1).toLowerCase()}`;
+        })
         .join('+');
-
-    if (res === '') {
-        return defaultKey;
-    }
-
-    return res;
 };
 
 export const KeyButton: React.FC<{
@@ -63,6 +52,8 @@ export const KeyButton: React.FC<{
         _setInputAnyKeyConfigIndex(index);
     }, []);
 
+    const [recordKeys, { start: startRecord, stop: stopRecord }] = useRecordHotkeys();
+
     useEffect(() => {
         if (!open) {
             return;
@@ -71,44 +62,21 @@ export const KeyButton: React.FC<{
         const keyConfigValueList = keyValue.split(',').map(_.trim);
 
         const configList = keyConfigValueList.slice(0, maxLength).map((value, index) => {
-            let selectCtrl = false;
-            let selectShift = false;
-            let selectAlt = false;
-            let anyKey = '';
-
-            value.split('+').forEach((key) => {
-                if (key === 'Control') {
-                    selectCtrl = true;
-                } else if (key === 'Shift') {
-                    selectShift = true;
-                } else if (key === 'Alt') {
-                    selectAlt = true;
-                } else {
-                    anyKey = key;
-                }
-            });
+            const recordKeys = value;
 
             return {
-                anyKey,
-                selectCtrl,
-                selectShift,
-                selectAlt,
+                recordKeys,
                 index,
             };
         });
         setKeyConfigList(configList);
-        if (
-            configList.length === 1 &&
-            configList[0].anyKey === '' &&
-            configList[0].selectAlt === false &&
-            configList[0].selectCtrl === false &&
-            configList[0].selectShift === false
-        ) {
+        if (configList.length === 1 && configList[0].recordKeys === '') {
             setTimeout(() => {
                 setInputAnyKeyConfigIndex(0);
+                startRecord();
             }, 0);
         }
-    }, [keyValue, maxLength, setInputAnyKeyConfigIndex, setKeyConfigList, open]);
+    }, [keyValue, maxLength, setInputAnyKeyConfigIndex, setKeyConfigList, open, startRecord]);
 
     const updateKeyConfig = useCallback(() => {
         setKeyConfigList((pre) => {
@@ -117,40 +85,9 @@ export const KeyButton: React.FC<{
     }, [setKeyConfigList]);
 
     useEffect(() => {
-        const handleKeyDown = (e: KeyboardEvent) => {
-            if (inputAnyKeyConfigIndexRef.current === undefined) {
-                return;
-            }
-
-            if (e.key === ' ') {
-                return;
-            }
-
-            if (e.key === 'Control') {
-                keyConfigListRef.current[inputAnyKeyConfigIndexRef.current].selectCtrl = true;
-            } else if (e.key === 'Shift') {
-                keyConfigListRef.current[inputAnyKeyConfigIndexRef.current].selectShift = true;
-            } else if (e.key === 'Alt') {
-                keyConfigListRef.current[inputAnyKeyConfigIndexRef.current].selectAlt = true;
-            } else {
-                keyConfigListRef.current[inputAnyKeyConfigIndexRef.current].anyKey =
-                    e.key.charAt(0).toUpperCase() + e.key.slice(1).toLowerCase();
-                setInputAnyKeyConfigIndex(undefined);
-            }
-
-            updateKeyConfig();
-        };
-
-        document.addEventListener('keydown', handleKeyDown);
-
-        return () => {
-            document.removeEventListener('keydown', handleKeyDown);
-        };
-    }, [setInputAnyKeyConfigIndex, updateKeyConfig]);
-
-    useEffect(() => {
         setInputAnyKeyConfigIndex(undefined);
-    }, [open, setInputAnyKeyConfigIndex]);
+        updateKeyConfig();
+    }, [open, setInputAnyKeyConfigIndex, updateKeyConfig]);
 
     const [confirmLoading, setConfirmLoading] = useState(false);
 
@@ -169,61 +106,31 @@ export const KeyButton: React.FC<{
                     onKeyChange(
                         keyConfigList
                             .map((item) => {
-                                return convertKeyConfigToString(item);
+                                return item.recordKeys;
                             })
                             .join(', '),
                     ).finally(() => {
                         setConfirmLoading(false);
                         setOpen(false);
                     });
+                    stopRecord();
                 }}
             >
                 {keyConfigList.map((keyConfig) => {
                     return (
-                        <Space
+                        <Flex
                             align="center"
+                            justify="space-between"
                             wrap
                             style={{ marginBottom: token.margin }}
                             key={keyConfig.index}
                         >
                             <Space>
                                 <Button
-                                    type={keyConfig.selectCtrl ? 'primary' : 'default'}
                                     onClick={() => {
-                                        keyConfig.selectCtrl = !keyConfig.selectCtrl;
-                                        updateKeyConfig();
-                                    }}
-                                >
-                                    Control
-                                </Button>
-                                +
-                                <Button
-                                    type={keyConfig.selectShift ? 'primary' : 'default'}
-                                    onClick={() => {
-                                        keyConfig.selectShift = !keyConfig.selectShift;
-                                        updateKeyConfig();
-                                    }}
-                                >
-                                    Shift
-                                </Button>
-                                +
-                                <Button
-                                    type={keyConfig.selectAlt ? 'primary' : 'default'}
-                                    onClick={() => {
-                                        keyConfig.selectAlt = !keyConfig.selectAlt;
-                                        updateKeyConfig();
-                                    }}
-                                >
-                                    Alt
-                                </Button>
-                                +
-                            </Space>
-                            <Space>
-                                <Button
-                                    type={'dashed'}
-                                    onClick={() => {
-                                        keyConfig.anyKey = '';
+                                        keyConfig.recordKeys = '';
                                         setInputAnyKeyConfigIndex(keyConfig.index);
+                                        startRecord();
                                     }}
                                     loading={inputAnyKeyConfigIndex === keyConfig.index}
                                     style={{
@@ -237,31 +144,62 @@ export const KeyButton: React.FC<{
                                     }
                                 >
                                     {inputAnyKeyConfigIndex === keyConfig.index ? (
-                                        <FormattedMessage id="settings.pleasePressTheKey" />
+                                        <>
+                                            {recordKeys.size > 0 ? (
+                                                convertKeyConfigToString(recordKeys)
+                                            ) : (
+                                                <FormattedMessage id="settings.pleasePressTheKey" />
+                                            )}
+                                        </>
                                     ) : (
-                                        keyConfig.anyKey
+                                        keyConfig.recordKeys
                                     )}
                                 </Button>
-                                =
-                                <Button color="primary" variant="outlined">
-                                    {convertKeyConfigToString(keyConfig, ' ')}
-                                </Button>
-                                {inputAnyKeyConfigIndex !== keyConfig.index && (
-                                    <Button
-                                        danger
-                                        onClick={() => {
-                                            setKeyConfigList((pre) => {
-                                                return pre.filter(
-                                                    (item) => item.index !== keyConfig.index,
-                                                );
-                                            });
-                                        }}
-                                    >
-                                        <DeleteOutlined />
-                                    </Button>
-                                )}
                             </Space>
-                        </Space>
+
+                            {inputAnyKeyConfigIndex !== keyConfig.index ? (
+                                <Button
+                                    danger
+                                    onClick={() => {
+                                        setKeyConfigList((pre) => {
+                                            return pre.filter(
+                                                (item) => item.index !== keyConfig.index,
+                                            );
+                                        });
+                                    }}
+                                    type="text"
+                                >
+                                    <DeleteOutlined />
+                                </Button>
+                            ) : (
+                                <Button
+                                    disabled={recordKeys.size === 0}
+                                    onClick={() => {
+                                        stopRecord();
+
+                                        if (recordKeys.size === 0) {
+                                            return;
+                                        }
+
+                                        if (inputAnyKeyConfigIndexRef.current === undefined) {
+                                            return;
+                                        }
+
+                                        keyConfigListRef.current[
+                                            inputAnyKeyConfigIndexRef.current
+                                        ].recordKeys = convertKeyConfigToString(recordKeys);
+
+                                        setInputAnyKeyConfigIndex(undefined);
+
+                                        updateKeyConfig();
+                                    }}
+                                    type="text"
+                                    style={{ color: token.colorSuccess }}
+                                >
+                                    <CheckOutlined />
+                                </Button>
+                            )}
+                        </Flex>
                     );
                 })}
                 {maxLength > 1 && (
@@ -284,15 +222,13 @@ export const KeyButton: React.FC<{
                                 return [
                                     ...pre,
                                     {
-                                        anyKey: '',
-                                        selectCtrl: false,
-                                        selectShift: false,
-                                        selectAlt: false,
+                                        recordKeys: '',
                                         index,
                                     },
                                 ];
                             });
                             setInputAnyKeyConfigIndex(index);
+                            startRecord();
                         }}
                     >
                         <FormattedMessage id="settings.addKeyConfig" />

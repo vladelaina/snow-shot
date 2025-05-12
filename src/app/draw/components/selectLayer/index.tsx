@@ -35,13 +35,15 @@ import {
     SelectState,
 } from './extra';
 import { MousePosition } from '@/utils/mousePosition';
-import { getMonitorRect } from '../../extra';
+import { getMonitorRect, ScreenshotTypePublisher } from '../../extra';
 import { CaptureStep, DrawContext } from '../../types';
 import { useStateSubscriber } from '@/hooks/useStateSubscriber';
 import { CaptureStepPublisher } from '../../extra';
 import { ResizeToolbar, ResizeToolbarActionType } from './components/resizeToolbar';
+import { ScreenshotType } from '@/functions/screenshot';
 export type SelectLayerActionType = BaseLayerActionType & {
     getSelectRect: () => ElementRect | undefined;
+    getWindowId: () => number | undefined;
 };
 
 export type SelectLayerProps = {
@@ -63,6 +65,7 @@ const SelectLayerCore: React.FC<SelectLayerProps> = ({ actionRef }) => {
             setFindChildrenElements(settings[AppSettingsGroup.Screenshot].findChildrenElements);
         }, []),
     );
+    const [getScreenshotType] = useStateSubscriber(ScreenshotTypePublisher, undefined);
     const tabFindChildrenElementsRef = useRef<boolean>(false); // 是否查找子元素
     const [tabFindChildrenElements, _setTabFindChildrenElements] = useState<boolean>(false); // Tab 键的切换查找子元素
     const setTabFindChildrenElements = useCallback(
@@ -73,7 +76,15 @@ const SelectLayerCore: React.FC<SelectLayerProps> = ({ actionRef }) => {
         },
         [],
     );
+    const isEnableFindChildrenElements = useCallback(() => {
+        return (
+            tabFindChildrenElementsRef.current && getScreenshotType() !== ScreenshotType.TopWindow
+        );
+    }, [getScreenshotType]);
+
     const elementsListRef = useRef<ElementRect[]>([]); // 窗口元素的列表
+    const elementsIndexWindowIdMapRef = useRef<Map<number, number>>(new Map()); // 窗口元素对应的窗口 ID
+    const selectedWindowIdRef = useRef<number | undefined>(undefined); // 选中的窗口 ID
     const elementsListRTreeRef = useRef<Flatbush | undefined>(undefined); // 窗口元素的 RTree
     const selectWindowElementLoadingRef = useRef(true); // 是否正在加载元素选择功能
     const overlayRectRef = useRef<PIXI.Graphics | undefined>(undefined); // 全屏遮罩
@@ -124,15 +135,23 @@ const SelectLayerCore: React.FC<SelectLayerProps> = ({ actionRef }) => {
         selectWindowElementLoadingRef.current = true;
 
         const windowElements = await getWindowElements();
+        const rectList: ElementRect[] = [];
         const initUiElementsCachePromise = initUiElementsCache();
+        const map = new Map<number, number>();
 
         const rTree = new Flatbush(windowElements.length);
-        windowElements.forEach((rect) => {
+        windowElements.forEach((windowElement, index) => {
+            const rect = windowElement.element_rect;
+            rectList.push(rect);
+
             rTree.add(rect.min_x, rect.min_y, rect.max_x, rect.max_y);
+            map.set(index, windowElement.window_id);
         });
         rTree.finish();
         elementsListRTreeRef.current = rTree;
-        elementsListRef.current = windowElements;
+        elementsListRef.current = rectList;
+        selectedWindowIdRef.current = undefined;
+        elementsIndexWindowIdMapRef.current = map;
 
         await initUiElementsCachePromise;
         selectWindowElementLoadingRef.current = false;
@@ -153,7 +172,7 @@ const SelectLayerCore: React.FC<SelectLayerProps> = ({ actionRef }) => {
             }
 
             let elementRectList = undefined;
-            if (tabFindChildrenElementsRef.current) {
+            if (isEnableFindChildrenElements()) {
                 try {
                     elementRectList = await getElementFromPosition(
                         mousePosition.mouseX,
@@ -178,13 +197,15 @@ const SelectLayerCore: React.FC<SelectLayerProps> = ({ actionRef }) => {
                 rectIndexs.sort((a, b) => a - b);
 
                 result = rectIndexs.map((index) => {
+                    selectedWindowIdRef.current = elementsIndexWindowIdMapRef.current.get(index);
+
                     return elementsListRef.current[index];
                 });
             }
 
             return result;
         },
-        [],
+        [isEnableFindChildrenElements],
     );
 
     const updateSelectRect = useCallback(
@@ -202,13 +223,14 @@ const SelectLayerCore: React.FC<SelectLayerProps> = ({ actionRef }) => {
                 overlayMaskRectControls,
                 getAppSettings()[AppSettingsGroup.Common].darkMode,
                 imageBuffer.monitorScaleFactor,
+                getScreenshotType(),
             );
             // 和 canvas 同步下
             requestAnimationFrame(() => {
                 resizeToolbarActionRef.current?.updateStyle(rect);
             });
         },
-        [getAppSettings],
+        [getAppSettings, getScreenshotType],
     );
 
     const initAnimation = useCallback(
@@ -283,7 +305,10 @@ const SelectLayerCore: React.FC<SelectLayerProps> = ({ actionRef }) => {
             let elementRectList = await getElementRectFromMousePosition(mousePosition);
 
             if (!elementRectList || elementRectList.length === 0) {
-                elementRectList = [getMonitorRect(imageBufferRef.current)];
+                elementRectList =
+                    getScreenshotType() === ScreenshotType.TopWindow
+                        ? [{ min_x: 0, min_y: 0, max_x: 0, max_y: 0 }]
+                        : [getMonitorRect(imageBufferRef.current)];
             }
 
             const minLevel = 0;
@@ -298,7 +323,7 @@ const SelectLayerCore: React.FC<SelectLayerProps> = ({ actionRef }) => {
 
             return elementRectList[currentLevel];
         },
-        [getElementRectFromMousePosition],
+        [getElementRectFromMousePosition, getScreenshotType],
     );
 
     const updateDragMode = useCallback(
@@ -336,7 +361,10 @@ const SelectLayerCore: React.FC<SelectLayerProps> = ({ actionRef }) => {
             lastMouseMovePositionRef.current = mousePosition;
 
             if (selectStateRef.current === SelectState.Auto) {
-                if (mouseDownPositionRef.current) {
+                if (
+                    mouseDownPositionRef.current &&
+                    getScreenshotType() !== ScreenshotType.TopWindow
+                ) {
                     // 检测拖动距离是否启用手动选择
                     const maxDistance = mouseDownPositionRef.current.getMaxDistance(mousePosition);
                     if (maxDistance > 9) {
@@ -344,7 +372,10 @@ const SelectLayerCore: React.FC<SelectLayerProps> = ({ actionRef }) => {
                     }
                 }
 
-                setSelectRect(await autoSelect(mousePosition));
+                setSelectRect(
+                    await autoSelect(mousePosition),
+                    getScreenshotType() === ScreenshotType.TopWindow,
+                );
             } else if (selectStateRef.current === SelectState.Manual) {
                 if (!mouseDownPositionRef.current) {
                     return;
@@ -369,7 +400,7 @@ const SelectLayerCore: React.FC<SelectLayerProps> = ({ actionRef }) => {
                 );
             }
         },
-        [autoSelect, setSelectRect, setSelectState, updateDragMode],
+        [autoSelect, getScreenshotType, setSelectRect, setSelectState, updateDragMode],
     );
     const onMouseUp = useCallback(() => {
         if (!mouseDownPositionRef.current) {
@@ -525,6 +556,7 @@ const SelectLayerCore: React.FC<SelectLayerProps> = ({ actionRef }) => {
                 await onCaptureReady(texture, imageBuffer);
                 refreshMouseMove();
             },
+            getWindowId: () => selectedWindowIdRef.current,
             onCaptureLoad,
             onCaptureFinish,
             getSelectRect,

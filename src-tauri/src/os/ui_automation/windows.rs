@@ -447,19 +447,6 @@ impl UIElements {
 
         return Ok(result_rect_list);
     }
-
-    fn get_window_info(hwnd: HWND) -> Result<WINDOWINFO, AutomationError> {
-        let mut window_info = WINDOWINFO {
-            cbSize: mem::size_of::<WINDOWINFO>() as u32,
-            ..WINDOWINFO::default()
-        };
-
-        unsafe {
-            GetWindowInfo(hwnd, &mut window_info)?;
-        };
-
-        Ok(window_info)
-    }
 }
 
 impl Drop for UIElements {
