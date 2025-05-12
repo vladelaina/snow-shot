@@ -24,7 +24,13 @@ import {
     SaveIcon,
     TextIcon,
 } from '@/components/icons';
-import { CaptureStepPublisher, DrawStatePublisher } from '../../extra';
+import {
+    CaptureEvent,
+    CaptureEventPublisher,
+    CaptureStepPublisher,
+    DrawStatePublisher,
+    ScreenshotTypePublisher,
+} from '../../extra';
 import { useStateSubscriber } from '@/hooks/useStateSubscriber';
 import { createPublisher, withStatePublisher } from '@/hooks/useStatePublisher';
 import { EnableKeyEventPublisher } from './components/keyEventWrap/extra';
@@ -39,6 +45,7 @@ export type DrawToolbarProps = {
     onCancel: () => void;
     onSave: () => void;
     onFixed: () => void;
+    onTopWindow: () => void;
     onCopyToClipboard: () => void;
     onOcrDetect: () => void;
 };
@@ -55,12 +62,14 @@ const DrawToolbarCore: React.FC<DrawToolbarProps> = ({
     onSave,
     onFixed,
     onCopyToClipboard,
+    onTopWindow,
     onOcrDetect,
 }) => {
-    const { drawCacheLayerActionRef, excuteScreenshotTypeRef } = useContext(DrawContext);
+    const { drawCacheLayerActionRef } = useContext(DrawContext);
 
     const [getDrawState, setDrawState] = useStateSubscriber(DrawStatePublisher, undefined);
     const [, setCaptureStep] = useStateSubscriber(CaptureStepPublisher, undefined);
+    const [getScreenshotType] = useStateSubscriber(ScreenshotTypePublisher, undefined);
     const { token } = theme.useToken();
 
     const enableRef = useRef(false);
@@ -218,23 +227,39 @@ const DrawToolbarCore: React.FC<DrawToolbarProps> = ({
         };
     }, [drawToolbarRef, draggingRef, setDragging]);
 
+    const canHandleScreenshotTypeRef = useRef(false);
+    useStateSubscriber(CaptureEventPublisher, (event) => {
+        if (event?.event === CaptureEvent.onCaptureReady) {
+            canHandleScreenshotTypeRef.current = true;
+        }
+    });
+
     const onEnableChange = useCallback(
         (enable: boolean) => {
             enableRef.current = enable;
             dragButtonActionRef.current?.setEnable(enable);
             drawToolarContainerRef.current!.style.pointerEvents = enable ? 'auto' : 'none';
 
-            if (excuteScreenshotTypeRef.current) {
-                if (excuteScreenshotTypeRef.current === ScreenshotType.Fixed) {
-                    onFixed();
-                } else if (excuteScreenshotTypeRef.current === ScreenshotType.OcrDetect) {
-                    onToolClick(DrawState.OcrDetect);
+            if (canHandleScreenshotTypeRef.current) {
+                switch (getScreenshotType()) {
+                    case ScreenshotType.Fixed:
+                        onFixed();
+                        break;
+                    case ScreenshotType.OcrDetect:
+                        onToolClick(DrawState.OcrDetect);
+                        break;
+                    case ScreenshotType.TopWindow:
+                        onTopWindow();
+                        break;
+                    case ScreenshotType.Default:
+                    default:
+                        onToolClick(DrawState.Idle);
+                        break;
                 }
-
-                excuteScreenshotTypeRef.current = undefined;
+                canHandleScreenshotTypeRef.current = false;
             }
         },
-        [excuteScreenshotTypeRef, onFixed, onToolClick],
+        [onFixed, onToolClick, onTopWindow, getScreenshotType],
     );
 
     const setEnable = useCallback(

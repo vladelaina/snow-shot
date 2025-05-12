@@ -60,8 +60,13 @@ export type ElementRect = {
     max_y: number;
 };
 
+export type WindowElement = {
+    element_rect: ElementRect;
+    window_id: number;
+};
+
 export const getWindowElements = async () => {
-    const result = await invoke<ElementRect[]>('get_window_elements');
+    const result = await invoke<WindowElement[]>('get_window_elements');
     return result;
 };
 

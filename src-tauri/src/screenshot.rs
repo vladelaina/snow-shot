@@ -1,6 +1,7 @@
 use device_query::{DeviceQuery, DeviceState, MouseState};
 use image::codecs::png::{CompressionType, FilterType, PngEncoder};
 use image::codecs::webp::WebPEncoder;
+use serde::Serialize;
 use std::sync::Mutex;
 use std::time::{SystemTime, UNIX_EPOCH};
 use tauri::command;
@@ -9,6 +10,7 @@ use xcap::{Monitor, Window};
 
 use crate::os::ElementRect;
 use crate::os::ui_automation::UIElements;
+use crate::os;
 
 fn get_device_mouse_position() -> (i32, i32) {
     let device_state = DeviceState::new();
@@ -142,8 +144,14 @@ pub async fn init_ui_elements_cache(
     Ok(())
 }
 
+#[derive(PartialEq, Eq, Serialize, Clone, Debug, Copy, Hash)]
+pub struct WindowElement {
+    element_rect: ElementRect,
+    window_id: u32,
+}
+
 #[command]
-pub async fn get_window_elements() -> Result<Vec<ElementRect>, ()> {
+pub async fn get_window_elements() -> Result<Vec<WindowElement>, ()> {
     // 获取当前鼠标的位置
     let device_state = DeviceState::new();
     let mouse: MouseState = device_state.get_mouse();
@@ -189,20 +197,52 @@ pub async fn get_window_elements() -> Result<Vec<ElementRect>, ()> {
             Err(_) => continue,
         };
 
+        let window_id = match window.id() {
+            Ok(id) => id,
+            Err(_) => continue,
+        };
+
         // 保留在屏幕内的窗口
         if !(x >= monitor_min_x && y >= monitor_min_y && x <= monitor_max_x && y <= monitor_max_y) {
             continue;
         }
 
-        rect_list.push(ElementRect {
-            min_x: x,
-            min_y: y,
-            max_x: x + width as i32,
-            max_y: y + height as i32,
+        rect_list.push(WindowElement {
+            element_rect: ElementRect {
+                min_x: x,
+                min_y: y,
+                max_x: x + width as i32,
+                max_y: y + height as i32,
+            },
+            window_id,
         });
     }
 
     Ok(rect_list)
+}
+
+#[command]
+pub async fn switch_always_on_top(window_id: u32) -> bool {
+    let window_list = Window::all().unwrap_or_default();
+    let window = window_list
+        .iter()
+        .find(|w| w.id().unwrap_or(0) == window_id);
+
+    let window = match window {
+        Some(window) => window,
+        None => return false,
+    };
+
+    let window_hwnd = window.hwnd();
+
+    let window_hwnd = match window_hwnd {
+        Ok(hwnd) => hwnd,
+        Err(_) => return false,
+    };
+
+    os::utils::switch_always_on_top(window_hwnd);
+
+    true
 }
 
 #[command]

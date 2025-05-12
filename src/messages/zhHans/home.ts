@@ -3,6 +3,8 @@ export const home = {
     'home.screenshotFunction': '截图功能',
     'home.translationFunction': '翻译功能',
     'home.chatFunction': 'Chat 功能',
+    'home.otherFunction': '其它功能',
+    'home.topWindow': '置顶/取消置顶窗口',
     'home.translationSelectText': '翻译选中的文本',
     'home.translation': '翻译',
     'home.screenshot': '截图',

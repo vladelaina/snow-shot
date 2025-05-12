@@ -43,4 +43,7 @@ export const tools = {
     'tools.translation.domain.medicine': '医学领域',
     'tools.translation.domain.finance': '金融领域',
     'tools.translation.domain.game': '游戏领域',
+    'tools.chat.chatCopyAndHide': '复制并隐藏',
+    'tools.chat.chatCopy': '复制',
+    'tools.chat.chatNewSession': '创建新对话',
 };

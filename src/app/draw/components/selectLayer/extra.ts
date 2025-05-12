@@ -1,4 +1,5 @@
 import { ElementRect } from '@/commands';
+import { ScreenshotType } from '@/functions/screenshot';
 import { MousePosition } from '@/utils/mousePosition';
 import * as PIXI from 'pixi.js';
 
@@ -65,6 +66,7 @@ export const drawSelectRect = (
     maskRectControls: PIXI.Graphics,
     darkMode: boolean,
     scaleFactor: number,
+    screenshotType: ScreenshotType,
 ) => {
     const { min_x: rectMinX, min_y: rectMinY, max_x: rectMaxX, max_y: rectMaxY } = selectRect;
     const rectWidth = rectMaxX - rectMinX;
@@ -77,17 +79,14 @@ export const drawSelectRect = (
     const maskCircleControlShowEndWidth = MASK_CIRCLE_CONTROL_SHOW_END_CONTROL_WIDTH * scaleFactor;
     const maskCircleControlShowMidWidth = MASK_CIRCLE_CONTROL_SHOW_MID_CONTROL_WIDTH * scaleFactor;
 
-    // 获取填充颜色
     const fillColor = {
         color: getMaskBackgroundColor(darkMode),
         alpha: MASK_OPACITY,
     };
 
-    // 一次性清除两个图形对象
     maskRect.clear();
     maskRectControls.clear();
 
-    // 优化绘制过程，减少方法调用次数
     maskRect
         .rect(0, 0, monitorWidth, rectMinY)
         .rect(0, rectMaxY, monitorWidth, monitorHeight - rectMaxY)
@@ -95,13 +94,15 @@ export const drawSelectRect = (
         .rect(rectMaxX, rectMinY, monitorWidth - rectMaxX, rectHeight)
         .fill(fillColor);
 
-    // 绘制 mask 的描边
     maskRectControls.rect(rectMinX, rectMinY, rectWidth, rectHeight).stroke({
         color: MASK_CONTROL_BORDER_STROKE_COLOR,
         width: maskControlBorderStrokeWidth,
     });
 
-    // 控制点样式复用
+    if (screenshotType === ScreenshotType.TopWindow) {
+        return;
+    }
+
     const controlPointStyle = {
         fill: MASK_CIRCLE_CONTROL_COLOR,
         stroke: {
@@ -128,11 +129,9 @@ export const drawSelectRect = (
     }
 
     if (minWidth > maskCircleControlShowMidWidth) {
-        // 计算中点坐标
         const midX = rectMinX + rectWidth / 2;
         const midY = rectMinY + rectHeight / 2;
 
-        // 创建边中点控制点
         const midPoints = [
             [midX, rectMinY], // 上边中点
             [midX, rectMaxY], // 下边中点

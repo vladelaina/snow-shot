@@ -89,11 +89,11 @@ export const defaultDrawToolbarKeyEventSettings: Record<KeyEventKey, KeyEventVal
         unique: true,
     },
     [KeyEventKey.UndoTool]: {
-        hotKey: 'Control+Z',
+        hotKey: 'Ctrl+Z',
         unique: true,
     },
     [KeyEventKey.RedoTool]: {
-        hotKey: 'Control+Y',
+        hotKey: 'Ctrl+Y',
         unique: true,
     },
     [KeyEventKey.CancelTool]: {
@@ -101,19 +101,19 @@ export const defaultDrawToolbarKeyEventSettings: Record<KeyEventKey, KeyEventVal
         unique: true,
     },
     [KeyEventKey.FixedTool]: {
-        hotKey: 'Control+F',
+        hotKey: 'Ctrl+F',
         unique: true,
     },
     [KeyEventKey.CopyTool]: {
-        hotKey: 'Control+C',
+        hotKey: 'Ctrl+C',
         unique: true,
     },
     [KeyEventKey.OcrDetectTool]: {
-        hotKey: 'Control+D',
+        hotKey: 'Ctrl+D',
         unique: true,
     },
     [KeyEventKey.SaveTool]: {
-        hotKey: 'Control+S',
+        hotKey: 'Ctrl+S',
         unique: true,
     },
     [KeyEventKey.ColorPickerCopy]: {

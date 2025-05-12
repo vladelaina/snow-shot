@@ -34,6 +34,7 @@ export const settings = {
     'settings.systemSettings.commonSettings': '常用设置',
     'settings.systemSettings.commonSettings.autoStart': '开机自动启动',
     'settings.hotKeySettings.translation': '翻译快捷键',
+    'settings.hotKeySettings.chat': 'Chat 快捷键',
     'settings.hotKeySettings.keyEventTooltip': '{message}（{key}）',
     'settings.chatSettings': 'Chat 设置',
     'settings.chatSettings.maxTokens': '最大 Token 数',
@@ -46,4 +47,6 @@ export const settings = {
     'settings.chatSettings.thinkingBudgetTokens': '思考预算 Token 数',
     'settings.chatSettings.thinkingBudgetTokens.tip':
         '对于如 Claude 模型的推理模式，思考预算决定其内部推理过程的最大 Token 数。注意，思考预算 Token 数不能小于\"最大 Token 数\"，所以如果该值有效，\"最大 Token 数\"可能由服务器决定',
+    'settings.functionSettings.chatSettings': 'Chat 设置',
+    'settings.functionSettings.chatSettings.autoCreateNewSession': '快捷键启动自动创建新会话',
 };

@@ -1,6 +1,9 @@
 #[cfg(target_os = "windows")]
-#[path = "./windows.rs"]
+#[path = "./ui_automation/windows.rs"]
 pub mod ui_automation;
+#[cfg(target_os = "windows")]
+#[path = "./utils/windows.rs"]
+pub mod utils;
 
 // #[cfg(target_os = "linux")]
 // #[path = "./linux.rs"]

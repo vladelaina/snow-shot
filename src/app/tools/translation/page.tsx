@@ -2,7 +2,7 @@
 
 import { AppSettingsActionContext, AppSettingsGroup, AppSettingsLanguage } from '@/app/contextWrap';
 import { ContentWrap } from '@/components/contentWrap';
-import { KeyboardIcon } from '@/components/icons';
+import { HotkeysMenu } from '@/components/hotkeysMenu';
 import { KeyEventKey, KeyEventValue } from '@/core/hotKeys';
 import { finishScreenshot } from '@/functions/screenshot';
 import { useAppSettingsLoad } from '@/hooks/useAppSettingsLoad';
@@ -14,22 +14,9 @@ import {
     TranslationType,
     TranslationTypeOption,
 } from '@/services/tools/translation';
-import { decodeParamsValue } from '@/utils';
+import { copyText, copyTextAndHide, decodeParamsValue } from '@/utils';
 import { SwapOutlined } from '@ant-design/icons';
-import { getCurrentWindow } from '@tauri-apps/api/window';
-import {
-    Button,
-    Col,
-    Dropdown,
-    Flex,
-    Form,
-    InputRef,
-    Row,
-    Select,
-    SelectProps,
-    Spin,
-    theme,
-} from 'antd';
+import { Button, Col, Flex, Form, InputRef, Row, Select, SelectProps, Spin, theme } from 'antd';
 import TextArea from 'antd/es/input/TextArea';
 import { debounce } from 'lodash';
 import { useSearchParams } from 'next/navigation';
@@ -387,18 +374,11 @@ const TranslationCore = () => {
     );
 
     const onCopy = useCallback(() => {
-        const selected = window.getSelection();
-        if (selected && selected.toString()) {
-            window.navigator.clipboard.writeText(selected.toString());
-            selected.removeAllRanges();
-        } else {
-            window.navigator.clipboard.writeText(translatedContentRef.current);
-        }
+        copyText(translatedContentRef.current);
     }, [translatedContentRef]);
     const onCopyAndHide = useCallback(() => {
-        onCopy();
-        getCurrentWindow().hide();
-    }, [onCopy]);
+        copyTextAndHide(translatedContentRef.current);
+    }, [translatedContentRef]);
 
     useHotkeys(hotKeys?.[KeyEventKey.CopyAndHide]?.hotKey ?? '', onCopyAndHide, {
         keyup: false,
@@ -620,54 +600,41 @@ const TranslationCore = () => {
                 </Form>
             </ContentWrap>
 
-            <div className="translation-footer">
-                <Dropdown
-                    menu={{
-                        items: [
-                            {
-                                label: (
-                                    <FormattedMessage
-                                        id="settings.hotKeySettings.keyEventTooltip"
-                                        values={{
-                                            message: (
-                                                <FormattedMessage id="tools.translation.copy" />
-                                            ),
-                                            key: hotKeys?.[KeyEventKey.Copy]?.hotKey,
-                                        }}
-                                    />
-                                ),
-                                key: 'copy',
-                                onClick: onCopy,
-                            },
-                            {
-                                label: (
-                                    <FormattedMessage
-                                        id="settings.hotKeySettings.keyEventTooltip"
-                                        values={{
-                                            message: (
-                                                <FormattedMessage id="tools.translation.copyAndHide" />
-                                            ),
-                                            key: hotKeys?.[KeyEventKey.CopyAndHide]?.hotKey,
-                                        }}
-                                    />
-                                ),
-                                key: 'copyAndHide',
-                                onClick: onCopyAndHide,
-                            },
-                        ],
-                    }}
-                    arrow={{
-                        pointAtCenter: true,
-                    }}
-                    placement="topRight"
-                >
-                    <Button
-                        className="translation-footer-button"
-                        icon={<KeyboardIcon />}
-                        shape="circle"
-                    />
-                </Dropdown>
-            </div>
+            <HotkeysMenu
+                className="translation-hotkeys-menu"
+                menu={{
+                    items: [
+                        {
+                            label: (
+                                <FormattedMessage
+                                    id="settings.hotKeySettings.keyEventTooltip"
+                                    values={{
+                                        message: <FormattedMessage id="tools.translation.copy" />,
+                                        key: hotKeys?.[KeyEventKey.Copy]?.hotKey,
+                                    }}
+                                />
+                            ),
+                            key: 'copy',
+                            onClick: onCopy,
+                        },
+                        {
+                            label: (
+                                <FormattedMessage
+                                    id="settings.hotKeySettings.keyEventTooltip"
+                                    values={{
+                                        message: (
+                                            <FormattedMessage id="tools.translation.copyAndHide" />
+                                        ),
+                                        key: hotKeys?.[KeyEventKey.CopyAndHide]?.hotKey,
+                                    }}
+                                />
+                            ),
+                            key: 'copyAndHide',
+                            onClick: onCopyAndHide,
+                        },
+                    ],
+                }}
+            />
 
             <style jsx>{`
                 :global(.ant-form-item-label) {
@@ -679,19 +646,11 @@ const TranslationCore = () => {
                     color: ${token.colorTextDescription} !important;
                 }
 
-                .translation-footer {
+                :global(.translation-hotkeys-menu) {
                     position: fixed;
                     bottom: 0;
                     right: 0;
                     padding: ${token.padding}px;
-                }
-
-                .translation-footer :global(.translation-footer-button) {
-                    opacity: 0.42;
-                }
-
-                .translation-footer :global(.translation-footer-button:hover) {
-                    opacity: 1;
                 }
             `}</style>
         </>

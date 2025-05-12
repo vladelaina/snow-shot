@@ -1,5 +1,6 @@
 export enum KeyEventGroup {
     Translation = 'translation',
+    Chat = 'chat',
 }
 
 export type KeyEventValue = {
@@ -15,16 +16,31 @@ export type KeyEventComponentValue = KeyEventValue & {
 export enum KeyEventKey {
     CopyAndHide = 'copyAndHide',
     Copy = 'copy',
+    ChatCopyAndHide = 'chatCopyAndHide',
+    ChatCopy = 'chatCopy',
+    ChatNewSession = 'chatNewSession',
 }
 
 export const defaultKeyEventSettings: Record<KeyEventKey, KeyEventValue> = {
     [KeyEventKey.CopyAndHide]: {
-        hotKey: 'Control+Q',
+        hotKey: 'Ctrl+Q',
         group: KeyEventGroup.Translation,
     },
     [KeyEventKey.Copy]: {
-        hotKey: 'Control+C',
+        hotKey: 'Ctrl+C',
         group: KeyEventGroup.Translation,
+    },
+    [KeyEventKey.ChatCopyAndHide]: {
+        hotKey: 'Ctrl+Q',
+        group: KeyEventGroup.Chat,
+    },
+    [KeyEventKey.ChatCopy]: {
+        hotKey: 'Ctrl+C',
+        group: KeyEventGroup.Chat,
+    },
+    [KeyEventKey.ChatNewSession]: {
+        hotKey: 'Ctrl+N',
+        group: KeyEventGroup.Chat,
     },
 };
 
@@ -35,6 +51,8 @@ export const defaultKeyEventComponentConfig: Record<KeyEventKey, KeyEventCompone
             let baseMessageId = '';
             if (defaultKeyEventSettings[key as KeyEventKey].group === KeyEventGroup.Translation) {
                 baseMessageId = 'tools.translation';
+            } else if (defaultKeyEventSettings[key as KeyEventKey].group === KeyEventGroup.Chat) {
+                baseMessageId = 'tools.chat';
             }
 
             acc[key as KeyEventKey] = {

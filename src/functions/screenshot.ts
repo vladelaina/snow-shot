@@ -4,6 +4,7 @@ export enum ScreenshotType {
     Default = 'default',
     Fixed = 'fixed',
     OcrDetect = 'ocr-detect',
+    TopWindow = 'top-window',
 }
 
 export const executeScreenshot = async (type: ScreenshotType = ScreenshotType.Default) => {

@@ -2,7 +2,7 @@ export const zhHant = {
     'menu.functions': '快速功能',
     'menu.screenshot': '截圖',
     'menu.settings': '設定',
-    'menu.settings.generalSettings': '常規設定',
+    'menu.settings.generalSettings': '介面設定',
     'menu.settings.hotKeySettings': '熱鍵設定',
     'menu.settings.systemSettings': '系統設定',
     'menu.tools': '工具箱',

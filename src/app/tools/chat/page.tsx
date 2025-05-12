@@ -48,7 +48,33 @@ import { SenderRef } from '@ant-design/x/es/sender';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { oneLight, oneDark } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import { useStateSubscriber } from '@/hooks/useStateSubscriber';
-import { decodeParamsValue } from '@/utils';
+import { copyText, copyTextAndHide, decodeParamsValue } from '@/utils';
+import { HotkeysMenu } from '@/components/hotkeysMenu';
+import { KeyEventValue } from '@/core/hotKeys';
+import { KeyEventKey } from '@/core/hotKeys';
+import { useAppSettingsLoad } from '@/hooks/useAppSettingsLoad';
+import { useHotkeys } from 'react-hotkeys-hook';
+import _ from 'lodash';
+
+const getMessageContent = (msg: ChatMessage | BubbleDataType) => {
+    const message = msg as ChatMessage;
+
+    const content =
+        typeof message.content === 'string'
+            ? message.content
+            : `${
+                  message.content.reasoning_content
+                      ? `${message.content.reasoning_content
+                            .split('\n')
+                            .map((line) => {
+                                return `> ${line}`;
+                            })
+                            .join('\n')}\n\n`
+                      : ''
+              }${message.content.content}`;
+
+    return content;
+};
 
 const MarkdownContent: React.FC<{
     content: string;
@@ -186,11 +212,41 @@ const fliterErrorMessages = (messages: BubbleDataType[] | undefined) => {
         newMessages.push(assistantMessage);
     }
 
-    return newMessages;
+    const finalMessages = [];
+    let lastRole: string | undefined = undefined;
+    let consecutiveCount = 0;
+
+    for (let i = 0; i < newMessages.length; i++) {
+        const currentMessage = newMessages[i];
+
+        if (currentMessage.role === lastRole) {
+            consecutiveCount++;
+            if (consecutiveCount >= 2) {
+                finalMessages[finalMessages.length - 1] = currentMessage;
+            } else {
+                finalMessages.push(currentMessage);
+            }
+        } else {
+            consecutiveCount = 1;
+            lastRole = currentMessage.role;
+            finalMessages.push(currentMessage);
+        }
+    }
+
+    return finalMessages;
 };
 
 const Chat = () => {
     const intl = useIntl();
+
+    const [hotKeys, setHotKeys] = useState<Record<KeyEventKey, KeyEventValue>>();
+    useAppSettingsLoad(
+        useCallback((appSettings) => {
+            setHotKeys(appSettings[AppSettingsGroup.KeyEvent]);
+        }, []),
+        true,
+    );
+
     const { token } = theme.useToken();
     const { message, modal } = useContext(AntdContext);
     const chatHistoryStoreRef = useRef<ChatHistoryStore | undefined>(undefined);
@@ -273,10 +329,12 @@ const Chat = () => {
     );
     const loading = agent.isRequesting();
 
+    const newestMessage = useRef<ChatMessage>(undefined);
     const { messages, onRequest, setMessages } = useXChat({
         agent,
         requestFallback: (...params): ChatMessage => {
             const [, { error }] = params;
+
             if (error.name === 'AbortError') {
                 return {
                     content: {
@@ -286,7 +344,19 @@ const Chat = () => {
                     },
                     role: 'assistant',
                 };
+            } else if (
+                error.message.startsWith('Unknown error') &&
+                newestMessage.current &&
+                typeof newestMessage.current.content === 'object'
+            ) {
+                return {
+                    content: {
+                        ...newestMessage.current.content,
+                    },
+                    role: 'assistant',
+                };
             }
+
             return {
                 content: {
                     reasoning_content: '',
@@ -298,7 +368,6 @@ const Chat = () => {
         },
         transformMessage: (info): ChatMessage => {
             const { originMessage, chunk } = info || {};
-
             if (chunk && 'code' in chunk && 'message' in chunk) {
                 const chatResponse = ServiceResponse.serviceError(
                     { status: 200, statusText: 'Service Error' } as Response,
@@ -369,10 +438,12 @@ const Chat = () => {
                 console.error(error);
             }
 
-            return {
+            newestMessage.current = {
                 content: messageContent,
                 role: 'assistant',
             };
+
+            return newestMessage.current;
         },
         resolveAbortController: (controller) => {
             abortController.current = controller;
@@ -402,6 +473,14 @@ const Chat = () => {
             }, 100);
         });
     }, [intl, setCurSession, setMessages, setSessionList]);
+
+    const onNewSessionClick = useCallback(() => {
+        if (messagesRef.current && messagesRef.current.length > 0) {
+            createNewSession();
+        } else {
+            message.error(intl.formatMessage({ id: 'tools.chat.newSession.tip' }));
+        }
+    }, [createNewSession, intl, message]);
 
     const [openSession, setOpenSession] = useState(false);
     const chatHeader = (
@@ -446,7 +525,11 @@ const Chat = () => {
                             i.key === curSession
                                 ? {
                                       ...i,
-                                      label: `[${intl.formatMessage({ id: 'tools.chat.session.current' })}] ${i.label}`,
+                                      label: (
+                                          <div
+                                              style={{ color: token.colorPrimary }}
+                                          >{`[${intl.formatMessage({ id: 'tools.chat.session.current' })}] ${i.label}`}</div>
+                                      ),
                                   }
                                 : i,
                         )}
@@ -507,14 +590,17 @@ const Chat = () => {
                 <Button
                     type="text"
                     icon={<PlusOutlined />}
-                    onClick={() => {
-                        if (messages && messages.length > 0) {
-                            createNewSession();
-                        } else {
-                            message.error(intl.formatMessage({ id: 'tools.chat.newSession.tip' }));
-                        }
-                    }}
+                    onClick={onNewSessionClick}
                     disabled={!(messages && messages.length > 0)}
+                    title={intl.formatMessage(
+                        {
+                            id: 'draw.keyEventTooltip',
+                        },
+                        {
+                            message: intl.formatMessage({ id: 'tools.chat.newSession' }),
+                            key: hotKeys?.[KeyEventKey.ChatNewSession]?.hotKey,
+                        },
+                    )}
                 >
                     <FormattedMessage id="tools.chat.newSession" />
                 </Button>
@@ -534,21 +620,7 @@ const Chat = () => {
             },
         };
         const list = messages.map((i): BubbleDataType => {
-            const itemMessage = i.message as ChatMessage;
-
-            const content =
-                typeof itemMessage.content === 'string'
-                    ? itemMessage.content
-                    : `${
-                          itemMessage.content.reasoning_content
-                              ? `${itemMessage.content.reasoning_content
-                                    .split('\n')
-                                    .map((line) => {
-                                        return `> ${line}`;
-                                    })
-                                    .join('\n')}\n\n`
-                              : ''
-                      }${itemMessage.content.content}`;
+            const content = getMessageContent(i.message);
 
             return {
                 role: i.message.role,
@@ -612,12 +684,19 @@ const Chat = () => {
 
     const scrollbarRef = useRef<Scrollbar | null>(null);
     const autoScrollRef = useRef<boolean>(true);
+
+    const enableAutoScroll = useMemo(() => {
+        return debounce(() => {
+            autoScrollRef.current = true;
+        }, 3000);
+    }, []);
     const chatList = (
         <div className="chatList">
             <RSC
                 ref={scrollbarRef as never}
                 onWheel={() => {
                     autoScrollRef.current = false;
+                    enableAutoScroll();
                 }}
             >
                 {bubbleItems ? (
@@ -676,8 +755,76 @@ const Chat = () => {
         </div>
     );
 
+    const messagesRef = useRef<MessageInfo<BubbleDataType>[]>([]);
+    useEffect(() => {
+        messagesRef.current = messages;
+    }, [messages]);
+
+    const onCopy = useCallback(() => {
+        const lastMessage = _.last(messagesRef.current);
+        copyText(lastMessage ? getMessageContent(lastMessage.message) : '');
+    }, []);
+    const onCopyAndHide = useCallback(() => {
+        const lastMessage = _.last(messagesRef.current);
+        copyTextAndHide(lastMessage ? getMessageContent(lastMessage.message) : '');
+    }, []);
+
+    useHotkeys(hotKeys?.[KeyEventKey.ChatCopyAndHide]?.hotKey ?? '', onCopyAndHide, {
+        keyup: false,
+        keydown: true,
+        enableOnFormTags: ['INPUT', 'TEXTAREA', 'SELECT'],
+    });
+
+    useHotkeys(hotKeys?.[KeyEventKey.ChatCopy]?.hotKey ?? '', onCopy, {
+        keyup: false,
+        keydown: true,
+        enableOnFormTags: ['INPUT', 'TEXTAREA', 'SELECT'],
+    });
+
+    useHotkeys(hotKeys?.[KeyEventKey.ChatNewSession]?.hotKey ?? '', onNewSessionClick, {
+        keyup: false,
+        keydown: true,
+        enableOnFormTags: ['INPUT', 'TEXTAREA', 'SELECT'],
+    });
+
     const chatSender = (
         <div className="chatSend">
+            <div className="chatSendHotkeysMenu">
+                <HotkeysMenu
+                    menu={{
+                        items: [
+                            {
+                                label: (
+                                    <FormattedMessage
+                                        id="settings.hotKeySettings.keyEventTooltip"
+                                        values={{
+                                            message: <FormattedMessage id="tools.chat.chatCopy" />,
+                                            key: hotKeys?.[KeyEventKey.ChatCopy]?.hotKey,
+                                        }}
+                                    />
+                                ),
+                                key: 'copy',
+                                onClick: onCopy,
+                            },
+                            {
+                                label: (
+                                    <FormattedMessage
+                                        id="settings.hotKeySettings.keyEventTooltip"
+                                        values={{
+                                            message: (
+                                                <FormattedMessage id="tools.chat.chatCopyAndHide" />
+                                            ),
+                                            key: hotKeys?.[KeyEventKey.ChatCopyAndHide]?.hotKey,
+                                        }}
+                                    />
+                                ),
+                                key: 'copyAndHide',
+                                onClick: onCopyAndHide,
+                            },
+                        ],
+                    }}
+                />
+            </div>
             {/** 输入框 */}
             <Suggestion items={[]} onSelect={(itemVal) => setInputValue(`[${itemVal}]:`)}>
                 {({ onKeyDown }) => (
@@ -701,6 +848,7 @@ const Chat = () => {
                             handleUserSubmit(inputValue);
                             setInputValue('');
                             autoScrollRef.current = true;
+                            newestMessage.current = undefined;
                         }}
                         onCancel={() => {
                             abortController.current?.abort();
@@ -775,7 +923,11 @@ const Chat = () => {
                     prev.map((i) =>
                         i.key !== curSessionRef.current
                             ? i
-                            : { ...i, label: val?.slice(0, 20), isDefaultSession: false },
+                            : {
+                                  ...i,
+                                  label: val?.replace(/\s+/g, ' ').trim().slice(0, 20),
+                                  isDefaultSession: false,
+                              },
                     ),
                 );
             }
@@ -797,7 +949,8 @@ const Chat = () => {
             if (
                 messageHistoryRef.current &&
                 curSessionRef.current &&
-                messageHistoryRef.current[curSessionRef.current].length > 0
+                messageHistoryRef.current[curSessionRef.current].length > 0 &&
+                getAppSettings()[AppSettingsGroup.FunctionChat].autoCreateNewSession
             ) {
                 newSessionPromise = createNewSession();
             }
@@ -819,6 +972,7 @@ const Chat = () => {
         searchParamsSelectText,
         messageHistoryRef,
         curSessionRef,
+        getAppSettings,
         createNewSession,
     ]);
     useEffect(() => {
@@ -893,6 +1047,13 @@ const Chat = () => {
                 :global(.chatSend) {
                     padding: 0px;
                     padding: ${token.padding}px;
+                    position: relative;
+                }
+                :global(.chatSendHotkeysMenu) {
+                    position: absolute;
+                    right: 0;
+                    transform: translateY(-100%) translateX(${-token.padding}px);
+                    top: ${token.marginXXS}px;
                 }
                 :global(.sendAction) {
                     display: flex;

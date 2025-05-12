@@ -37,6 +37,7 @@ export enum AppSettingsGroup {
     SystemCommon = 'systemCommon',
     SystemChat = 'systemChat',
     SystemNetwork = 'systemNetwork',
+    FunctionChat = 'functionChat',
 }
 
 export enum AppSettingsLanguage {
@@ -90,6 +91,9 @@ export type AppSettingsData = {
     [AppSettingsGroup.SystemNetwork]: {
         enableProxy: boolean;
     };
+    [AppSettingsGroup.FunctionChat]: {
+        autoCreateNewSession: boolean;
+    };
 };
 
 export const defaultAppSettingsData: AppSettingsData = {
@@ -125,6 +129,9 @@ export const defaultAppSettingsData: AppSettingsData = {
     },
     [AppSettingsGroup.SystemNetwork]: {
         enableProxy: false,
+    },
+    [AppSettingsGroup.FunctionChat]: {
+        autoCreateNewSession: true,
     },
 };
 
@@ -554,6 +561,19 @@ const ContextWrapCore: React.FC<{ children: React.ReactNode }> = ({ children }) 
                 if (saveToFile) {
                     setEnableProxy(settings.enableProxy);
                 }
+            } else if (group === AppSettingsGroup.FunctionChat) {
+                newSettings = newSettings as AppSettingsData[typeof group];
+                const prevSettings = appSettingsRef.current[group] as
+                    | AppSettingsData[typeof group]
+                    | undefined;
+
+                settings = {
+                    autoCreateNewSession:
+                        typeof newSettings?.autoCreateNewSession === 'boolean'
+                            ? newSettings.autoCreateNewSession
+                            : (prevSettings?.autoCreateNewSession ??
+                              defaultAppSettingsData[group].autoCreateNewSession),
+                };
             } else {
                 return defaultAppSettingsData[group];
             }
@@ -702,6 +722,7 @@ const ContextWrapCore: React.FC<{ children: React.ReactNode }> = ({ children }) 
                 <IntlProvider
                     locale={appSettings[AppSettingsGroup.Common].language}
                     messages={messages[appSettings[AppSettingsGroup.Common].language]}
+                    defaultLocale={AppSettingsLanguage.ZHHans}
                 >
                     <AppContext.Provider value={appContextValue}>{children}</AppContext.Provider>
                 </IntlProvider>

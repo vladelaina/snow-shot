@@ -35,7 +35,7 @@ const ToolButtonCore: React.FC<{
     useStateSubscriber(DrawStatePublisher, updateButtonType);
     return (
         <KeyEventWrap
-            onKeyDownEventPropName="onClick"
+            onKeyUpEventPropName="onClick"
             componentKey={componentKey}
             disableOnDrawing={disableOnDrawing}
             confirmTip={confirmTip}

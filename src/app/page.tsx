@@ -10,6 +10,7 @@ import {
     OcrDetectIcon,
     ScreenshotIcon,
     SelectTextIcon,
+    TopWindowIcon,
     TranslationIcon,
 } from '@/components/icons';
 import { FunctionButton } from '@/components/functionButton';
@@ -128,6 +129,11 @@ export default function Home() {
                             showWindow();
                             router.push(`/tools/chat?t=${Date.now()}`);
                         };
+                        break;
+                    case AppFunction.TopWindow:
+                        buttonTitle = <FormattedMessage id="home.topWindow" />;
+                        buttonIcon = <TopWindowIcon />;
+                        buttonOnClick = () => executeScreenshot(ScreenshotType.TopWindow);
                         break;
                     case AppFunction.Screenshot:
                     default:
@@ -363,6 +369,20 @@ export default function Home() {
                                 }
                             >
                                 <FormattedMessage id="home.chatFunction" key="chatFunction" />
+                            </GroupTitle>
+                        );
+                        break;
+                    case AppFunctionGroup.Other:
+                        groupTitle = (
+                            <GroupTitle
+                                id="otherFunction"
+                                extra={
+                                    <ResetSettingsButton
+                                        title={<FormattedMessage id="home.otherFunction" />}
+                                    />
+                                }
+                            >
+                                <FormattedMessage id="home.otherFunction" key="otherFunction" />
                             </GroupTitle>
                         );
                         break;

@@ -17,6 +17,7 @@ import {
     switchLayer,
     CaptureEventPublisher,
     CaptureEvent,
+    ScreenshotTypePublisher,
 } from './extra';
 import { DrawToolbar, DrawToolbarActionType } from './components/drawToolbar';
 import { BaseLayerEventActionType } from './components/baseLayer';
@@ -41,6 +42,8 @@ import { OcrBlocks, OcrBlocksActionType } from './components/ocrBlocks';
 import { ocrInit } from '@/commands/ocr';
 import { ScreenshotType } from '@/functions/screenshot';
 import { showWindow as showCurrentWindow } from '@/utils/window';
+import _ from 'lodash';
+import { switchAlwaysOnTop } from '@/commands/screenshot';
 
 const DrawCacheLayer = dynamic(
     async () => (await import('./components/drawCacheLayer')).DrawCacheLayer,
@@ -71,8 +74,11 @@ const DrawPageCore: React.FC = () => {
     const ocrBlocksActionRef = useRef<OcrBlocksActionType | undefined>(undefined);
 
     // 状态
-    const excuteScreenshotTypeRef = useRef<ScreenshotType | undefined>(undefined);
     const mousePositionRef = useRef<MousePosition>(new MousePosition(0, 0));
+    const [getScreenshotType, setScreenshotType, resetScreenshotType] = useStateSubscriber(
+        ScreenshotTypePublisher,
+        undefined,
+    );
     const [getCaptureStep, setCaptureStep, resetCaptureStep] = useStateSubscriber(
         CaptureStepPublisher,
         undefined,
@@ -121,8 +127,11 @@ const DrawPageCore: React.FC = () => {
 
         handleLayerSwitch(CanvasLayer.Select);
     }, [getCaptureStep, getDrawState, handleLayerSwitch]);
-    useStateSubscriber(CaptureStepPublisher, onCaptureStepDrawStateChange);
-    useStateSubscriber(DrawStatePublisher, onCaptureStepDrawStateChange);
+    const onCaptureStepDrawStateChangeDebounce = useMemo(() => {
+        return _.debounce(onCaptureStepDrawStateChange, 0);
+    }, [onCaptureStepDrawStateChange]);
+    useStateSubscriber(CaptureStepPublisher, onCaptureStepDrawStateChangeDebounce);
+    useStateSubscriber(DrawStatePublisher, onCaptureStepDrawStateChangeDebounce);
 
     /** 截图准备 */
     const readyCapture = useCallback(
@@ -166,25 +175,31 @@ const DrawPageCore: React.FC = () => {
     );
 
     /** 显示截图窗口 */
-    const showWindow = useCallback(async (imageBuffer: ImageBuffer) => {
-        const appWindow = appWindowRef.current;
+    const showWindow = useCallback(
+        async (imageBuffer: ImageBuffer) => {
+            const appWindow = appWindowRef.current;
 
-        const { monitorX, monitorY, monitorWidth, monitorHeight } = imageBuffer;
+            const { monitorX, monitorY, monitorWidth, monitorHeight } = imageBuffer;
 
-        await Promise.all([
-            appWindow.setAlwaysOnTop(true),
-            appWindow.setPosition(new PhysicalPosition(monitorX, monitorY)),
-            appWindow.setSize(new PhysicalSize(monitorWidth, monitorHeight)),
-        ]);
-        if (layerContainerRef.current) {
-            layerContainerRef.current.style.width = `${window.screen.width}px`;
-            layerContainerRef.current.style.height = `${window.screen.height}px`;
-        }
-        await showCurrentWindow();
-        if (process.env.NODE_ENV === 'development') {
-            await appWindow.setAlwaysOnTop(false);
-        }
-    }, []);
+            await Promise.all([
+                appWindow.setAlwaysOnTop(true),
+                appWindow.setPosition(new PhysicalPosition(monitorX, monitorY)),
+                appWindow.setSize(new PhysicalSize(monitorWidth, monitorHeight)),
+            ]);
+            if (layerContainerRef.current) {
+                layerContainerRef.current.style.width = `${window.screen.width}px`;
+                layerContainerRef.current.style.height = `${window.screen.height}px`;
+            }
+            await showCurrentWindow();
+            if (
+                process.env.NODE_ENV === 'development' &&
+                getScreenshotType() !== ScreenshotType.TopWindow
+            ) {
+                await appWindow.setAlwaysOnTop(false);
+            }
+        },
+        [getScreenshotType],
+    );
 
     const hideWindow = useCallback(async () => {
         await appWindowRef.current.hide();
@@ -204,15 +219,23 @@ const DrawPageCore: React.FC = () => {
         imageBufferRef.current = undefined;
         resetCaptureStep();
         resetDrawState();
+        resetScreenshotType();
         drawToolbarActionRef.current?.setEnable(false);
         capturingRef.current = false;
         history.clear();
-    }, [hideWindow, setCaptureEvent, resetCaptureStep, resetDrawState, history]);
+    }, [
+        hideWindow,
+        setCaptureEvent,
+        resetCaptureStep,
+        resetDrawState,
+        history,
+        resetScreenshotType,
+    ]);
 
     /** 执行截图 */
     const excuteScreenshot = useCallback(
         async (excuteScreenshotType: ScreenshotType) => {
-            excuteScreenshotTypeRef.current = excuteScreenshotType;
+            setScreenshotType(excuteScreenshotType);
             const layerOnExecuteScreenshotPromise = Promise.all([
                 drawLayerActionRef.current?.onExecuteScreenshot(),
                 selectLayerActionRef.current?.onExecuteScreenshot(),
@@ -232,7 +255,7 @@ const DrawPageCore: React.FC = () => {
                 layerOnExecuteScreenshotPromise,
             ]);
         },
-        [readyCapture, showWindow, setCaptureEvent],
+        [setScreenshotType, setCaptureEvent, showWindow, readyCapture],
     );
 
     const onSave = useCallback(async () => {
@@ -281,6 +304,15 @@ const DrawPageCore: React.FC = () => {
 
         switchLayer(undefined, drawLayerActionRef.current, selectLayerActionRef.current);
     }, [setCaptureStep]);
+
+    const onTopWindow = useCallback(async () => {
+        const windowId = selectLayerActionRef.current?.getWindowId();
+        if (windowId) {
+            await switchAlwaysOnTop(windowId);
+        }
+
+        await finishCapture();
+    }, [finishCapture]);
 
     const onOcrDetect = useCallback(async () => {
         if (
@@ -369,7 +401,6 @@ const DrawPageCore: React.FC = () => {
             drawCacheLayerActionRef,
             ocrBlocksActionRef,
             fixedImageActionRef,
-            excuteScreenshotTypeRef,
         };
     }, [finishCapture]);
 
@@ -431,6 +462,7 @@ const DrawPageCore: React.FC = () => {
                             onFixed={onFixed}
                             onCopyToClipboard={onCopyToClipboard}
                             onOcrDetect={onOcrDetect}
+                            onTopWindow={onTopWindow}
                         />
                         <ColorPicker
                             onCopyColor={() => {
@@ -462,6 +494,7 @@ export default React.memo(
             ExcalidrawOnChangePublisher,
             CaptureEventPublisher,
             ExcalidrawOnHandleEraserPublisher,
+            ScreenshotTypePublisher,
         ),
     ),
 );

@@ -2,7 +2,7 @@ export const en = {
     'menu.functions': 'Quick Functions',
     'menu.screenshot': 'Screenshot',
     'menu.settings': 'Settings',
-    'menu.settings.generalSettings': 'General Settings',
+    'menu.settings.generalSettings': 'Interface Settings',
     'menu.settings.hotKeySettings': 'Hotkey Settings',
     'menu.settings.systemSettings': 'System Settings',
     'menu.tools': 'Toolbox',
