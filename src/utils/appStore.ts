@@ -49,6 +49,14 @@ class BaseStore<Value> {
 
         return await this.instance.clear();
     }
+
+    public async delete(key: string) {
+        if (!this.instance) {
+            throw new Error('Store not initialized');
+        }
+
+        return await this.instance.delete(key);
+    }
 }
 
 export class ChatHistoryStore extends BaseStore<{
@@ -65,5 +73,24 @@ export class ExcalidrawAppStateStore extends BaseStore<{
 }> {
     constructor() {
         super('excalidraw-app-state', 0);
+    }
+}
+
+export type ChatWorkflowFlow = {
+    variable_name?: string;
+    ignore_context: boolean;
+    message: string;
+};
+
+export type ChatWorkflowConfig = {
+    id: string;
+    name: string;
+    description?: string;
+    flow_list: ChatWorkflowFlow[];
+};
+
+export class ChatWorkflowConfigStore extends BaseStore<ChatWorkflowConfig> {
+    constructor() {
+        super('chat-workflow-config', 0);
     }
 }

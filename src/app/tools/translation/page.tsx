@@ -423,7 +423,13 @@ const TranslationCore = () => {
                                         ...(languageOptions ?? []),
                                     ]}
                                     variant="underlined"
-                                    dropdownStyle={{ minWidth: 200 }}
+                                    styles={{
+                                        popup: {
+                                            root: {
+                                                minWidth: 200,
+                                            },
+                                        },
+                                    }}
                                     filterOption={selectFilterOption}
                                 />
                             </Form.Item>
@@ -468,7 +474,13 @@ const TranslationCore = () => {
                                     }}
                                     options={languageOptions}
                                     filterOption={selectFilterOption}
-                                    dropdownStyle={{ minWidth: 200 }}
+                                    styles={{
+                                        popup: {
+                                            root: {
+                                                minWidth: 200,
+                                            },
+                                        },
+                                    }}
                                     variant="underlined"
                                 />
                             </Form.Item>
@@ -498,7 +510,13 @@ const TranslationCore = () => {
                                     }))}
                                     loading={supportedTranslationTypesLoading}
                                     filterOption={selectFilterOption}
-                                    dropdownStyle={{ minWidth: 200 }}
+                                    styles={{
+                                        popup: {
+                                            root: {
+                                                minWidth: 200,
+                                            },
+                                        },
+                                    }}
                                     variant="underlined"
                                 />
                             </Form.Item>
@@ -552,7 +570,13 @@ const TranslationCore = () => {
                                         },
                                     ]}
                                     filterOption={selectFilterOption}
-                                    dropdownStyle={{ minWidth: 200 }}
+                                    styles={{
+                                        popup: {
+                                            root: {
+                                                minWidth: 200,
+                                            },
+                                        },
+                                    }}
                                     variant="underlined"
                                 />
                             </Form.Item>

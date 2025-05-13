@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useRef, useEffect, useState } from 'react';
+import { debounce } from 'lodash';
+import React, { useRef, useState, useCallback, useMemo } from 'react';
 
 interface ScrollShadowProps {
     children: React.ReactNode;
@@ -13,26 +14,19 @@ const ScrollShadow: React.FC<ScrollShadowProps> = ({ children, className, style 
     const [showLeftShadow, setShowLeftShadow] = useState(false);
     const [showRightShadow, setShowRightShadow] = useState(false);
 
-    const checkScroll = () => {
+    const checkScroll = useCallback(() => {
         const container = containerRef.current;
         if (!container) return;
 
         const { scrollLeft, scrollWidth, clientWidth } = container;
         setShowLeftShadow(scrollLeft > 0);
         setShowRightShadow(scrollLeft < scrollWidth - clientWidth - 1);
-    };
-
-    useEffect(() => {
-        const container = containerRef.current;
-        if (!container) return;
-
-        checkScroll();
-        window.addEventListener('resize', checkScroll);
-
-        return () => {
-            window.removeEventListener('resize', checkScroll);
-        };
     }, []);
+    const checkScrollRender = useMemo(() => {
+        return debounce(checkScroll, 17);
+    }, [checkScroll]);
+
+    checkScrollRender();
 
     return (
         <div className={`scroll-container ${className || ''}`}>
@@ -70,19 +64,19 @@ const ScrollShadow: React.FC<ScrollShadowProps> = ({ children, className, style 
                     position: absolute;
                     top: 0;
                     bottom: 0;
-                    width: 20px;
+                    width: 12px;
                     pointer-events: none;
                     z-index: 1;
                 }
 
                 .left-shadow {
                     left: 0;
-                    background: linear-gradient(to right, rgba(0, 0, 0, 0.1), transparent);
+                    background: linear-gradient(to right, rgba(0, 0, 0, 0.08), transparent);
                 }
 
                 .right-shadow {
                     right: 0;
-                    background: linear-gradient(to left, rgba(0, 0, 0, 0.1), transparent);
+                    background: linear-gradient(to left, rgba(0, 0, 0, 0.08), transparent);
                 }
             `}</style>
         </div>

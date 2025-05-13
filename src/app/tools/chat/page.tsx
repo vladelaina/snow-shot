@@ -15,7 +15,7 @@ import {
     Welcome,
     XRequest,
 } from '@ant-design/x';
-import type { BubbleDataType } from '@ant-design/x/es/bubble/BubbleList';
+import type { BubbleDataType as AntdBubbleDataType } from '@ant-design/x/es/bubble/BubbleList';
 import type { Conversation } from '@ant-design/x/es/conversations';
 import { MessageInfo } from '@ant-design/x/es/use-x-chat';
 import { Button, Drawer, Select, Space, Spin, Tag, theme, Typography } from 'antd';
@@ -55,15 +55,22 @@ import { KeyEventKey } from '@/core/hotKeys';
 import { useAppSettingsLoad } from '@/hooks/useAppSettingsLoad';
 import { useHotkeys } from 'react-hotkeys-hook';
 import _ from 'lodash';
+import { SendQueueMessageList } from './components/sendQueueMessageList';
+import { ChatMessage, ChatMessageFlowConfig, SendQueueMessage } from './types';
+import { WorkflowList } from './components/workflowList';
 
-const getMessageContent = (msg: ChatMessage | BubbleDataType) => {
+type BubbleDataType = AntdBubbleDataType & {
+    flow_config?: ChatMessageFlowConfig;
+};
+
+const getMessageContent = (msg: ChatMessage | BubbleDataType, ignoreReasoningContent = false) => {
     const message = msg as ChatMessage;
 
     const content =
         typeof message.content === 'string'
             ? message.content
             : `${
-                  message.content.reasoning_content
+                  !ignoreReasoningContent && message.content.reasoning_content
                       ? `${message.content.reasoning_content
                             .split('\n')
                             .map((line) => {
@@ -137,17 +144,6 @@ const modelRequest = XRequest({
     baseURL: getUrl('/api/v1/chat/chat/completions'),
     fetch: appFetch,
 });
-
-type ChatMessage = {
-    content:
-        | {
-              reasoning_content: string;
-              content: string;
-              response_error: boolean;
-          }
-        | string;
-    role: 'user' | 'assistant';
-};
 
 const defaultModel = 'deepseek-reasoner';
 const defaultModles: ChatModel[] = [
@@ -253,6 +249,9 @@ const Chat = () => {
     const [sessionStoreLoading, setSessionStoreLoading] = useState(true);
     const [supportedModels, setSupportedModels] = useState<ChatModel[]>(defaultModles);
     const [selectedModel, setSelectedModel, selectedModelRef] = useStateRef<string>(defaultModel);
+    const [sendQueueMessages, setSendQueueMessages, sendQueueMessagesRef] = useStateRef<
+        SendQueueMessage[]
+    >([]);
 
     const { updateAppSettings } = useContext(AppSettingsActionContext);
     const [getAppSettings] = useStateSubscriber(
@@ -303,16 +302,66 @@ const Chat = () => {
             return {
                 request: (input, callbacks) => {
                     const inputMessages = input.messages?.slice(-20);
-                    const newInputMessages = fliterErrorMessages(inputMessages);
+                    let newInputMessages = fliterErrorMessages(inputMessages);
+
+                    // 处理消息变量
+                    const variables: Map<string, string> = new Map();
+                    // 遍历消息，如果用户消息指定了变量，那么将对应的输出变量添加到变量列表中
+                    for (let i = 0; i < newInputMessages.length; i++) {
+                        const message = newInputMessages[i];
+                        if (message.role === 'user' && 'flow_config' in message) {
+                            const flowConfig = message.flow_config as ChatMessageFlowConfig;
+                            if (!flowConfig) {
+                                continue;
+                            }
+
+                            if (flowConfig.globalVariable) {
+                                flowConfig.globalVariable.forEach((value, key) => {
+                                    variables.set(key, value);
+                                });
+                            }
+
+                            if (flowConfig.flow.variable_name && newInputMessages[i + 1]) {
+                                variables.set(
+                                    `{{${flowConfig.flow.variable_name}}}`,
+                                    getMessageContent(newInputMessages[i + 1], true),
+                                );
+                            }
+                        }
+                    }
+
+                    const userInput = _.last(newInputMessages)!;
+
+                    if (userInput.flow_config) {
+                        if (userInput.flow_config.flow.ignore_context) {
+                            // 忽略上下文
+                            newInputMessages = newInputMessages.slice(-1);
+                        }
+                    }
+
+                    newInputMessages.forEach((item) => {
+                        let content = getMessageContent(item, true);
+
+                        variables.forEach((value, key) => {
+                            content = content.replace(new RegExp(key, 'g'), value);
+                        });
+
+                        if (typeof item.content === 'string') {
+                            item.content = content;
+                        } else if (
+                            item.content &&
+                            typeof item.content === 'object' &&
+                            'content' in item.content
+                        ) {
+                            item.content.content = content;
+                        }
+                    });
 
                     return modelRequest.create(
                         {
-                            messages: newInputMessages?.map((i) => ({
-                                role: i.role ?? '',
-                                content:
-                                    typeof i.content === 'string'
-                                        ? i.content
-                                        : (i.content as ChatMessage).content,
+                            messages: newInputMessages?.map((item) => ({
+                                role: item.role ?? '',
+                                content: getMessageContent(item, true),
                             })),
                             model: selectedModelRef.current,
                             temperature: getAppSettings()[AppSettingsGroup.SystemChat].temperature,
@@ -450,11 +499,16 @@ const Chat = () => {
         },
     });
 
+    const abortChat = useCallback(() => {
+        abortController.current?.abort();
+        setSendQueueMessages([]);
+    }, [setSendQueueMessages]);
+
     const createNewSession = useCallback(async () => {
         return new Promise<void>((resolve) => {
             const currentDate = dayjs().format('YYYY-MM-DD');
             const sessionKey = `${currentDate}-${new Date().valueOf()}`;
-            abortController.current?.abort();
+            abortChat();
             setTimeout(() => {
                 setSessionList((prev) => [
                     {
@@ -472,7 +526,7 @@ const Chat = () => {
                 resolve();
             }, 100);
         });
-    }, [intl, setCurSession, setMessages, setSessionList]);
+    }, [abortChat, intl, setCurSession, setMessages, setSessionList]);
 
     const onNewSessionClick = useCallback(() => {
         if (messagesRef.current && messagesRef.current.length > 0) {
@@ -512,7 +566,7 @@ const Chat = () => {
                                     setMessageHistory({});
                                     setOpenSession(false);
                                     chatHistoryStoreRef.current?.clear();
-                                    abortController.current?.abort();
+                                    abortChat();
                                 },
                             });
                         }}
@@ -536,7 +590,7 @@ const Chat = () => {
                         activeKey={curSession}
                         groupable
                         onActiveChange={async (val) => {
-                            abortController.current?.abort();
+                            abortChat();
                             // The abort execution will trigger an asynchronous requestFallback, which may lead to timing issues.
                             // In future versions, the sessionId capability will be added to resolve this problem.
                             setTimeout(() => {
@@ -581,7 +635,7 @@ const Chat = () => {
                             false,
                         );
                     }}
-                    dropdownStyle={{ minWidth: 256 }}
+                    styles={{ popup: { root: { minWidth: 256 } } }}
                     loading={supportedModelsLoading}
                 />
             </Space>
@@ -787,8 +841,104 @@ const Chat = () => {
         enableOnFormTags: ['INPUT', 'TEXTAREA', 'SELECT'],
     });
 
+    const senderLoading = loading || sendQueueMessages.length > 0;
+
+    const handleUserSubmit = useCallback(
+        (val: string, flowConfig?: ChatMessageFlowConfig) => {
+            onRequest({
+                stream: true,
+                message: {
+                    content: val,
+                    role: 'user',
+                    flow_config: flowConfig,
+                },
+            });
+
+            if (
+                sessionListRef.current.find((i) => i.key === curSessionRef.current)
+                    ?.isDefaultSession
+            ) {
+                setSessionList((prev) =>
+                    prev.map((i) =>
+                        i.key !== curSessionRef.current
+                            ? i
+                            : {
+                                  ...i,
+                                  label: val?.replace(/\s+/g, ' ').trim().slice(0, 20),
+                                  isDefaultSession: false,
+                              },
+                    ),
+                );
+            }
+        },
+        [onRequest, sessionListRef, curSessionRef, setSessionList],
+    );
+
+    const userSendingRef = useRef<boolean>(false);
+    const onSenderSubmit = useCallback(
+        async (value: string, flowConfig?: ChatMessageFlowConfig) => {
+            if (!curSessionRef.current) {
+                await createNewSession();
+            }
+
+            handleUserSubmit(value, flowConfig);
+            setInputValue('');
+            autoScrollRef.current = true;
+            newestMessage.current = undefined;
+        },
+        [curSessionRef, handleUserSubmit, createNewSession],
+    );
+
+    useEffect(() => {
+        if (!loading && sendQueueMessagesRef.current.length > 0) {
+            onSenderSubmit(
+                sendQueueMessagesRef.current[0].content,
+                sendQueueMessagesRef.current[0].flow_config,
+            );
+            setSendQueueMessages((prev) => prev.slice(1));
+        }
+    }, [loading, onSenderSubmit, sendQueueMessagesRef, setSendQueueMessages]);
+
+    useEffect(() => {
+        if (!senderLoading) {
+            userSendingRef.current = false;
+        }
+    }, [senderLoading]);
+
     const chatSender = (
         <div className="chatSend">
+            <WorkflowList
+                sendMessageAction={(message, _flowConfig) => {
+                    const globalVariable = new Map<string, string>();
+                    globalVariable.set('{{USER_INPUT}}', inputValue);
+                    const flowConfig = _flowConfig
+                        ? {
+                              ..._flowConfig,
+                              globalVariable,
+                          }
+                        : undefined;
+
+                    if (userSendingRef.current) {
+                        setSendQueueMessages((prev) =>
+                            prev.concat({
+                                content: message,
+                                title:
+                                    flowConfig?.name ??
+                                    intl.formatMessage({
+                                        id: 'tools.chat.sendQueue.userMessage',
+                                    }),
+                                flow_config: flowConfig,
+                            }),
+                        );
+                        return;
+                    }
+
+                    userSendingRef.current = true;
+
+                    onSenderSubmit(message, flowConfig);
+                }}
+            />
+
             <div className="chatSendHotkeysMenu">
                 <HotkeysMenu
                     menu={{
@@ -830,7 +980,7 @@ const Chat = () => {
                 {({ onKeyDown }) => (
                     <Sender
                         ref={senderRef}
-                        loading={loading}
+                        loading={senderLoading}
                         value={inputValue}
                         onChange={(v) => {
                             if (v.length > 10000) {
@@ -840,25 +990,41 @@ const Chat = () => {
                             }
                         }}
                         disabled={sessionStoreLoading}
-                        onSubmit={async () => {
-                            if (!curSession) {
+                        onSubmit={async (message) => {
+                            if (!curSessionRef.current) {
                                 await createNewSession();
                             }
 
-                            handleUserSubmit(inputValue);
-                            setInputValue('');
-                            autoScrollRef.current = true;
-                            newestMessage.current = undefined;
+                            onSenderSubmit(message);
                         }}
-                        onCancel={() => {
-                            abortController.current?.abort();
-                        }}
+                        onCancel={abortChat}
                         placeholder={intl.formatMessage({ id: 'tools.chat.placeholder' })}
-                        onKeyDown={onKeyDown}
+                        onKeyDown={(e) => {
+                            if (e.key === 'Enter' && (senderLoading || userSendingRef.current)) {
+                                setSendQueueMessages((prev) =>
+                                    prev.concat({
+                                        content: inputValue,
+                                        title: intl.formatMessage({
+                                            id: 'tools.chat.sendQueue.userMessage',
+                                        }),
+                                    }),
+                                );
+                                setInputValue('');
+                            }
+
+                            onKeyDown(e);
+                        }}
                         actions={(_, info) => {
                             const { SendButton, LoadingButton } = info.components;
                             return (
-                                <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                                <div
+                                    style={{
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: token.marginXS,
+                                    }}
+                                >
+                                    <SendQueueMessageList queue={sendQueueMessages} />
                                     {loading ? (
                                         <LoadingButton type="default" />
                                     ) : (
@@ -905,36 +1071,6 @@ const Chat = () => {
         scrollToBottom();
     }, [messages, updateHistoryDebounce, scrollToBottom]);
 
-    const handleUserSubmit = useCallback(
-        (val: string) => {
-            onRequest({
-                stream: true,
-                message: {
-                    content: val,
-                    role: 'user',
-                },
-            });
-
-            if (
-                sessionListRef.current.find((i) => i.key === curSessionRef.current)
-                    ?.isDefaultSession
-            ) {
-                setSessionList((prev) =>
-                    prev.map((i) =>
-                        i.key !== curSessionRef.current
-                            ? i
-                            : {
-                                  ...i,
-                                  label: val?.replace(/\s+/g, ' ').trim().slice(0, 20),
-                                  isDefaultSession: false,
-                              },
-                    ),
-                );
-            }
-        },
-        [onRequest, sessionListRef, curSessionRef, setSessionList],
-    );
-
     const searchParams = useSearchParams();
     const searchParamsSign = searchParams.get('t');
     const searchParamsSelectText = searchParams.get('selectText');
@@ -973,6 +1109,7 @@ const Chat = () => {
         messageHistoryRef,
         curSessionRef,
         getAppSettings,
+        setInputValue,
         createNewSession,
     ]);
     useEffect(() => {
@@ -1053,13 +1190,7 @@ const Chat = () => {
                     position: absolute;
                     right: 0;
                     transform: translateY(-100%) translateX(${-token.padding}px);
-                    top: ${token.marginXXS}px;
-                }
-                :global(.sendAction) {
-                    display: flex;
-                    align-items: center;
-                    margin-bottom: 12px;
-                    gap: 8px;
+                    top: ${16}px;
                 }
                 :global(.speechButton) {
                     font-size: 18px;
