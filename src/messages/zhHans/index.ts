@@ -3,6 +3,7 @@ import { settings } from './settings';
 import { home } from './home';
 import { draw } from './draw';
 import { tools } from './tools';
+import { common } from './common';
 
 export const zhHans = {
     ...menu,
@@ -10,4 +11,5 @@ export const zhHans = {
     ...home,
     ...draw,
     ...tools,
+    ...common,
 };
