@@ -307,6 +307,7 @@ const DrawPageCore: React.FC = () => {
 
     const onTopWindow = useCallback(async () => {
         const windowId = selectLayerActionRef.current?.getWindowId();
+
         if (windowId) {
             await switchAlwaysOnTop(windowId);
         }

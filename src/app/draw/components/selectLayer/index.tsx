@@ -197,10 +197,12 @@ const SelectLayerCore: React.FC<SelectLayerProps> = ({ actionRef }) => {
                 rectIndexs.sort((a, b) => a - b);
 
                 result = rectIndexs.map((index) => {
-                    selectedWindowIdRef.current = elementsIndexWindowIdMapRef.current.get(index);
-
                     return elementsListRef.current[index];
                 });
+
+                selectedWindowIdRef.current = elementsIndexWindowIdMapRef.current.get(
+                    rectIndexs[0],
+                );
             }
 
             return result;
