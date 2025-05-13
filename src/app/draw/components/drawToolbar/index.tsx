@@ -121,7 +121,7 @@ const DrawToolbarCore: React.FC<DrawToolbarProps> = ({
             const prev = getDrawState();
 
             let next = drawState;
-            if (prev === drawState) {
+            if (prev === drawState && prev !== DrawState.Idle) {
                 next = DrawState.Select;
             }
 
