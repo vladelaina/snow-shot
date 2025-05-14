@@ -8,5 +8,5 @@ export const menu = {
     'menu.settings.systemSettings': '系统设置',
     'menu.tools': '工具箱',
     'menu.tools.translation': '翻译',
-    'menu.tools.chat': 'Chat',
+    'menu.tools.chat': 'AI 对话',
 };
