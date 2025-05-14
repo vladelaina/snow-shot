@@ -29,8 +29,14 @@ import { useHistory } from '../historyContext';
 import { layoutRenders } from './excalidrawRenders';
 import { pickerRenders } from './excalidrawRenders';
 import { ElementRect } from '@/commands';
-import { CaptureEvent, CaptureEventParams, CaptureEventPublisher } from '../../extra';
+import {
+    CaptureEvent,
+    CaptureEventParams,
+    CaptureEventPublisher,
+    CaptureStepPublisher,
+} from '../../extra';
 import { ExcalidrawAppStateStore } from '@/utils/appStore';
+import { CaptureStep } from '../../types';
 
 const storageKey = 'global';
 const DrawCacheLayerCore: React.FC<{
@@ -223,40 +229,60 @@ const DrawCacheLayerCore: React.FC<{
         [history],
     );
 
+    const saveAppState = useCallback(async () => {
+        const appState = excalidrawAPIRef.current?.getAppState();
+        if (!appState) {
+            return;
+        }
+
+        const storageAppState: Partial<AppState> = {};
+        Object.keys(appState)
+            .filter((item) => item.startsWith('currentItem'))
+            .forEach((item) => {
+                const value = appState[item as keyof AppState];
+                if (!value) {
+                    return;
+                }
+
+                storageAppState[item as keyof AppState] = value;
+            });
+
+        await excalidrawAppStateStoreRef.current!.set(storageKey, {
+            appState: storageAppState,
+        });
+    }, []);
+
     useStateSubscriber(
         CaptureEventPublisher,
-        useCallback(async (params: CaptureEventParams | undefined) => {
-            if (params?.event === CaptureEvent.onCaptureLoad) {
-                excalidrawAPIRef.current?.setActiveTool({
-                    type: 'hand',
-                });
-            }
+        useCallback(
+            async (params: CaptureEventParams | undefined) => {
+                if (params?.event === CaptureEvent.onCaptureLoad) {
+                    excalidrawAPIRef.current?.setActiveTool({
+                        type: 'hand',
+                    });
+                }
 
-            if (params?.event !== CaptureEvent.onCaptureFinish) {
-                return;
-            }
+                if (params?.event !== CaptureEvent.onCaptureFinish) {
+                    return;
+                }
 
-            const appState = excalidrawAPIRef.current?.getAppState();
-            if (!appState) {
-                return;
-            }
+                saveAppState();
+            },
+            [saveAppState],
+        ),
+    );
+    useStateSubscriber(
+        CaptureStepPublisher,
+        useCallback(
+            async (step: CaptureStep) => {
+                if (step === CaptureStep.Fixed) {
+                    return;
+                }
 
-            const storageAppState: Partial<AppState> = {};
-            Object.keys(appState)
-                .filter((item) => item.startsWith('currentItem'))
-                .forEach((item) => {
-                    const value = appState[item as keyof AppState];
-                    if (!value) {
-                        return;
-                    }
-
-                    storageAppState[item as keyof AppState] = value;
-                });
-
-            await excalidrawAppStateStoreRef.current!.set(storageKey, {
-                appState: storageAppState,
-            });
-        }, []),
+                saveAppState();
+            },
+            [saveAppState],
+        ),
     );
 
     return (
