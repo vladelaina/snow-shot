@@ -154,12 +154,12 @@ export type BaseLayerProps = {
     children: React.ReactNode;
     zIndex: number;
     enable: boolean;
-    onCanvasReady: (app: PIXI.Application) => void;
+    onCanvasReadyAction: (app: PIXI.Application) => void;
 };
 
 export const BaseLayerCore: React.FC<
     BaseLayerProps & { actionRef?: React.RefObject<BaseLayerCoreActionType | undefined> }
-> = ({ zIndex, actionRef, enable, children, onCanvasReady }) => {
+> = ({ zIndex, actionRef, enable, children, onCanvasReadyAction }) => {
     const layerContainerElementRef = useRef<HTMLDivElement>(null);
     const canvasAppRef = useRef<PIXI.Application | undefined>(undefined);
     const canvasContainerListRef = useRef<PIXI.Container[]>([]);
@@ -209,9 +209,9 @@ export const BaseLayerCore: React.FC<
             });
             canvasAppRef.current = canvasApp;
             layerContainerElementRef.current?.appendChild(canvasApp.canvas);
-            onCanvasReady(canvasApp);
+            onCanvasReadyAction(canvasApp);
         },
-        [disposeCanvas, onCanvasReady],
+        [disposeCanvas, onCanvasReadyAction],
     );
 
     useAppSettingsLoad(
@@ -445,7 +445,7 @@ export function withBaseLayer<
             layerActionRef.current?.setEnable(...args);
         }, []);
 
-        const onCanvasReady = useCallback((app: PIXI.Application) => {
+        const onCanvasReadyAction = useCallback((app: PIXI.Application) => {
             layerActionRef.current?.onCanvasReady(app);
         }, []);
 
@@ -522,7 +522,7 @@ export function withBaseLayer<
                 zIndex={zIndex}
                 actionRef={baseLayerCoreActionRef}
                 enable={layerEnable}
-                onCanvasReady={onCanvasReady}
+                onCanvasReadyAction={onCanvasReadyAction}
             >
                 <WrappedComponent {...props} actionRef={layerActionRef} />
             </BaseLayerCore>

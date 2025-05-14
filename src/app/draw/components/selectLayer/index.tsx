@@ -2,14 +2,7 @@
 
 import { useCallback, useContext, useEffect, useImperativeHandle, useRef, useState } from 'react';
 import React from 'react';
-import {
-    BaseLayerEventActionType,
-    withBaseLayer,
-    BaseLayerActionType,
-    BaseLayerContext,
-    defaultBaseLayerActions,
-} from '../baseLayer';
-import { zIndexs } from '@/utils/zIndex';
+import { BaseLayerEventActionType } from '../baseLayer';
 import {
     ElementRect,
     getElementFromPosition,
@@ -41,9 +34,14 @@ import { useStateSubscriber } from '@/hooks/useStateSubscriber';
 import { CaptureStepPublisher } from '../../extra';
 import { ResizeToolbar, ResizeToolbarActionType } from './components/resizeToolbar';
 import { ScreenshotType } from '@/functions/screenshot';
-export type SelectLayerActionType = BaseLayerActionType & {
+import { zIndexs } from '@/utils/zIndex';
+export type SelectLayerActionType = {
     getSelectRect: () => ElementRect | undefined;
     getWindowId: () => number | undefined;
+    setEnable: (enable: boolean) => void;
+    onExecuteScreenshot: () => Promise<void>;
+    onCaptureReady: (texture: PIXI.Texture, imageBuffer: ImageBuffer) => Promise<void>;
+    onCaptureFinish: () => Promise<void>;
 };
 
 export type SelectLayerProps = {
@@ -55,8 +53,7 @@ const SelectLayerCore: React.FC<SelectLayerProps> = ({ actionRef }) => {
     const resizeToolbarActionRef = useRef<ResizeToolbarActionType | undefined>(undefined);
 
     const { finishCapture, drawToolbarActionRef } = useContext(DrawContext);
-    const { isEnable, addChildToTopContainer, changeCursor, layerContainerElementRef } =
-        useContext(BaseLayerContext);
+    const [isEnable, setIsEnable] = useState(false);
 
     const [findChildrenElements, setFindChildrenElements] = useState(false);
     const [getAppSettings] = useStateSubscriber(
@@ -82,13 +79,20 @@ const SelectLayerCore: React.FC<SelectLayerProps> = ({ actionRef }) => {
         );
     }, [getScreenshotType]);
 
+    const changeCursor = useCallback((cursor: string) => {
+        if (layerContainerElementRef.current) {
+            layerContainerElementRef.current.style.cursor = cursor;
+        }
+    }, []);
+
+    const layerContainerElementRef = useRef<HTMLDivElement | null>(null);
+    const selectLayerCanvasRef = useRef<HTMLCanvasElement | null>(null);
+    const selectLayerCanvasContextRef = useRef<CanvasRenderingContext2D | null>(null);
     const elementsListRef = useRef<ElementRect[]>([]); // 窗口元素的列表
     const elementsIndexWindowIdMapRef = useRef<Map<number, number>>(new Map()); // 窗口元素对应的窗口 ID
     const selectedWindowIdRef = useRef<number | undefined>(undefined); // 选中的窗口 ID
     const elementsListRTreeRef = useRef<Flatbush | undefined>(undefined); // 窗口元素的 RTree
     const selectWindowElementLoadingRef = useRef(true); // 是否正在加载元素选择功能
-    const overlayRectRef = useRef<PIXI.Graphics | undefined>(undefined); // 全屏遮罩
-    const overlayMaskRectControlsRef = useRef<PIXI.Graphics | undefined>(undefined); // 全屏遮罩的 mask 的控制点
     const selectWindowFromMousePositionLevelRef = useRef(0);
     const lastMouseMovePositionRef = useRef<MousePosition | undefined>(undefined); // 上一次鼠标移动事件触发的参数
     const drawSelectRectAnimationRef = useRef<TweenAnimation<ElementRect> | undefined>(undefined); // 绘制选取框的动画
@@ -211,18 +215,12 @@ const SelectLayerCore: React.FC<SelectLayerProps> = ({ actionRef }) => {
     );
 
     const updateSelectRect = useCallback(
-        (
-            rect: ElementRect,
-            imageBuffer: ImageBuffer,
-            overlayRect: PIXI.Graphics,
-            overlayMaskRectControls: PIXI.Graphics,
-        ) => {
+        (rect: ElementRect, imageBuffer: ImageBuffer) => {
             drawSelectRect(
                 imageBuffer.monitorWidth,
                 imageBuffer.monitorHeight,
                 rect,
-                overlayRect,
-                overlayMaskRectControls,
+                selectLayerCanvasContextRef.current!,
                 getAppSettings()[AppSettingsGroup.Common].darkMode,
                 imageBuffer.monitorScaleFactor,
                 getScreenshotType(),
@@ -236,11 +234,7 @@ const SelectLayerCore: React.FC<SelectLayerProps> = ({ actionRef }) => {
     );
 
     const initAnimation = useCallback(
-        (
-            imageBuffer: ImageBuffer,
-            overlayRect: PIXI.Graphics,
-            overlayMaskRectControls: PIXI.Graphics,
-        ) => {
+        (imageBuffer: ImageBuffer) => {
             if (drawSelectRectAnimationRef.current) {
                 drawSelectRectAnimationRef.current.dispose();
             }
@@ -255,7 +249,7 @@ const SelectLayerCore: React.FC<SelectLayerProps> = ({ actionRef }) => {
                 TWEEN.Easing.Quadratic.Out,
                 100,
                 (rect) => {
-                    updateSelectRect(rect, imageBuffer, overlayRect, overlayMaskRectControls);
+                    updateSelectRect(rect, imageBuffer);
                 },
             );
         },
@@ -271,30 +265,26 @@ const SelectLayerCore: React.FC<SelectLayerProps> = ({ actionRef }) => {
             // 初始化下选择状态
             setSelectState(SelectState.Auto);
 
-            // 创建一个全屏遮罩
-            const overlayRect = new PIXI.Graphics({
-                cullable: true,
-            });
-            const overlayControls = new PIXI.Graphics({
-                cullable: true,
-            });
+            if (!selectLayerCanvasContextRef.current) {
+                selectLayerCanvasContextRef.current =
+                    selectLayerCanvasRef.current!.getContext('2d');
+            }
 
-            addChildToTopContainer(overlayRect);
-            addChildToTopContainer(overlayControls);
+            selectLayerCanvasRef.current!.height = imageBuffer.monitorHeight;
+            selectLayerCanvasRef.current!.width = imageBuffer.monitorWidth;
 
-            overlayRectRef.current = overlayRect;
-            overlayMaskRectControlsRef.current = overlayControls;
-
-            initAnimation(imageBuffer, overlayRect, overlayControls);
+            initAnimation(imageBuffer);
         },
-        [addChildToTopContainer, initAnimation, setSelectState],
+        [initAnimation, setSelectState],
     );
 
-    const onCaptureLoad = useCallback<
-        BaseLayerEventActionType['onCaptureLoad']
-    >(async () => {}, []);
-
     const onCaptureFinish = useCallback<BaseLayerEventActionType['onCaptureFinish']>(async () => {
+        selectLayerCanvasContextRef.current!.clearRect(
+            0,
+            0,
+            imageBufferRef.current!.monitorWidth,
+            imageBufferRef.current!.monitorHeight,
+        );
         imageBufferRef.current = undefined;
         selectWindowElementLoadingRef.current = true;
         elementsListRTreeRef.current = undefined;
@@ -552,25 +542,19 @@ const SelectLayerCore: React.FC<SelectLayerProps> = ({ actionRef }) => {
     useImperativeHandle(
         actionRef,
         () => ({
-            ...defaultBaseLayerActions,
             onExecuteScreenshot,
             onCaptureReady: async (texture, imageBuffer) => {
                 await onCaptureReady(texture, imageBuffer);
                 refreshMouseMove();
             },
             getWindowId: () => selectedWindowIdRef.current,
-            onCaptureLoad,
             onCaptureFinish,
             getSelectRect,
+            setEnable: (enable: boolean) => {
+                setIsEnable(enable);
+            },
         }),
-        [
-            getSelectRect,
-            onCaptureFinish,
-            onCaptureLoad,
-            onCaptureReady,
-            onExecuteScreenshot,
-            refreshMouseMove,
-        ],
+        [getSelectRect, onCaptureFinish, onCaptureReady, onExecuteScreenshot, refreshMouseMove],
     );
 
     useHotkeys(
@@ -589,6 +573,10 @@ const SelectLayerCore: React.FC<SelectLayerProps> = ({ actionRef }) => {
     );
 
     useEffect(() => {
+        if (layerContainerElementRef.current) {
+            layerContainerElementRef.current.style.pointerEvents = isEnable ? 'auto' : 'none';
+        }
+
         if (!isEnable) {
             return;
         }
@@ -615,8 +603,30 @@ const SelectLayerCore: React.FC<SelectLayerProps> = ({ actionRef }) => {
     return (
         <>
             <ResizeToolbar actionRef={resizeToolbarActionRef} />
+
+            <div className="select-layer-container" ref={layerContainerElementRef}>
+                <canvas className="select-layer-canvas" ref={selectLayerCanvasRef} />
+                <style jsx>{`
+                    .select-layer-container {
+                        position: fixed;
+                        top: 0;
+                        left: 0;
+                        width: 100vw;
+                        height: 100vh;
+                        z-index: ${zIndexs.Draw_SelectLayer};
+                    }
+
+                    .select-layer-container > .select-layer-canvas {
+                        width: 100vw;
+                        height: 100vh;
+                        position: absolute;
+                        top: 0;
+                        left: 0;
+                    }
+                `}</style>
+            </div>
         </>
     );
 };
 
-export default withBaseLayer(SelectLayerCore, zIndexs.Draw_SelectLayer);
+export default React.memo(SelectLayerCore);
