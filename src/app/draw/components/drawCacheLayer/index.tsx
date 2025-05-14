@@ -275,7 +275,7 @@ const DrawCacheLayerCore: React.FC<{
         CaptureStepPublisher,
         useCallback(
             async (step: CaptureStep) => {
-                if (step === CaptureStep.Fixed) {
+                if (step !== CaptureStep.Fixed) {
                     return;
                 }
 
