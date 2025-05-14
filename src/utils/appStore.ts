@@ -57,6 +57,14 @@ class BaseStore<Value> {
 
         return await this.instance.delete(key);
     }
+
+    public async save() {
+        if (!this.instance) {
+            throw new Error('Store not initialized');
+        }
+
+        return await this.instance.save();
+    }
 }
 
 export class ChatHistoryStore extends BaseStore<{
