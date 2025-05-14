@@ -3913,9 +3913,9 @@ dependencies = [
 
 [[package]]
 name = "paddle-ocr-rs"
-version = "0.3.1"
+version = "0.3.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5792ea7e6e912730506ad3752dbcf1afb82e52c7f27613083a3751ec585baa42"
+checksum = "19b17116cf38342162f65ffd229d0ee6e0bcb3f9e98ce8dc83e8ba23f48c679c"
 dependencies = [
  "clipper-sys",
  "geo-clipper",

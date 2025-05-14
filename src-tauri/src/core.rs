@@ -36,12 +36,12 @@ pub async fn auto_start_hide_window(
 }
 
 #[command]
-pub async fn set_enable_proxy(enable: bool) -> Result<(), ()> {
+pub async fn set_enable_proxy(enable: bool, host: String) -> Result<(), ()> {
     unsafe {
         if enable {
             std::env::set_var("NO_PROXY", "");
         } else {
-            std::env::set_var("NO_PROXY", "127.0.0.1,localhost,snowshot.top,120.79.232.67");
+            std::env::set_var("NO_PROXY", host);
         }
     }
     Ok(())

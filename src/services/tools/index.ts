@@ -5,11 +5,12 @@ import { fetch } from '@tauri-apps/plugin-http';
 export const getUrl = (url: string, params?: Record<string, any>) => {
     let baseUrl;
     if (process.env.NODE_ENV === 'development') {
-        baseUrl = 'http://127.0.0.1:5101/';
+        // baseUrl = 'http://127.0.0.1:5101/';
+        baseUrl = 'https://snowshot.mgchao.top/';
         // baseUrl = 'http://120.79.232.67/';
     } else {
-        // baseUrl = 'https://api.snowshot.top/';
-        baseUrl = 'http://120.79.232.67/';
+        baseUrl = 'https://snowshot.mgchao.top/';
+        // baseUrl = 'http://120.79.232.67/';
     }
 
     const urlObj = new URL(url, baseUrl);
