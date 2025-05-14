@@ -27,4 +27,3 @@ pub fn switch_always_on_top(hwnd: *mut c_void) -> bool {
     
     result.is_ok()
 }
-
