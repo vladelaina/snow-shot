@@ -18,7 +18,7 @@ import {
 import type { BubbleDataType as AntdBubbleDataType } from '@ant-design/x/es/bubble/BubbleList';
 import type { Conversation } from '@ant-design/x/es/conversations';
 import { MessageInfo } from '@ant-design/x/es/use-x-chat';
-import { Button, Drawer, Select, Space, Spin, Tag, theme, Typography } from 'antd';
+import { Button, Card, Drawer, Select, Space, Spin, Tag, theme, Typography } from 'antd';
 import dayjs from 'dayjs';
 import { debounce, last, throttle } from 'lodash';
 import React, {
@@ -40,7 +40,7 @@ import {
     AppSettingsGroup,
     AppSettingsPublisher,
 } from '@/app/contextWrap';
-import Markdown from 'react-markdown';
+import Markdown, { ExtraProps } from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { useSearchParams } from 'next/navigation';
 import { finishScreenshot } from '@/functions/screenshot';
@@ -83,37 +83,58 @@ const getMessageContent = (msg: ChatMessage | BubbleDataType, ignoreReasoningCon
     return content;
 };
 
+const CodeCard: React.FC<{
+    props: React.ClassAttributes<HTMLElement> & React.HTMLAttributes<HTMLElement> & ExtraProps;
+    language: string;
+    darkMode: boolean;
+}> = ({ props, language, darkMode }) => {
+    const { children, ...rest } = props;
+    return (
+        <Card
+            title={language}
+            size="small"
+            styles={{ body: { padding: 0, margin: '-0.5em 0' } }}
+            extra={
+                <Space>
+                    <Button
+                        type="text"
+                        icon={<CopyOutlined />}
+                        onClick={() => {
+                            copyText(String(children).replace(/\n$/, ''));
+                        }}
+                    />
+                </Space>
+            }
+        >
+            <SyntaxHighlighter
+                {...rest}
+                ref={undefined}
+                PreTag="div"
+                language={language}
+                style={darkMode ? oneDark : oneLight}
+                wrapLongLines
+                showLineNumbers
+            >
+                {String(children).replace(/\n$/, '')}
+            </SyntaxHighlighter>
+        </Card>
+    );
+};
+
 const MarkdownContent: React.FC<{
     content: string;
     clipboardContent: string;
-}> = ({ content, clipboardContent }) => {
-    const [darkMode, setDarkMode] = useState(false);
-    useStateSubscriber(
-        AppSettingsPublisher,
-        useCallback((settings: AppSettingsData) => {
-            setDarkMode(settings[AppSettingsGroup.Common].darkMode);
-        }, []),
-    );
-
+    darkMode: boolean;
+}> = ({ content, darkMode }) => {
     return (
-        <Typography data-clipboard-content={clipboardContent}>
+        <Typography>
             <Markdown
                 components={{
                     code(props) {
                         const { children, className, ...rest } = props;
                         const match = /language-(\w+)/.exec(className || '');
                         return match ? (
-                            <SyntaxHighlighter
-                                {...rest}
-                                ref={undefined}
-                                PreTag="div"
-                                language={match[1]}
-                                style={darkMode ? oneDark : oneLight}
-                                wrapLongLines
-                                showLineNumbers
-                            >
-                                {String(children).replace(/\n$/, '')}
-                            </SyntaxHighlighter>
+                            <CodeCard language={match[1]} darkMode={darkMode} props={props} />
                         ) : (
                             <code {...rest} className={className}>
                                 {children}
@@ -241,6 +262,14 @@ const Chat = () => {
             setHotKeys(appSettings[AppSettingsGroup.KeyEvent]);
         }, []),
         true,
+    );
+
+    const [darkMode, setDarkMode] = useState(false);
+    useStateSubscriber(
+        AppSettingsPublisher,
+        useCallback((settings: AppSettingsData) => {
+            setDarkMode(settings[AppSettingsGroup.Common].darkMode);
+        }, []),
     );
 
     const { token } = theme.useToken();
@@ -688,7 +717,11 @@ const Chat = () => {
                     i.message.role === 'assistant'
                         ? () => {
                               return (
-                                  <MarkdownContent content={content} clipboardContent={content} />
+                                  <MarkdownContent
+                                      darkMode={darkMode}
+                                      content={content}
+                                      clipboardContent={content}
+                                  />
                               );
                           }
                         : undefined,
@@ -784,7 +817,7 @@ const Chat = () => {
                                                 }
 
                                                 navigator.clipboard.writeText(
-                                                    content['props']['data-clipboard-content'],
+                                                    content['props']['clipboardContent'],
                                                 );
                                             }}
                                         />
