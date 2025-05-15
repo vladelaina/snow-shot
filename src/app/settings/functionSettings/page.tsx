@@ -1,7 +1,7 @@
 'use client';
 
 import { GroupTitle } from '@/components/groupTitle';
-import { Col, Flex, Form, Row, Spin, Switch, theme } from 'antd';
+import { Alert, Col, Flex, Form, Row, Spin, Switch, theme, Typography } from 'antd';
 import { AppSettingsActionContext, AppSettingsData, AppSettingsGroup } from '../../contextWrap';
 import { useCallback, useContext, useState } from 'react';
 import { useAppSettingsLoad } from '@/hooks/useAppSettingsLoad';
@@ -9,7 +9,17 @@ import { FormattedMessage, useIntl } from 'react-intl';
 import { ContentWrap } from '@/components/contentWrap';
 import { IconLabel } from '@/components/iconLable';
 import { ResetSettingsButton } from '@/components/resetSettingsButton';
-import ProForm, { ProFormList, ProFormSwitch, ProFormText } from '@ant-design/pro-form';
+import ProForm, {
+    ProFormList,
+    ProFormSwitch,
+    ProFormText,
+    ProFormTextArea,
+} from '@ant-design/pro-form';
+import {
+    SOURCE_LANGUAGE_ENV_VARIABLE,
+    TARGET_LANGUAGE_ENV_VARIABLE,
+    TRANSLATION_DOMAIN_ENV_VARIABLE,
+} from '@/app/tools/translation/extra';
 
 export default function SystemSettings() {
     const intl = useIntl();
@@ -17,6 +27,7 @@ export default function SystemSettings() {
 
     const { updateAppSettings } = useContext(AppSettingsActionContext);
     const [functionForm] = Form.useForm<AppSettingsData[AppSettingsGroup.FunctionChat]>();
+    const [translationForm] = Form.useForm<AppSettingsData[AppSettingsGroup.FunctionTranslation]>();
 
     const [appSettingsLoading, setAppSettingsLoading] = useState(true);
     useAppSettingsLoad(
@@ -26,18 +37,112 @@ export default function SystemSettings() {
 
                 if (
                     preSettings === undefined ||
+                    preSettings[AppSettingsGroup.FunctionTranslation] !==
+                        settings[AppSettingsGroup.FunctionTranslation]
+                ) {
+                    translationForm.setFieldsValue(settings[AppSettingsGroup.FunctionTranslation]);
+                }
+
+                if (
+                    preSettings === undefined ||
                     preSettings[AppSettingsGroup.FunctionChat] !==
                         settings[AppSettingsGroup.FunctionChat]
                 ) {
                     functionForm.setFieldsValue(settings[AppSettingsGroup.FunctionChat]);
                 }
             },
-            [functionForm],
+            [functionForm, translationForm],
         ),
         true,
     );
     return (
         <ContentWrap>
+            <GroupTitle
+                id="translationSettings"
+                extra={
+                    <ResetSettingsButton
+                        title={
+                            <FormattedMessage id="settings.functionSettings.translationSettings" />
+                        }
+                        appSettingsGroup={AppSettingsGroup.FunctionTranslation}
+                    />
+                }
+            >
+                <FormattedMessage id="settings.functionSettings.translationSettings" />
+            </GroupTitle>
+
+            <Spin spinning={appSettingsLoading}>
+                <ProForm
+                    form={translationForm}
+                    onValuesChange={(_, values) => {
+                        updateAppSettings(
+                            AppSettingsGroup.FunctionTranslation,
+                            values,
+                            true,
+                            true,
+                            true,
+                            true,
+                            false,
+                        );
+                    }}
+                    submitter={false}
+                >
+                    <Alert
+                        message={
+                            <Typography>
+                                <Row>
+                                    <Col span={24}>
+                                        <FormattedMessage id="settings.functionSettings.translationSettings.chatPrompt.variables" />
+                                    </Col>
+                                    <Col span={12}>
+                                        <FormattedMessage id="settings.functionSettings.translationSettings.chatPrompt.sourceLanguage" />
+                                        <code>{SOURCE_LANGUAGE_ENV_VARIABLE}</code>
+                                    </Col>
+                                    <Col span={12}>
+                                        <FormattedMessage id="settings.functionSettings.translationSettings.chatPrompt.targetLanguage" />
+                                        <code>{TARGET_LANGUAGE_ENV_VARIABLE}</code>
+                                    </Col>
+                                    <Col span={12}>
+                                        <FormattedMessage id="settings.functionSettings.translationSettings.chatPrompt.translationDomain" />
+                                        <code>{TRANSLATION_DOMAIN_ENV_VARIABLE}</code>
+                                    </Col>
+                                </Row>
+                            </Typography>
+                        }
+                        type="info"
+                        style={{ marginBottom: token.margin }}
+                    />
+                    <ProFormTextArea
+                        label={
+                            <IconLabel
+                                label={
+                                    <FormattedMessage id="settings.functionSettings.translationSettings.chatPrompt" />
+                                }
+                                tooltipTitle={
+                                    <FormattedMessage id="settings.functionSettings.translationSettings.chatPrompt.tip" />
+                                }
+                            />
+                        }
+                        layout="horizontal"
+                        name="chatPrompt"
+                        rules={[
+                            {
+                                required: true,
+                                message: intl.formatMessage({
+                                    id: 'settings.functionSettings.translationSettings.chatPrompt.required',
+                                }),
+                            },
+                        ]}
+                        fieldProps={{
+                            autoSize: {
+                                minRows: 1,
+                                maxRows: 5,
+                            },
+                        }}
+                    />
+                </ProForm>
+            </Spin>
+
             <GroupTitle
                 id="functionSettings"
                 extra={
@@ -141,7 +246,14 @@ export default function SystemSettings() {
                                 <ProFormSwitch
                                     name="support_thinking"
                                     label={
-                                        <FormattedMessage id="settings.functionSettings.chatSettings.apiConfig.supportThinking" />
+                                        <IconLabel
+                                            label={
+                                                <FormattedMessage id="settings.functionSettings.chatSettings.apiConfig.supportThinking" />
+                                            }
+                                            tooltipTitle={
+                                                <FormattedMessage id="settings.functionSettings.chatSettings.apiConfig.supportThinking.tip" />
+                                            }
+                                        />
                                     }
                                 />
                             </Col>

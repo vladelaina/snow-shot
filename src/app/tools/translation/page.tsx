@@ -43,7 +43,7 @@ import { useHotkeys } from 'react-hotkeys-hook';
 import { FormattedMessage, useIntl } from 'react-intl';
 import { ChatApiConfig } from '@/app/settings/functionSettings/extra';
 import OpenAI from 'openai';
-import { getTranslationPrompt } from './extra';
+import { defaultTranslationPrompt, getTranslationPrompt } from './extra';
 
 const SelectLabel: React.FC<{
     label: React.ReactNode;
@@ -224,6 +224,8 @@ const TranslationCore = () => {
     );
     const { updateAppSettings } = useContext(AppSettingsActionContext);
     const [chatConfig, setChatConfig] = useState<AppSettingsData[AppSettingsGroup.SystemChat]>();
+    const [translationConfig, setTranslationConfig] =
+        useState<AppSettingsData[AppSettingsGroup.FunctionTranslation]>();
     useAppSettingsLoad(
         useCallback(
             (settings) => {
@@ -231,6 +233,7 @@ const TranslationCore = () => {
                 setTranslationType(settings[AppSettingsGroup.Cache].translationType);
                 setChatApiConfigList(settings[AppSettingsGroup.FunctionChat].chatApiConfigList);
                 setChatConfig(settings[AppSettingsGroup.SystemChat]);
+                setTranslationConfig(settings[AppSettingsGroup.FunctionTranslation]);
             },
             [setTranslationType, setTranslationDomain],
         ),
@@ -332,7 +335,7 @@ const TranslationCore = () => {
 
             const client = new OpenAI({
                 apiKey: config.apiConfig.api_key,
-                baseURL: new URL('v1', config.apiConfig.api_uri).toString(),
+                baseURL: config.apiConfig.api_uri,
                 dangerouslyAllowBrowser: true,
             });
 
@@ -342,6 +345,7 @@ const TranslationCore = () => {
                     {
                         role: 'system',
                         content: getTranslationPrompt(
+                            translationConfig?.chatPrompt ?? defaultTranslationPrompt,
                             sourceLanguage,
                             targetLanguage,
                             translationDomain,

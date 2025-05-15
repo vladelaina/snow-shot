@@ -47,6 +47,14 @@ export const settings = {
     'settings.chatSettings.thinkingBudgetTokens': '思考预算 Token 数',
     'settings.chatSettings.thinkingBudgetTokens.tip':
         '对于如 Claude 模型的推理模式，思考预算决定其内部推理过程的最大 Token 数。注意，思考预算 Token 数不能小于\"最大 Token 数\"，所以如果该值有效，\"最大 Token 数\"可能由服务器决定',
+    'settings.functionSettings.translationSettings': '翻译设置',
+    'settings.functionSettings.translationSettings.chatPrompt': '翻译提示词',
+    'settings.functionSettings.translationSettings.chatPrompt.tip': '目前仅对自定义 API 的模型生效',
+    'settings.functionSettings.translationSettings.chatPrompt.required': '请输入翻译提示词',
+    'settings.functionSettings.translationSettings.chatPrompt.variables': '支持的变量',
+    'settings.functionSettings.translationSettings.chatPrompt.sourceLanguage': '源语言',
+    'settings.functionSettings.translationSettings.chatPrompt.targetLanguage': '目标语言',
+    'settings.functionSettings.translationSettings.chatPrompt.translationDomain': '翻译领域',
     'settings.functionSettings.chatSettings': 'AI 对话设置',
     'settings.functionSettings.chatSettings.autoCreateNewSession': '快捷键启动自动创建新会话',
     'settings.functionSettings.chatSettings.apiConfig': 'API 配置',
@@ -59,7 +67,7 @@ export const settings = {
     'settings.functionSettings.chatSettings.apiConfig.apiUri': 'API 地址',
     'settings.functionSettings.chatSettings.apiConfig.apiUri.required': '请输入 API 地址',
     'settings.functionSettings.chatSettings.apiConfig.apiUri.tip':
-        '格式如：https://api.openai.com/',
+        '格式如：https://api.openai.com/v1',
     'settings.functionSettings.chatSettings.apiConfig.apiModel': 'API 模型',
     'settings.functionSettings.chatSettings.apiConfig.apiModel.tip': 'API 模型，如：gpt-3.5-turbo',
     'settings.functionSettings.chatSettings.apiConfig.apiModel.required': '请输入 API 模型',
@@ -68,4 +76,6 @@ export const settings = {
         '模型名称用于 Snow Shot 的展示',
     'settings.functionSettings.chatSettings.apiConfig.modelName.required': '请输入模型名称',
     'settings.functionSettings.chatSettings.apiConfig.supportThinking': '支持推理',
+    'settings.functionSettings.chatSettings.apiConfig.supportThinking.tip':
+        '如果你需要将该模型用于翻译，不建议开启此选项',
 };

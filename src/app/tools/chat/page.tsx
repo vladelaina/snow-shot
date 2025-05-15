@@ -59,6 +59,7 @@ import { SendQueueMessageList } from './components/sendQueueMessageList';
 import { ChatMessage, ChatMessageFlowConfig, SendQueueMessage } from './types';
 import { WorkflowList } from './components/workflowList';
 import { ChatApiConfig } from '@/app/settings/functionSettings/extra';
+import path from 'path';
 
 type BubbleDataType = AntdBubbleDataType & {
     flow_config?: ChatMessageFlowConfig;
@@ -365,7 +366,7 @@ const Chat = () => {
 
             return {
                 request: XRequest({
-                    baseURL: new URL('v1/chat/completions', customConfig.api_uri).toString(),
+                    baseURL: path.join(customConfig.api_uri, '/chat/completions'),
                     model: customConfig.api_model,
                     dangerouslyApiKey: `Bearer ${customConfig.api_key}`,
                 }),

@@ -26,6 +26,7 @@ import { defaultKeyEventSettings, KeyEventKey, KeyEventValue } from '@/core/hotK
 import { TranslationDomain, TranslationType } from '@/services/tools/translation';
 import { setEnableProxy } from '@/commands/core';
 import { ChatApiConfig } from './settings/functionSettings/extra';
+import { defaultTranslationPrompt } from './tools/translation/extra';
 
 export enum AppSettingsGroup {
     Common = 'common',
@@ -39,6 +40,7 @@ export enum AppSettingsGroup {
     SystemChat = 'systemChat',
     SystemNetwork = 'systemNetwork',
     FunctionChat = 'functionChat',
+    FunctionTranslation = 'functionTranslation',
 }
 
 export enum AppSettingsLanguage {
@@ -96,6 +98,9 @@ export type AppSettingsData = {
         autoCreateNewSession: boolean;
         chatApiConfigList: ChatApiConfig[];
     };
+    [AppSettingsGroup.FunctionTranslation]: {
+        chatPrompt: string;
+    };
 };
 
 export const defaultAppSettingsData: AppSettingsData = {
@@ -135,6 +140,9 @@ export const defaultAppSettingsData: AppSettingsData = {
     [AppSettingsGroup.FunctionChat]: {
         autoCreateNewSession: true,
         chatApiConfigList: [],
+    },
+    [AppSettingsGroup.FunctionTranslation]: {
+        chatPrompt: defaultTranslationPrompt,
     },
 };
 
@@ -587,6 +595,18 @@ const ContextWrapCore: React.FC<{ children: React.ReactNode }> = ({ children }) 
                           }))
                         : (prevSettings?.chatApiConfigList ??
                           defaultAppSettingsData[group].chatApiConfigList),
+                };
+            } else if (group === AppSettingsGroup.FunctionTranslation) {
+                newSettings = newSettings as AppSettingsData[typeof group];
+                const prevSettings = appSettingsRef.current[group] as
+                    | AppSettingsData[typeof group]
+                    | undefined;
+
+                settings = {
+                    chatPrompt:
+                        typeof newSettings?.chatPrompt === 'string'
+                            ? newSettings.chatPrompt
+                            : (prevSettings?.chatPrompt ?? ''),
                 };
             } else {
                 return defaultAppSettingsData[group];
