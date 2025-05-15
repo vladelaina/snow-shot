@@ -80,9 +80,9 @@ export const settings = {
         '如果你需要将该模型用于翻译，不建议开启此选项',
     'settings.functionSettings.screenshotSettings': '截图设置',
     'settings.functionSettings.screenshotSettings.findChildrenElements': '查找窗口子元素',
-    'settings.functionSettings.screenshotSettings.alwaysShowColorPicker': '始终显示颜色选择器',
+    'settings.functionSettings.screenshotSettings.alwaysShowColorPicker': '始终显示颜色拾取器',
     'settings.functionSettings.screenshotSettings.alwaysShowColorPicker.tip':
-        '超出选区范围时，保持显示颜色选择器',
+        '超出选区范围时，保持显示颜色拾取器',
     'settings.functionSettings.screenshotSettings.beyondSelectRectElementOpacity':
         '超出选区范围的元素透明度',
     'settings.functionSettings.screenshotSettings.beyondSelectRectElementOpacity.tip':
