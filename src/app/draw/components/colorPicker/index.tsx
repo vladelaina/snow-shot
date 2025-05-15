@@ -2,7 +2,14 @@
 
 import { theme } from 'antd';
 import { zIndexs } from '@/utils/zIndex';
-import React, { useCallback, useContext, useEffect, useMemo, useRef } from 'react';
+import React, {
+    useCallback,
+    useContext,
+    useEffect,
+    useImperativeHandle,
+    useMemo,
+    useRef,
+} from 'react';
 import { getCurrentWindow, Window as AppWindow, PhysicalPosition } from '@tauri-apps/api/window';
 import { CaptureStep, DrawContext, DrawState } from '@/app/draw/types';
 import { KeyEventKey } from '../drawToolbar/components/keyEventWrap/extra';
@@ -44,9 +51,14 @@ export const isEnableColorPicker = (
     );
 };
 
+export type ColorPickerActionType = {
+    getCurrentImageData: () => ImageData | undefined;
+};
+
 const ColorPickerCore: React.FC<{
     onCopyColor?: () => void;
-}> = ({ onCopyColor }) => {
+    actionRef: React.Ref<ColorPickerActionType | undefined>;
+}> = ({ onCopyColor, actionRef }) => {
     const [getCaptureStep] = useStateSubscriber(CaptureStepPublisher, undefined);
     const [getDrawState] = useStateSubscriber(DrawStatePublisher, undefined);
     const [, setEnableKeyEvent] = useStateSubscriber(EnableKeyEventPublisher, undefined);
@@ -167,24 +179,17 @@ const ColorPickerCore: React.FC<{
     const moveCursorFinishedRef = useRef(true);
     const moveCursorFinishedTimeoutRef = useRef<NodeJS.Timeout | undefined>(undefined);
     const updateImageDataPutImage = useCallback(
-        (ctx: CanvasRenderingContext2D, x: number, y: number) => {
+        (ctx: CanvasRenderingContext2D, x: number, y: number, imageData: ImageData) => {
             ctx.clearRect(0, 0, previewCanvasSize, previewCanvasSize);
-            ctx.putImageData(
-                currentCanvasImageDataRef.current!,
-                -x,
-                -y,
-                x,
-                y,
-                previewPickerSize,
-                previewPickerSize,
-            );
+            ctx.putImageData(imageData, -x, -y, x, y, previewPickerSize, previewPickerSize);
         },
         [],
     );
     const updateImageDataPutImageRender = useCallbackRender(updateImageDataPutImage);
     const updateImageData = useCallback(
         async (mouseX: number, mouseY: number, physicalX?: number, physicalY?: number) => {
-            if (!currentCanvasImageDataRef.current) {
+            const imageData = currentCanvasImageDataRef.current;
+            if (!imageData) {
                 return;
             }
 
@@ -224,7 +229,6 @@ const ColorPickerCore: React.FC<{
             const pickerX = x + halfPickerSize;
             const pickerY = y + halfPickerSize;
             updatePickerPosition(pickerX, pickerY);
-            const imageData = currentCanvasImageDataRef.current!;
             const baseIndex = (pickerY * imageBuffer.monitorWidth + pickerX) * 4;
 
             // 更新颜色
@@ -235,7 +239,7 @@ const ColorPickerCore: React.FC<{
             );
 
             // 计算和绘制错开 1 帧率
-            updateImageDataPutImageRender(ctx, x, y);
+            updateImageDataPutImageRender(ctx, x, y, imageData);
         },
         [imageBufferRef, updateColor, updateImageDataPutImageRender, updatePickerPosition],
     );
@@ -332,6 +336,15 @@ const ColorPickerCore: React.FC<{
     );
     useStateSubscriber(CaptureLoadingPublisher, onCaptureLoad);
 
+    useStateSubscriber(
+        CaptureEventPublisher,
+        useCallback((captureEvent: CaptureEventParams | undefined) => {
+            if (captureEvent?.event === CaptureEvent.onCaptureFinish) {
+                currentCanvasImageDataRef.current = undefined;
+            }
+        }, []),
+    );
+
     useEffect(() => {
         const handleMouseMove = (e: MouseEvent) => {
             if (!moveCursorFinishedRef.current) {
@@ -394,6 +407,14 @@ const ColorPickerCore: React.FC<{
             }
         },
         [imageBufferRef, mousePositionRef, update],
+    );
+
+    useImperativeHandle(
+        actionRef,
+        () => ({
+            getCurrentImageData: () => currentCanvasImageDataRef.current,
+        }),
+        [],
     );
 
     return (

@@ -105,6 +105,8 @@ export type AppSettingsData = {
         findChildrenElements: boolean;
         /** 始终显示颜色选择器 */
         alwaysShowColorPicker: boolean;
+        /** 超出选区范围的元素透明度 */
+        beyondSelectRectElementOpacity: number;
     };
 };
 
@@ -151,6 +153,7 @@ export const defaultAppSettingsData: AppSettingsData = {
     [AppSettingsGroup.FunctionScreenshot]: {
         findChildrenElements: true,
         alwaysShowColorPicker: false,
+        beyondSelectRectElementOpacity: 100,
     },
 };
 
@@ -628,6 +631,11 @@ const ContextWrapCore: React.FC<{ children: React.ReactNode }> = ({ children }) 
                             ? newSettings.alwaysShowColorPicker
                             : (prevSettings?.alwaysShowColorPicker ??
                               defaultAppSettingsData[group].alwaysShowColorPicker),
+                    beyondSelectRectElementOpacity:
+                        typeof newSettings?.beyondSelectRectElementOpacity === 'number'
+                            ? Math.min(Math.max(newSettings.beyondSelectRectElementOpacity, 0), 100)
+                            : (prevSettings?.beyondSelectRectElementOpacity ??
+                              defaultAppSettingsData[group].beyondSelectRectElementOpacity),
                 };
             } else {
                 return defaultAppSettingsData[group];

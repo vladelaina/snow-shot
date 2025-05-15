@@ -11,6 +11,7 @@ import { IconLabel } from '@/components/iconLable';
 import { ResetSettingsButton } from '@/components/resetSettingsButton';
 import ProForm, {
     ProFormList,
+    ProFormSlider,
     ProFormSwitch,
     ProFormText,
     ProFormTextArea,
@@ -95,7 +96,7 @@ export default function SystemSettings() {
                         );
                     }}
                     submitter={false}
-                    layout="horizontal"
+                    layout="vertical"
                 >
                     <Row gutter={token.padding}>
                         <Col span={12}>
@@ -112,8 +113,38 @@ export default function SystemSettings() {
                                 name="alwaysShowColorPicker"
                                 layout="horizontal"
                                 label={
-                                    <FormattedMessage id="settings.functionSettings.screenshotSettings.alwaysShowColorPicker" />
+                                    <IconLabel
+                                        label={
+                                            <FormattedMessage id="settings.functionSettings.screenshotSettings.alwaysShowColorPicker" />
+                                        }
+                                        tooltipTitle={
+                                            <FormattedMessage id="settings.functionSettings.screenshotSettings.alwaysShowColorPicker.tip" />
+                                        }
+                                    />
                                 }
+                            />
+                        </Col>
+
+                        <Col span={12}>
+                            <ProFormSlider
+                                label={
+                                    <IconLabel
+                                        label={
+                                            <FormattedMessage id="settings.functionSettings.screenshotSettings.beyondSelectRectElementOpacity" />
+                                        }
+                                        tooltipTitle={
+                                            <FormattedMessage id="settings.functionSettings.screenshotSettings.beyondSelectRectElementOpacity.tip" />
+                                        }
+                                    />
+                                }
+                                name="beyondSelectRectElementOpacity"
+                                min={0}
+                                max={100}
+                                step={1}
+                                marks={{
+                                    0: '0%',
+                                    100: '100%',
+                                }}
                             />
                         </Col>
                     </Row>

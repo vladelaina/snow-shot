@@ -21,7 +21,7 @@ import {
 } from './extra';
 import { DrawToolbar, DrawToolbarActionType } from './components/drawToolbar';
 import { BaseLayerEventActionType } from './components/baseLayer';
-import { ColorPicker } from './components/colorPicker';
+import { ColorPicker, ColorPickerActionType } from './components/colorPicker';
 import { HistoryContext, withCanvasHistory } from './components/historyContext';
 import { withStatePublisher } from '@/hooks/useStatePublisher';
 import { useStateSubscriber } from '@/hooks/useStateSubscriber';
@@ -69,6 +69,7 @@ const DrawPageCore: React.FC = () => {
     const drawCacheLayerActionRef = useRef<DrawCacheLayerActionType | undefined>(undefined);
     const selectLayerActionRef = useRef<SelectLayerActionType | undefined>(undefined);
     const drawToolbarActionRef = useRef<DrawToolbarActionType | undefined>(undefined);
+    const colorPickerActionRef = useRef<ColorPickerActionType | undefined>(undefined);
     const [isFixed, setIsFixed] = useState(false);
     const fixedImageActionRef = useRef<FixedImageActionType | undefined>(undefined);
     const ocrBlocksActionRef = useRef<OcrBlocksActionType | undefined>(undefined);
@@ -399,6 +400,7 @@ const DrawPageCore: React.FC = () => {
             drawCacheLayerActionRef,
             ocrBlocksActionRef,
             fixedImageActionRef,
+            colorPickerActionRef,
         };
     }, [finishCapture]);
 
@@ -466,6 +468,7 @@ const DrawPageCore: React.FC = () => {
                             onCopyColor={() => {
                                 finishCapture();
                             }}
+                            actionRef={colorPickerActionRef}
                         />
                         <StatusBar />
 

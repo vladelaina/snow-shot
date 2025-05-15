@@ -82,5 +82,9 @@ export const settings = {
     'settings.functionSettings.screenshotSettings.findChildrenElements': '查找窗口子元素',
     'settings.functionSettings.screenshotSettings.alwaysShowColorPicker': '始终显示颜色选择器',
     'settings.functionSettings.screenshotSettings.alwaysShowColorPicker.tip':
-        '超出选区范围时，任然显示颜色选择器',
+        '超出选区范围时，保持显示颜色选择器',
+    'settings.functionSettings.screenshotSettings.beyondSelectRectElementOpacity':
+        '超出选区范围的元素透明度',
+    'settings.functionSettings.screenshotSettings.beyondSelectRectElementOpacity.tip':
+        '选定截图区域后，绘制的元素在超出选区范围时显示的透明度',
 };

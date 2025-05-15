@@ -69,6 +69,9 @@ export const drawSelectRect = (
     darkMode: boolean,
     scaleFactor: number,
     screenshotType: ScreenshotType,
+    drawElementMask?: {
+        imageData: ImageData;
+    },
 ) => {
     const { min_x: rectMinX, min_y: rectMinY, max_x: rectMaxX, max_y: rectMaxY } = selectRect;
     const rectWidth = rectMaxX - rectMinX;
@@ -84,6 +87,10 @@ export const drawSelectRect = (
     const fillColor = getMaskBackgroundColor(darkMode);
 
     canvasContext.clearRect(0, 0, monitorWidth, monitorHeight);
+
+    if (drawElementMask) {
+        canvasContext.putImageData(drawElementMask.imageData, 0, 0);
+    }
 
     canvasContext.fillStyle = fillColor;
     canvasContext.fillRect(0, 0, monitorWidth, monitorHeight);
