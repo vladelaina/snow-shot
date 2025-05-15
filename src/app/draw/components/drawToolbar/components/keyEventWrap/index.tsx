@@ -118,6 +118,19 @@ const KeyEventWrapCore: React.FC<{
             eventName: string | undefined,
             event: (() => void) | undefined,
         ) => {
+            let tempEvent: (() => void) | undefined = undefined;
+            if (event) {
+                tempEvent = event;
+            }
+
+            if (eventName && typeof element.props[eventName] === 'function') {
+                tempEvent = element.props[eventName];
+            }
+
+            if (!tempEvent) {
+                return;
+            }
+
             if (confirmTip) {
                 if (confirming.current) {
                     return;
@@ -135,21 +148,7 @@ const KeyEventWrapCore: React.FC<{
                 }
             }
 
-            if (event) {
-                event();
-                return;
-            }
-
-            if (!eventName) {
-                return;
-            }
-
-            event = element.props[eventName];
-            if (typeof event !== 'function') {
-                return;
-            }
-
-            return event();
+            return tempEvent();
         },
         [confirmTip, modal],
     );

@@ -18,7 +18,7 @@ import {
 import type { BubbleDataType as AntdBubbleDataType } from '@ant-design/x/es/bubble/BubbleList';
 import type { Conversation } from '@ant-design/x/es/conversations';
 import { MessageInfo } from '@ant-design/x/es/use-x-chat';
-import { Button, Card, Drawer, Select, Space, Spin, Tag, theme, Typography } from 'antd';
+import { Button, Card, Drawer, Select, Space, Spin, theme, Typography } from 'antd';
 import dayjs from 'dayjs';
 import { debounce, last, throttle } from 'lodash';
 import React, {
@@ -60,6 +60,7 @@ import { ChatMessage, ChatMessageFlowConfig, SendQueueMessage } from './types';
 import { WorkflowList } from './components/workflowList';
 import { ChatApiConfig } from '@/app/settings/functionSettings/extra';
 import path from 'path';
+import { ModelSelectLabel } from './components/modelSelectLabel';
 
 type BubbleDataType = AntdBubbleDataType & {
     flow_config?: ChatMessageFlowConfig;
@@ -186,28 +187,6 @@ const defaultModles: ChatModelConfig[] = [
     },
 ];
 
-const ModelSelectLabel: React.FC<{
-    model: ChatModelConfig;
-}> = ({ model }) => {
-    return (
-        <Space>
-            <div>{model.name}</div>
-            <div>
-                {model.customConfig && (
-                    <Tag color="green">
-                        <FormattedMessage id="tools.chat.custom" />
-                    </Tag>
-                )}
-                {model.thinking && (
-                    <Tag color="processing">
-                        <FormattedMessage id="tools.chat.reasoner" />
-                    </Tag>
-                )}
-            </div>
-        </Space>
-    );
-};
-
 const fliterErrorMessages = (messages: BubbleDataType[] | undefined) => {
     if (!messages) {
         return [];
@@ -326,7 +305,7 @@ const Chat = () => {
         setSupportedModels([
             ...customModelConfigList.map((item) => {
                 return {
-                    model: `${CUSTOM_MODEL_PREFIX}${item.api_model}`,
+                    model: `${CUSTOM_MODEL_PREFIX}${item.api_model}${item.support_thinking ? '_thinking' : ''}`,
                     name: item.model_name,
                     thinking: item.support_thinking,
                     customConfig: item,
@@ -367,7 +346,6 @@ const Chat = () => {
             return {
                 request: XRequest({
                     baseURL: path.join(customConfig.api_uri, '/chat/completions'),
-                    model: customConfig.api_model,
                     dangerouslyApiKey: `Bearer ${customConfig.api_key}`,
                 }),
                 config: customConfig,
@@ -443,11 +421,17 @@ const Chat = () => {
                             content: getMessageContent(item, true),
                         })),
                         model: customModelRequest
-                            ? selectedModelRef.current.substring(CUSTOM_MODEL_PREFIX.length)
+                            ? selectedModelRef.current
+                                  .substring(CUSTOM_MODEL_PREFIX.length)
+                                  .replace('_thinking', '')
                             : selectedModelRef.current,
                         temperature: getAppSettings()[AppSettingsGroup.SystemChat].temperature,
                         max_tokens: getAppSettings()[AppSettingsGroup.SystemChat].maxTokens,
-                        thinking_budget_tokens:
+                        enable_thinking: customModelRequest?.config?.support_thinking ?? false,
+                        stream_options: {
+                            include_usage: true,
+                        },
+                        thinking_budget:
                             getAppSettings()[AppSettingsGroup.SystemChat].thinkingBudgetTokens,
                         reasoning: customModelRequest?.config?.support_thinking
                             ? { effort: 'medium' }
@@ -704,7 +688,13 @@ const Chat = () => {
                 <Select
                     value={selectedModel}
                     options={supportedModels.map((item) => ({
-                        label: <ModelSelectLabel model={item} />,
+                        label: (
+                            <ModelSelectLabel
+                                modelName={item.name}
+                                custom={!!item.customConfig}
+                                reasoner={item.thinking}
+                            />
+                        ),
                         value: item.model,
                     }))}
                     variant="underlined"

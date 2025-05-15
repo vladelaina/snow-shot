@@ -21,20 +21,7 @@ import {
 } from '@/services/tools/translation';
 import { copyText, copyTextAndHide, decodeParamsValue } from '@/utils';
 import { SwapOutlined } from '@ant-design/icons';
-import {
-    Button,
-    Col,
-    Flex,
-    Form,
-    InputRef,
-    Row,
-    Select,
-    SelectProps,
-    Space,
-    Spin,
-    Tag,
-    theme,
-} from 'antd';
+import { Button, Col, Flex, Form, InputRef, Row, Select, SelectProps, Spin, theme } from 'antd';
 import TextArea from 'antd/es/input/TextArea';
 import { debounce } from 'lodash';
 import { useSearchParams } from 'next/navigation';
@@ -44,6 +31,7 @@ import { FormattedMessage, useIntl } from 'react-intl';
 import { ChatApiConfig } from '@/app/settings/functionSettings/extra';
 import OpenAI from 'openai';
 import { defaultTranslationPrompt, getTranslationPrompt } from './extra';
+import { ModelSelectLabel } from '../chat/components/modelSelectLabel';
 
 const SelectLabel: React.FC<{
     label: React.ReactNode;
@@ -269,7 +257,7 @@ const TranslationCore = () => {
         setSupportedTranslationTypes([
             ...(chatApiConfigList?.map((item): TranslationServiceConfig => {
                 return {
-                    type: item.api_model,
+                    type: `${item.api_model}${item.support_thinking ? '_thinking' : ''}`,
                     name: item.model_name,
                     apiConfig: item,
                 };
@@ -340,7 +328,7 @@ const TranslationCore = () => {
             });
 
             const stream_response = await client.chat.completions.create({
-                model: config.apiConfig.api_model,
+                model: config.apiConfig.api_model.replace('_thinking', ''),
                 messages: [
                     {
                         role: 'system',
@@ -376,11 +364,13 @@ const TranslationCore = () => {
             return true;
         },
         [
-            chatConfig,
+            chatConfig?.maxTokens,
+            chatConfig?.temperature,
             setTranslatedContent,
             sourceLanguage,
             supportedTranslationTypesRef,
             targetLanguage,
+            translationConfig?.chatPrompt,
             translationDomain,
         ],
     );
@@ -647,15 +637,17 @@ const TranslationCore = () => {
                                     }}
                                     options={supportedTranslationTypes.map((item) => ({
                                         label: (
-                                            <Space>
-                                                {item.name}
-                                                {typeof item.type === 'string' &&
-                                                    item.apiConfig && (
-                                                        <Tag color="green">
-                                                            <FormattedMessage id="tools.chat.custom" />
-                                                        </Tag>
-                                                    )}
-                                            </Space>
+                                            <ModelSelectLabel
+                                                modelName={item.name}
+                                                custom={
+                                                    typeof item.type === 'string' &&
+                                                    !!item.apiConfig
+                                                }
+                                                reasoner={
+                                                    typeof item.type === 'string' &&
+                                                    item.apiConfig?.support_thinking
+                                                }
+                                            />
                                         ),
                                         value: item.type,
                                     }))}
