@@ -81,33 +81,33 @@ const ColorPickerCore: React.FC<{
             return;
         }
 
-        let opacity = '0';
+        let opacity = '1';
 
         if (enableRef.current) {
-            opacity = '1';
-        }
+            if (!getAppSettings()[AppSettingsGroup.FunctionScreenshot].alwaysShowColorPicker) {
+                const selectRect = selectLayerActionRef.current?.getSelectRect();
+                if (selectRect) {
+                    const mouseX = mousePositionRef.current.mouseX * imageBuffer.monitorScaleFactor;
+                    const mouseY = mousePositionRef.current.mouseY * imageBuffer.monitorScaleFactor;
 
-        if (!getAppSettings()[AppSettingsGroup.FunctionScreenshot].alwaysShowColorPicker) {
-            const selectRect = selectLayerActionRef.current?.getSelectRect();
-            if (selectRect) {
-                const mouseX = mousePositionRef.current.mouseX * imageBuffer.monitorScaleFactor;
-                const mouseY = mousePositionRef.current.mouseY * imageBuffer.monitorScaleFactor;
+                    const tolerance = token.marginXXS;
 
-                const tolerance = token.marginXXS;
-
-                if (
-                    mouseX > selectRect.min_x - tolerance &&
-                    mouseX < selectRect.max_x + tolerance &&
-                    mouseY > selectRect.min_y - tolerance &&
-                    mouseY < selectRect.max_y + tolerance
-                ) {
-                    opacity = '1';
+                    if (
+                        mouseX > selectRect.min_x - tolerance &&
+                        mouseX < selectRect.max_x + tolerance &&
+                        mouseY > selectRect.min_y - tolerance &&
+                        mouseY < selectRect.max_y + tolerance
+                    ) {
+                        opacity = '1';
+                    } else {
+                        opacity = '0';
+                    }
                 } else {
                     opacity = '0';
                 }
-            } else {
-                opacity = '0';
             }
+        } else {
+            opacity = '0';
         }
 
         colorPickerRef.current.style.opacity = opacity;
