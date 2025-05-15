@@ -160,23 +160,6 @@ export default function GeneralSettings() {
                                 </Select>
                             </Form.Item>
                         </Col>
-                        <Col span={12}>
-                            <Form.Item
-                                name="findChildrenElements"
-                                label={
-                                    <IconLabel
-                                        label={
-                                            <FormattedMessage id="settings.findChildrenElements" />
-                                        }
-                                    />
-                                }
-                                valuePropName="checked"
-                                required={false}
-                                rules={[{ required: true }]}
-                            >
-                                <Switch />
-                            </Form.Item>
-                        </Col>
                     </Row>
                 </Spin>
             </Form>

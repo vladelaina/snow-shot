@@ -7,6 +7,7 @@ import { MousePosition } from '@/utils/mousePosition';
 import { DrawCacheLayerActionType } from './components/drawCacheLayer/extra';
 import { OcrBlocksActionType } from './components/ocrBlocks';
 import { FixedImageActionType } from './components/fixedImage';
+import { ColorPickerActionType } from './components/colorPicker';
 
 export enum CaptureStep {
     // 选择阶段
@@ -71,6 +72,7 @@ export type DrawContextType = {
     drawCacheLayerActionRef: React.RefObject<DrawCacheLayerActionType | undefined>;
     ocrBlocksActionRef: React.RefObject<OcrBlocksActionType | undefined>;
     fixedImageActionRef: React.RefObject<FixedImageActionType | undefined>;
+    colorPickerActionRef: React.RefObject<ColorPickerActionType | undefined>;
 };
 
 export const DrawContext = React.createContext<DrawContextType>({
@@ -84,4 +86,5 @@ export const DrawContext = React.createContext<DrawContextType>({
     drawCacheLayerActionRef: { current: undefined },
     ocrBlocksActionRef: { current: undefined },
     fixedImageActionRef: { current: undefined },
+    colorPickerActionRef: { current: undefined },
 });

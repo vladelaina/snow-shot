@@ -41,6 +41,7 @@ export enum AppSettingsGroup {
     SystemNetwork = 'systemNetwork',
     FunctionChat = 'functionChat',
     FunctionTranslation = 'functionTranslation',
+    FunctionScreenshot = 'functionScreenshot',
 }
 
 export enum AppSettingsLanguage {
@@ -64,8 +65,6 @@ export type AppSettingsData = {
     [AppSettingsGroup.Screenshot]: {
         /** 选区控件样式 */
         controlNode: AppSettingsControlNode;
-        /** 选取窗口子元素 */
-        findChildrenElements: boolean;
     };
     [AppSettingsGroup.Cache]: {
         menuCollapsed: boolean;
@@ -101,6 +100,14 @@ export type AppSettingsData = {
     [AppSettingsGroup.FunctionTranslation]: {
         chatPrompt: string;
     };
+    [AppSettingsGroup.FunctionScreenshot]: {
+        /** 选取窗口子元素 */
+        findChildrenElements: boolean;
+        /** 始终显示颜色选择器 */
+        alwaysShowColorPicker: boolean;
+        /** 超出选区范围的元素透明度 */
+        beyondSelectRectElementOpacity: number;
+    };
 };
 
 export const defaultAppSettingsData: AppSettingsData = {
@@ -111,7 +118,6 @@ export const defaultAppSettingsData: AppSettingsData = {
     },
     [AppSettingsGroup.Screenshot]: {
         controlNode: AppSettingsControlNode.Circle,
-        findChildrenElements: true,
     },
     [AppSettingsGroup.Cache]: {
         menuCollapsed: false,
@@ -143,6 +149,11 @@ export const defaultAppSettingsData: AppSettingsData = {
     },
     [AppSettingsGroup.FunctionTranslation]: {
         chatPrompt: defaultTranslationPrompt,
+    },
+    [AppSettingsGroup.FunctionScreenshot]: {
+        findChildrenElements: true,
+        alwaysShowColorPicker: false,
+        beyondSelectRectElementOpacity: 100,
     },
 };
 
@@ -347,15 +358,8 @@ const ContextWrapCore: React.FC<{ children: React.ReactNode }> = ({ children }) 
                     }
                 }
 
-                const findChildrenElements =
-                    typeof newSettings?.findChildrenElements === 'boolean'
-                        ? newSettings.findChildrenElements
-                        : (prevSettings?.findChildrenElements ??
-                          defaultAppSettingsData[group].findChildrenElements);
-
                 settings = {
                     controlNode,
-                    findChildrenElements,
                 };
             } else if (group === AppSettingsGroup.DrawToolbarKeyEvent) {
                 newSettings = newSettings as AppSettingsData[typeof group];
@@ -607,6 +611,31 @@ const ContextWrapCore: React.FC<{ children: React.ReactNode }> = ({ children }) 
                         typeof newSettings?.chatPrompt === 'string'
                             ? newSettings.chatPrompt
                             : (prevSettings?.chatPrompt ?? ''),
+                };
+            } else if (group === AppSettingsGroup.FunctionScreenshot) {
+                newSettings = newSettings as AppSettingsData[typeof group];
+                const prevSettings = appSettingsRef.current[group] as
+                    | AppSettingsData[typeof group]
+                    | undefined;
+
+                const findChildrenElements =
+                    typeof newSettings?.findChildrenElements === 'boolean'
+                        ? newSettings.findChildrenElements
+                        : (prevSettings?.findChildrenElements ??
+                          defaultAppSettingsData[group].findChildrenElements);
+
+                settings = {
+                    findChildrenElements,
+                    alwaysShowColorPicker:
+                        typeof newSettings?.alwaysShowColorPicker === 'boolean'
+                            ? newSettings.alwaysShowColorPicker
+                            : (prevSettings?.alwaysShowColorPicker ??
+                              defaultAppSettingsData[group].alwaysShowColorPicker),
+                    beyondSelectRectElementOpacity:
+                        typeof newSettings?.beyondSelectRectElementOpacity === 'number'
+                            ? Math.min(Math.max(newSettings.beyondSelectRectElementOpacity, 0), 100)
+                            : (prevSettings?.beyondSelectRectElementOpacity ??
+                              defaultAppSettingsData[group].beyondSelectRectElementOpacity),
                 };
             } else {
                 return defaultAppSettingsData[group];

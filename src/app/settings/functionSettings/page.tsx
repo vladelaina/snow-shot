@@ -11,6 +11,7 @@ import { IconLabel } from '@/components/iconLable';
 import { ResetSettingsButton } from '@/components/resetSettingsButton';
 import ProForm, {
     ProFormList,
+    ProFormSlider,
     ProFormSwitch,
     ProFormText,
     ProFormTextArea,
@@ -28,6 +29,7 @@ export default function SystemSettings() {
     const { updateAppSettings } = useContext(AppSettingsActionContext);
     const [functionForm] = Form.useForm<AppSettingsData[AppSettingsGroup.FunctionChat]>();
     const [translationForm] = Form.useForm<AppSettingsData[AppSettingsGroup.FunctionTranslation]>();
+    const [screenshotForm] = Form.useForm<AppSettingsData[AppSettingsGroup.FunctionScreenshot]>();
 
     const [appSettingsLoading, setAppSettingsLoading] = useState(true);
     useAppSettingsLoad(
@@ -50,13 +52,105 @@ export default function SystemSettings() {
                 ) {
                     functionForm.setFieldsValue(settings[AppSettingsGroup.FunctionChat]);
                 }
+
+                if (
+                    preSettings === undefined ||
+                    preSettings[AppSettingsGroup.FunctionScreenshot] !==
+                        settings[AppSettingsGroup.FunctionScreenshot]
+                ) {
+                    screenshotForm.setFieldsValue(settings[AppSettingsGroup.FunctionScreenshot]);
+                }
             },
-            [functionForm, translationForm],
+            [functionForm, translationForm, screenshotForm],
         ),
         true,
     );
     return (
         <ContentWrap>
+            <GroupTitle
+                id="screenshotSettings"
+                extra={
+                    <ResetSettingsButton
+                        title={
+                            <FormattedMessage id="settings.functionSettings.screenshotSettings" />
+                        }
+                        appSettingsGroup={AppSettingsGroup.FunctionScreenshot}
+                    />
+                }
+            >
+                <FormattedMessage id="settings.functionSettings.screenshotSettings" />
+            </GroupTitle>
+
+            <Spin spinning={appSettingsLoading}>
+                <ProForm
+                    form={screenshotForm}
+                    onValuesChange={(_, values) => {
+                        updateAppSettings(
+                            AppSettingsGroup.FunctionScreenshot,
+                            values,
+                            true,
+                            true,
+                            true,
+                            true,
+                            false,
+                        );
+                    }}
+                    submitter={false}
+                    layout="vertical"
+                >
+                    <Row gutter={token.padding}>
+                        <Col span={12}>
+                            <ProFormSwitch
+                                name="findChildrenElements"
+                                layout="horizontal"
+                                label={
+                                    <FormattedMessage id="settings.functionSettings.screenshotSettings.findChildrenElements" />
+                                }
+                            />
+                        </Col>
+                        <Col span={12}>
+                            <ProFormSwitch
+                                name="alwaysShowColorPicker"
+                                layout="horizontal"
+                                label={
+                                    <IconLabel
+                                        label={
+                                            <FormattedMessage id="settings.functionSettings.screenshotSettings.alwaysShowColorPicker" />
+                                        }
+                                        tooltipTitle={
+                                            <FormattedMessage id="settings.functionSettings.screenshotSettings.alwaysShowColorPicker.tip" />
+                                        }
+                                    />
+                                }
+                            />
+                        </Col>
+
+                        <Col span={12}>
+                            <ProFormSlider
+                                label={
+                                    <IconLabel
+                                        label={
+                                            <FormattedMessage id="settings.functionSettings.screenshotSettings.beyondSelectRectElementOpacity" />
+                                        }
+                                        tooltipTitle={
+                                            <FormattedMessage id="settings.functionSettings.screenshotSettings.beyondSelectRectElementOpacity.tip" />
+                                        }
+                                    />
+                                }
+                                name="beyondSelectRectElementOpacity"
+                                min={0}
+                                max={100}
+                                step={1}
+                                marks={{
+                                    0: '0%',
+                                    100: '100%',
+                                }}
+                            />
+                        </Col>
+                    </Row>
+                </ProForm>
+            </Spin>
+
             <GroupTitle
                 id="translationSettings"
                 extra={

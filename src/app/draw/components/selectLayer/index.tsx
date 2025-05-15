@@ -52,14 +52,16 @@ const SelectLayerCore: React.FC<SelectLayerProps> = ({ actionRef }) => {
     const imageBufferRef = useRef<ImageBuffer | undefined>(undefined);
     const resizeToolbarActionRef = useRef<ResizeToolbarActionType | undefined>(undefined);
 
-    const { finishCapture, drawToolbarActionRef } = useContext(DrawContext);
+    const { finishCapture, drawToolbarActionRef, colorPickerActionRef } = useContext(DrawContext);
     const [isEnable, setIsEnable] = useState(false);
 
     const [findChildrenElements, setFindChildrenElements] = useState(false);
     const [getAppSettings] = useStateSubscriber(
         AppSettingsPublisher,
         useCallback((settings: AppSettingsData) => {
-            setFindChildrenElements(settings[AppSettingsGroup.Screenshot].findChildrenElements);
+            setFindChildrenElements(
+                settings[AppSettingsGroup.FunctionScreenshot].findChildrenElements,
+            );
         }, []),
     );
     const [getScreenshotType] = useStateSubscriber(ScreenshotTypePublisher, undefined);
@@ -215,7 +217,13 @@ const SelectLayerCore: React.FC<SelectLayerProps> = ({ actionRef }) => {
     );
 
     const updateSelectRect = useCallback(
-        (rect: ElementRect, imageBuffer: ImageBuffer) => {
+        (
+            rect: ElementRect,
+            imageBuffer: ImageBuffer,
+            drawElementMask?: {
+                imageData: ImageData;
+            },
+        ) => {
             drawSelectRect(
                 imageBuffer.monitorWidth,
                 imageBuffer.monitorHeight,
@@ -224,6 +232,7 @@ const SelectLayerCore: React.FC<SelectLayerProps> = ({ actionRef }) => {
                 getAppSettings()[AppSettingsGroup.Common].darkMode,
                 imageBuffer.monitorScaleFactor,
                 getScreenshotType(),
+                drawElementMask,
             );
             // 和 canvas 同步下
             requestAnimationFrame(() => {
@@ -278,6 +287,87 @@ const SelectLayerCore: React.FC<SelectLayerProps> = ({ actionRef }) => {
         [initAnimation, setSelectState],
     );
 
+    const opacityImageDataRef = useRef<
+        | {
+              opacity: number;
+              imageData: ImageData;
+          }
+        | undefined
+    >(undefined);
+    const renderElementMask = useCallback(
+        (isEnable: boolean) => {
+            if (isEnable) {
+                // 如果有缓存，则把遮罩去除
+                if (opacityImageDataRef.current) {
+                    updateSelectRect(getSelectRect()!, imageBufferRef.current!);
+                }
+
+                return;
+            }
+
+            const opacity = Math.min(
+                Math.max(
+                    (100 -
+                        getAppSettings()[AppSettingsGroup.FunctionScreenshot]
+                            .beyondSelectRectElementOpacity) /
+                        100,
+                    0,
+                ),
+                1,
+            );
+
+            let imageData: ImageData | undefined;
+            if (opacity === 0) {
+                imageData = undefined;
+            } else if (
+                opacityImageDataRef.current &&
+                opacityImageDataRef.current.opacity === opacity
+            ) {
+                imageData = opacityImageDataRef.current.imageData;
+            } else {
+                const originalImageData = colorPickerActionRef.current?.getCurrentImageData();
+
+                if (originalImageData) {
+                    let newImageData: ImageData;
+                    if (opacity === 1) {
+                        newImageData = originalImageData;
+                    } else {
+                        newImageData = new ImageData(
+                            new Uint8ClampedArray(originalImageData.data),
+                            originalImageData.width,
+                            originalImageData.height,
+                        );
+
+                        for (let i = 3; i < newImageData.data.length; i += 4) {
+                            newImageData.data[i] = Math.round(newImageData.data[i] * opacity);
+                        }
+                    }
+
+                    imageData = newImageData;
+                    opacityImageDataRef.current = {
+                        opacity,
+                        imageData: newImageData,
+                    };
+                }
+            }
+
+            if (!imageData) {
+                return;
+            }
+
+            updateSelectRect(
+                getSelectRect()!,
+                imageBufferRef.current!,
+                imageData
+                    ? {
+                          imageData,
+                      }
+                    : undefined,
+            );
+        },
+        [colorPickerActionRef, getAppSettings, getSelectRect, updateSelectRect],
+    );
+
     const onCaptureFinish = useCallback<BaseLayerEventActionType['onCaptureFinish']>(async () => {
         selectLayerCanvasContextRef.current!.clearRect(
             0,
@@ -290,6 +380,7 @@ const SelectLayerCore: React.FC<SelectLayerProps> = ({ actionRef }) => {
         elementsListRTreeRef.current = undefined;
         elementsListRef.current = [];
         lastMouseMovePositionRef.current = undefined;
+        opacityImageDataRef.current = undefined;
     }, []);
 
     const autoSelect = useCallback(
@@ -568,7 +659,9 @@ const SelectLayerCore: React.FC<SelectLayerProps> = ({ actionRef }) => {
         },
         {
             preventDefault: true,
-            enabled: isEnable && getAppSettings()[AppSettingsGroup.Screenshot].findChildrenElements,
+            enabled:
+                isEnable &&
+                getAppSettings()[AppSettingsGroup.FunctionScreenshot].findChildrenElements,
         },
     );
 
@@ -576,6 +669,9 @@ const SelectLayerCore: React.FC<SelectLayerProps> = ({ actionRef }) => {
         if (layerContainerElementRef.current) {
             layerContainerElementRef.current.style.pointerEvents = isEnable ? 'auto' : 'none';
         }
+
+        // 切换为其他功能时，渲染元素遮罩
+        renderElementMask(isEnable);
 
         if (!isEnable) {
             return;
@@ -598,7 +694,7 @@ const SelectLayerCore: React.FC<SelectLayerProps> = ({ actionRef }) => {
         return () => {
             document.removeEventListener('contextmenu', mouseRightClick);
         };
-    }, [finishCapture, isEnable, refreshMouseMove, setSelectState]);
+    }, [finishCapture, isEnable, refreshMouseMove, renderElementMask, setSelectState]);
 
     return (
         <>
