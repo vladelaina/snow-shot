@@ -34,6 +34,7 @@ export const tools = {
     'tools.chat.session.clear': '清空所有对话',
     'tools.chat.session.clear.tip': '确定要清空所有对话吗？',
     'tools.chat.reasoner': '推理',
+    'tools.chat.custom': '自定义',
     'tools.translation.type': '翻译服务',
     'tools.translation.domain': '翻译领域',
     'tools.translation.type.youdao': '有道翻译',

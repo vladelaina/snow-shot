@@ -1,9 +1,9 @@
 import { Radio } from 'antd';
 import { ExcalidrawPropsCustomOptions } from '@mg-chao/excalidraw/types';
+import { ButtonIconSelectProps } from '@mg-chao/excalidraw/components/ButtonIconSelect';
+import React from 'react';
 
-export const buttonIconSelectRender: NonNullable<
-    ExcalidrawPropsCustomOptions['pickerRenders']
->['buttonIconSelectRender'] = (props) => {
+function ButtonIconSelectRenderCore<T>(props: ButtonIconSelectProps<T>) {
     return (
         <Radio.Group value={props.value} style={{ padding: '.25rem 0' }}>
             {props.options.map((option) => (
@@ -27,4 +27,12 @@ export const buttonIconSelectRender: NonNullable<
             ))}
         </Radio.Group>
     );
+}
+
+const ButtonIconSelectRenderMemo = React.memo(ButtonIconSelectRenderCore) as typeof ButtonIconSelectRenderCore;
+
+export const buttonIconSelectRender: NonNullable<
+    ExcalidrawPropsCustomOptions['pickerRenders']
+>['buttonIconSelectRender'] = (props) => {
+    return <ButtonIconSelectRenderMemo {...props} />;
 };

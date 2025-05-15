@@ -18,7 +18,7 @@ import {
 import type { BubbleDataType as AntdBubbleDataType } from '@ant-design/x/es/bubble/BubbleList';
 import type { Conversation } from '@ant-design/x/es/conversations';
 import { MessageInfo } from '@ant-design/x/es/use-x-chat';
-import { Button, Card, Drawer, Select, Space, Spin, Tag, theme, Typography } from 'antd';
+import { Button, Card, Drawer, Select, Space, Spin, theme, Typography } from 'antd';
 import dayjs from 'dayjs';
 import { debounce, last, throttle } from 'lodash';
 import React, {
@@ -58,6 +58,9 @@ import _ from 'lodash';
 import { SendQueueMessageList } from './components/sendQueueMessageList';
 import { ChatMessage, ChatMessageFlowConfig, SendQueueMessage } from './types';
 import { WorkflowList } from './components/workflowList';
+import { ChatApiConfig } from '@/app/settings/functionSettings/extra';
+import path from 'path';
+import { ModelSelectLabel } from './components/modelSelectLabel';
 
 type BubbleDataType = AntdBubbleDataType & {
     flow_config?: ChatMessageFlowConfig;
@@ -166,8 +169,12 @@ const modelRequest = XRequest({
     fetch: appFetch,
 });
 
+type ChatModelConfig = ChatModel & {
+    customConfig?: ChatApiConfig;
+};
+
 const defaultModel = 'deepseek-reasoner';
-const defaultModles: ChatModel[] = [
+const defaultModles: ChatModelConfig[] = [
     {
         model: 'deepseek-chat',
         name: 'DeepSeek-V3',
@@ -179,23 +186,6 @@ const defaultModles: ChatModel[] = [
         thinking: true,
     },
 ];
-
-const ModelSelectLabel: React.FC<{
-    model: ChatModel;
-}> = ({ model }) => {
-    return (
-        <Space>
-            <div>{model.name}</div>
-            <div>
-                {model.thinking && (
-                    <Tag color="processing">
-                        <FormattedMessage id="tools.chat.reasoner" />
-                    </Tag>
-                )}
-            </div>
-        </Space>
-    );
-};
 
 const fliterErrorMessages = (messages: BubbleDataType[] | undefined) => {
     if (!messages) {
@@ -253,6 +243,8 @@ const fliterErrorMessages = (messages: BubbleDataType[] | undefined) => {
     return finalMessages;
 };
 
+const CUSTOM_MODEL_PREFIX = 'snow_shot_custom_';
+
 const Chat = () => {
     const intl = useIntl();
 
@@ -264,30 +256,28 @@ const Chat = () => {
         true,
     );
 
-    const [darkMode, setDarkMode] = useState(false);
-    useStateSubscriber(
-        AppSettingsPublisher,
-        useCallback((settings: AppSettingsData) => {
-            setDarkMode(settings[AppSettingsGroup.Common].darkMode);
-        }, []),
-    );
-
     const { token } = theme.useToken();
     const { message, modal } = useContext(AntdContext);
     const chatHistoryStoreRef = useRef<ChatHistoryStore | undefined>(undefined);
     const [sessionStoreLoading, setSessionStoreLoading] = useState(true);
-    const [supportedModels, setSupportedModels] = useState<ChatModel[]>(defaultModles);
+    const [customModelConfigList, setCustomModelConfigList] = useState<ChatApiConfig[]>([]);
+    const [onlineModelConfigList, setOnlineModelConfigList] = useState<ChatModel[]>([]);
+    const [supportedModels, setSupportedModels, supportedModelsRef] =
+        useStateRef<ChatModelConfig[]>(defaultModles);
     const [selectedModel, setSelectedModel, selectedModelRef] = useStateRef<string>(defaultModel);
     const [sendQueueMessages, setSendQueueMessages, sendQueueMessagesRef] = useStateRef<
         SendQueueMessage[]
     >([]);
 
     const { updateAppSettings } = useContext(AppSettingsActionContext);
+    const [darkMode, setDarkMode] = useState(false);
     const [getAppSettings] = useStateSubscriber(
         AppSettingsPublisher,
         useCallback(
             (settings: AppSettingsData) => {
                 setSelectedModel(settings[AppSettingsGroup.Cache].chatModel);
+                setDarkMode(settings[AppSettingsGroup.Common].darkMode);
+                setCustomModelConfigList(settings[AppSettingsGroup.FunctionChat].chatApiConfigList);
             },
             [setSelectedModel],
         ),
@@ -307,9 +297,23 @@ const Chat = () => {
                 return;
             }
 
-            setSupportedModels(res.data ?? defaultModles);
+            setOnlineModelConfigList(res.data ?? defaultModles);
         });
-    }, [setSupportedModelsLoading, supportedModelsLoadingRef]);
+    }, [getAppSettings, setSupportedModels, setSupportedModelsLoading, supportedModelsLoadingRef]);
+
+    useEffect(() => {
+        setSupportedModels([
+            ...customModelConfigList.map((item) => {
+                return {
+                    model: `${CUSTOM_MODEL_PREFIX}${item.api_model}${item.support_thinking ? '_thinking' : ''}`,
+                    name: item.model_name,
+                    thinking: item.support_thinking,
+                    customConfig: item,
+                };
+            }),
+            ...onlineModelConfigList,
+        ]);
+    }, [getAppSettings, onlineModelConfigList, setSupportedModels, customModelConfigList]);
 
     const abortController = useRef<AbortController>(null);
 
@@ -325,86 +329,121 @@ const Chat = () => {
     const [inputValue, setInputValue] = useState('');
     const senderRef = useRef<SenderRef>(null);
 
-    // ==================== Runtime ====================
-    const [agent] = useXAgent<BubbleDataType>(
-        useMemo(() => {
+    const getCustomModelRequest = useCallback(
+        (model: string) => {
+            if (!model.startsWith(CUSTOM_MODEL_PREFIX)) {
+                return undefined;
+            }
+
+            const customConfig = supportedModelsRef.current.find(
+                (item) => item.model === model,
+            )?.customConfig;
+
+            if (!customConfig) {
+                return undefined;
+            }
+
             return {
-                request: (input, callbacks) => {
-                    const inputMessages = input.messages?.slice(-20);
-                    let newInputMessages = fliterErrorMessages(inputMessages);
+                request: XRequest({
+                    baseURL: path.join(customConfig.api_uri, '/chat/completions'),
+                    dangerouslyApiKey: `Bearer ${customConfig.api_key}`,
+                }),
+                config: customConfig,
+            };
+        },
+        [supportedModelsRef],
+    );
+    const modelAgentConfig: Parameters<typeof useXAgent<BubbleDataType>>[0] = useMemo(() => {
+        return {
+            request: (input, callbacks) => {
+                const inputMessages = input.messages?.slice(-20);
+                let newInputMessages = fliterErrorMessages(inputMessages);
 
-                    // 处理消息变量
-                    const variables: Map<string, string> = new Map();
-                    // 遍历消息，如果用户消息指定了变量，那么将对应的输出变量添加到变量列表中
-                    for (let i = 0; i < newInputMessages.length; i++) {
-                        const message = newInputMessages[i];
-                        if (message.role === 'user' && 'flow_config' in message) {
-                            const flowConfig = message.flow_config as ChatMessageFlowConfig;
-                            if (!flowConfig) {
-                                continue;
-                            }
+                // 处理消息变量
+                const variables: Map<string, string> = new Map();
+                // 遍历消息，如果用户消息指定了变量，那么将对应的输出变量添加到变量列表中
+                for (let i = 0; i < newInputMessages.length; i++) {
+                    const message = newInputMessages[i];
+                    if (message.role === 'user' && 'flow_config' in message) {
+                        const flowConfig = message.flow_config as ChatMessageFlowConfig;
+                        if (!flowConfig) {
+                            continue;
+                        }
 
-                            if (flowConfig.globalVariable) {
-                                flowConfig.globalVariable.forEach((value, key) => {
-                                    variables.set(key, value);
-                                });
-                            }
+                        if (flowConfig.globalVariable) {
+                            flowConfig.globalVariable.forEach((value, key) => {
+                                variables.set(key, value);
+                            });
+                        }
 
-                            if (flowConfig.flow.variable_name && newInputMessages[i + 1]) {
-                                variables.set(
-                                    `{{${flowConfig.flow.variable_name}}}`,
-                                    getMessageContent(newInputMessages[i + 1], true),
-                                );
-                            }
+                        if (flowConfig.flow.variable_name && newInputMessages[i + 1]) {
+                            variables.set(
+                                `{{${flowConfig.flow.variable_name}}}`,
+                                getMessageContent(newInputMessages[i + 1], true),
+                            );
                         }
                     }
+                }
 
-                    const userInput = _.last(newInputMessages)!;
+                const userInput = _.last(newInputMessages)!;
 
-                    if (userInput.flow_config) {
-                        if (userInput.flow_config.flow.ignore_context) {
-                            // 忽略上下文
-                            newInputMessages = newInputMessages.slice(-1);
-                        }
+                if (userInput.flow_config) {
+                    if (userInput.flow_config.flow.ignore_context) {
+                        // 忽略上下文
+                        newInputMessages = newInputMessages.slice(-1);
                     }
+                }
 
-                    newInputMessages.forEach((item) => {
-                        let content = getMessageContent(item, true);
+                newInputMessages.forEach((item) => {
+                    let content = getMessageContent(item, true);
 
-                        variables.forEach((value, key) => {
-                            content = content.replace(new RegExp(key, 'g'), value);
-                        });
-
-                        if (typeof item.content === 'string') {
-                            item.content = content;
-                        } else if (
-                            item.content &&
-                            typeof item.content === 'object' &&
-                            'content' in item.content
-                        ) {
-                            item.content.content = content;
-                        }
+                    variables.forEach((value, key) => {
+                        content = content.replace(new RegExp(key, 'g'), value);
                     });
 
-                    return modelRequest.create(
-                        {
-                            messages: newInputMessages?.map((item) => ({
-                                role: item.role ?? '',
-                                content: getMessageContent(item, true),
-                            })),
-                            model: selectedModelRef.current,
-                            temperature: getAppSettings()[AppSettingsGroup.SystemChat].temperature,
-                            max_tokens: getAppSettings()[AppSettingsGroup.SystemChat].maxTokens,
-                            thinking_budget_tokens:
-                                getAppSettings()[AppSettingsGroup.SystemChat].thinkingBudgetTokens,
-                            stream: true,
+                    if (typeof item.content === 'string') {
+                        item.content = content;
+                    } else if (
+                        item.content &&
+                        typeof item.content === 'object' &&
+                        'content' in item.content
+                    ) {
+                        item.content.content = content;
+                    }
+                });
+
+                const customModelRequest = getCustomModelRequest(selectedModelRef.current);
+
+                return (customModelRequest?.request ?? modelRequest).create(
+                    {
+                        messages: newInputMessages?.map((item) => ({
+                            role: item.role ?? '',
+                            content: getMessageContent(item, true),
+                        })),
+                        model: customModelRequest
+                            ? selectedModelRef.current
+                                  .substring(CUSTOM_MODEL_PREFIX.length)
+                                  .replace('_thinking', '')
+                            : selectedModelRef.current,
+                        temperature: getAppSettings()[AppSettingsGroup.SystemChat].temperature,
+                        max_tokens: getAppSettings()[AppSettingsGroup.SystemChat].maxTokens,
+                        enable_thinking: customModelRequest?.config?.support_thinking ?? false,
+                        stream_options: {
+                            include_usage: true,
                         },
-                        callbacks,
-                    );
-                },
-            };
-        }, [getAppSettings, selectedModelRef]),
-    );
+                        thinking_budget:
+                            getAppSettings()[AppSettingsGroup.SystemChat].thinkingBudgetTokens,
+                        reasoning: customModelRequest?.config?.support_thinking
+                            ? { effort: 'medium' }
+                            : undefined,
+                        stream: true,
+                    },
+                    callbacks,
+                );
+            },
+        };
+    }, [getAppSettings, getCustomModelRequest, selectedModelRef]);
+    const [agent] = useXAgent<BubbleDataType>(modelAgentConfig);
     const loading = agent.isRequesting();
 
     const newestMessage = useRef<ChatMessage>(undefined);
@@ -649,7 +688,13 @@ const Chat = () => {
                 <Select
                     value={selectedModel}
                     options={supportedModels.map((item) => ({
-                        label: <ModelSelectLabel model={item} />,
+                        label: (
+                            <ModelSelectLabel
+                                modelName={item.name}
+                                custom={!!item.customConfig}
+                                reasoner={item.thinking}
+                            />
+                        ),
                         value: item.model,
                     }))}
                     variant="underlined"
@@ -740,7 +785,7 @@ const Chat = () => {
         }
 
         return list;
-    }, [loading, messages, token.colorPrimary]);
+    }, [darkMode, loading, messages, token.colorPrimary]);
 
     useEffect(() => {
         if (chatHistoryStoreRef.current) {

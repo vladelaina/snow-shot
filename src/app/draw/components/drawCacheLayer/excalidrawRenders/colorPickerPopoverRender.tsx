@@ -1,15 +1,18 @@
 import { ColorPicker } from 'antd';
 import { ExcalidrawPropsCustomOptions } from '@mg-chao/excalidraw/types';
+import React from 'react';
 
-export const colorPickerPopoverRender: NonNullable<
-    ExcalidrawPropsCustomOptions['pickerRenders']
->['colorPickerPopoverRender'] = ({ color: colorProp, onChange }) => {
+const ColorPickerCore: React.FC<{
+    color: string | null;
+    onChange: (color: string) => void;
+}> = ({ color: colorProp, onChange }) => {
     const color = colorProp === 'transparent' ? '#00000000' : colorProp;
     return (
-        <div title={color} className="color-picker-popover-render">
+        <div title={color ?? undefined} className="color-picker-popover-render">
             <ColorPicker
                 value={color}
                 onChangeComplete={(newColor) => {
+                    console.log('newColor', newColor);
                     onChange(newColor.toHexString());
                 }}
                 size="small"
@@ -30,4 +33,12 @@ export const colorPickerPopoverRender: NonNullable<
             `}</style>
         </div>
     );
+};
+
+const ColorPickerMemo = React.memo(ColorPickerCore);
+
+export const colorPickerPopoverRender: NonNullable<
+    ExcalidrawPropsCustomOptions['pickerRenders']
+>['colorPickerPopoverRender'] = ({ color, onChange }) => {
+    return <ColorPickerMemo color={color} onChange={onChange} />;
 };

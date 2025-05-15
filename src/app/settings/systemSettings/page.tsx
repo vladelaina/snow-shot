@@ -77,9 +77,17 @@ export default function SystemSettings() {
                 <ProForm
                     form={commonForm}
                     onValuesChange={(_, values) => {
-                        updateAppSettings(AppSettingsGroup.SystemCommon, values, true, true, false);
+                        updateAppSettings(
+                            AppSettingsGroup.SystemCommon,
+                            values,
+                            true,
+                            true,
+                            false,
+                            true,
+                        );
                     }}
                     submitter={false}
+                    layout="horizontal"
                 >
                     <ProForm.Item
                         label={
@@ -118,6 +126,7 @@ export default function SystemSettings() {
                         updateAppSettings(AppSettingsGroup.Render, values, true, true, true);
                     }}
                     submitter={false}
+                    layout="horizontal"
                 >
                     <ProForm.Item
                         label={<IconLabel label={<FormattedMessage id="settings.antialias" />} />}
@@ -145,9 +154,17 @@ export default function SystemSettings() {
                 <ProForm
                     form={networkForm}
                     onValuesChange={(_, values) => {
-                        updateAppSettings(AppSettingsGroup.SystemNetwork, values, true, true, true);
+                        updateAppSettings(
+                            AppSettingsGroup.SystemNetwork,
+                            values,
+                            true,
+                            true,
+                            false,
+                            true,
+                        );
                     }}
                     submitter={false}
+                    layout="horizontal"
                 >
                     <ProForm.Item
                         label={
@@ -181,7 +198,14 @@ export default function SystemSettings() {
                 <ProForm
                     form={chatForm}
                     onValuesChange={(_, values) => {
-                        updateAppSettings(AppSettingsGroup.SystemChat, values, true, true, false);
+                        updateAppSettings(
+                            AppSettingsGroup.SystemChat,
+                            values,
+                            true,
+                            true,
+                            false,
+                            true,
+                        );
                     }}
                     submitter={false}
                 >

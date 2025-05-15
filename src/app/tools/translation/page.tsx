@@ -1,6 +1,11 @@
 'use client';
 
-import { AppSettingsActionContext, AppSettingsGroup, AppSettingsLanguage } from '@/app/contextWrap';
+import {
+    AppSettingsActionContext,
+    AppSettingsData,
+    AppSettingsGroup,
+    AppSettingsLanguage,
+} from '@/app/contextWrap';
 import { ContentWrap } from '@/components/contentWrap';
 import { HotkeysMenu } from '@/components/hotkeysMenu';
 import { KeyEventKey, KeyEventValue } from '@/core/hotKeys';
@@ -23,6 +28,10 @@ import { useSearchParams } from 'next/navigation';
 import { useCallback, useContext, useEffect, useMemo, useRef, useState, Suspense } from 'react';
 import { useHotkeys } from 'react-hotkeys-hook';
 import { FormattedMessage, useIntl } from 'react-intl';
+import { ChatApiConfig } from '@/app/settings/functionSettings/extra';
+import OpenAI from 'openai';
+import { defaultTranslationPrompt, getTranslationPrompt } from './extra';
+import { ModelSelectLabel } from '../chat/components/modelSelectLabel';
 
 const SelectLabel: React.FC<{
     label: React.ReactNode;
@@ -93,6 +102,14 @@ const selectFilterOption: SelectProps['filterOption'] = (input, option) => {
     const regex = new RegExp(pattern, 'i');
     return regex.test(option.title.toString().toLowerCase());
 };
+
+type TranslationServiceConfig =
+    | TranslationTypeOption
+    | {
+          name: string;
+          type: string;
+          apiConfig?: ChatApiConfig;
+      };
 
 const TranslationCore = () => {
     const intl = useIntl();
@@ -183,24 +200,38 @@ const TranslationCore = () => {
 
     const [sourceLanguage, setSourceLanguage] = useState<string>('auto');
     const [targetLanguage, setTargetLanguage] = useState<string>('zh-CHS');
-    const [translationType, setTranslationType] = useState<TranslationType>(TranslationType.Youdao);
+    const [translationType, setTranslationType] = useState<TranslationType | string>(
+        TranslationType.Youdao,
+    );
     const [translationDomain, setTranslationDomain] = useState<TranslationDomain>(
         TranslationDomain.General,
     );
 
+    const [chatApiConfigList, setChatApiConfigList] = useState<ChatApiConfig[] | undefined>(
+        undefined,
+    );
     const { updateAppSettings } = useContext(AppSettingsActionContext);
+    const [chatConfig, setChatConfig] = useState<AppSettingsData[AppSettingsGroup.SystemChat]>();
+    const [translationConfig, setTranslationConfig] =
+        useState<AppSettingsData[AppSettingsGroup.FunctionTranslation]>();
     useAppSettingsLoad(
         useCallback(
             (settings) => {
                 setTranslationDomain(settings[AppSettingsGroup.Cache].translationDomain);
                 setTranslationType(settings[AppSettingsGroup.Cache].translationType);
+                setChatApiConfigList(settings[AppSettingsGroup.FunctionChat].chatApiConfigList);
+                setChatConfig(settings[AppSettingsGroup.SystemChat]);
+                setTranslationConfig(settings[AppSettingsGroup.FunctionTranslation]);
             },
             [setTranslationType, setTranslationDomain],
         ),
     );
 
-    const [supportedTranslationTypes, setSupportedTranslationTypes] =
-        useState<TranslationTypeOption[]>(defaultTranslationTypes);
+    const [supportedTranslationTypes, setSupportedTranslationTypes, supportedTranslationTypesRef] =
+        useStateRef<TranslationServiceConfig[]>(defaultTranslationTypes);
+    const [onlineTranslationTypes, setOnlineTranslationTypes] = useState<TranslationTypeOption[]>(
+        [],
+    );
     const [
         supportedTranslationTypesLoading,
         setSupportedTranslationTypesLoading,
@@ -218,9 +249,22 @@ const TranslationCore = () => {
                 return;
             }
 
-            setSupportedTranslationTypes(res.data ?? []);
+            setOnlineTranslationTypes(res.data ?? []);
         });
     }, [setSupportedTranslationTypesLoading, supportedTranslationTypesLoadingRef]);
+
+    useEffect(() => {
+        setSupportedTranslationTypes([
+            ...(chatApiConfigList?.map((item): TranslationServiceConfig => {
+                return {
+                    type: `${item.api_model}${item.support_thinking ? '_thinking' : ''}`,
+                    name: item.model_name,
+                    apiConfig: item,
+                };
+            }) ?? []),
+            ...onlineTranslationTypes,
+        ]);
+    }, [chatApiConfigList, onlineTranslationTypes, setSupportedTranslationTypes]);
 
     const sourceContentRef = useRef<InputRef | null>(null);
     const [sourceContent, setSourceContent] = useState<string>('');
@@ -259,14 +303,96 @@ const TranslationCore = () => {
     const currentRequestSignRef = useRef<number>(0);
     const [loading, setLoading] = useState(false);
     const [startLoading, setStartLoading] = useState<boolean>(false);
+
+    const customTranslation = useCallback(
+        async (params: {
+            sourceContent: string;
+            sourceLanguage: string;
+            targetLanguage: string;
+            translationType: string;
+            translationDomain: TranslationDomain;
+        }): Promise<boolean> => {
+            const config = supportedTranslationTypesRef.current.find(
+                (item) => item.type === params.translationType,
+            );
+            if (!config || typeof config.type !== 'string' || !config.apiConfig) {
+                return false;
+            }
+
+            setStartLoading(true);
+
+            const client = new OpenAI({
+                apiKey: config.apiConfig.api_key,
+                baseURL: config.apiConfig.api_uri,
+                dangerouslyAllowBrowser: true,
+            });
+
+            const stream_response = await client.chat.completions.create({
+                model: config.apiConfig.api_model.replace('_thinking', ''),
+                messages: [
+                    {
+                        role: 'system',
+                        content: getTranslationPrompt(
+                            translationConfig?.chatPrompt ?? defaultTranslationPrompt,
+                            sourceLanguage,
+                            targetLanguage,
+                            translationDomain,
+                        ),
+                    },
+                    {
+                        role: 'user',
+                        content: params.sourceContent,
+                    },
+                ],
+                max_completion_tokens: chatConfig?.maxTokens ?? 4096,
+                temperature: chatConfig?.temperature ?? 1,
+                stream: true,
+            });
+
+            setTranslatedContent('');
+            for await (const event of stream_response) {
+                setLoading(true);
+                setStartLoading(false);
+
+                if (event.choices.length > 0 && event.choices[0].delta.content) {
+                    setTranslatedContent((prev) => `${prev}${event.choices[0].delta.content}`);
+                }
+            }
+
+            setLoading(false);
+
+            return true;
+        },
+        [
+            chatConfig?.maxTokens,
+            chatConfig?.temperature,
+            setTranslatedContent,
+            sourceLanguage,
+            supportedTranslationTypesRef,
+            targetLanguage,
+            translationConfig?.chatPrompt,
+            translationDomain,
+        ],
+    );
+
     const requestTranslate = useCallback(
         async (params: {
             sourceContent: string;
             sourceLanguage: string;
             targetLanguage: string;
-            translationType: TranslationType;
+            translationType: TranslationType | string;
             translationDomain: TranslationDomain;
         }) => {
+            if (typeof params.translationType === 'string') {
+                const result = await customTranslation({
+                    ...params,
+                    translationType: params.translationType,
+                });
+                if (result) {
+                    return;
+                }
+            }
+
             setStartLoading(true);
             currentRequestSignRef.current++;
             const requestSign = currentRequestSignRef.current;
@@ -302,11 +428,11 @@ const TranslationCore = () => {
                     from: params.sourceLanguage,
                     to: params.targetLanguage,
                     domain: params.translationDomain,
-                    type: params.translationType,
+                    type: params.translationType as TranslationType, // 如果没找到自定义模型，则报错
                 },
             );
         },
-        [languageCodeLabelMap, setTranslatedContent],
+        [customTranslation, languageCodeLabelMap, setTranslatedContent],
     );
     const requestTranslateDebounce = useMemo(
         () => debounce(requestTranslate, 1000),
@@ -314,6 +440,10 @@ const TranslationCore = () => {
     );
 
     useEffect(() => {
+        if (!chatApiConfigList) {
+            return;
+        }
+
         if (sourceContent.trim() === '') {
             return;
         }
@@ -344,6 +474,7 @@ const TranslationCore = () => {
         requestTranslate,
         translationType,
         translationDomain,
+        chatApiConfigList,
     ]);
 
     useEffect(() => {
@@ -505,7 +636,19 @@ const TranslationCore = () => {
                                         );
                                     }}
                                     options={supportedTranslationTypes.map((item) => ({
-                                        label: item.name,
+                                        label: (
+                                            <ModelSelectLabel
+                                                modelName={item.name}
+                                                custom={
+                                                    typeof item.type === 'string' &&
+                                                    !!item.apiConfig
+                                                }
+                                                reasoner={
+                                                    typeof item.type === 'string' &&
+                                                    item.apiConfig?.support_thinking
+                                                }
+                                            />
+                                        ),
                                         value: item.type,
                                     }))}
                                     loading={supportedTranslationTypesLoading}
