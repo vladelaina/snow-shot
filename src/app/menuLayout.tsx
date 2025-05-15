@@ -441,6 +441,18 @@ const MenuLayoutCore: React.FC<{ children: React.ReactNode }> = ({ children }) =
                         label: intl.formatMessage({ id: 'menu.settings.functionSettings' }),
                         tabs: [
                             {
+                                key: 'screenshotSettings',
+                                label: intl.formatMessage({
+                                    id: 'settings.functionSettings.screenshotSettings',
+                                }),
+                            },
+                            {
+                                key: 'translationSettings',
+                                label: intl.formatMessage({
+                                    id: 'settings.functionSettings.translationSettings',
+                                }),
+                            },
+                            {
                                 key: 'functionSettings',
                                 label: intl.formatMessage({
                                     id: 'settings.functionSettings.chatSettings',

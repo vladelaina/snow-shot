@@ -59,7 +59,9 @@ const SelectLayerCore: React.FC<SelectLayerProps> = ({ actionRef }) => {
     const [getAppSettings] = useStateSubscriber(
         AppSettingsPublisher,
         useCallback((settings: AppSettingsData) => {
-            setFindChildrenElements(settings[AppSettingsGroup.Screenshot].findChildrenElements);
+            setFindChildrenElements(
+                settings[AppSettingsGroup.FunctionScreenshot].findChildrenElements,
+            );
         }, []),
     );
     const [getScreenshotType] = useStateSubscriber(ScreenshotTypePublisher, undefined);
@@ -568,7 +570,9 @@ const SelectLayerCore: React.FC<SelectLayerProps> = ({ actionRef }) => {
         },
         {
             preventDefault: true,
-            enabled: isEnable && getAppSettings()[AppSettingsGroup.Screenshot].findChildrenElements,
+            enabled:
+                isEnable &&
+                getAppSettings()[AppSettingsGroup.FunctionScreenshot].findChildrenElements,
         },
     );
 

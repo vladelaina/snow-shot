@@ -78,4 +78,6 @@ export const settings = {
     'settings.functionSettings.chatSettings.apiConfig.supportThinking': '支持推理',
     'settings.functionSettings.chatSettings.apiConfig.supportThinking.tip':
         '如果你需要将该模型用于翻译，不建议开启此选项',
+    'settings.functionSettings.screenshotSettings': '截图设置',
+    'settings.functionSettings.screenshotSettings.findChildrenElements': '查找窗口子元素',
 };
