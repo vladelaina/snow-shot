@@ -43,9 +43,7 @@ const DrawLayerCore: React.FC<DrawLayerProps> = ({ actionRef }) => {
             blurContainerRef.current = createNewCanvasContainer();
             drawContainerRef.current = createNewCanvasContainer();
 
-            requestAnimationFrame(() => {
-                getCanvasApp()?.stop();
-            });
+            getCanvasApp()!.render();
         },
         [addChildToTopContainer, createNewCanvasContainer, getCanvasApp],
     );

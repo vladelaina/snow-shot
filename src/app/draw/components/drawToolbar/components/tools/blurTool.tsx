@@ -115,6 +115,8 @@ const BlurToolCore: React.FC = () => {
                 props.valid = false;
             });
 
+            let needRender = false;
+
             for (const element of params.elements) {
                 if (element.type !== 'blur' || element.isDeleted) {
                     continue;
@@ -164,6 +166,7 @@ const BlurToolCore: React.FC = () => {
                     );
 
                     blurSpriteMapRef.current.set(element.id, blurSprite);
+                    needRender = true;
                 }
 
                 blurSprite.props.valid = true;
@@ -190,6 +193,7 @@ const BlurToolCore: React.FC = () => {
                     blurSprite.spriteBlurFliter.strength = Math.max(0, (blurProps.blur / 100) * 32);
                 }
                 blurSprite.props = blurProps;
+                needRender = true;
             }
 
             const blurSprites = Array.from(blurSpriteMapRef.current.entries()).filter(
@@ -202,6 +206,12 @@ const BlurToolCore: React.FC = () => {
                 blurSprite.sprite.destroy();
                 blurSprite.spriteBlurFliter.destroy();
                 blurSprite.spriteMask.destroy();
+
+                needRender = true;
+            }
+
+            if (needRender) {
+                drawLayerActionRef.current.getCanvasApp()!.render();
             }
         },
         [drawLayerActionRef],

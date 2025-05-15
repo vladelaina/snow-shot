@@ -205,8 +205,11 @@ export const BaseLayerCore: React.FC<
                     click: false,
                     wheel: false,
                 },
+                autoStart: false,
                 antialias,
             });
+            canvasApp.ticker.maxFPS = 60;
+            canvasApp.ticker.minFPS = 0;
             canvasAppRef.current = canvasApp;
             layerContainerElementRef.current?.appendChild(canvasApp.canvas);
             onCanvasReadyAction(canvasApp);
@@ -283,6 +286,7 @@ export const BaseLayerCore: React.FC<
         }
         canvasContainerListRef.current = [];
         canvasContainerChildCountRef.current = 0;
+        canvasApp.render();
     }, []);
 
     const changeCursor = useCallback<BaseLayerContextType['changeCursor']>((cursor) => {
@@ -417,7 +421,6 @@ export function withBaseLayer<
                 // 将画布调整为截图大小
                 const { monitorWidth, monitorHeight } = imageBuffer;
 
-                baseLayerCoreActionRef.current?.getCanvasApp()?.start();
                 baseLayerCoreActionRef.current?.resizeCanvas(monitorWidth, monitorHeight);
                 await layerActionRef.current?.onCaptureReady(...args);
             },
@@ -426,14 +429,7 @@ export function withBaseLayer<
         const onCaptureFinish = useCallback(
             async (...args: Parameters<BaseLayerActionType['onCaptureFinish']>) => {
                 await Promise.all([
-                    baseLayerCoreActionRef.current?.clearCanvas().then(() => {
-                        return new Promise((resolve) => {
-                            requestAnimationFrame(() => {
-                                baseLayerCoreActionRef.current?.getCanvasApp()?.stop();
-                                resolve(undefined);
-                            });
-                        });
-                    }),
+                    baseLayerCoreActionRef.current?.clearCanvas(),
                     layerActionRef.current?.onCaptureFinish(...args),
                 ]);
             },
