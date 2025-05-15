@@ -154,12 +154,12 @@ export type BaseLayerProps = {
     children: React.ReactNode;
     zIndex: number;
     enable: boolean;
-    onCanvasReady: (app: PIXI.Application) => void;
+    onCanvasReadyAction: (app: PIXI.Application) => void;
 };
 
 export const BaseLayerCore: React.FC<
     BaseLayerProps & { actionRef?: React.RefObject<BaseLayerCoreActionType | undefined> }
-> = ({ zIndex, actionRef, enable, children, onCanvasReady }) => {
+> = ({ zIndex, actionRef, enable, children, onCanvasReadyAction }) => {
     const layerContainerElementRef = useRef<HTMLDivElement>(null);
     const canvasAppRef = useRef<PIXI.Application | undefined>(undefined);
     const canvasContainerListRef = useRef<PIXI.Container[]>([]);
@@ -205,13 +205,16 @@ export const BaseLayerCore: React.FC<
                     click: false,
                     wheel: false,
                 },
+                autoStart: false,
                 antialias,
             });
+            canvasApp.ticker.maxFPS = 60;
+            canvasApp.ticker.minFPS = 0;
             canvasAppRef.current = canvasApp;
             layerContainerElementRef.current?.appendChild(canvasApp.canvas);
-            onCanvasReady(canvasApp);
+            onCanvasReadyAction(canvasApp);
         },
-        [disposeCanvas, onCanvasReady],
+        [disposeCanvas, onCanvasReadyAction],
     );
 
     useAppSettingsLoad(
@@ -283,6 +286,7 @@ export const BaseLayerCore: React.FC<
         }
         canvasContainerListRef.current = [];
         canvasContainerChildCountRef.current = 0;
+        canvasApp.render();
     }, []);
 
     const changeCursor = useCallback<BaseLayerContextType['changeCursor']>((cursor) => {
@@ -417,7 +421,6 @@ export function withBaseLayer<
                 // 将画布调整为截图大小
                 const { monitorWidth, monitorHeight } = imageBuffer;
 
-                baseLayerCoreActionRef.current?.getCanvasApp()?.start();
                 baseLayerCoreActionRef.current?.resizeCanvas(monitorWidth, monitorHeight);
                 await layerActionRef.current?.onCaptureReady(...args);
             },
@@ -426,14 +429,7 @@ export function withBaseLayer<
         const onCaptureFinish = useCallback(
             async (...args: Parameters<BaseLayerActionType['onCaptureFinish']>) => {
                 await Promise.all([
-                    baseLayerCoreActionRef.current?.clearCanvas().then(() => {
-                        return new Promise((resolve) => {
-                            requestAnimationFrame(() => {
-                                baseLayerCoreActionRef.current?.getCanvasApp()?.stop();
-                                resolve(undefined);
-                            });
-                        });
-                    }),
+                    baseLayerCoreActionRef.current?.clearCanvas(),
                     layerActionRef.current?.onCaptureFinish(...args),
                 ]);
             },
@@ -445,7 +441,7 @@ export function withBaseLayer<
             layerActionRef.current?.setEnable(...args);
         }, []);
 
-        const onCanvasReady = useCallback((app: PIXI.Application) => {
+        const onCanvasReadyAction = useCallback((app: PIXI.Application) => {
             layerActionRef.current?.onCanvasReady(app);
         }, []);
 
@@ -522,7 +518,7 @@ export function withBaseLayer<
                 zIndex={zIndex}
                 actionRef={baseLayerCoreActionRef}
                 enable={layerEnable}
-                onCanvasReady={onCanvasReady}
+                onCanvasReadyAction={onCanvasReadyAction}
             >
                 <WrappedComponent {...props} actionRef={layerActionRef} />
             </BaseLayerCore>

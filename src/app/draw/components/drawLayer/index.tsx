@@ -22,7 +22,8 @@ export type DrawLayerProps = {
 };
 
 const DrawLayerCore: React.FC<DrawLayerProps> = ({ actionRef }) => {
-    const { addChildToTopContainer, createNewCanvasContainer } = useContext(BaseLayerContext);
+    const { addChildToTopContainer, createNewCanvasContainer, getCanvasApp } =
+        useContext(BaseLayerContext);
 
     const imageTextureRef = useRef<PIXI.Texture | undefined>(undefined);
     const blurContainerRef = useRef<PIXI.Container | undefined>(undefined);
@@ -41,8 +42,10 @@ const DrawLayerCore: React.FC<DrawLayerProps> = ({ actionRef }) => {
 
             blurContainerRef.current = createNewCanvasContainer();
             drawContainerRef.current = createNewCanvasContainer();
+
+            getCanvasApp()!.render();
         },
-        [addChildToTopContainer, createNewCanvasContainer],
+        [addChildToTopContainer, createNewCanvasContainer, getCanvasApp],
     );
 
     const onCaptureFinish = useCallback<

@@ -1,7 +1,7 @@
 import { ElementRect } from '@/commands';
 import { ScreenshotType } from '@/functions/screenshot';
 import { MousePosition } from '@/utils/mousePosition';
-import * as PIXI from 'pixi.js';
+import Color from 'color';
 
 export enum SelectState {
     /** 自动选择 */
@@ -35,10 +35,6 @@ export enum DragMode {
     Left = 8,
 }
 
-export const getMaskBackgroundColor = (darkMode: boolean) => {
-    return darkMode ? '#434343' : '#000000';
-};
-
 // 全屏遮罩的透明度
 const MASK_OPACITY = 0.5;
 // 全屏遮罩圆形 controls 点的宽度
@@ -58,12 +54,18 @@ export const MASK_CONTROL_BORDER_STROKE_WIDTH = 2;
 // 全屏遮罩的 mask 的描边颜色
 export const MASK_CONTROL_BORDER_STROKE_COLOR = '#4096ff';
 
+const LIGHT_MASK_BACKGROUND_COLOR = Color('#000000').alpha(MASK_OPACITY).toString();
+const DARK_MASK_BACKGROUND_COLOR = Color('#434343').alpha(MASK_OPACITY).toString();
+
+export const getMaskBackgroundColor = (darkMode: boolean) => {
+    return darkMode ? DARK_MASK_BACKGROUND_COLOR : LIGHT_MASK_BACKGROUND_COLOR;
+};
+
 export const drawSelectRect = (
     monitorWidth: number,
     monitorHeight: number,
     selectRect: ElementRect,
-    maskRect: PIXI.Graphics,
-    maskRectControls: PIXI.Graphics,
+    canvasContext: CanvasRenderingContext2D,
     darkMode: boolean,
     scaleFactor: number,
     screenshotType: ScreenshotType,
@@ -79,37 +81,25 @@ export const drawSelectRect = (
     const maskCircleControlShowEndWidth = MASK_CIRCLE_CONTROL_SHOW_END_CONTROL_WIDTH * scaleFactor;
     const maskCircleControlShowMidWidth = MASK_CIRCLE_CONTROL_SHOW_MID_CONTROL_WIDTH * scaleFactor;
 
-    const fillColor = {
-        color: getMaskBackgroundColor(darkMode),
-        alpha: MASK_OPACITY,
-    };
+    const fillColor = getMaskBackgroundColor(darkMode);
 
-    maskRect.clear();
-    maskRectControls.clear();
+    canvasContext.clearRect(0, 0, monitorWidth, monitorHeight);
 
-    maskRect
-        .rect(0, 0, monitorWidth, rectMinY)
-        .rect(0, rectMaxY, monitorWidth, monitorHeight - rectMaxY)
-        .rect(0, rectMinY, rectMinX, rectHeight)
-        .rect(rectMaxX, rectMinY, monitorWidth - rectMaxX, rectHeight)
-        .fill(fillColor);
+    canvasContext.fillStyle = fillColor;
+    canvasContext.fillRect(0, 0, monitorWidth, monitorHeight);
 
-    maskRectControls.rect(rectMinX, rectMinY, rectWidth, rectHeight).stroke({
-        color: MASK_CONTROL_BORDER_STROKE_COLOR,
-        width: maskControlBorderStrokeWidth,
-    });
+    canvasContext.clearRect(rectMinX, rectMinY, rectWidth, rectHeight);
+
+    canvasContext.strokeStyle = MASK_CONTROL_BORDER_STROKE_COLOR;
+    canvasContext.lineWidth = maskControlBorderStrokeWidth;
+    canvasContext.strokeRect(rectMinX, rectMinY, rectWidth, rectHeight);
 
     if (screenshotType === ScreenshotType.TopWindow) {
         return;
     }
 
-    const controlPointStyle = {
-        fill: MASK_CIRCLE_CONTROL_COLOR,
-        stroke: {
-            color: MASK_CIRCLE_CONTROL_STROKE_COLOR,
-            width: maskCircleControlStrokeWidth,
-        },
-    };
+    const controlFillColor = MASK_CIRCLE_CONTROL_COLOR;
+    const controlStrokeColor = MASK_CIRCLE_CONTROL_STROKE_COLOR;
 
     if (minWidth > maskCircleControlShowEndWidth) {
         // 创建顶点控制点
@@ -121,10 +111,13 @@ export const drawSelectRect = (
         ];
 
         for (const [x, y] of cornerPoints) {
-            maskRectControls
-                .circle(x, y, maskCircleControlWidth)
-                .fill(controlPointStyle.fill)
-                .stroke(controlPointStyle.stroke);
+            canvasContext.beginPath();
+            canvasContext.arc(x, y, maskCircleControlWidth, 0, Math.PI * 2);
+            canvasContext.fillStyle = controlFillColor;
+            canvasContext.fill();
+            canvasContext.strokeStyle = controlStrokeColor;
+            canvasContext.lineWidth = maskCircleControlStrokeWidth;
+            canvasContext.stroke();
         }
     }
 
@@ -140,10 +133,13 @@ export const drawSelectRect = (
         ];
 
         for (const [x, y] of midPoints) {
-            maskRectControls
-                .circle(x, y, maskCircleControlWidth)
-                .fill(controlPointStyle.fill)
-                .stroke(controlPointStyle.stroke);
+            canvasContext.beginPath();
+            canvasContext.arc(x, y, maskCircleControlWidth, 0, Math.PI * 2);
+            canvasContext.fillStyle = controlFillColor;
+            canvasContext.fill();
+            canvasContext.strokeStyle = controlStrokeColor;
+            canvasContext.lineWidth = maskCircleControlStrokeWidth;
+            canvasContext.stroke();
         }
     }
 };

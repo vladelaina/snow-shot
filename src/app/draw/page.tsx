@@ -88,10 +88,7 @@ const DrawPageCore: React.FC = () => {
     const [, setCaptureEvent] = useStateSubscriber(CaptureEventPublisher, undefined);
     const onCaptureLoad = useCallback<BaseLayerEventActionType['onCaptureLoad']>(
         async (texture: PIXI.Texture, imageBuffer: ImageBuffer) => {
-            await Promise.all([
-                drawLayerActionRef.current?.onCaptureLoad(texture, imageBuffer),
-                selectLayerActionRef.current?.onCaptureLoad(texture, imageBuffer),
-            ]);
+            await Promise.all([drawLayerActionRef.current?.onCaptureLoad(texture, imageBuffer)]);
 
             setCaptureEvent({
                 event: CaptureEvent.onCaptureLoad,
