@@ -25,6 +25,7 @@ import * as appAutostart from '@tauri-apps/plugin-autostart';
 import { defaultKeyEventSettings, KeyEventKey, KeyEventValue } from '@/core/hotKeys';
 import { TranslationDomain, TranslationType } from '@/services/tools/translation';
 import { setEnableProxy } from '@/commands/core';
+import { ChatApiConfig } from './settings/functionSettings/extra';
 
 export enum AppSettingsGroup {
     Common = 'common',
@@ -67,7 +68,7 @@ export type AppSettingsData = {
     [AppSettingsGroup.Cache]: {
         menuCollapsed: boolean;
         chatModel: string;
-        translationType: TranslationType;
+        translationType: TranslationType | string;
         translationDomain: TranslationDomain;
         targetLanguage: string;
     };
@@ -93,6 +94,7 @@ export type AppSettingsData = {
     };
     [AppSettingsGroup.FunctionChat]: {
         autoCreateNewSession: boolean;
+        chatApiConfigList: ChatApiConfig[];
     };
 };
 
@@ -132,6 +134,7 @@ export const defaultAppSettingsData: AppSettingsData = {
     },
     [AppSettingsGroup.FunctionChat]: {
         autoCreateNewSession: true,
+        chatApiConfigList: [],
     },
 };
 
@@ -308,7 +311,8 @@ const ContextWrapCore: React.FC<{ children: React.ReactNode }> = ({ children }) 
                             ? newSettings.chatModel
                             : (prevSettings?.chatModel ?? 'deepseek-reasoner'),
                     translationType:
-                        typeof newSettings?.translationType === 'number'
+                        typeof newSettings?.translationType === 'number' ||
+                        typeof newSettings?.translationType === 'string'
                             ? newSettings.translationType
                             : (prevSettings?.translationType ?? TranslationType.Youdao),
                     translationDomain:
@@ -573,6 +577,16 @@ const ContextWrapCore: React.FC<{ children: React.ReactNode }> = ({ children }) 
                             ? newSettings.autoCreateNewSession
                             : (prevSettings?.autoCreateNewSession ??
                               defaultAppSettingsData[group].autoCreateNewSession),
+                    chatApiConfigList: Array.isArray(newSettings?.chatApiConfigList)
+                        ? newSettings.chatApiConfigList.map((item) => ({
+                              api_uri: `${item.api_uri ?? ''}`,
+                              api_key: `${item.api_key ?? ''}`,
+                              api_model: `${item.api_model ?? ''}`,
+                              model_name: `${item.model_name ?? ''}`,
+                              support_thinking: !!item.support_thinking,
+                          }))
+                        : (prevSettings?.chatApiConfigList ??
+                          defaultAppSettingsData[group].chatApiConfigList),
                 };
             } else {
                 return defaultAppSettingsData[group];

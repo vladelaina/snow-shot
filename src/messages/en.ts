@@ -169,6 +169,7 @@ export const en = {
     'tools.chat.session.clear': 'Clear All Sessions',
     'tools.chat.session.clear.tip': 'Confirm to clear all sessions?',
     'tools.chat.reasoner': 'Reasoning',
+    'tools.chat.custom': 'Custom',
     'tools.translation.type': 'Translation Service',
     'tools.translation.domain': 'Translation Domain',
     'tools.translation.type.youdao': 'Youdao Translate',

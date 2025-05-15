@@ -83,6 +83,21 @@ const MenuSiderCore: React.FC<{
         }, []),
     );
     const { updateAppSettings } = useContext(AppSettingsActionContext);
+
+    useEffect(() => {
+        if (process.env.NODE_ENV === 'development') {
+            return;
+        }
+
+        window.oncontextmenu = (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+        };
+
+        return () => {
+            window.oncontextmenu = null;
+        };
+    }, []);
     return (
         <Sider
             theme={darkMode ? 'dark' : 'light'}

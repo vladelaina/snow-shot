@@ -1,8 +1,11 @@
 import { Slider, theme } from 'antd';
 import { ExcalidrawPropsCustomOptions } from '@mg-chao/excalidraw/types';
+import React from 'react';
 
-export const rangeRender: NonNullable<
-    NonNullable<ExcalidrawPropsCustomOptions['pickerRenders']>['rangeRender']
+const RangeRenderCore: React.FC<
+    Parameters<
+        NonNullable<NonNullable<ExcalidrawPropsCustomOptions['pickerRenders']>['rangeRender']>
+    >[0]
 > = (props) => {
     const { token } = theme.useToken();
     return (
@@ -16,4 +19,12 @@ export const rangeRender: NonNullable<
             tooltip={{ placement: 'bottom' }}
         />
     );
+};
+
+const RangeRenderMemo = React.memo(RangeRenderCore);
+
+export const rangeRender: NonNullable<
+    NonNullable<ExcalidrawPropsCustomOptions['pickerRenders']>['rangeRender']
+> = (props) => {
+    return <RangeRenderMemo {...props} />;
 };

@@ -1,8 +1,14 @@
 import { Radio } from 'antd';
 import { ExcalidrawPropsCustomOptions } from '@mg-chao/excalidraw/types';
-
-export const buttonIconSelectRadioRender: NonNullable<
-    NonNullable<ExcalidrawPropsCustomOptions['pickerRenders']>['buttonIconSelectRadioRender']
+import React from 'react';
+const ButtonIconSelectRadioRenderCore: React.FC<
+    Parameters<
+        NonNullable<
+            NonNullable<
+                ExcalidrawPropsCustomOptions['pickerRenders']
+            >['buttonIconSelectRadioRender']
+        >
+    >[0]
 > = (props) => {
     return (
         <Radio.Button
@@ -17,4 +23,12 @@ export const buttonIconSelectRadioRender: NonNullable<
             <div className="radio-button-icon">{props.children}</div>
         </Radio.Button>
     );
+};
+
+const ButtonIconSelectRadioRenderMemo = React.memo(ButtonIconSelectRadioRenderCore);
+
+export const buttonIconSelectRadioRender: NonNullable<
+    NonNullable<ExcalidrawPropsCustomOptions['pickerRenders']>['buttonIconSelectRadioRender']
+> = (props) => {
+    return <ButtonIconSelectRadioRenderMemo {...props} />;
 };
