@@ -97,13 +97,26 @@ export default function SystemSettings() {
                     submitter={false}
                     layout="horizontal"
                 >
-                    <ProFormSwitch
-                        name="findChildrenElements"
-                        layout="horizontal"
-                        label={
-                            <FormattedMessage id="settings.functionSettings.screenshotSettings.findChildrenElements" />
-                        }
-                    />
+                    <Row gutter={token.padding}>
+                        <Col span={12}>
+                            <ProFormSwitch
+                                name="findChildrenElements"
+                                layout="horizontal"
+                                label={
+                                    <FormattedMessage id="settings.functionSettings.screenshotSettings.findChildrenElements" />
+                                }
+                            />
+                        </Col>
+                        <Col span={12}>
+                            <ProFormSwitch
+                                name="alwaysShowColorPicker"
+                                layout="horizontal"
+                                label={
+                                    <FormattedMessage id="settings.functionSettings.screenshotSettings.alwaysShowColorPicker" />
+                                }
+                            />
+                        </Col>
+                    </Row>
                 </ProForm>
             </Spin>
 

@@ -103,6 +103,8 @@ export type AppSettingsData = {
     [AppSettingsGroup.FunctionScreenshot]: {
         /** 选取窗口子元素 */
         findChildrenElements: boolean;
+        /** 始终显示颜色选择器 */
+        alwaysShowColorPicker: boolean;
     };
 };
 
@@ -148,6 +150,7 @@ export const defaultAppSettingsData: AppSettingsData = {
     },
     [AppSettingsGroup.FunctionScreenshot]: {
         findChildrenElements: true,
+        alwaysShowColorPicker: false,
     },
 };
 
@@ -620,6 +623,11 @@ const ContextWrapCore: React.FC<{ children: React.ReactNode }> = ({ children }) 
 
                 settings = {
                     findChildrenElements,
+                    alwaysShowColorPicker:
+                        typeof newSettings?.alwaysShowColorPicker === 'boolean'
+                            ? newSettings.alwaysShowColorPicker
+                            : (prevSettings?.alwaysShowColorPicker ??
+                              defaultAppSettingsData[group].alwaysShowColorPicker),
                 };
             } else {
                 return defaultAppSettingsData[group];
