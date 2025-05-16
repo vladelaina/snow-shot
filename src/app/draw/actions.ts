@@ -8,7 +8,7 @@ import { Window as AppWindow, PhysicalPosition, PhysicalSize } from '@tauri-apps
 import { CaptureStep } from './types';
 import { FixedImageActionType } from './components/fixedImage';
 import { OcrBlocksActionType } from './components/ocrBlocks';
-import { hideWindow, showWindow } from '@/utils/window';
+
 export const generateImageFileName = () => {
     return `SnowShot_${dayjs().format('YYYY-MM-DD_HH-mm-ss')}`;
 };
@@ -136,22 +136,10 @@ export const fixedToScreen = async (
     setCaptureStep(CaptureStep.Fixed);
     createDrawWindow();
 
-    await hideWindow();
-    layerContainerElement.style.transform = `translate(-${selectRect.min_x / imageBuffer.monitorScaleFactor}px, -${selectRect.min_y / imageBuffer.monitorScaleFactor}px)`;
-    await Promise.all([
-        appWindow.setPosition(new PhysicalPosition(selectRect.min_x, selectRect.min_y)),
-        appWindow.setSize(
-            new PhysicalSize(
-                selectRect.max_x - selectRect.min_x,
-                selectRect.max_y - selectRect.min_y,
-            ),
-        ),
-        appWindow.setAlwaysOnTop(true),
-    ]);
-    await new Promise((resolve) => {
-        setTimeout(resolve, 42);
+    await appWindow.hide();
+    const hideReadyPromise = new Promise((resolve) => {
+        setTimeout(resolve, 256);
     });
-    await showWindow();
 
     layerContainerElement.style.opacity = '1';
     // 创建一个固定的图片
@@ -161,7 +149,23 @@ export const fixedToScreen = async (
     }
 
     await Promise.all([
-        fixedImageAction.init(selectRect, imageBuffer, imageCanvas),
+        fixedImageAction.init(selectRect, imageBuffer, imageCanvas).then(async () => {
+            await hideReadyPromise;
+            layerContainerElement.style.transform = `translate(-${selectRect.min_x / imageBuffer.monitorScaleFactor}px, -${selectRect.min_y / imageBuffer.monitorScaleFactor}px)`;
+            await Promise.all([
+                appWindow.setPosition(new PhysicalPosition(selectRect.min_x, selectRect.min_y)),
+                appWindow.setSize(
+                    new PhysicalSize(
+                        selectRect.max_x - selectRect.min_x,
+                        selectRect.max_y - selectRect.min_y,
+                    ),
+                ),
+            ]);
+            await new Promise((resolve) => {
+                requestAnimationFrame(resolve);
+            });
+            await Promise.all([appWindow.show(), appWindow.setAlwaysOnTop(true)]);
+        }),
         ocrBlocksAction.init(selectRect, imageBuffer, imageCanvas),
     ]);
 };

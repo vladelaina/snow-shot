@@ -13,7 +13,7 @@ import { useStateRef } from '@/hooks/useStateRef';
 import { useCallbackRender } from '@/hooks/useCallbackRender';
 import { zIndexs } from '@/utils/zIndex';
 import { DrawContext } from '../../types';
-import { closeWindow } from '@/utils/window';
+import { closeWindowComplete } from '@/utils/window';
 
 export type FixedImageActionType = {
     init: (
@@ -158,7 +158,7 @@ export const FixedImage: React.FC<{
                     id: `${window.label}-closeTool`,
                     text: intl.formatMessage({ id: 'draw.close' }),
                     action: async () => {
-                        await closeWindow();
+                        await closeWindowComplete();
                     },
                 },
             ],
@@ -287,7 +287,7 @@ export const FixedImage: React.FC<{
                         backgroundColor: token.colorBgMask,
                     }}
                     onClick={() => {
-                        closeWindow();
+                        closeWindowComplete();
                     }}
                 />
 
