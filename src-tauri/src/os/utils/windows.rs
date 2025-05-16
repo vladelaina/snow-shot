@@ -39,9 +39,6 @@ pub fn set_draw_window_style(window: tauri::Window) {
     let window_hwnd = window.hwnd();
 
     if let Ok(hwnd) = window_hwnd {
-        println!("hwnd: {:?}", hwnd);
-        println!("hwnd: {:?}", window.title());
-
         // 设置窗口样式为0x96000000
         let new_style = -1778384896;
         unsafe { SetWindowLongW(hwnd, GWL_STYLE, new_style) };
