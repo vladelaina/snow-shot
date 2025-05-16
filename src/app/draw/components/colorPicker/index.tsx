@@ -125,7 +125,10 @@ const ColorPickerCore: React.FC<{
     const updatePickerPosition = useCallback((x: number, y: number) => {
         pickerPositionRef.current.mouseX = x;
         pickerPositionRef.current.mouseY = y;
-        pickerPositionElementRef.current!.textContent = `X: ${x} Y: ${y}`;
+
+        if (pickerPositionElementRef.current) {
+            pickerPositionElementRef.current.textContent = `X: ${x} Y: ${y}`;
+        }
     }, []);
 
     const enableRef = useRef(false);
@@ -167,11 +170,15 @@ const ColorPickerCore: React.FC<{
         colorRef.current.red = red;
         colorRef.current.green = green;
         colorRef.current.blue = blue;
-        colorElementRef.current!.style.backgroundColor = `rgb(${red}, ${green}, ${blue})`;
-        colorElementRef.current!.style.color =
+        if (!colorElementRef.current || !previewColorElementRef.current) {
+            return;
+        }
+
+        colorElementRef.current.style.backgroundColor = `rgb(${red}, ${green}, ${blue})`;
+        colorElementRef.current.style.color =
             red + green + blue < 383 ? 'rgba(255,255,255,0.85)' : 'rgba(0,0,0,0.88)';
-        colorElementRef.current!.textContent = `RGB (${red}, ${green}, ${blue})`;
-        previewColorElementRef.current!.style.boxShadow = `0 0 0 1px ${colorElementRef.current!.style.color}`;
+        colorElementRef.current.textContent = `RGB (${red}, ${green}, ${blue})`;
+        previewColorElementRef.current.style.boxShadow = `0 0 0 1px ${colorElementRef.current.style.color}`;
     }, []);
 
     const pickerPositionElementRef = useRef<HTMLDivElement>(null);
