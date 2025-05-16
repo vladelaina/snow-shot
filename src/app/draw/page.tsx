@@ -43,7 +43,7 @@ import { ocrInit } from '@/commands/ocr';
 import { ScreenshotType } from '@/functions/screenshot';
 import { showWindow as showCurrentWindow } from '@/utils/window';
 import _ from 'lodash';
-import { switchAlwaysOnTop } from '@/commands/screenshot';
+import { setDrawWindowStyle, switchAlwaysOnTop } from '@/commands/screenshot';
 
 const DrawCacheLayer = dynamic(
     async () => (await import('./components/drawCacheLayer')).DrawCacheLayer,
@@ -195,6 +195,8 @@ const DrawPageCore: React.FC = () => {
             ) {
                 await appWindow.setAlwaysOnTop(false);
             }
+
+            setDrawWindowStyle();
         },
         [getScreenshotType],
     );

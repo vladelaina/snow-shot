@@ -35,6 +35,7 @@ import { CaptureStepPublisher } from '../../extra';
 import { ResizeToolbar, ResizeToolbarActionType } from './components/resizeToolbar';
 import { ScreenshotType } from '@/functions/screenshot';
 import { zIndexs } from '@/utils/zIndex';
+
 export type SelectLayerActionType = {
     getSelectRect: () => ElementRect | undefined;
     getWindowId: () => number | undefined;

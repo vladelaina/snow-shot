@@ -137,9 +137,6 @@ export const fixedToScreen = async (
     createDrawWindow();
 
     await appWindow.hide();
-    const hideReadyPromise = new Promise((resolve) => {
-        setTimeout(resolve, 256);
-    });
 
     layerContainerElement.style.opacity = '1';
     // 创建一个固定的图片
@@ -150,7 +147,6 @@ export const fixedToScreen = async (
 
     await Promise.all([
         fixedImageAction.init(selectRect, imageBuffer, imageCanvas).then(async () => {
-            await hideReadyPromise;
             layerContainerElement.style.transform = `translate(-${selectRect.min_x / imageBuffer.monitorScaleFactor}px, -${selectRect.min_y / imageBuffer.monitorScaleFactor}px)`;
             await Promise.all([
                 appWindow.setPosition(new PhysicalPosition(selectRect.min_x, selectRect.min_y)),
@@ -162,7 +158,9 @@ export const fixedToScreen = async (
                 ),
             ]);
             await new Promise((resolve) => {
-                requestAnimationFrame(resolve);
+                requestAnimationFrame(() => {
+                    requestAnimationFrame(resolve);
+                });
             });
             await Promise.all([appWindow.show(), appWindow.setAlwaysOnTop(true)]);
         }),

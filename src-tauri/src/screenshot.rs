@@ -8,9 +8,9 @@ use tauri::command;
 use tauri::ipc::Response;
 use xcap::{Monitor, Window};
 
+use crate::os;
 use crate::os::ElementRect;
 use crate::os::ui_automation::UIElements;
-use crate::os;
 
 fn get_device_mouse_position() -> (i32, i32) {
     let device_state = DeviceState::new();
@@ -300,4 +300,9 @@ pub async fn create_draw_window(app: tauri::AppHandle) {
     .inner_size(0.0, 0.0)
     .build()
     .unwrap();
+}
+
+#[command]
+pub async fn set_draw_window_style(window: tauri::Window) {
+    os::utils::set_draw_window_style(window);
 }

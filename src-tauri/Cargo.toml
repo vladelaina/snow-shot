@@ -31,7 +31,7 @@ windows = { version = "0.61.1", features = [
     "UI_UIAutomation",
 ] }
 thiserror = "2.0.12"
-uiautomation = "^0.17"
+uiautomation = "^0.18"
 rtree_rs = "^0.1.4"
 atree = "^0.5.2"
 tauri-plugin-dialog = "^2"
