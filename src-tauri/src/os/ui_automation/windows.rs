@@ -13,8 +13,6 @@ use uiautomation::UITreeWalker;
 use uiautomation::types::Handle;
 use uiautomation::types::Point;
 use windows::Win32::Foundation::HWND;
-use windows::Win32::UI::WindowsAndMessaging::GetWindowInfo;
-use windows::Win32::UI::WindowsAndMessaging::WINDOWINFO;
 
 use super::ElementRect;
 

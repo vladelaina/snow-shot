@@ -60,6 +60,7 @@ pub fn run() {
             screenshot::get_mouse_position,
             screenshot::create_draw_window,
             screenshot::switch_always_on_top,
+            screenshot::set_draw_window_style,
             core::exit_app,
             file::save_file,
             ocr::ocr_detect,
