@@ -78,7 +78,7 @@ pub async fn ocr_detect(
     };
 
     let image_buffer = image.to_rgb8();
-    let ocr_result = ocr_instance.detect(
+    let ocr_result = ocr_instance.detect_angle_rollback(
         &image_buffer,
         50,
         image.height().max(image.width()),
@@ -87,6 +87,7 @@ pub async fn ocr_detect(
         1.6,
         true,
         false,
+        0.0,
     );
 
     match ocr_result {

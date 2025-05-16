@@ -8,8 +8,16 @@ export const showWindow = async (ignoreFocus = false) => {
     }
 };
 
-export const closeWindow = async () => {
+export const hideWindow = async () => {
     const appWindow = getCurrentWindow();
     await appWindow.hide();
+    await new Promise((resolve) => {
+        setTimeout(resolve, 42);
+    });
+};
+
+export const closeWindow = async () => {
+    const appWindow = getCurrentWindow();
+    await hideWindow();
     await appWindow.close();
 };
