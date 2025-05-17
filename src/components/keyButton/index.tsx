@@ -3,8 +3,8 @@ import { KeyboardGrayIcon } from '../icons';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { FormattedMessage } from 'react-intl';
 import { CheckOutlined, DeleteOutlined, PlusOutlined } from '@ant-design/icons';
-import _ from 'lodash';
 import { useRecordHotkeys } from 'react-hotkeys-hook';
+import { trim } from 'es-toolkit';
 
 type KeyConfig = {
     recordKeys: string;
@@ -59,7 +59,7 @@ export const KeyButton: React.FC<{
             return;
         }
 
-        const keyConfigValueList = keyValue.split(',').map(_.trim);
+        const keyConfigValueList = keyValue.split(',').map((item) => trim(item));
 
         const configList = keyConfigValueList.slice(0, maxLength).map((value, index) => {
             const recordKeys = value;

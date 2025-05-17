@@ -3,4 +3,8 @@
         "**/src-tauri": true,
     },
     "typescript.tsdk": "node_modules\\typescript\\lib",
+    "i18n-ally.localesPaths": [
+        "src/messages",
+        "excalidraw/packages/excalidraw/locales"
+    ],
 }

@@ -1,5 +1,5 @@
 import { Tabs, TabsProps, theme } from 'antd';
-import { debounce } from 'lodash';
+import { debounce } from 'es-toolkit';
 import { useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react';
 import { RouteMapItem } from '../menuLayout';
 

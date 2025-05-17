@@ -10,11 +10,11 @@ import React, {
     useState,
 } from 'react';
 import * as PIXI from 'pixi.js';
-import _ from 'lodash';
 import { ElementRect, ImageBuffer } from '@/commands';
 import styles from './index.module.css';
 import { AppSettingsData, AppSettingsGroup } from '@/app/contextWrap';
 import { useAppSettingsLoad } from '@/hooks/useAppSettingsLoad';
+import { last } from 'es-toolkit';
 
 export type BaseLayerContextType = {
     /** 调整画布大小 */
@@ -248,7 +248,7 @@ export const BaseLayerCore: React.FC<
     );
 
     const getTopContainer = useCallback(() => {
-        return _.last(canvasContainerListRef.current);
+        return last(canvasContainerListRef.current);
     }, []);
 
     const addChildToTopContainer = useCallback(

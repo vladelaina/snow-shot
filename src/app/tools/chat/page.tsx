@@ -20,7 +20,7 @@ import type { Conversation } from '@ant-design/x/es/conversations';
 import { MessageInfo } from '@ant-design/x/es/use-x-chat';
 import { Button, Card, Drawer, Select, Space, Spin, theme, Typography } from 'antd';
 import dayjs from 'dayjs';
-import { debounce, last, throttle } from 'lodash';
+import { debounce, last, throttle } from 'es-toolkit';
 import React, {
     useCallback,
     useContext,
@@ -54,7 +54,6 @@ import { KeyEventValue } from '@/core/hotKeys';
 import { KeyEventKey } from '@/core/hotKeys';
 import { useAppSettingsLoad } from '@/hooks/useAppSettingsLoad';
 import { useHotkeys } from 'react-hotkeys-hook';
-import _ from 'lodash';
 import { SendQueueMessageList } from './components/sendQueueMessageList';
 import { ChatMessage, ChatMessageFlowConfig, SendQueueMessage } from './types';
 import { WorkflowList } from './components/workflowList';
@@ -385,7 +384,7 @@ const Chat = () => {
                     }
                 }
 
-                const userInput = _.last(newInputMessages)!;
+                const userInput = last(newInputMessages)!;
 
                 if (userInput.flow_config) {
                     if (userInput.flow_config.flow.ignore_context) {
@@ -893,11 +892,11 @@ const Chat = () => {
     }, [messages]);
 
     const onCopy = useCallback(() => {
-        const lastMessage = _.last(messagesRef.current);
+        const lastMessage = last(messagesRef.current);
         copyText(lastMessage ? getMessageContent(lastMessage.message) : '');
     }, []);
     const onCopyAndHide = useCallback(() => {
-        const lastMessage = _.last(messagesRef.current);
+        const lastMessage = last(messagesRef.current);
         copyTextAndHide(lastMessage ? getMessageContent(lastMessage.message) : '');
     }, []);
 
