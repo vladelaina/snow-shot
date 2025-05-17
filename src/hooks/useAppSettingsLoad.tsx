@@ -5,7 +5,7 @@ import {
 } from '@/app/contextWrap';
 import { useCallback, useEffect, useMemo, useRef } from 'react';
 import { useStateSubscriber } from './useStateSubscriber';
-import { debounce } from 'lodash';
+import { debounce } from 'es-toolkit';
 
 /**
  * 应用设置加载完毕后执行

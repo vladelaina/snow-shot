@@ -22,7 +22,7 @@ import { useStateSubscriber } from '@/hooks/useStateSubscriber';
 import { getMaskBackgroundColor } from '../selectLayer/extra';
 import { MousePosition } from '@/utils/mousePosition';
 import { useCallbackRender } from '@/hooks/useCallbackRender';
-import { debounce } from 'lodash';
+import { debounce } from 'es-toolkit';
 import { ScreenshotType } from '@/functions/screenshot';
 
 const KeyLabel: React.FC<{

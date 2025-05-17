@@ -1,5 +1,5 @@
 import * as TWEEN from '@tweenjs/tween.js';
-import _ from 'lodash';
+import { isEqual } from 'es-toolkit';
 
 /**
  * 基于 TWEEN 的动画工具类
@@ -37,7 +37,7 @@ export class TweenAnimation<T extends object> {
      * @param object
      */
     public update = (object: T, ignoreAnimation: boolean = false) => {
-        if (_.isEqual(object, this.targetObject)) {
+        if (isEqual(object, this.targetObject)) {
             return;
         }
 

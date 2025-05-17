@@ -1,6 +1,6 @@
 'use client';
 
-import { debounce } from 'lodash';
+import { debounce } from 'es-toolkit';
 import React, { useRef, useState, useCallback, useMemo } from 'react';
 
 interface ScrollShadowProps {

@@ -42,8 +42,8 @@ import { OcrBlocks, OcrBlocksActionType } from './components/ocrBlocks';
 import { ocrInit } from '@/commands/ocr';
 import { ScreenshotType } from '@/functions/screenshot';
 import { showWindow as showCurrentWindow } from '@/utils/window';
-import _ from 'lodash';
 import { setDrawWindowStyle, switchAlwaysOnTop } from '@/commands/screenshot';
+import { debounce } from 'es-toolkit';
 
 const DrawCacheLayer = dynamic(
     async () => (await import('./components/drawCacheLayer')).DrawCacheLayer,
@@ -126,7 +126,7 @@ const DrawPageCore: React.FC = () => {
         handleLayerSwitch(CanvasLayer.Select);
     }, [getCaptureStep, getDrawState, handleLayerSwitch]);
     const onCaptureStepDrawStateChangeDebounce = useMemo(() => {
-        return _.debounce(onCaptureStepDrawStateChange, 0);
+        return debounce(onCaptureStepDrawStateChange, 0);
     }, [onCaptureStepDrawStateChange]);
     useStateSubscriber(CaptureStepPublisher, onCaptureStepDrawStateChangeDebounce);
     useStateSubscriber(DrawStatePublisher, onCaptureStepDrawStateChangeDebounce);

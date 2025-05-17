@@ -3,7 +3,7 @@
 import { createContext, RefObject, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { BaseDirectory, exists, mkdir, readTextFile, writeTextFile } from '@tauri-apps/plugin-fs';
 import { ConfigProvider, theme } from 'antd';
-import _, { trim } from 'lodash';
+import { debounce, isEqual, trim } from 'es-toolkit';
 import zhCN from 'antd/es/locale/zh_CN';
 import zhTW from 'antd/es/locale/zh_TW';
 import enUS from 'antd/es/locale/en_US';
@@ -250,7 +250,7 @@ const ContextWrapCore: React.FC<{ children: React.ReactNode }> = ({ children }) 
     );
     const writeAppSettingsDebounce = useCallback(
         (group: AppSettingsGroup, data: AppSettingsData[typeof group], syncAllWindow: boolean) => {
-            _.debounce(() => writeAppSettings(group, data, syncAllWindow), 1000)();
+            debounce(() => writeAppSettings(group, data, syncAllWindow), 1000)();
         },
         [writeAppSettings],
     );
@@ -386,7 +386,7 @@ const ContextWrapCore: React.FC<{ children: React.ReactNode }> = ({ children }) 
                     // 格式化处理下
                     keyEventSettingsKey = keyEventSettingsKey
                         .split(',')
-                        .map(trim)
+                        .map((item) => trim(item))
                         .filter((val) => {
                             if (settingsKeySet.has(val)) {
                                 return false;
@@ -430,7 +430,7 @@ const ContextWrapCore: React.FC<{ children: React.ReactNode }> = ({ children }) 
                     // 格式化处理下
                     keyEventSettingsKey = keyEventSettingsKey
                         .split(',')
-                        .map(trim)
+                        .map((item) => trim(item))
                         .filter((val) => {
                             if (settingsKeySet.has(val)) {
                                 return false;
@@ -477,7 +477,7 @@ const ContextWrapCore: React.FC<{ children: React.ReactNode }> = ({ children }) 
                     keyEventSettingsKey = keyEventSettingsKey
                         .split(',')
                         .slice(0, 1) // 快捷键不支持多个键，这里也限制下
-                        .map(trim)
+                        .map((item) => trim(item))
                         .filter((val) => {
                             if (settingsKeySet.has(val)) {
                                 return false;
@@ -727,7 +727,7 @@ const ContextWrapCore: React.FC<{ children: React.ReactNode }> = ({ children }) 
             ) as any;
         }
 
-        if (_.isEqual(appSettingsRef.current, settings)) {
+        if (isEqual(appSettingsRef.current, settings)) {
             setAppSettings(settings);
         }
 

@@ -23,7 +23,7 @@ import { copyText, copyTextAndHide, decodeParamsValue } from '@/utils';
 import { SwapOutlined } from '@ant-design/icons';
 import { Button, Col, Flex, Form, InputRef, Row, Select, SelectProps, Spin, theme } from 'antd';
 import TextArea from 'antd/es/input/TextArea';
-import { debounce } from 'lodash';
+import { debounce } from 'es-toolkit';
 import { useSearchParams } from 'next/navigation';
 import { useCallback, useContext, useEffect, useMemo, useRef, useState, Suspense } from 'react';
 import { useHotkeys } from 'react-hotkeys-hook';
