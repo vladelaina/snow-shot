@@ -172,7 +172,6 @@ dependencies = [
  "atree",
  "base64 0.22.1",
  "device_query",
- "dpi",
  "get-selected-text",
  "image 0.25.6",
  "log",
