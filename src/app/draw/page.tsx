@@ -196,7 +196,7 @@ const DrawPageCore: React.FC = () => {
                 setTimeout(() => {
                     const offsetX = documentWidth - document.body.clientWidth;
                     const offsetY = documentHeight - document.body.clientHeight;
-                    document.body.style.transform = `translate(${Math.ceil(offsetX / 2)}px, ${Math.ceil(offsetY / 2)}px)`;
+                    document.body.style.transform = `translate(${Math.floor(offsetX / 2)}px, ${Math.floor(offsetY / 2)}px)`;
                     document.body.style.width = `${documentWidth}px`;
                     document.body.style.height = `${documentHeight}px`;
                     // 工具栏还有一些偏移，后面修复
@@ -309,6 +309,9 @@ const DrawPageCore: React.FC = () => {
         ) {
             return;
         }
+
+        document.body.style.width = '100vw';
+        document.body.style.height = '100vh';
 
         await fixedToScreen(
             imageBufferRef.current,

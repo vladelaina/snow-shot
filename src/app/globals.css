@@ -20,7 +20,7 @@ body {
     background: transparent;
     box-sizing: border-box;
     margin: 0 !important;
-    position: fixed;
+    position: relative;
     bottom: 0;
     right: 0;
 }
