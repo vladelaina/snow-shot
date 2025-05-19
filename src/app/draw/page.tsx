@@ -246,6 +246,8 @@ const DrawPageCore: React.FC = () => {
 
             // 发起截图
             const imageBuffer = await captureCurrentMonitor(ImageEncoder.WebP);
+            // 尝试用 tauri 的 scaleFactor 获取缩放比例修正缩放比例异常的问题
+            imageBuffer.monitorScaleFactor = await appWindowRef.current.scaleFactor();
             imageBufferRef.current = imageBuffer;
 
             // 因为窗口是空的，所以窗口显示和图片显示先后顺序倒无所谓
