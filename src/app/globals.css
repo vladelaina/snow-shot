@@ -20,6 +20,9 @@ body {
     background: transparent;
     box-sizing: border-box;
     margin: 0 !important;
+    position: fixed;
+    bottom: 0;
+    right: 0;
 }
 
 @media (prefers-color-scheme: dark) {

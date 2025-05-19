@@ -184,9 +184,26 @@ const DrawPageCore: React.FC = () => {
                 appWindow.setPosition(new PhysicalPosition(monitorX, monitorY)),
                 appWindow.setSize(new PhysicalSize(monitorWidth, monitorHeight)),
             ]);
+
+            const browserScaleFactor = monitorWidth / window.screen.width;
+            imageBuffer.monitorScaleFactor =
+                window.devicePixelRatio ??
+                (browserScaleFactor === 0 ? imageBuffer.monitorScaleFactor : browserScaleFactor);
+
             if (layerContainerRef.current) {
-                layerContainerRef.current.style.width = `${window.screen.width}px`;
-                layerContainerRef.current.style.height = `${window.screen.height}px`;
+                const documentWidth = monitorWidth / imageBuffer.monitorScaleFactor;
+                const documentHeight = monitorHeight / imageBuffer.monitorScaleFactor;
+                setTimeout(() => {
+                    const offsetX = documentWidth - document.body.clientWidth;
+                    const offsetY = documentHeight - document.body.clientHeight;
+                    document.body.style.transform = `translate(${Math.ceil(offsetX / 2)}px, ${Math.ceil(offsetY / 2)}px)`;
+                    document.body.style.width = `${documentWidth}px`;
+                    document.body.style.height = `${documentHeight}px`;
+                    // 工具栏还有一些偏移，后面修复
+                }, 256);
+
+                layerContainerRef.current.style.width = `${documentWidth}px`;
+                layerContainerRef.current.style.height = `${documentHeight}px`;
             }
             await showCurrentWindow();
             if (
@@ -223,6 +240,9 @@ const DrawPageCore: React.FC = () => {
         drawToolbarActionRef.current?.setEnable(false);
         capturingRef.current = false;
         history.clear();
+        document.body.style.transform = 'translate(0px, 0px)';
+        document.body.style.width = '100vw';
+        document.body.style.height = '100vh';
     }, [
         hideWindow,
         setCaptureEvent,
@@ -246,8 +266,6 @@ const DrawPageCore: React.FC = () => {
 
             // 发起截图
             const imageBuffer = await captureCurrentMonitor(ImageEncoder.WebP);
-            // 尝试用 tauri 的 scaleFactor 获取缩放比例修正缩放比例异常的问题
-            imageBuffer.monitorScaleFactor = await appWindowRef.current.scaleFactor();
             imageBufferRef.current = imageBuffer;
 
             // 因为窗口是空的，所以窗口显示和图片显示先后顺序倒无所谓
