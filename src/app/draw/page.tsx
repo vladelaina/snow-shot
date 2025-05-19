@@ -64,6 +64,7 @@ const DrawPageCore: React.FC = () => {
     const { addListener, removeListener } = useContext(EventListenerContext);
 
     // 层级
+    const drawLayerWrapRef = useRef<HTMLDivElement>(null);
     const layerContainerRef = useRef<HTMLDivElement>(null);
     const drawLayerActionRef = useRef<DrawLayerActionType | undefined>(undefined);
     const drawCacheLayerActionRef = useRef<DrawCacheLayerActionType | undefined>(undefined);
@@ -129,7 +130,25 @@ const DrawPageCore: React.FC = () => {
         return debounce(onCaptureStepDrawStateChange, 0);
     }, [onCaptureStepDrawStateChange]);
     useStateSubscriber(CaptureStepPublisher, onCaptureStepDrawStateChangeDebounce);
-    useStateSubscriber(DrawStatePublisher, onCaptureStepDrawStateChangeDebounce);
+    useStateSubscriber(
+        DrawStatePublisher,
+        useCallback(
+            (drawState: DrawState) => {
+                onCaptureStepDrawStateChangeDebounce();
+
+                if (!drawLayerWrapRef.current) {
+                    return;
+                }
+
+                if (drawState === DrawState.ScrollScreenshot) {
+                    drawLayerWrapRef.current.style.opacity = '0';
+                } else {
+                    drawLayerWrapRef.current.style.opacity = '1';
+                }
+            },
+            [onCaptureStepDrawStateChangeDebounce],
+        ),
+    );
 
     /** 截图准备 */
     const readyCapture = useCallback(
@@ -454,8 +473,10 @@ const DrawPageCore: React.FC = () => {
                 <OcrBlocks actionRef={ocrBlocksActionRef} />
                 {!isFixed && (
                     <>
-                        <DrawLayer actionRef={drawLayerActionRef} />
-                        <DrawCacheLayer actionRef={drawCacheLayerActionRef} />
+                        <div className={styles.drawLayerWrap} ref={drawLayerWrapRef}>
+                            <DrawLayer actionRef={drawLayerActionRef} />
+                            <DrawCacheLayer actionRef={drawCacheLayerActionRef} />
+                        </div>
                         <SelectLayer actionRef={selectLayerActionRef} />
                         <DrawToolbar
                             actionRef={drawToolbarActionRef}

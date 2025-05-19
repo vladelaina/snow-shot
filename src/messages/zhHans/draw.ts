@@ -49,6 +49,7 @@ export const draw = {
     'draw.redoTool': '重做',
     'draw.cancelTool': '取消',
     'draw.copyTool': '复制到剪贴板',
+    'draw.scrollScreenshotTool': '滚动截图',
     'draw.saveTool': '保存为文件',
     'draw.close': '关闭',
     'draw.ocrDetectTool': '文字识别',
@@ -71,4 +72,7 @@ export const draw = {
     'draw.autoAlignPicker': '自动对齐',
     'draw.ocrLoading': 'OCR 识别中',
     'draw.copySelectedText': '复制选中文本',
+    'draw.scrollScreenshot.limitTip': '所选区域过小，无法进行滚动截图（最小边需 > 200px）',
+    'draw.scrollScreenshot.initError': '初始化失败，请向开发者反馈 [1]',
+    'draw.scrollScreenshot.captureError': '滚动截图失败，请向开发者反馈 [2]',
 };

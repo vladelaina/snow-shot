@@ -28,8 +28,8 @@ import {
     SelectState,
 } from './extra';
 import { MousePosition } from '@/utils/mousePosition';
-import { getMonitorRect, ScreenshotTypePublisher } from '../../extra';
-import { CaptureStep, DrawContext } from '../../types';
+import { DrawStatePublisher, getMonitorRect, ScreenshotTypePublisher } from '../../extra';
+import { CaptureStep, DrawContext, DrawState } from '../../types';
 import { useStateSubscriber } from '@/hooks/useStateSubscriber';
 import { CaptureStepPublisher } from '../../extra';
 import { ResizeToolbar, ResizeToolbarActionType } from './components/resizeToolbar';
@@ -224,6 +224,7 @@ const SelectLayerCore: React.FC<SelectLayerProps> = ({ actionRef }) => {
             drawElementMask?: {
                 imageData: ImageData;
             },
+            enableScrollScreenshot?: boolean,
         ) => {
             drawSelectRect(
                 imageBuffer.monitorWidth,
@@ -234,6 +235,7 @@ const SelectLayerCore: React.FC<SelectLayerProps> = ({ actionRef }) => {
                 imageBuffer.monitorScaleFactor,
                 getScreenshotType(),
                 drawElementMask,
+                enableScrollScreenshot,
             );
             // 和 canvas 同步下
             requestAnimationFrame(() => {
@@ -538,6 +540,24 @@ const SelectLayerCore: React.FC<SelectLayerProps> = ({ actionRef }) => {
         // 初始化可能晚于截图准备
         refreshMouseMove();
     }, [initSelectWindowElement, refreshMouseMove]);
+
+    useStateSubscriber(
+        DrawStatePublisher,
+        useCallback(
+            (drawState: DrawState, prevDrawState: DrawState) => {
+                if (!imageBufferRef.current) {
+                    return;
+                }
+
+                if (drawState === DrawState.ScrollScreenshot) {
+                    updateSelectRect(getSelectRect()!, imageBufferRef.current, undefined, true);
+                } else if (prevDrawState === DrawState.ScrollScreenshot) {
+                    updateSelectRect(getSelectRect()!, imageBufferRef.current, undefined, false);
+                }
+            },
+            [getSelectRect, updateSelectRect],
+        ),
+    );
 
     useEffect(() => {
         initUiElements();

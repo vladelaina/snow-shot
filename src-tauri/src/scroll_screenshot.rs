@@ -1,0 +1,130 @@
+use image::{codecs::webp::WebPEncoder, imageops::FilterType};
+use serde::Serialize;
+use std::sync::Mutex;
+use tauri::command;
+use tauri::ipc::Response;
+use xcap::Monitor;
+
+use crate::services::{ScrollDirection, ScrollImageList, ScrollScreenshotService};
+
+#[command]
+pub async fn scroll_screenshot_init(
+    scroll_screenshot_service: tauri::State<'_, Mutex<ScrollScreenshotService>>,
+    direction: ScrollDirection,
+    image_width: u32,
+    image_height: u32,
+    sample_rate: f32,
+    min_sample_size: u32,
+    max_sample_size: u32,
+    corner_threshold: u8,
+    descriptor_patch_size: usize,
+    min_size_delta: i32,
+) -> Result<(), ()> {
+    let mut scroll_screenshot_service = match scroll_screenshot_service.lock() {
+        Ok(service) => service,
+        Err(_) => return Err(()),
+    };
+
+    scroll_screenshot_service.init(
+        direction,
+        image_width,
+        image_height,
+        sample_rate,
+        min_sample_size,
+        max_sample_size,
+        corner_threshold,
+        descriptor_patch_size,
+        min_size_delta,
+    );
+
+    Ok(())
+}
+
+#[command]
+pub async fn scroll_screenshot_capture(
+    scroll_screenshot_service: tauri::State<'_, Mutex<ScrollScreenshotService>>,
+    monitor_x: i32,
+    monitor_y: i32,
+    min_x: u32,
+    min_y: u32,
+    max_x: u32,
+    max_y: u32,
+    thumbnail_size: u32,
+) -> Result<Response, ()> {
+    let mut scroll_screenshot_service = match scroll_screenshot_service.lock() {
+        Ok(service) => service,
+        Err(_) => return Err(()),
+    };
+
+    let monitor = Monitor::from_point(monitor_x, monitor_y).unwrap();
+
+    // 区域截图
+    let image = match monitor.capture_region(min_x, min_y, max_x - min_x, max_y - min_y) {
+        Ok(image) => image,
+        Err(_) => return Err(()),
+    };
+
+    let handle_result =
+        scroll_screenshot_service.handle_image(image::DynamicImage::ImageRgba8(image));
+
+    let handle_result = match handle_result {
+        Some(result) => result,
+        None => return Ok(Response::new(vec![])),
+    };
+
+    let crop_image = match handle_result {
+        (edge_position, None) => {
+            return Ok(Response::new(edge_position.to_le_bytes().to_vec()));
+        }
+        (_, Some(ScrollImageList::Top)) => scroll_screenshot_service.top_image_list.last().unwrap(),
+        (_, Some(ScrollImageList::Bottom)) => {
+            scroll_screenshot_service.bottom_image_list.last().unwrap()
+        }
+    };
+
+    let mut buf = Vec::new();
+
+    let image_width = crop_image.width();
+    let image_height = crop_image.height();
+    let scale = if scroll_screenshot_service.current_direction == ScrollDirection::Vertical {
+        thumbnail_size as f32 / image_width as f32
+    } else {
+        thumbnail_size as f32 / image_height as f32
+    };
+
+    let thumbnail = crop_image.resize(
+        (image_width as f32 * scale) as u32,
+        (image_height as f32 * scale) as u32,
+        FilterType::Nearest,
+    );
+
+    thumbnail
+        .write_with_encoder(WebPEncoder::new_lossless(&mut buf))
+        .unwrap();
+
+    // 添加边缘位置信息到缓冲区末尾
+    buf.extend_from_slice(&handle_result.0.to_le_bytes());
+
+    Ok(Response::new(buf))
+}
+
+#[derive(Serialize)]
+pub struct ScrollScreenshotCaptureSize {
+    pub top_image_size: i32,
+    pub bottom_image_size: i32,
+}
+
+#[command]
+pub async fn scroll_screenshot_get_size(
+    scroll_screenshot_service: tauri::State<'_, Mutex<ScrollScreenshotService>>,
+) -> Result<ScrollScreenshotCaptureSize, ()> {
+    let scroll_screenshot_service = match scroll_screenshot_service.lock() {
+        Ok(service) => service,
+        Err(_) => return Err(()),
+    };
+
+    Ok(ScrollScreenshotCaptureSize {
+        top_image_size: scroll_screenshot_service.top_image_size,
+        bottom_image_size: scroll_screenshot_service.bottom_image_size,
+    })
+}

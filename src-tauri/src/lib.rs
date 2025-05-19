@@ -5,8 +5,11 @@ mod file;
 mod ocr;
 mod os;
 mod screenshot;
+mod scroll_screenshot;
+mod services;
 use std::sync::Mutex;
 
+use enigo::{Enigo, Settings};
 use ocr::OcrLiteWrap;
 use os::ui_automation::UIElements;
 use paddle_ocr_rs::ocr_lite::OcrLite;
@@ -18,6 +21,10 @@ pub fn run() {
         ocr_instance: Some(OcrLite::new()),
     };
     let ocr_instance = Mutex::new(ocr_instance);
+    let scroll_screenshot_service = Mutex::new(services::ScrollScreenshotService::new());
+
+    let enigo_instance = Enigo::new(&Settings::default()).unwrap();
+    let enigo_instance = Mutex::new(enigo_instance);
 
     let ui_elements = Mutex::new(UIElements::new());
     let auto_start_hide_window = Mutex::new(false);
@@ -51,6 +58,8 @@ pub fn run() {
         .manage(ui_elements)
         .manage(ocr_instance)
         .manage(auto_start_hide_window)
+        .manage(enigo_instance)
+        .manage(scroll_screenshot_service)
         .invoke_handler(tauri::generate_handler![
             screenshot::capture_current_monitor,
             screenshot::get_window_elements,
@@ -69,6 +78,10 @@ pub fn run() {
             core::auto_start_hide_window,
             core::get_selected_text,
             core::set_enable_proxy,
+            core::scroll_through,
+            scroll_screenshot::scroll_screenshot_init,
+            scroll_screenshot::scroll_screenshot_capture,
+            scroll_screenshot::scroll_screenshot_get_size,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

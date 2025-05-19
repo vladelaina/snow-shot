@@ -16,3 +16,8 @@
     cursor: none;
     pointer-events: none;
 }
+
+.drawLayerWrap {
+    height: 100%;
+    width: 100%;
+}

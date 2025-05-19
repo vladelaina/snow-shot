@@ -39,6 +39,7 @@ const ToolButtonCore: React.FC<{
             componentKey={componentKey}
             disableOnDrawing={disableOnDrawing}
             confirmTip={confirmTip}
+            enable={disable ? false : undefined}
         >
             <Button icon={icon} type={buttonType} onClick={onClick} disabled={disable} />
         </KeyEventWrap>

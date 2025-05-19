@@ -30,6 +30,7 @@ export enum KeyEventKey {
     RemoveTool = 'removeTool',
     ColorPickerCopy = 'colorPickerCopy',
     SaveTool = 'saveTool',
+    ScrollScreenshotTool = 'scrollScreenshotTool',
     CopyTool = 'copyTool',
     FixedTool = 'fixedTool',
     OcrDetectTool = 'ocrDetectTool',
@@ -110,6 +111,10 @@ export const defaultDrawToolbarKeyEventSettings: Record<KeyEventKey, KeyEventVal
     },
     [KeyEventKey.OcrDetectTool]: {
         hotKey: 'Ctrl+D',
+        unique: true,
+    },
+    [KeyEventKey.ScrollScreenshotTool]: {
+        hotKey: 'L',
         unique: true,
     },
     [KeyEventKey.SaveTool]: {

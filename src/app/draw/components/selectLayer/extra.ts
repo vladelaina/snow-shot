@@ -72,6 +72,7 @@ export const drawSelectRect = (
     drawElementMask?: {
         imageData: ImageData;
     },
+    enableScrollScreenshot?: boolean,
 ) => {
     const { min_x: rectMinX, min_y: rectMinY, max_x: rectMaxX, max_y: rectMaxY } = selectRect;
     const rectWidth = rectMaxX - rectMinX;
@@ -96,6 +97,10 @@ export const drawSelectRect = (
     canvasContext.fillRect(0, 0, monitorWidth, monitorHeight);
 
     canvasContext.clearRect(rectMinX, rectMinY, rectWidth, rectHeight);
+
+    if (enableScrollScreenshot) {
+        return;
+    }
 
     canvasContext.strokeStyle = MASK_CONTROL_BORDER_STROKE_COLOR;
     canvasContext.lineWidth = maskControlBorderStrokeWidth;
