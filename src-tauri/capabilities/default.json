@@ -19,6 +19,8 @@
         "core:window:allow-set-size",
         "core:window:allow-set-shadow",
         "core:window:allow-set-focus",
+        "core:webview:allow-set-webview-size",
+        "core:webview:allow-set-webview-zoom",
         "dialog:default",
         "dialog:allow-ask",
         "dialog:allow-confirm",

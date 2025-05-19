@@ -44,6 +44,7 @@ import { ScreenshotType } from '@/functions/screenshot';
 import { showWindow as showCurrentWindow } from '@/utils/window';
 import { setDrawWindowStyle, switchAlwaysOnTop } from '@/commands/screenshot';
 import { debounce } from 'es-toolkit';
+import { Webview } from '@tauri-apps/api/webview';
 
 const DrawCacheLayer = dynamic(
     async () => (await import('./components/drawCacheLayer')).DrawCacheLayer,
@@ -183,6 +184,8 @@ const DrawPageCore: React.FC = () => {
                 appWindow.setAlwaysOnTop(true),
                 appWindow.setPosition(new PhysicalPosition(monitorX, monitorY)),
                 appWindow.setSize(new PhysicalSize(monitorWidth, monitorHeight)),
+                Webview.getCurrent().setSize(new PhysicalSize(monitorWidth, monitorHeight)),
+                Webview.getCurrent().setZoom(1),
             ]);
 
             const browserScaleFactor = monitorWidth / window.screen.width;
