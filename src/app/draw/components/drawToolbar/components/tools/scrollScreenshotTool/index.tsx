@@ -6,6 +6,7 @@ import { scrollThrough } from '@/commands/core';
 import {
     SCROLL_SCREENSHOT_CAPTURE_RESULT_EXTRA_DATA_SIZE,
     ScrollDirection,
+    ScrollImageList,
     scrollScreenshotCapture,
     ScrollScreenshotCaptureResult,
     ScrollScreenshotCaptureSize,
@@ -166,37 +167,41 @@ export const ScrollScreenshot = () => {
         ],
     );
 
-    const captureImage = useCallback(async () => {
-        setLoading(true);
-        let captureResult: ScrollScreenshotCaptureResult;
+    const captureImage = useCallback(
+        async (scrollImageList: ScrollImageList) => {
+            setLoading(true);
+            let captureResult: ScrollScreenshotCaptureResult;
 
-        const rect = selectLayerActionRef.current!.getSelectRect()!;
-        try {
-            captureResult = await scrollScreenshotCapture(
-                imageBufferRef.current!.monitorX,
-                imageBufferRef.current!.monitorY,
-                rect.min_x,
-                rect.min_y,
-                rect.max_x,
-                rect.max_y,
-                THUMBNAIL_WIDTH * imageBufferRef.current!.monitorScaleFactor,
-            );
-        } catch (error) {
-            console.error(error);
-            message.error(intl.formatMessage({ id: 'draw.scrollScreenshot.captureError' }));
-            return;
-        }
+            const rect = selectLayerActionRef.current!.getSelectRect()!;
+            try {
+                captureResult = await scrollScreenshotCapture(
+                    scrollImageList,
+                    imageBufferRef.current!.monitorX,
+                    imageBufferRef.current!.monitorY,
+                    rect.min_x,
+                    rect.min_y,
+                    rect.max_x,
+                    rect.max_y,
+                    THUMBNAIL_WIDTH * imageBufferRef.current!.monitorScaleFactor,
+                );
+            } catch (error) {
+                console.error(error);
+                message.error(intl.formatMessage({ id: 'draw.scrollScreenshot.captureError' }));
+                return;
+            }
 
-        setLoading(false);
+            setLoading(false);
 
-        if (captureResult.edge_position === undefined) {
-            return;
-        }
+            if (captureResult.edge_position === undefined) {
+                return;
+            }
 
-        updateImageUrlList(captureResult);
-    }, [imageBufferRef, intl, message, selectLayerActionRef, setLoading, updateImageUrlList]);
+            updateImageUrlList(captureResult);
+        },
+        [imageBufferRef, intl, message, selectLayerActionRef, setLoading, updateImageUrlList],
+    );
     const captuerDebounce = useMemo(() => {
-        return debounce(captureImage, 512);
+        return debounce(captureImage, 256);
     }, [captureImage]);
 
     const init = useCallback(
@@ -212,14 +217,6 @@ export const ScrollScreenshot = () => {
             const scrollSettings = getAppSettings()[AppSettingsGroup.SystemScrollScreenshot];
             const maxSide = Math.max(scrollSettings.maxSide, scrollSettings.minSide);
 
-            console.log(`
-                scrollSettings.sampleRate: ${scrollSettings.sampleRate},
-                scrollSettings.minSide: ${scrollSettings.minSide},
-                maxSide: ${maxSide},
-                scrollSettings.imageFeatureThreshold: ${scrollSettings.imageFeatureThreshold},
-                scrollSettings.imageFeatureDescriptionLength: ${scrollSettings.imageFeatureDescriptionLength},
-            `);
-
             try {
                 await scrollScreenshotInit(
                     direction,
@@ -230,7 +227,9 @@ export const ScrollScreenshot = () => {
                     maxSide,
                     scrollSettings.imageFeatureThreshold,
                     scrollSettings.imageFeatureDescriptionLength,
-                    0,
+                    scrollDirectionRef.current === ScrollDirection.Horizontal
+                        ? Math.ceil((rect.max_x - rect.min_x) / 3)
+                        : Math.ceil((rect.max_y - rect.min_y) / 3),
                 );
             } catch (error) {
                 console.error(error);
@@ -241,9 +240,17 @@ export const ScrollScreenshot = () => {
             enableScrollThroughRef.current = true;
 
             // 初始化成功后，自动截取第一个片段
-            captureImage();
+            captureImage(ScrollImageList.Bottom);
         },
-        [captureImage, getAppSettings, imageBufferRef, intl, message, setPositionRect],
+        [
+            captureImage,
+            getAppSettings,
+            imageBufferRef,
+            intl,
+            message,
+            scrollDirectionRef,
+            setPositionRect,
+        ],
     );
 
     const pendingScrollThroughRef = useRef<boolean>(false);
@@ -270,7 +277,8 @@ export const ScrollScreenshot = () => {
                 return;
             }
 
-            captuerDebounce();
+            console.log(event.deltaY);
+            captuerDebounce(event.deltaY > 0 ? ScrollImageList.Bottom : ScrollImageList.Top);
         },
         [captuerDebounce, loadingRef, scrollDirectionRef],
     );

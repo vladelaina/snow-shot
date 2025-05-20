@@ -119,7 +119,7 @@ const DrawToolbarCore: React.FC<DrawToolbarProps> = ({
                     Math.min(
                         selectRect.max_x - selectRect.min_x,
                         selectRect.max_y - selectRect.min_y,
-                    ) < 200
+                    ) < 300
                 ) {
                     message.error(intl.formatMessage({ id: 'draw.scrollScreenshot.limitTip' }));
                     return;
