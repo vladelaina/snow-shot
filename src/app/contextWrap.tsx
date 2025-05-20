@@ -39,7 +39,7 @@ export enum AppSettingsGroup {
     SystemCommon = 'systemCommon',
     SystemChat = 'systemChat',
     SystemNetwork = 'systemNetwork',
-    SystemScrollScreenshot = 'systemScrollScreenshot',
+    SystemScrollScreenshot = 'systemScrollScreenshot_20250520',
     FunctionChat = 'functionChat',
     FunctionTranslation = 'functionTranslation',
     FunctionScreenshot = 'functionScreenshot',
@@ -164,11 +164,11 @@ export const defaultAppSettingsData: AppSettingsData = {
         beyondSelectRectElementOpacity: 100,
     },
     [AppSettingsGroup.SystemScrollScreenshot]: {
-        imageFeatureThreshold: 64,
-        minSide: 256,
-        maxSide: 512,
+        imageFeatureThreshold: 16,
+        minSide: 0,
+        maxSide: 4096,
         sampleRate: 1,
-        imageFeatureDescriptionLength: 8,
+        imageFeatureDescriptionLength: 24,
     },
 };
 
@@ -666,7 +666,7 @@ const ContextWrapCore: React.FC<{ children: React.ReactNode }> = ({ children }) 
                               defaultAppSettingsData[group].imageFeatureThreshold),
                     minSide:
                         typeof newSettings?.minSide === 'number'
-                            ? Math.min(Math.max(newSettings.minSide, 64), 4096)
+                            ? Math.min(Math.max(newSettings.minSide, 0), 4096)
                             : (prevSettings?.minSide ?? defaultAppSettingsData[group].minSide),
                     maxSide:
                         typeof newSettings?.maxSide === 'number'
@@ -679,7 +679,7 @@ const ContextWrapCore: React.FC<{ children: React.ReactNode }> = ({ children }) 
                               defaultAppSettingsData[group].sampleRate),
                     imageFeatureDescriptionLength:
                         typeof newSettings?.imageFeatureDescriptionLength === 'number'
-                            ? Math.min(Math.max(newSettings.imageFeatureDescriptionLength, 0), 32)
+                            ? Math.min(Math.max(newSettings.imageFeatureDescriptionLength, 8), 128)
                             : (prevSettings?.imageFeatureDescriptionLength ??
                               defaultAppSettingsData[group].imageFeatureDescriptionLength),
                 };

@@ -285,11 +285,11 @@ export default function SystemSettings() {
                                 }
                                 name="minSide"
                                 min={64}
-                                max={4096}
+                                max={1024}
                                 step={1}
                                 marks={{
                                     64: '64',
-                                    4096: '4096',
+                                    1024: '1024',
                                 }}
                             />
                         </Col>
@@ -328,12 +328,12 @@ export default function SystemSettings() {
                                     />
                                 }
                                 name="imageFeatureDescriptionLength"
-                                min={2}
-                                max={32}
+                                min={8}
+                                max={128}
                                 step={1}
                                 marks={{
-                                    2: '2',
-                                    32: '32',
+                                    8: '8',
+                                    128: '128',
                                 }}
                             />
                         </Col>

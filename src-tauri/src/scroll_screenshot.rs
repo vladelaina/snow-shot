@@ -1,8 +1,8 @@
 use image::{codecs::webp::WebPEncoder, imageops::FilterType};
 use serde::Serialize;
 use std::sync::Mutex;
-use tauri::{command, image::Image};
 use tauri::ipc::Response;
+use tauri::{command, image::Image};
 use tauri_plugin_clipboard_manager::ClipboardExt;
 use xcap::Monitor;
 
@@ -44,6 +44,7 @@ pub async fn scroll_screenshot_init(
 #[command]
 pub async fn scroll_screenshot_capture(
     scroll_screenshot_service: tauri::State<'_, Mutex<ScrollScreenshotService>>,
+    scroll_image_list: ScrollImageList,
     monitor_x: i32,
     monitor_y: i32,
     min_x: u32,
@@ -65,8 +66,8 @@ pub async fn scroll_screenshot_capture(
         Err(_) => return Err(()),
     };
 
-    let handle_result =
-        scroll_screenshot_service.handle_image(image::DynamicImage::ImageRgba8(image));
+    let handle_result = scroll_screenshot_service
+        .handle_image(image::DynamicImage::ImageRgba8(image), scroll_image_list);
 
     let handle_result = match handle_result {
         Some(result) => result,
@@ -165,12 +166,13 @@ pub async fn scroll_screenshot_save_to_clipboard(
     match image {
         Some(image) => {
             let rgba_image = image.to_rgba8();
-            app.clipboard().write_image(&Image::new(
-                rgba_image.as_raw(),
-                rgba_image.width(),
-                rgba_image.height(),
-            ))
-            .unwrap();
+            app.clipboard()
+                .write_image(&Image::new(
+                    rgba_image.as_raw(),
+                    rgba_image.width(),
+                    rgba_image.height(),
+                ))
+                .unwrap();
         }
         None => return Err(()),
     }

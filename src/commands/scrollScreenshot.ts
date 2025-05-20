@@ -7,6 +7,13 @@ export enum ScrollDirection {
     Horizontal = 'Horizontal',
 }
 
+export enum ScrollImageList {
+    /// 上图片列表
+    Top = 'Top',
+    /// 下图片列表
+    Bottom = 'Bottom',
+}
+
 export const scrollScreenshotInit = async (
     direction: ScrollDirection,
     imageWidth: number,
@@ -43,6 +50,7 @@ export const SCROLL_SCREENSHOT_CAPTURE_RESULT_EXTRA_DATA_SIZE = 4;
  * @returns WebP 的 buffer 数据
  */
 export const scrollScreenshotCapture = async (
+    scrollImageList: ScrollImageList,
     monitorX: number,
     monitorY: number,
     minX: number,
@@ -52,6 +60,7 @@ export const scrollScreenshotCapture = async (
     thumbnailSize: number,
 ) => {
     const result = await invoke<ArrayBuffer>('scroll_screenshot_capture', {
+        scrollImageList,
         monitorX,
         monitorY,
         minX,
