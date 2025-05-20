@@ -6,7 +6,7 @@ import React from 'react';
 import { DrawState } from '@/app/draw/types';
 import { ToolButton } from '../toolButton';
 
-const HistoryControlsCore = () => {
+const HistoryControlsCore: React.FC<{ disable: boolean }> = ({ disable }) => {
     const { history } = useHistory();
     const [canUndo, setCanUndo] = useState(false);
     const [canRedo, setCanRedo] = useState(false);
@@ -30,7 +30,7 @@ const HistoryControlsCore = () => {
                 icon={<UndoOutlined />}
                 disableOnDrawing
                 drawState={DrawState.Undo}
-                disable={!canUndo}
+                disable={!canUndo || disable}
                 onClick={() => {
                     history.undo();
                 }}
@@ -42,7 +42,7 @@ const HistoryControlsCore = () => {
                 icon={<RedoOutlined />}
                 disableOnDrawing
                 drawState={DrawState.Redo}
-                disable={!canRedo}
+                disable={!canRedo || disable}
                 onClick={() => {
                     history.redo();
                 }}

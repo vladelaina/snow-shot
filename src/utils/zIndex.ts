@@ -20,6 +20,8 @@ export const zIndexs = {
     Draw_OcrResult: 106,
     /** 截图选择图层 */
     Draw_SelectLayer: 107,
+    /** 截图滚动截图缩略图 */
+    Draw_ScrollScreenshotThumbnail: 108,
 
     /** 截图绘制工具层 */
     Draw_BaseTool: 200,

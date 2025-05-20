@@ -17,7 +17,6 @@ export function useStateSubscriber<Value>(
                 return;
             }
 
-            stateRef.current = value;
             publish(value);
         },
         [stateRef, publish],

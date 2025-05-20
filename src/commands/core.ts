@@ -12,3 +12,10 @@ export const setEnableProxy = async (enable: boolean) => {
     });
     return result;
 };
+
+export const scrollThrough = async (length: number) => {
+    const result = await invoke<void>('scroll_through', {
+        length,
+    });
+    return result;
+};

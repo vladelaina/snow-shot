@@ -1,13 +1,26 @@
 import { MousePosition } from '@/utils/mousePosition';
-import { DrawContext } from '@/app/draw/types';
+import { DrawContext, DrawState } from '@/app/draw/types';
 import { zIndexs } from '@/utils/zIndex';
 import { Flex, theme } from 'antd';
-import React, { useCallback, useContext, useImperativeHandle, useRef, useState } from 'react';
+import React, {
+    useCallback,
+    useContext,
+    useImperativeHandle,
+    useMemo,
+    useRef,
+    useState,
+} from 'react';
 import { updateElementPosition } from '../../../drawToolbar/components/dragButton/extra';
 import { ElementRect } from '@/commands';
-import { CaptureEvent, CaptureEventPublisher, ScreenshotTypePublisher } from '@/app/draw/extra';
+import {
+    CaptureEvent,
+    CaptureEventPublisher,
+    DrawStatePublisher,
+    ScreenshotTypePublisher,
+} from '@/app/draw/extra';
 import { useStateSubscriber } from '@/hooks/useStateSubscriber';
 import { ScreenshotType } from '@/functions/screenshot';
+import { debounce } from 'es-toolkit';
 
 export type ResizeToolbarActionType = {
     updateStyle: (selectedRect: ElementRect) => void;
@@ -53,25 +66,24 @@ export const ResizeToolbar: React.FC<{
         [imageBufferRef, token.marginXXS],
     );
 
-    const setEnable = useCallback(
-        (enable: boolean) => {
-            const resizeToolbar = resizeToolbarRef.current;
-            if (!resizeToolbar) {
-                return;
-            }
+    const setEnable = useCallback((enable: boolean) => {
+        const resizeToolbar = resizeToolbarRef.current;
+        if (!resizeToolbar) {
+            return;
+        }
 
-            if (enable) {
-                resizeToolbar.style.opacity = '1';
-                updateStyle({ min_x: 0, min_y: 0, max_x: 0, max_y: 0 });
-            } else {
-                resizeToolbar.style.opacity = '0';
-            }
-        },
-        [updateStyle],
-    );
+        if (enable) {
+            resizeToolbar.style.opacity = '1';
+        } else {
+            resizeToolbar.style.opacity = '0';
+        }
+    }, []);
 
     const [getScreenshotType] = useStateSubscriber(ScreenshotTypePublisher, undefined);
-    useStateSubscriber(CaptureEventPublisher, (event) => {
+    const [getCaptureEvent] = useStateSubscriber(CaptureEventPublisher, undefined);
+    const [getDrawState] = useStateSubscriber(DrawStatePublisher, undefined);
+    const updateEnable = useCallback(() => {
+        const event = getCaptureEvent();
         if (!event) {
             return;
         }
@@ -81,12 +93,23 @@ export const ResizeToolbar: React.FC<{
             return;
         }
 
+        let isEnable = false;
         if (event.event === CaptureEvent.onCaptureReady) {
-            setEnable(true);
+            updateStyle({ min_x: 0, min_y: 0, max_x: 0, max_y: 0 });
+            isEnable = true;
         } else if (event.event === CaptureEvent.onCaptureFinish) {
-            setEnable(false);
+            isEnable = false;
+        } else if (event.event === CaptureEvent.onCaptureLoad) {
+            isEnable = getDrawState() === DrawState.Idle;
         }
-    });
+
+        setEnable(isEnable);
+    }, [getCaptureEvent, getDrawState, getScreenshotType, setEnable, updateStyle]);
+    const updateEnableDebounce = useMemo(() => {
+        return debounce(updateEnable, 0);
+    }, [updateEnable]);
+    useStateSubscriber(CaptureEventPublisher, updateEnableDebounce);
+    useStateSubscriber(DrawStatePublisher, updateEnableDebounce);
 
     useImperativeHandle(actionRef, () => {
         return {
