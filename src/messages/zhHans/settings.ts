@@ -87,4 +87,21 @@ export const settings = {
         '超出选区范围的元素透明度',
     'settings.functionSettings.screenshotSettings.beyondSelectRectElementOpacity.tip':
         '选定截图区域后，绘制的元素在超出选区范围时显示的透明度',
+    'settings.systemSettings.scrollScreenshotSettings': '滚动截图设置',
+    'settings.systemSettings.scrollScreenshotSettings.imageFeatureThreshold': '图片特征阈值',
+    'settings.systemSettings.scrollScreenshotSettings.imageFeatureThreshold.tip':
+        '值越大，选取特征点的要求越高，采用 FAST 算法（https://en.wikipedia.org/wiki/Features_from_accelerated_segment_test）',
+    'settings.systemSettings.scrollScreenshotSettings.minSide': '采样最小边长',
+    'settings.systemSettings.scrollScreenshotSettings.minSide.tip':
+        '截取的图片尺寸低于该值则不做处理',
+    'settings.systemSettings.scrollScreenshotSettings.maxSide': '采样最大边长',
+    'settings.systemSettings.scrollScreenshotSettings.maxSide.tip':
+        '截取的图片尺寸高于该值则进行缩放',
+    'settings.systemSettings.scrollScreenshotSettings.sampleRate': '采样率',
+    'settings.systemSettings.scrollScreenshotSettings.sampleRate.tip':
+        '截图尺寸高度小于最小边长且小于采样最大边长时，对图片的缩放比例',
+    'settings.systemSettings.scrollScreenshotSettings.imageFeatureDescriptionLength':
+        '图片特征描述大小',
+    'settings.systemSettings.scrollScreenshotSettings.imageFeatureDescriptionLength.tip':
+        '如果是 8 则以特征点为中心选取 8x8 的区域进行比较',
 };

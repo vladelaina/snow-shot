@@ -30,6 +30,7 @@ pub fn run() {
     let auto_start_hide_window = Mutex::new(false);
 
     tauri::Builder::default()
+        .plugin(tauri_plugin_clipboard_manager::init())
         .plugin(tauri_plugin_store::Builder::new().build())
         .plugin(tauri_plugin_http::init())
         .plugin(tauri_plugin_autostart::init(
@@ -81,6 +82,8 @@ pub fn run() {
             core::scroll_through,
             scroll_screenshot::scroll_screenshot_init,
             scroll_screenshot::scroll_screenshot_capture,
+            scroll_screenshot::scroll_screenshot_save_to_file,
+            scroll_screenshot::scroll_screenshot_save_to_clipboard,
             scroll_screenshot::scroll_screenshot_get_size,
         ])
         .run(tauri::generate_context!())

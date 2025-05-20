@@ -1,8 +1,9 @@
 use image::{codecs::webp::WebPEncoder, imageops::FilterType};
 use serde::Serialize;
 use std::sync::Mutex;
-use tauri::command;
+use tauri::{command, image::Image};
 use tauri::ipc::Response;
+use tauri_plugin_clipboard_manager::ClipboardExt;
 use xcap::Monitor;
 
 use crate::services::{ScrollDirection, ScrollImageList, ScrollScreenshotService};
@@ -127,4 +128,52 @@ pub async fn scroll_screenshot_get_size(
         top_image_size: scroll_screenshot_service.top_image_size,
         bottom_image_size: scroll_screenshot_service.bottom_image_size,
     })
+}
+
+#[command]
+pub async fn scroll_screenshot_save_to_file(
+    scroll_screenshot_service: tauri::State<'_, Mutex<ScrollScreenshotService>>,
+    file_path: String,
+) -> Result<(), ()> {
+    let scroll_screenshot_service = match scroll_screenshot_service.lock() {
+        Ok(service) => service,
+        Err(_) => return Err(()),
+    };
+
+    let image = scroll_screenshot_service.export();
+    match image {
+        Some(image) => {
+            image.save(file_path).unwrap();
+        }
+        None => return Err(()),
+    }
+
+    Ok(())
+}
+
+#[command]
+pub async fn scroll_screenshot_save_to_clipboard(
+    app: tauri::AppHandle,
+    scroll_screenshot_service: tauri::State<'_, Mutex<ScrollScreenshotService>>,
+) -> Result<(), ()> {
+    let scroll_screenshot_service = match scroll_screenshot_service.lock() {
+        Ok(service) => service,
+        Err(_) => return Err(()),
+    };
+
+    let image = scroll_screenshot_service.export();
+    match image {
+        Some(image) => {
+            let rgba_image = image.to_rgba8();
+            app.clipboard().write_image(&Image::new(
+                rgba_image.as_raw(),
+                rgba_image.width(),
+                rgba_image.height(),
+            ))
+            .unwrap();
+        }
+        None => return Err(()),
+    }
+
+    Ok(())
 }

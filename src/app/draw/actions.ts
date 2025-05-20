@@ -2,16 +2,11 @@ import { DrawLayerActionType } from './components/drawLayer';
 import { SelectLayerActionType } from './components/selectLayer';
 import { DrawCacheLayerActionType } from './components/drawCacheLayer/extra';
 import { createDrawWindow, ElementRect, ImageBuffer, saveFile } from '@/commands';
-import dayjs from 'dayjs';
-import * as dialog from '@tauri-apps/plugin-dialog';
 import { Window as AppWindow, PhysicalPosition, PhysicalSize } from '@tauri-apps/api/window';
 import { CaptureStep } from './types';
 import { FixedImageActionType } from './components/fixedImage';
 import { OcrBlocksActionType } from './components/ocrBlocks';
-
-export const generateImageFileName = () => {
-    return `SnowShot_${dayjs().format('YYYY-MM-DD_HH-mm-ss')}`;
-};
+import { showImageDialog } from '@/utils/file';
 
 export const getCanvas = async (
     selectRect: ElementRect,
@@ -56,26 +51,9 @@ export const saveToFile = async (
 
     const canvasPromise = getCanvas(selectRect, drawLayerAction, drawCacheLayerAction);
 
-    const filePath = await dialog.save({
-        filters: [
-            {
-                name: 'PNG(*.png)',
-                extensions: ['png'],
-            },
-            {
-                name: 'JPEG(*.jpg)',
-                extensions: ['jpg'],
-            },
-            {
-                name: 'WebP(*.webp)',
-                extensions: ['webp'],
-            },
-        ],
-        defaultPath: generateImageFileName(),
-        canCreateDirectories: true,
-    });
+    const imagePath = await showImageDialog();
 
-    if (!filePath) {
+    if (!imagePath) {
         return;
     }
 
@@ -85,15 +63,8 @@ export const saveToFile = async (
                 return;
             }
 
-            let imageType = 'image/png';
-            if (filePath.endsWith('.jpg')) {
-                imageType = 'image/jpeg';
-            } else if (filePath.endsWith('.webp')) {
-                imageType = 'image/webp';
-            }
-
             return new Promise<Blob | null>((resolve) => {
-                canvas.toBlob(resolve, imageType, 1);
+                canvas.toBlob(resolve, imagePath.imageFormat, 1);
             });
         })
         .then((blob) => {
@@ -105,7 +76,7 @@ export const saveToFile = async (
         });
 
     if (beforeSaveFile) {
-        await beforeSaveFile(filePath);
+        await beforeSaveFile(imagePath.filePath);
     }
 
     const imageData = await imageDataPromise;
@@ -114,7 +85,7 @@ export const saveToFile = async (
         return;
     }
 
-    await saveFile(filePath, imageData);
+    await saveFile(imagePath.filePath, imageData);
 };
 
 export const fixedToScreen = async (

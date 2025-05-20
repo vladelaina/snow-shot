@@ -29,6 +29,7 @@ import {
 import { useIntl } from 'react-intl';
 import { SubTools } from './components/subTools';
 import { RotateIcon } from '@/components/icons';
+import { AppSettingsGroup, AppSettingsPublisher } from '@/app/contextWrap';
 
 const THUMBNAIL_WIDTH = 128;
 
@@ -42,6 +43,7 @@ export const ScrollScreenshot = () => {
     const [positionRect, setPositionRect, positionRectRef] = useStateRef<ElementRect | undefined>(
         undefined,
     );
+    const [getAppSettings] = useStateSubscriber(AppSettingsPublisher, undefined);
 
     const enableScrollThroughRef = useRef(false);
     const scrollRef = useRef<HTMLDivElement>(null);
@@ -94,9 +96,6 @@ export const ScrollScreenshot = () => {
     const updateImageUrlList = useCallback(
         async (captureResult: ScrollScreenshotCaptureResult) => {
             const currentScrollSize = await scrollScreenshotGetSize();
-
-            console.log('currentScrollSize', currentScrollSize);
-            console.log('captureResult', captureResult);
 
             const edgePosition = captureResult.edge_position!;
 
@@ -197,7 +196,7 @@ export const ScrollScreenshot = () => {
         updateImageUrlList(captureResult);
     }, [imageBufferRef, intl, message, selectLayerActionRef, setLoading, updateImageUrlList]);
     const captuerDebounce = useMemo(() => {
-        return debounce(captureImage, 1000);
+        return debounce(captureImage, 512);
     }, [captureImage]);
 
     const init = useCallback(
@@ -210,16 +209,27 @@ export const ScrollScreenshot = () => {
                 max_y: rect.max_y * scale,
             });
 
+            const scrollSettings = getAppSettings()[AppSettingsGroup.SystemScrollScreenshot];
+            const maxSide = Math.max(scrollSettings.maxSide, scrollSettings.minSide);
+
+            console.log(`
+                scrollSettings.sampleRate: ${scrollSettings.sampleRate},
+                scrollSettings.minSide: ${scrollSettings.minSide},
+                maxSide: ${maxSide},
+                scrollSettings.imageFeatureThreshold: ${scrollSettings.imageFeatureThreshold},
+                scrollSettings.imageFeatureDescriptionLength: ${scrollSettings.imageFeatureDescriptionLength},
+            `);
+
             try {
                 await scrollScreenshotInit(
                     direction,
                     rect.max_x - rect.min_x,
                     rect.max_y - rect.min_y,
-                    1,
-                    256,
-                    512,
-                    64,
-                    8,
+                    scrollSettings.sampleRate,
+                    scrollSettings.minSide,
+                    maxSide,
+                    scrollSettings.imageFeatureThreshold,
+                    scrollSettings.imageFeatureDescriptionLength,
                     0,
                 );
             } catch (error) {
@@ -233,7 +243,7 @@ export const ScrollScreenshot = () => {
             // 初始化成功后，自动截取第一个片段
             captureImage();
         },
-        [captureImage, imageBufferRef, intl, message, setPositionRect],
+        [captureImage, getAppSettings, imageBufferRef, intl, message, setPositionRect],
     );
 
     const pendingScrollThroughRef = useRef<boolean>(false);

@@ -1,7 +1,7 @@
 'use client';
 
 import { GroupTitle } from '@/components/groupTitle';
-import { Form, Spin, Switch } from 'antd';
+import { Col, Form, Row, Spin, Switch, theme } from 'antd';
 import { AppSettingsActionContext, AppSettingsData, AppSettingsGroup } from '../../contextWrap';
 import { useCallback, useContext, useState } from 'react';
 import { useAppSettingsLoad } from '@/hooks/useAppSettingsLoad';
@@ -12,9 +12,13 @@ import { ResetSettingsButton } from '@/components/resetSettingsButton';
 import ProForm, { ProFormSlider } from '@ant-design/pro-form';
 
 export default function SystemSettings() {
+    const { token } = theme.useToken();
+
     const { updateAppSettings } = useContext(AppSettingsActionContext);
     const [commonForm] = Form.useForm<AppSettingsData[AppSettingsGroup.SystemCommon]>();
     const [renderForm] = Form.useForm<AppSettingsData[AppSettingsGroup.Render]>();
+    const [scrollScreenshotForm] =
+        Form.useForm<AppSettingsData[AppSettingsGroup.SystemScrollScreenshot]>();
     const [chatForm] = Form.useForm<AppSettingsData[AppSettingsGroup.SystemChat]>();
     const [networkForm] = Form.useForm<AppSettingsData[AppSettingsGroup.SystemNetwork]>();
 
@@ -54,8 +58,18 @@ export default function SystemSettings() {
                 ) {
                     networkForm.setFieldsValue(settings[AppSettingsGroup.SystemNetwork]);
                 }
+
+                if (
+                    preSettings === undefined ||
+                    preSettings[AppSettingsGroup.SystemScrollScreenshot] !==
+                        settings[AppSettingsGroup.SystemScrollScreenshot]
+                ) {
+                    scrollScreenshotForm.setFieldsValue(
+                        settings[AppSettingsGroup.SystemScrollScreenshot],
+                    );
+                }
             },
-            [renderForm, commonForm, chatForm, networkForm],
+            [renderForm, commonForm, chatForm, networkForm, scrollScreenshotForm],
         ),
         true,
     );
@@ -183,6 +197,151 @@ export default function SystemSettings() {
             </Spin>
 
             <GroupTitle
+                id="scrollScreenshotSettings"
+                extra={
+                    <ResetSettingsButton
+                        title={
+                            <FormattedMessage id="settings.systemSettings.scrollScreenshotSettings" />
+                        }
+                        appSettingsGroup={AppSettingsGroup.SystemScrollScreenshot}
+                    />
+                }
+            >
+                <FormattedMessage id="settings.systemSettings.scrollScreenshotSettings" />
+            </GroupTitle>
+
+            <Spin spinning={appSettingsLoading}>
+                <ProForm
+                    form={scrollScreenshotForm}
+                    onValuesChange={(_, values) => {
+                        updateAppSettings(
+                            AppSettingsGroup.SystemScrollScreenshot,
+                            values,
+                            true,
+                            true,
+                            true,
+                            true,
+                        );
+                    }}
+                    submitter={false}
+                    layout="vertical"
+                >
+                    <Row gutter={token.margin}>
+                        <Col span={12}>
+                            <ProFormSlider
+                                label={
+                                    <IconLabel
+                                        label={
+                                            <FormattedMessage id="settings.systemSettings.scrollScreenshotSettings.imageFeatureThreshold" />
+                                        }
+                                        tooltipTitle={
+                                            <FormattedMessage id="settings.systemSettings.scrollScreenshotSettings.imageFeatureThreshold.tip" />
+                                        }
+                                    />
+                                }
+                                name="imageFeatureThreshold"
+                                min={0}
+                                max={255}
+                                step={1}
+                                marks={{
+                                    0: '0',
+                                    255: '255',
+                                }}
+                            />
+                        </Col>
+                        <Col span={12}>
+                            <ProFormSlider
+                                label={
+                                    <IconLabel
+                                        label={
+                                            <FormattedMessage id="settings.systemSettings.scrollScreenshotSettings.sampleRate" />
+                                        }
+                                        tooltipTitle={
+                                            <FormattedMessage id="settings.systemSettings.scrollScreenshotSettings.sampleRate.tip" />
+                                        }
+                                    />
+                                }
+                                name="sampleRate"
+                                min={0}
+                                max={1}
+                                step={0.1}
+                                marks={{
+                                    0: '0.1',
+                                    1: '1',
+                                }}
+                            />
+                        </Col>
+                        <Col span={12}>
+                            <ProFormSlider
+                                label={
+                                    <IconLabel
+                                        label={
+                                            <FormattedMessage id="settings.systemSettings.scrollScreenshotSettings.minSide" />
+                                        }
+                                        tooltipTitle={
+                                            <FormattedMessage id="settings.systemSettings.scrollScreenshotSettings.minSide.tip" />
+                                        }
+                                    />
+                                }
+                                name="minSide"
+                                min={64}
+                                max={4096}
+                                step={1}
+                                marks={{
+                                    64: '64',
+                                    4096: '4096',
+                                }}
+                            />
+                        </Col>
+                        <Col span={12}>
+                            <ProFormSlider
+                                label={
+                                    <IconLabel
+                                        label={
+                                            <FormattedMessage id="settings.systemSettings.scrollScreenshotSettings.maxSide" />
+                                        }
+                                        tooltipTitle={
+                                            <FormattedMessage id="settings.systemSettings.scrollScreenshotSettings.maxSide.tip" />
+                                        }
+                                    />
+                                }
+                                name="maxSide"
+                                min={64}
+                                max={4096}
+                                step={1}
+                                marks={{
+                                    64: '64',
+                                    4096: '4096',
+                                }}
+                            />
+                        </Col>
+                        <Col span={12}>
+                            <ProFormSlider
+                                label={
+                                    <IconLabel
+                                        label={
+                                            <FormattedMessage id="settings.systemSettings.scrollScreenshotSettings.imageFeatureDescriptionLength" />
+                                        }
+                                        tooltipTitle={
+                                            <FormattedMessage id="settings.systemSettings.scrollScreenshotSettings.imageFeatureDescriptionLength.tip" />
+                                        }
+                                    />
+                                }
+                                name="imageFeatureDescriptionLength"
+                                min={2}
+                                max={32}
+                                step={1}
+                                marks={{
+                                    2: '2',
+                                    32: '32',
+                                }}
+                            />
+                        </Col>
+                    </Row>
+                </ProForm>
+            </Spin>
+
+            <GroupTitle
                 id="chatSettings"
                 extra={
                     <ResetSettingsButton
@@ -209,26 +368,7 @@ export default function SystemSettings() {
                     }}
                     submitter={false}
                 >
-                    <ProFormSlider
-                        label={
-                            <IconLabel
-                                label={<FormattedMessage id="settings.chatSettings.maxTokens" />}
-                                tooltipTitle={
-                                    <FormattedMessage id="settings.chatSettings.maxTokens.tip" />
-                                }
-                            />
-                        }
-                        name="maxTokens"
-                        min={512}
-                        max={8192}
-                        step={128}
-                        marks={{
-                            512: '512',
-                            4096: '4096',
-                            8192: '8192',
-                        }}
-                    />
-
+         
                     <ProFormSlider
                         label={
                             <IconLabel

@@ -44,6 +44,9 @@ import { ScreenshotType } from '@/functions/screenshot';
 import { showWindow as showCurrentWindow } from '@/utils/window';
 import { setDrawWindowStyle, switchAlwaysOnTop } from '@/commands/screenshot';
 import { debounce } from 'es-toolkit';
+import { scrollScreenshotSaveToClipboard } from '@/commands/scrollScreenshot';
+import { showImageDialog } from '@/utils/file';
+import { scrollScreenshotSaveToFile } from '@/commands/scrollScreenshot';
 
 const DrawCacheLayer = dynamic(
     async () => (await import('./components/drawCacheLayer')).DrawCacheLayer,
@@ -278,6 +281,17 @@ const DrawPageCore: React.FC = () => {
     );
 
     const onSave = useCallback(async () => {
+        if (getDrawState() === DrawState.ScrollScreenshot) {
+            const imagePath = await showImageDialog();
+            if (!imagePath) {
+                return;
+            }
+
+            scrollScreenshotSaveToFile(imagePath.filePath);
+            finishCapture();
+            return;
+        }
+
         if (
             !selectLayerActionRef.current ||
             !drawLayerActionRef.current ||
@@ -294,7 +308,7 @@ const DrawPageCore: React.FC = () => {
                 finishCapture();
             },
         );
-    }, [finishCapture]);
+    }, [finishCapture, getDrawState]);
 
     const onFixed = useCallback(async () => {
         if (
@@ -355,6 +369,12 @@ const DrawPageCore: React.FC = () => {
     }, []);
 
     const onCopyToClipboard = useCallback(async () => {
+        if (getDrawState() === DrawState.ScrollScreenshot) {
+            scrollScreenshotSaveToClipboard();
+            finishCapture();
+            return;
+        }
+
         const selected = window.getSelection();
         if (getDrawState() === DrawState.OcrDetect && selected && selected.toString()) {
             navigator.clipboard.writeText(selected.toString());

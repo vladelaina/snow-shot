@@ -48,6 +48,8 @@ imageproc = "0.25.0"
 rayon = "1.10.0"
 fast_image_resize = { version = "5.1.4", features = ["rayon"] }
 bytemuck = "1.23.0"
+tauri-plugin-clipboard-manager = "2"
+clipboard-rs = "0.2.4"
 
 [target.'cfg(not(any(target_os = "android", target_os = "ios")))'.dependencies]
 tauri-plugin-autostart = "2"

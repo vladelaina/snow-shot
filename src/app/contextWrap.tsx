@@ -39,6 +39,7 @@ export enum AppSettingsGroup {
     SystemCommon = 'systemCommon',
     SystemChat = 'systemChat',
     SystemNetwork = 'systemNetwork',
+    SystemScrollScreenshot = 'systemScrollScreenshot',
     FunctionChat = 'functionChat',
     FunctionTranslation = 'functionTranslation',
     FunctionScreenshot = 'functionScreenshot',
@@ -108,6 +109,13 @@ export type AppSettingsData = {
         /** 超出选区范围的元素透明度 */
         beyondSelectRectElementOpacity: number;
     };
+    [AppSettingsGroup.SystemScrollScreenshot]: {
+        minSide: number;
+        maxSide: number;
+        sampleRate: number;
+        imageFeatureDescriptionLength: number;
+        imageFeatureThreshold: number;
+    };
 };
 
 export const defaultAppSettingsData: AppSettingsData = {
@@ -154,6 +162,13 @@ export const defaultAppSettingsData: AppSettingsData = {
         findChildrenElements: true,
         alwaysShowColorPicker: false,
         beyondSelectRectElementOpacity: 100,
+    },
+    [AppSettingsGroup.SystemScrollScreenshot]: {
+        imageFeatureThreshold: 64,
+        minSide: 256,
+        maxSide: 512,
+        sampleRate: 1,
+        imageFeatureDescriptionLength: 8,
     },
 };
 
@@ -636,6 +651,37 @@ const ContextWrapCore: React.FC<{ children: React.ReactNode }> = ({ children }) 
                             ? Math.min(Math.max(newSettings.beyondSelectRectElementOpacity, 0), 100)
                             : (prevSettings?.beyondSelectRectElementOpacity ??
                               defaultAppSettingsData[group].beyondSelectRectElementOpacity),
+                };
+            } else if (group === AppSettingsGroup.SystemScrollScreenshot) {
+                newSettings = newSettings as AppSettingsData[typeof group];
+                const prevSettings = appSettingsRef.current[group] as
+                    | AppSettingsData[typeof group]
+                    | undefined;
+
+                settings = {
+                    imageFeatureThreshold:
+                        typeof newSettings?.imageFeatureThreshold === 'number'
+                            ? Math.min(Math.max(newSettings.imageFeatureThreshold, 0), 255)
+                            : (prevSettings?.imageFeatureThreshold ??
+                              defaultAppSettingsData[group].imageFeatureThreshold),
+                    minSide:
+                        typeof newSettings?.minSide === 'number'
+                            ? Math.min(Math.max(newSettings.minSide, 64), 4096)
+                            : (prevSettings?.minSide ?? defaultAppSettingsData[group].minSide),
+                    maxSide:
+                        typeof newSettings?.maxSide === 'number'
+                            ? Math.min(Math.max(newSettings.maxSide, 64), 4096)
+                            : (prevSettings?.maxSide ?? defaultAppSettingsData[group].maxSide),
+                    sampleRate:
+                        typeof newSettings?.sampleRate === 'number'
+                            ? Math.min(Math.max(newSettings.sampleRate, 0.1), 1)
+                            : (prevSettings?.sampleRate ??
+                              defaultAppSettingsData[group].sampleRate),
+                    imageFeatureDescriptionLength:
+                        typeof newSettings?.imageFeatureDescriptionLength === 'number'
+                            ? Math.min(Math.max(newSettings.imageFeatureDescriptionLength, 0), 32)
+                            : (prevSettings?.imageFeatureDescriptionLength ??
+                              defaultAppSettingsData[group].imageFeatureDescriptionLength),
                 };
             } else {
                 return defaultAppSettingsData[group];

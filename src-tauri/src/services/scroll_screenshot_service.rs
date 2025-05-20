@@ -452,6 +452,7 @@ impl ScrollScreenshotService {
             ));
         }
 
+        let max_dist = self.descriptor_patch_size as f32 / 8.0;
         let offsets: Vec<(ScrollOffset, usize, usize)> = current_descriptors
             .par_iter()
             .enumerate()
@@ -465,7 +466,7 @@ impl ScrollScreenshotService {
                 let dist =
                     Self::euclidean_distance(&self.image_corners_descriptors[idx1], descriptor);
 
-                if dist < 1.0 {
+                if dist < max_dist {
                     let point1 = &self.image_corners[idx1];
                     let point2 = &image_corners[i];
                     let dx = point2.x - point1.x;

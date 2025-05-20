@@ -94,3 +94,15 @@ export const scrollScreenshotGetSize = async () => {
     const result = await invoke<ScrollScreenshotCaptureSize>('scroll_screenshot_get_size');
     return result;
 };
+
+export const scrollScreenshotSaveToFile = async (filePath: string) => {
+    const result = await invoke('scroll_screenshot_save_to_file', {
+        filePath,
+    });
+    return result;
+};
+
+export const scrollScreenshotSaveToClipboard = async () => {
+    const result = await invoke('scroll_screenshot_save_to_clipboard');
+    return result;
+};
