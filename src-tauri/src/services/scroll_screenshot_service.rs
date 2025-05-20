@@ -1,5 +1,5 @@
-use fast_image_resize::{images::Image, PixelType, Resizer};
 use fast_image_resize::{FilterType, ResizeAlg, ResizeOptions};
+use fast_image_resize::{PixelType, Resizer, images::Image};
 use hora::core::ann_index::ANNIndex;
 use hora::core::metrics::Metric;
 use hora::index::{hnsw_idx::HNSWIndex, hnsw_params::HNSWParams};
@@ -383,20 +383,13 @@ impl ScrollScreenshotService {
     }
 
     fn get_corners(&self, image: &image::GrayImage) -> Vec<ScrollOffset> {
-        let corners = corners::corners_fast12(image, self.corner_threshold);
-
-        let mut unique_corners = std::collections::HashSet::with_capacity(corners.len());
-
-        // 直接插入HashSet，减少中间步骤
-        for corner in &corners {
-            unique_corners.insert(ScrollOffset {
+        corners::corners_fast12(image, self.corner_threshold)
+            .iter()
+            .map(|corner| ScrollOffset {
                 x: corner.x as i32,
                 y: corner.y as i32,
-            });
-        }
-
-        // 一次性转换为Vec
-        unique_corners.into_iter().collect()
+            })
+            .collect()
     }
 
     fn build_index(

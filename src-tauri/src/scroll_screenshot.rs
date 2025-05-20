@@ -1,7 +1,6 @@
 use image::{codecs::webp::WebPEncoder, imageops::FilterType};
 use serde::Serialize;
 use std::sync::Mutex;
-use std::time::{SystemTime, UNIX_EPOCH};
 use tauri::ipc::Response;
 use tauri::{command, image::Image};
 use tauri_plugin_clipboard_manager::ClipboardExt;
