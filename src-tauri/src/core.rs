@@ -1,4 +1,5 @@
-use std::{env, sync::Mutex};
+use enigo::{Axis, Enigo, Mouse};
+use std::{env, sync::Mutex, thread::sleep, time::Duration};
 use tauri::command;
 
 #[command]
@@ -44,5 +45,30 @@ pub async fn set_enable_proxy(enable: bool, host: String) -> Result<(), ()> {
             std::env::set_var("NO_PROXY", host);
         }
     }
+    Ok(())
+}
+
+/// 鼠标滚轮穿透
+#[command]
+pub async fn scroll_through(
+    window: tauri::Window,
+    enigo: tauri::State<'_, Mutex<Enigo>>,
+    length: i32,
+) -> Result<(), ()> {
+    let result = window.set_ignore_cursor_events(true);
+    if result.is_err() {
+        return Ok(());
+    }
+
+    sleep(Duration::from_millis(1));
+
+    if let Ok(mut enigo) = enigo.lock() {
+        enigo.scroll(length, Axis::Vertical).unwrap();
+
+        // 让用户的鼠标也能触发滚轮事件
+        sleep(Duration::from_millis(128));
+        window.set_ignore_cursor_events(false).unwrap();
+    }
+
     Ok(())
 }

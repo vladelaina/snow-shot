@@ -7,13 +7,13 @@ import { LogicalPosition, PhysicalSize } from '@tauri-apps/api/dpi';
 import { useIntl } from 'react-intl';
 import { getCurrentWindow } from '@tauri-apps/api/window';
 import * as dialog from '@tauri-apps/plugin-dialog';
-import { generateImageFileName } from '../../actions';
 import { CloseOutlined } from '@ant-design/icons';
 import { useStateRef } from '@/hooks/useStateRef';
 import { useCallbackRender } from '@/hooks/useCallbackRender';
 import { zIndexs } from '@/utils/zIndex';
 import { DrawContext } from '../../types';
 import { closeWindowComplete } from '@/utils/window';
+import { generateImageFileName } from '@/utils/file';
 
 export type FixedImageActionType = {
     init: (

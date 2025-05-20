@@ -54,6 +54,8 @@ export enum DrawState {
     Copy = 106,
     // OCR
     OcrDetect = 107,
+    // 滚动截图
+    ScrollScreenshot = 108,
 }
 
 export enum CanvasLayer {

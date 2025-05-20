@@ -45,6 +45,9 @@ import { showWindow as showCurrentWindow } from '@/utils/window';
 import { setDrawWindowStyle, switchAlwaysOnTop } from '@/commands/screenshot';
 import { debounce } from 'es-toolkit';
 import { Webview } from '@tauri-apps/api/webview';
+import { scrollScreenshotSaveToClipboard } from '@/commands/scrollScreenshot';
+import { showImageDialog } from '@/utils/file';
+import { scrollScreenshotSaveToFile } from '@/commands/scrollScreenshot';
 
 const DrawCacheLayer = dynamic(
     async () => (await import('./components/drawCacheLayer')).DrawCacheLayer,
@@ -65,6 +68,7 @@ const DrawPageCore: React.FC = () => {
     const { addListener, removeListener } = useContext(EventListenerContext);
 
     // 层级
+    const drawLayerWrapRef = useRef<HTMLDivElement>(null);
     const layerContainerRef = useRef<HTMLDivElement>(null);
     const drawLayerActionRef = useRef<DrawLayerActionType | undefined>(undefined);
     const drawCacheLayerActionRef = useRef<DrawCacheLayerActionType | undefined>(undefined);
@@ -130,7 +134,25 @@ const DrawPageCore: React.FC = () => {
         return debounce(onCaptureStepDrawStateChange, 0);
     }, [onCaptureStepDrawStateChange]);
     useStateSubscriber(CaptureStepPublisher, onCaptureStepDrawStateChangeDebounce);
-    useStateSubscriber(DrawStatePublisher, onCaptureStepDrawStateChangeDebounce);
+    useStateSubscriber(
+        DrawStatePublisher,
+        useCallback(
+            (drawState: DrawState) => {
+                onCaptureStepDrawStateChangeDebounce();
+
+                if (!drawLayerWrapRef.current) {
+                    return;
+                }
+
+                if (drawState === DrawState.ScrollScreenshot) {
+                    drawLayerWrapRef.current.style.opacity = '0';
+                } else {
+                    drawLayerWrapRef.current.style.opacity = '1';
+                }
+            },
+            [onCaptureStepDrawStateChangeDebounce],
+        ),
+    );
 
     /** 截图准备 */
     const readyCapture = useCallback(
@@ -271,6 +293,17 @@ const DrawPageCore: React.FC = () => {
     );
 
     const onSave = useCallback(async () => {
+        if (getDrawState() === DrawState.ScrollScreenshot) {
+            const imagePath = await showImageDialog();
+            if (!imagePath) {
+                return;
+            }
+
+            scrollScreenshotSaveToFile(imagePath.filePath);
+            finishCapture();
+            return;
+        }
+
         if (
             !selectLayerActionRef.current ||
             !drawLayerActionRef.current ||
@@ -287,7 +320,7 @@ const DrawPageCore: React.FC = () => {
                 finishCapture();
             },
         );
-    }, [finishCapture]);
+    }, [finishCapture, getDrawState]);
 
     const onFixed = useCallback(async () => {
         if (
@@ -348,6 +381,12 @@ const DrawPageCore: React.FC = () => {
     }, []);
 
     const onCopyToClipboard = useCallback(async () => {
+        if (getDrawState() === DrawState.ScrollScreenshot) {
+            scrollScreenshotSaveToClipboard();
+            finishCapture();
+            return;
+        }
+
         const selected = window.getSelection();
         if (getDrawState() === DrawState.OcrDetect && selected && selected.toString()) {
             navigator.clipboard.writeText(selected.toString());
@@ -466,8 +505,10 @@ const DrawPageCore: React.FC = () => {
                 <OcrBlocks actionRef={ocrBlocksActionRef} />
                 {!isFixed && (
                     <>
-                        <DrawLayer actionRef={drawLayerActionRef} />
-                        <DrawCacheLayer actionRef={drawCacheLayerActionRef} />
+                        <div className={styles.drawLayerWrap} ref={drawLayerWrapRef}>
+                            <DrawLayer actionRef={drawLayerActionRef} />
+                            <DrawCacheLayer actionRef={drawCacheLayerActionRef} />
+                        </div>
                         <SelectLayer actionRef={selectLayerActionRef} />
                         <DrawToolbar
                             actionRef={drawToolbarActionRef}
