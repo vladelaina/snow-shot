@@ -115,3 +115,8 @@ export const scrollScreenshotSaveToClipboard = async () => {
     const result = await invoke('scroll_screenshot_save_to_clipboard');
     return result;
 };
+
+export const scrollScreenshotClear = async () => {
+    const result = await invoke('scroll_screenshot_clear');
+    return result;
+};

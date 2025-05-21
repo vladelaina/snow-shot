@@ -10,6 +10,7 @@ import {
     scrollScreenshotCapture,
     ScrollScreenshotCaptureResult,
     ScrollScreenshotCaptureSize,
+    scrollScreenshotClear,
     scrollScreenshotGetSize,
     scrollScreenshotInit,
 } from '@/commands/scrollScreenshot';
@@ -314,6 +315,12 @@ export const ScrollScreenshot = () => {
             [setPositionRect, startCapture],
         ),
     );
+
+    useEffect(() => {
+        return () => {
+            scrollScreenshotClear();
+        };
+    }, []);
 
     if (!positionRect) {
         return null;
