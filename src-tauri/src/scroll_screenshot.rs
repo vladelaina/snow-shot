@@ -1,6 +1,7 @@
 use image::{codecs::webp::WebPEncoder, imageops::FilterType};
 use serde::Serialize;
 use std::sync::Mutex;
+use std::time::{SystemTime, UNIX_EPOCH};
 use tauri::ipc::Response;
 use tauri::{command, image::Image};
 use tauri_plugin_clipboard_manager::ClipboardExt;
@@ -65,6 +66,12 @@ pub async fn scroll_screenshot_capture(
         Ok(image) => image,
         Err(_) => return Err(()),
     };
+
+    let timestamp = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap()
+        .as_secs();
+    image.save(&format!("captuers/img_{}.png", timestamp)).unwrap();
 
     let handle_result = scroll_screenshot_service
         .handle_image(image::DynamicImage::ImageRgba8(image), scroll_image_list);

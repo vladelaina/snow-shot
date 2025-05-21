@@ -368,7 +368,26 @@ export default function SystemSettings() {
                     }}
                     submitter={false}
                 >
-         
+                    <ProFormSlider
+                        label={
+                            <IconLabel
+                                label={<FormattedMessage id="settings.chatSettings.maxTokens" />}
+                                tooltipTitle={
+                                    <FormattedMessage id="settings.chatSettings.maxTokens.tip" />
+                                }
+                            />
+                        }
+                        name="maxTokens"
+                        min={512}
+                        max={8192}
+                        step={128}
+                        marks={{
+                            512: '512',
+                            4096: '4096',
+                            8192: '8192',
+                        }}
+                    />
+
                     <ProFormSlider
                         label={
                             <IconLabel
