@@ -85,6 +85,7 @@ pub fn run() {
             scroll_screenshot::scroll_screenshot_save_to_file,
             scroll_screenshot::scroll_screenshot_save_to_clipboard,
             scroll_screenshot::scroll_screenshot_get_size,
+            scroll_screenshot::scroll_screenshot_clear,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

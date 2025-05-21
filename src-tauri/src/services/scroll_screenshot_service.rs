@@ -233,6 +233,13 @@ impl ScrollScreenshotService {
         }
     }
 
+    pub fn clear(&mut self) {
+        self.top_image_list.clear();
+        self.bottom_image_list.clear();
+        self.top_image_ann_index_list.clear();
+        self.bottom_image_ann_index_list.clear();
+    }
+
     pub fn init(
         &mut self,
         direction: ScrollDirection,
@@ -780,7 +787,7 @@ impl ScrollScreenshotService {
         ))
     }
 
-    pub fn export(&self) -> Option<image::DynamicImage> {
+    pub fn export(&mut self) -> Option<image::DynamicImage> {
         if self.top_image_list.is_empty() && self.bottom_image_list.is_empty() {
             return None;
         }
@@ -838,6 +845,8 @@ impl ScrollScreenshotService {
                 offset_x += img.width();
             }
         }
+
+        self.clear();
 
         Some(final_image)
     }

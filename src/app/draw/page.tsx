@@ -22,7 +22,7 @@ import {
 import { DrawToolbar, DrawToolbarActionType } from './components/drawToolbar';
 import { BaseLayerEventActionType } from './components/baseLayer';
 import { ColorPicker, ColorPickerActionType } from './components/colorPicker';
-import { HistoryContext, withCanvasHistory } from './components/historyContext';
+import { withCanvasHistory } from './components/historyContext';
 import { withStatePublisher } from '@/hooks/useStatePublisher';
 import { useStateSubscriber } from '@/hooks/useStateSubscriber';
 import StatusBar from './components/statusBar';
@@ -45,7 +45,7 @@ import { showWindow as showCurrentWindow } from '@/utils/window';
 import { setDrawWindowStyle, switchAlwaysOnTop } from '@/commands/screenshot';
 import { debounce } from 'es-toolkit';
 import { Webview } from '@tauri-apps/api/webview';
-import { scrollScreenshotSaveToClipboard } from '@/commands/scrollScreenshot';
+import { scrollScreenshotClear, scrollScreenshotSaveToClipboard } from '@/commands/scrollScreenshot';
 import { showImageDialog } from '@/utils/file';
 import { scrollScreenshotSaveToFile } from '@/commands/scrollScreenshot';
 
@@ -81,15 +81,12 @@ const DrawPageCore: React.FC = () => {
 
     // 状态
     const mousePositionRef = useRef<MousePosition>(new MousePosition(0, 0));
-    const [getScreenshotType, setScreenshotType, resetScreenshotType] = useStateSubscriber(
+    const [getScreenshotType, setScreenshotType] = useStateSubscriber(
         ScreenshotTypePublisher,
         undefined,
     );
-    const [getCaptureStep, setCaptureStep, resetCaptureStep] = useStateSubscriber(
-        CaptureStepPublisher,
-        undefined,
-    );
-    const [getDrawState, , resetDrawState] = useStateSubscriber(DrawStatePublisher, undefined);
+    const [getCaptureStep, setCaptureStep] = useStateSubscriber(CaptureStepPublisher, undefined);
+    const [getDrawState] = useStateSubscriber(DrawStatePublisher, undefined);
     const [, setCaptureLoading] = useStateSubscriber(CaptureLoadingPublisher, undefined);
     const [, setCaptureEvent] = useStateSubscriber(CaptureEventPublisher, undefined);
     const onCaptureLoad = useCallback<BaseLayerEventActionType['onCaptureLoad']>(
@@ -104,7 +101,6 @@ const DrawPageCore: React.FC = () => {
         [setCaptureEvent],
     );
     const capturingRef = useRef(false);
-    const { history } = useContext(HistoryContext);
     const circleCursorRef = useRef<HTMLDivElement>(null);
 
     const handleLayerSwitch = useCallback((layer: CanvasLayer) => {
@@ -240,31 +236,28 @@ const DrawPageCore: React.FC = () => {
     }, []);
 
     const finishCapture = useCallback<DrawContextType['finishCapture']>(async () => {
-        window.getSelection()?.removeAllRanges();
-        await Promise.all([
-            drawLayerActionRef.current?.onCaptureFinish(),
-            selectLayerActionRef.current?.onCaptureFinish(),
-            drawCacheLayerActionRef.current?.onCaptureFinish(),
-        ]);
         hideWindow();
-        setCaptureEvent({
-            event: CaptureEvent.onCaptureFinish,
-        });
-        imageBufferRef.current = undefined;
-        resetCaptureStep();
-        resetDrawState();
-        resetScreenshotType();
-        drawToolbarActionRef.current?.setEnable(false);
-        capturingRef.current = false;
-        history.clear();
-    }, [
-        hideWindow,
-        setCaptureEvent,
-        resetCaptureStep,
-        resetDrawState,
-        history,
-        resetScreenshotType,
-    ]);
+        appWindowRef.current.setSize(new PhysicalSize(0, 0));
+        scrollScreenshotClear();
+        location.reload();
+        // window.getSelection()?.removeAllRanges();
+        // await Promise.all([
+        //     drawLayerActionRef.current?.onCaptureFinish(),
+        //     selectLayerActionRef.current?.onCaptureFinish(),
+        //     drawCacheLayerActionRef.current?.onCaptureFinish(),
+        // ]);
+
+        // setCaptureEvent({
+        //     event: CaptureEvent.onCaptureFinish,
+        // });
+        // imageBufferRef.current = undefined;
+        // resetCaptureStep();
+        // resetDrawState();
+        // resetScreenshotType();
+        // drawToolbarActionRef.current?.setEnable(false);
+        // capturingRef.current = false;
+        // history.clear();
+    }, [hideWindow]);
 
     /** 执行截图 */
     const excuteScreenshot = useCallback(

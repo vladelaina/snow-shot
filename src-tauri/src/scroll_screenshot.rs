@@ -136,7 +136,7 @@ pub async fn scroll_screenshot_save_to_file(
     scroll_screenshot_service: tauri::State<'_, Mutex<ScrollScreenshotService>>,
     file_path: String,
 ) -> Result<(), ()> {
-    let scroll_screenshot_service = match scroll_screenshot_service.lock() {
+    let mut scroll_screenshot_service = match scroll_screenshot_service.lock() {
         Ok(service) => service,
         Err(_) => return Err(()),
     };
@@ -157,7 +157,7 @@ pub async fn scroll_screenshot_save_to_clipboard(
     app: tauri::AppHandle,
     scroll_screenshot_service: tauri::State<'_, Mutex<ScrollScreenshotService>>,
 ) -> Result<(), ()> {
-    let scroll_screenshot_service = match scroll_screenshot_service.lock() {
+    let mut scroll_screenshot_service = match scroll_screenshot_service.lock() {
         Ok(service) => service,
         Err(_) => return Err(()),
     };
@@ -176,6 +176,20 @@ pub async fn scroll_screenshot_save_to_clipboard(
         }
         None => return Err(()),
     }
+
+    Ok(())
+}
+
+#[command]
+pub async fn scroll_screenshot_clear(
+    scroll_screenshot_service: tauri::State<'_, Mutex<ScrollScreenshotService>>,
+) -> Result<(), ()> {
+    let mut scroll_screenshot_service = match scroll_screenshot_service.lock() {
+        Ok(service) => service,
+        Err(_) => return Err(()),
+    };
+
+    scroll_screenshot_service.clear();
 
     Ok(())
 }
