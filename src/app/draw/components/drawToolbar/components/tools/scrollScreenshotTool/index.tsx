@@ -201,7 +201,7 @@ export const ScrollScreenshot = () => {
         [imageBufferRef, intl, message, selectLayerActionRef, setLoading, updateImageUrlList],
     );
     const captuerDebounce = useMemo(() => {
-        return debounce(captureImage, 256);
+        return debounce(captureImage, 83);
     }, [captureImage]);
 
     const init = useCallback(
@@ -228,8 +228,8 @@ export const ScrollScreenshot = () => {
                     scrollSettings.imageFeatureThreshold,
                     scrollSettings.imageFeatureDescriptionLength,
                     scrollDirectionRef.current === ScrollDirection.Horizontal
-                        ? Math.ceil((rect.max_x - rect.min_x) / 3)
-                        : Math.ceil((rect.max_y - rect.min_y) / 3),
+                        ? Math.ceil((rect.max_x - rect.min_x) / 1.5)
+                        : Math.ceil((rect.max_y - rect.min_y) / 1.5),
                 );
             } catch (error) {
                 console.error(error);

@@ -39,7 +39,7 @@ export enum AppSettingsGroup {
     SystemCommon = 'systemCommon',
     SystemChat = 'systemChat',
     SystemNetwork = 'systemNetwork',
-    SystemScrollScreenshot = 'systemScrollScreenshot_20250520',
+    SystemScrollScreenshot = 'systemScrollScreenshot_20250521',
     FunctionChat = 'functionChat',
     FunctionTranslation = 'functionTranslation',
     FunctionScreenshot = 'functionScreenshot',
@@ -164,11 +164,11 @@ export const defaultAppSettingsData: AppSettingsData = {
         beyondSelectRectElementOpacity: 100,
     },
     [AppSettingsGroup.SystemScrollScreenshot]: {
-        imageFeatureThreshold: 16,
+        imageFeatureThreshold: 32,
         minSide: 0,
         maxSide: 4096,
         sampleRate: 1,
-        imageFeatureDescriptionLength: 24,
+        imageFeatureDescriptionLength: 32,
     },
 };
 
