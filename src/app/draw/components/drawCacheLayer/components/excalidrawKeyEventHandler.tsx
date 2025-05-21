@@ -1,5 +1,4 @@
 import { useCallback, useState } from 'react';
-import { useHotkeys } from 'react-hotkeys-hook';
 import React from 'react';
 import { useStateSubscriber } from '@/hooks/useStateSubscriber';
 import { ExcalidrawKeyEvent, ExcalidrawKeyEventPublisher } from '../extra';
@@ -7,6 +6,8 @@ import { AppSettingsGroup } from '@/app/contextWrap';
 import { useAppSettingsLoad } from '@/hooks/useAppSettingsLoad';
 import { defaultDrawToolbarKeyEventSettings } from '../../drawToolbar/components/keyEventWrap/extra';
 import { KeyEventKey } from '../../drawToolbar/components/keyEventWrap/extra';
+import { HotkeysScope } from '@/components/globalLayoutExtra';
+import { useHotkeysApp } from '@/hooks/useHotkeysApp';
 
 type HotKeys = {
     [key in keyof ExcalidrawKeyEvent]: string;
@@ -16,7 +17,8 @@ const defaultHotKeys: HotKeys = {
     rotateWithDiscreteAngle:
         defaultDrawToolbarKeyEventSettings[KeyEventKey.RotateWithDiscreteAnglePicker].hotKey,
     resizeFromCenter: defaultDrawToolbarKeyEventSettings[KeyEventKey.ResizeFromCenterPicker].hotKey,
-    maintainAspectRatio: defaultDrawToolbarKeyEventSettings[KeyEventKey.MaintainAspectRatioPicker].hotKey,
+    maintainAspectRatio:
+        defaultDrawToolbarKeyEventSettings[KeyEventKey.MaintainAspectRatioPicker].hotKey,
     autoAlign: defaultDrawToolbarKeyEventSettings[KeyEventKey.AutoAlignPicker].hotKey,
 };
 
@@ -58,45 +60,61 @@ const ExcalidrawKeyEventHandlerCore = () => {
         [getExcalidrawKeyEvent, setExcalidrawKeyEvent],
     );
 
-    useHotkeys(hotKeys.rotateWithDiscreteAngle, switchKeyEvent('rotateWithDiscreteAngle', true), {
+    useHotkeysApp(
+        hotKeys.rotateWithDiscreteAngle,
+        switchKeyEvent('rotateWithDiscreteAngle', true),
+        {
+            preventDefault: true,
+            keyup: false,
+            keydown: true,
+            scopes: HotkeysScope.DrawTool,
+        },
+    );
+    useHotkeysApp(
+        hotKeys.rotateWithDiscreteAngle,
+        switchKeyEvent('rotateWithDiscreteAngle', false),
+        {
+            preventDefault: true,
+            keyup: true,
+            keydown: false,
+            scopes: HotkeysScope.DrawTool,
+        },
+    );
+    useHotkeysApp(hotKeys.maintainAspectRatio, switchKeyEvent('maintainAspectRatio', true), {
         preventDefault: true,
         keyup: false,
         keydown: true,
+        scopes: HotkeysScope.DrawTool,
     });
-    useHotkeys(hotKeys.rotateWithDiscreteAngle, switchKeyEvent('rotateWithDiscreteAngle', false), {
+    useHotkeysApp(hotKeys.maintainAspectRatio, switchKeyEvent('maintainAspectRatio', false), {
         preventDefault: true,
         keyup: true,
         keydown: false,
+        scopes: HotkeysScope.DrawTool,
     });
-    useHotkeys(hotKeys.maintainAspectRatio, switchKeyEvent('maintainAspectRatio', true), {
+    useHotkeysApp(hotKeys.resizeFromCenter, switchKeyEvent('resizeFromCenter', true), {
         preventDefault: true,
         keyup: false,
         keydown: true,
+        scopes: HotkeysScope.DrawTool,
     });
-    useHotkeys(hotKeys.maintainAspectRatio, switchKeyEvent('maintainAspectRatio', false), {
+    useHotkeysApp(hotKeys.resizeFromCenter, switchKeyEvent('resizeFromCenter', false), {
         preventDefault: true,
         keyup: true,
         keydown: false,
+        scopes: HotkeysScope.DrawTool,
     });
-    useHotkeys(hotKeys.resizeFromCenter, switchKeyEvent('resizeFromCenter', true), {
+    useHotkeysApp(hotKeys.autoAlign, switchKeyEvent('autoAlign', true), {
         preventDefault: true,
         keyup: false,
         keydown: true,
+        scopes: HotkeysScope.DrawTool,
     });
-    useHotkeys(hotKeys.resizeFromCenter, switchKeyEvent('resizeFromCenter', false), {
+    useHotkeysApp(hotKeys.autoAlign, switchKeyEvent('autoAlign', false), {
         preventDefault: true,
         keyup: true,
         keydown: false,
-    });
-    useHotkeys(hotKeys.autoAlign, switchKeyEvent('autoAlign', true), {
-        preventDefault: true,
-        keyup: false,
-        keydown: true,
-    });
-    useHotkeys(hotKeys.autoAlign, switchKeyEvent('autoAlign', false), {
-        preventDefault: true,
-        keyup: true,
-        keydown: false,
+        scopes: HotkeysScope.DrawTool,
     });
 
     return <></>;

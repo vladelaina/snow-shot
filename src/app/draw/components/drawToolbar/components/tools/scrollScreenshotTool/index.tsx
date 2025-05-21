@@ -1,6 +1,5 @@
 import { DrawStatePublisher } from '@/app/draw/extra';
 import { DrawContext, DrawState } from '@/app/draw/types';
-import { AntdContext } from '@/app/layout';
 import { ElementRect } from '@/commands';
 import { scrollThrough } from '@/commands/core';
 import {
@@ -29,9 +28,10 @@ import {
     WheelEventHandler,
 } from 'react';
 import { useIntl } from 'react-intl';
-import { SubTools } from './components/subTools';
+import { SubTools } from '../../subTools';
 import { RotateIcon } from '@/components/icons';
 import { AppSettingsGroup, AppSettingsPublisher } from '@/app/contextWrap';
+import { AntdContext } from '@/components/globalLayoutExtra';
 
 const THUMBNAIL_WIDTH = 128;
 
@@ -353,6 +353,7 @@ export const ScrollScreenshot = () => {
                             startCapture();
                         }}
                         icon={<RotateIcon />}
+                        title={intl.formatMessage({ id: 'draw.scrollScreenshot.changeDirection' })}
                         type={'text'}
                         key="rotate"
                     />,

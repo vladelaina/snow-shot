@@ -4,17 +4,17 @@ import { colorPickerTopPickesButtonRender } from './colorPickerTopPickesButtonRe
 import { colorPickerPopoverRender } from './colorPickerPopoverRender';
 import { ButtonIcon } from './buttonIcon';
 import { buttonIconSelectRadioRender } from './buttonIconSelectRadioRender';
-import { buttonIconSelectRender } from './buttonIconSelectRender';
 import { rangeRender } from './rangeRender';
 import { layerButtonRender } from './layerButtonRender';
 import { ButtonList } from './buttonList';
+import { RadioSelection } from './radioSelection';
 
 export const pickerRenders: ExcalidrawPropsCustomOptions['pickerRenders'] = {
     colorPickerTopPickesButtonRender,
     colorPickerPopoverRender,
     buttonIconSelectRadioRender,
     CustomButtonIcon: ButtonIcon,
-    buttonIconSelectRender,
+    RadioSelection,
     rangeRender,
     layerButtonRender,
     elementStrokeColors: ['#1e1e1e', '#f5222d', '#52c41a', '#1677ff', '#faad14'],

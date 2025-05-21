@@ -91,6 +91,25 @@ export const KeyButton: React.FC<{
 
     const [confirmLoading, setConfirmLoading] = useState(false);
 
+    const stopRecordAndSave = useCallback(() => {
+        stopRecord();
+
+        if (recordKeys.size === 0) {
+            return;
+        }
+
+        if (inputAnyKeyConfigIndexRef.current === undefined) {
+            return;
+        }
+
+        keyConfigListRef.current[inputAnyKeyConfigIndexRef.current].recordKeys =
+            convertKeyConfigToString(recordKeys);
+
+        setInputAnyKeyConfigIndex(undefined);
+
+        updateKeyConfig();
+    }, [recordKeys, setInputAnyKeyConfigIndex, stopRecord, updateKeyConfig]);
+
     return (
         <>
             <Modal
@@ -102,6 +121,7 @@ export const KeyButton: React.FC<{
                 }}
                 confirmLoading={confirmLoading}
                 onOk={() => {
+                    stopRecordAndSave();
                     setConfirmLoading(true);
                     onKeyChange(
                         keyConfigList
@@ -113,7 +133,6 @@ export const KeyButton: React.FC<{
                         setConfirmLoading(false);
                         setOpen(false);
                     });
-                    stopRecord();
                 }}
             >
                 {keyConfigList.map((keyConfig) => {
@@ -168,36 +187,21 @@ export const KeyButton: React.FC<{
                                         });
                                     }}
                                     type="text"
-                                >
-                                    <DeleteOutlined />
-                                </Button>
+                                    variant="outlined"
+                                    color="red"
+                                    icon={<DeleteOutlined />}
+                                ></Button>
                             ) : (
                                 <Button
                                     disabled={recordKeys.size === 0}
                                     onClick={() => {
-                                        stopRecord();
-
-                                        if (recordKeys.size === 0) {
-                                            return;
-                                        }
-
-                                        if (inputAnyKeyConfigIndexRef.current === undefined) {
-                                            return;
-                                        }
-
-                                        keyConfigListRef.current[
-                                            inputAnyKeyConfigIndexRef.current
-                                        ].recordKeys = convertKeyConfigToString(recordKeys);
-
-                                        setInputAnyKeyConfigIndex(undefined);
-
-                                        updateKeyConfig();
+                                        stopRecordAndSave();
                                     }}
-                                    type="text"
-                                    style={{ color: token.colorSuccess }}
-                                >
-                                    <CheckOutlined />
-                                </Button>
+                                    type="default"
+                                    variant="outlined"
+                                    color="green"
+                                    icon={<CheckOutlined />}
+                                ></Button>
                             )}
                         </Flex>
                     );

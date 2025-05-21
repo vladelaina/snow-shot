@@ -75,4 +75,9 @@ export const draw = {
     'draw.scrollScreenshot.limitTip': '所选区域过小，无法进行滚动截图（最小边需 > 300px）',
     'draw.scrollScreenshot.initError': '初始化失败，请向开发者反馈 [1]',
     'draw.scrollScreenshot.captureError': '滚动截图失败，请向开发者反馈 [2]',
+    'draw.scrollScreenshot.changeDirection': '切换滚动方向',
+    'draw.ocrDetect.translate': '翻译',
+    'draw.ocrDetect.translate.autoReplace': '自动替换识别结果',
+    'draw.ocrDetect.translate.error': '翻译结果的格式错误',
+    'draw.ocrDetect.translate.error2': '翻译结果的行数不匹配',
 };

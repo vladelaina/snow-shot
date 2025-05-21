@@ -1,6 +1,6 @@
 'use client';
 
-import { AntdContext } from '@/app/layout';
+import { AntdContext } from '@/components/globalLayoutExtra';
 import { BotIcon, SidebarIcon } from '@/components/icons';
 import { useStateRef } from '@/hooks/useStateRef';
 import { ChatHistoryStore } from '@/utils/appStore';

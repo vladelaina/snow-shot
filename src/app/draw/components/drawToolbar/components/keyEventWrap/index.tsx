@@ -1,7 +1,6 @@
 import { useAppSettingsLoad } from '@/hooks/useAppSettingsLoad';
 import React, { useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { JSX } from 'react';
-import { useHotkeys } from 'react-hotkeys-hook';
 import { useIntl } from 'react-intl';
 import { useStateSubscriber } from '@/hooks/useStateSubscriber';
 import { DrawingPublisher } from '../..';
@@ -13,7 +12,8 @@ import {
     KeyEventValue,
 } from './extra';
 import { AppSettingsData } from '@/app/contextWrap';
-import { AntdContext } from '@/app/layout';
+import { AntdContext, HotkeysScope } from '@/components/globalLayoutExtra';
+import { useHotkeysApp } from '@/hooks/useHotkeysApp';
 
 const KeyEventHandleCore: React.FC<{
     keyEventValue: KeyEventValue;
@@ -23,15 +23,17 @@ const KeyEventHandleCore: React.FC<{
     children: JSX.Element;
 }> = ({ keyEventValue, onKeyDownChildren, onKeyUpChildren, componentKey, children }) => {
     const intl = useIntl();
-    useHotkeys(keyEventValue.hotKey, onKeyDownChildren, {
+    useHotkeysApp(keyEventValue.hotKey, onKeyDownChildren, {
         keydown: true,
         keyup: false,
         preventDefault: true,
+        scopes: HotkeysScope.DrawTool,
     });
-    useHotkeys(keyEventValue.hotKey, onKeyUpChildren, {
+    useHotkeysApp(keyEventValue.hotKey, onKeyUpChildren, {
         keydown: false,
         keyup: true,
         preventDefault: true,
+        scopes: HotkeysScope.DrawTool,
     });
 
     const buttonTitle = useMemo(() => {

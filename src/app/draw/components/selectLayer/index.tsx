@@ -12,7 +12,6 @@ import {
     initUiElementsCache,
 } from '@/commands';
 import { AppSettingsData, AppSettingsGroup, AppSettingsPublisher } from '@/app/contextWrap';
-import { useHotkeys } from 'react-hotkeys-hook';
 import * as PIXI from 'pixi.js';
 import Flatbush from 'flatbush';
 import { useCallbackRender } from '@/hooks/useCallbackRender';
@@ -35,6 +34,8 @@ import { CaptureStepPublisher } from '../../extra';
 import { ResizeToolbar, ResizeToolbarActionType } from './components/resizeToolbar';
 import { ScreenshotType } from '@/functions/screenshot';
 import { zIndexs } from '@/utils/zIndex';
+import { HotkeysScope } from '@/components/globalLayoutExtra';
+import { useHotkeysApp } from '@/hooks/useHotkeysApp';
 
 export type SelectLayerActionType = {
     getSelectRect: () => ElementRect | undefined;
@@ -669,7 +670,7 @@ const SelectLayerCore: React.FC<SelectLayerProps> = ({ actionRef }) => {
         [getSelectRect, onCaptureFinish, onCaptureReady, onExecuteScreenshot, refreshMouseMove],
     );
 
-    useHotkeys(
+    useHotkeysApp(
         'Tab',
         () => {
             if (!enableSelectRef.current) {
@@ -683,6 +684,7 @@ const SelectLayerCore: React.FC<SelectLayerProps> = ({ actionRef }) => {
             enabled:
                 isEnable &&
                 getAppSettings()[AppSettingsGroup.FunctionScreenshot].findChildrenElements,
+            scopes: HotkeysScope.DrawTool,
         },
     );
 

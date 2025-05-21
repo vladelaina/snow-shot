@@ -5,6 +5,7 @@ import { ImageBuffer } from '@/commands';
 import { createPublisher } from '@/hooks/useStatePublisher';
 import { BaseLayerEventActionType } from './components/baseLayer';
 import { ScreenshotType } from '@/functions/screenshot';
+import { OcrDetectResult } from '@/commands/ocr';
 
 export const switchLayer = (
     layer: CanvasLayer | undefined,
@@ -66,3 +67,18 @@ export const DrawStatePublisher = createPublisher<DrawState>(DrawState.Idle);
 export const CaptureLoadingPublisher = createPublisher<boolean>(true);
 export const CaptureEventPublisher = createPublisher<CaptureEventParams | undefined>(undefined);
 export const ScreenshotTypePublisher = createPublisher<ScreenshotType>(ScreenshotType.Default);
+
+export enum DrawEvent {
+    OcrDetect = 0,
+}
+
+export type DrawEventParams =
+    | {
+          event: DrawEvent.OcrDetect;
+          params: {
+              result: OcrDetectResult;
+          };
+      }
+    | undefined;
+
+export const DrawEventPublisher = createPublisher<DrawEventParams>(undefined);

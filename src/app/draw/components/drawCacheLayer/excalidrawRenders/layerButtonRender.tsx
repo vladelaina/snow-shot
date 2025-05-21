@@ -1,11 +1,12 @@
 import { ExcalidrawPropsCustomOptions } from '@mg-chao/excalidraw/types';
 import React, { useCallback, useMemo, useState } from 'react';
 import { Button } from 'antd';
-import { useHotkeys } from 'react-hotkeys-hook';
 import { KeyEventKey } from '../../drawToolbar/components/keyEventWrap/extra';
 import { useAppSettingsLoad } from '@/hooks/useAppSettingsLoad';
 import { AppSettingsGroup } from '@/app/contextWrap';
 import { useIntl } from 'react-intl';
+import { HotkeysScope } from '@/components/globalLayoutExtra';
+import { useHotkeysApp } from '@/hooks/useHotkeysApp';
 
 const DeleteSelectedElementsButton: NonNullable<
     NonNullable<ExcalidrawPropsCustomOptions['pickerRenders']>['layerButtonRender']
@@ -22,7 +23,7 @@ const DeleteSelectedElementsButton: NonNullable<
         true,
     );
 
-    useHotkeys(
+    useHotkeysApp(
         hotkey,
         () => {
             props.onClick?.();
@@ -32,6 +33,7 @@ const DeleteSelectedElementsButton: NonNullable<
             keyup: false,
             preventDefault: true,
             enabled: hotkey !== '',
+            scopes: HotkeysScope.DrawTool,
         },
     );
 
