@@ -79,5 +79,7 @@ export const draw = {
     'draw.ocrDetect.translate': '翻译',
     'draw.ocrDetect.translate.autoReplace': '自动替换识别结果',
     'draw.ocrDetect.translate.error': '翻译结果的格式错误',
-    'draw.ocrDetect.translate.error2': '翻译结果的行数不匹配',
+    'draw.ocrDetect.translate.error2': '翻译结果的行数不匹配（回退到按行解析）',
+    'draw.ocrDetect.translate.error3': '按行解析异常',
+    'draw.switchColorFormat': '切换颜色格式',
 };

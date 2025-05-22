@@ -27,6 +27,8 @@
         "dialog:allow-message",
         "dialog:allow-save",
         "dialog:allow-open",
+        "opener:allow-open-url",
+        "opener:default",
         "log:default",
         "store:default",
         {

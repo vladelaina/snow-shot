@@ -85,7 +85,11 @@ export const saveToFile = async (
         return;
     }
 
-    await saveFile(imagePath.filePath, imageData);
+    await saveFile(imagePath.filePath, imageData).then(() => {
+        if (process.env.NODE_ENV !== 'development') {
+            location.reload();
+        }
+    });
 };
 
 export const fixedToScreen = async (
@@ -174,10 +178,14 @@ export const copyToClipboard = async (
     }
 
     if (beforeCopy) {
-        await beforeCopy(imageData);
+        beforeCopy(imageData);
     }
 
-    await navigator.clipboard.write([new ClipboardItem({ 'image/png': imageData })]);
+    navigator.clipboard.write([new ClipboardItem({ 'image/png': imageData })]).then(() => {
+        if (process.env.NODE_ENV !== 'development') {
+            location.reload();
+        }
+    });
 };
 
 export const handleOcrDetect = async (

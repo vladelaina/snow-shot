@@ -42,17 +42,18 @@ import {
     ShortcutKeyStatus,
 } from './extra';
 import { autoStartHideWindow } from '@/commands';
-import { useRouter } from 'next/navigation';
 import { GroupTitle } from '@/components/groupTitle';
 import { theme } from 'antd';
-import { showWindow } from '@/utils/window';
 import { ResetSettingsButton } from '@/components/resetSettingsButton';
-import { getSelectedText } from '@/commands/core';
-import { encodeParamsValue } from '@/utils';
+import {
+    executeChat,
+    executeChatSelectedText,
+    executeTranslate,
+    executeTranslateSelectedText,
+} from '@/functions/tools';
 
 export default function Home() {
     const { token } = theme.useToken();
-    const router = useRouter();
 
     const disableShortcutKeyRef = useRef(false);
     const {
@@ -66,7 +67,7 @@ export default function Home() {
             (configs, key) => {
                 let buttonTitle;
                 let buttonIcon;
-                let buttonOnClick;
+                let buttonOnClick: () => void | Promise<void>;
                 switch (key) {
                     case AppFunction.ScreenshotFixed:
                         buttonTitle = (
@@ -96,38 +97,28 @@ export default function Home() {
                         buttonTitle = <FormattedMessage id="home.translationSelectText" />;
                         buttonIcon = <SelectTextIcon style={{ fontSize: '1em' }} />;
                         buttonOnClick = async () => {
-                            const text = (await getSelectedText()).substring(0, 10000);
-                            await showWindow();
-                            router.push(
-                                `/tools/translation?selectText=${encodeParamsValue(text)}&t=${Date.now()}`,
-                            );
+                            executeTranslateSelectedText();
                         };
                         break;
                     case AppFunction.Translation:
                         buttonTitle = <FormattedMessage id="home.translation" />;
                         buttonIcon = <TranslationIcon />;
                         buttonOnClick = () => {
-                            showWindow();
-                            router.push(`/tools/translation?t=${Date.now()}`);
+                            executeTranslate();
                         };
                         break;
                     case AppFunction.ChatSelectText:
                         buttonTitle = <FormattedMessage id="home.chatSelectText" />;
                         buttonIcon = <SelectTextIcon style={{ fontSize: '1em' }} />;
                         buttonOnClick = async () => {
-                            const text = (await getSelectedText()).substring(0, 10000);
-                            await showWindow();
-                            router.push(
-                                `/tools/chat?selectText=${encodeParamsValue(text)}&t=${Date.now()}`,
-                            );
+                            executeChatSelectedText();
                         };
                         break;
                     case AppFunction.Chat:
                         buttonTitle = <FormattedMessage id="home.chat" />;
                         buttonIcon = <ChatIcon />;
                         buttonOnClick = () => {
-                            showWindow();
-                            router.push(`/tools/chat?t=${Date.now()}`);
+                            executeChat();
                         };
                         break;
                     case AppFunction.TopWindow:
@@ -206,7 +197,7 @@ export default function Home() {
         );
 
         return { configs, groupConfigs };
-    }, [router]);
+    }, []);
 
     const [shortcutKeyStatus, setShortcutKeyStatus] =
         useState<Record<AppFunction, ShortcutKeyStatus>>();

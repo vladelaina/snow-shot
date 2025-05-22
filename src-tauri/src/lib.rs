@@ -30,6 +30,7 @@ pub fn run() {
     let auto_start_hide_window = Mutex::new(false);
 
     tauri::Builder::default()
+        .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_clipboard_manager::init())
         .plugin(tauri_plugin_store::Builder::new().build())
         .plugin(tauri_plugin_http::init())

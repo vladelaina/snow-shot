@@ -29,14 +29,8 @@ import { useHistory } from '../historyContext';
 import { layoutRenders } from './excalidrawRenders';
 import { pickerRenders } from './excalidrawRenders';
 import { ElementRect } from '@/commands';
-import {
-    CaptureEvent,
-    CaptureEventParams,
-    CaptureEventPublisher,
-    CaptureStepPublisher,
-} from '../../extra';
 import { ExcalidrawAppStateStore } from '@/utils/appStore';
-import { CaptureStep } from '../../types';
+import { debounce } from 'es-toolkit';
 
 const storageKey = 'global';
 const DrawCacheLayerCore: React.FC<{
@@ -254,39 +248,7 @@ const DrawCacheLayerCore: React.FC<{
             appState: storageAppState,
         });
     }, []);
-
-    useStateSubscriber(
-        CaptureEventPublisher,
-        useCallback(
-            async (params: CaptureEventParams | undefined) => {
-                if (params?.event === CaptureEvent.onCaptureLoad) {
-                    excalidrawAPIRef.current?.setActiveTool({
-                        type: 'hand',
-                    });
-                }
-
-                if (params?.event !== CaptureEvent.onCaptureFinish) {
-                    return;
-                }
-
-                saveAppState();
-            },
-            [saveAppState],
-        ),
-    );
-    useStateSubscriber(
-        CaptureStepPublisher,
-        useCallback(
-            async (step: CaptureStep) => {
-                if (step !== CaptureStep.Fixed) {
-                    return;
-                }
-
-                saveAppState();
-            },
-            [saveAppState],
-        ),
-    );
+    const saveAppStateDebounce = useMemo(() => debounce(saveAppState, 1000), [saveAppState]);
 
     return (
         <div ref={drawCacheLayerElementRef} className="draw-cache-layer">
@@ -330,6 +292,7 @@ const DrawCacheLayerCore: React.FC<{
                     },
                 }}
                 onChange={(elements, appState, files) => {
+                    saveAppStateDebounce();
                     setExcalidrawOnChangeEvent({
                         elements,
                         appState,

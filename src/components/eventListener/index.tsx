@@ -67,6 +67,7 @@ const EventListenerCore: React.FC<{ children: React.ReactNode }> = ({ children }
     const { reloadAppSettings } = useContext(AppSettingsActionContext);
 
     const inited = useRef(false);
+    const isDrawPage = useMemo(() => pathname === '/draw', [pathname]);
     useEffect(() => {
         if (inited.current) {
             return;
@@ -88,6 +89,22 @@ const EventListenerCore: React.FC<{ children: React.ReactNode }> = ({ children }
                     appLog(payload, undefined, 'APP_TAURI');
                 },
             });
+            defaultListener.push({
+                event: 'execute-chat',
+                callback: async () => {},
+            });
+            defaultListener.push({
+                event: 'execute-chat-selected-text',
+                callback: async () => {},
+            });
+            defaultListener.push({
+                event: 'execute-translate',
+                callback: async () => {},
+            });
+            defaultListener.push({
+                event: 'execute-translate-selected-text',
+                callback: async () => {},
+            });
         } else {
             defaultListener.push({
                 event: 'reload-app-settings',
@@ -96,7 +113,7 @@ const EventListenerCore: React.FC<{ children: React.ReactNode }> = ({ children }
                 },
             });
 
-            if (pathname === '/draw') {
+            if (isDrawPage) {
                 defaultListener.push({
                     event: 'execute-screenshot',
                     callback: async () => {},
@@ -113,6 +130,7 @@ const EventListenerCore: React.FC<{ children: React.ReactNode }> = ({ children }
                 const res: Listener = {
                     event: listener.event,
                     callback: (e) => {
+                        console.log('callback', listener.event);
                         listener.callback(e);
                         try {
                             listenerEventMapRef.current.get(listener.event)?.forEach((id) => {
@@ -131,14 +149,25 @@ const EventListenerCore: React.FC<{ children: React.ReactNode }> = ({ children }
                 });
             });
 
-        return () => {
+        const clear = () => {
             detach?.();
 
             unlistenList.forEach((unlisten) => {
                 unlisten();
             });
+
+            inited.current = false;
         };
-    }, [mainWindow, pathname, reloadAppSettings]);
+
+        window.addEventListener('beforeunload', () => {
+            clear();
+        });
+
+        return () => {
+            clear();
+            window.removeEventListener('beforeunload', clear);
+        };
+    }, [mainWindow, isDrawPage, reloadAppSettings]);
 
     const eventListenerContextValue = useMemo(() => {
         return { addListener, removeListener };

@@ -10,10 +10,11 @@ export const home = {
     'home.screenshot': '截图',
     'home.chat': 'AI 对话',
     'home.chatSelectText': '对话框填入选中的文本',
-    'home.screenshotAfter': '截图后 {text}',
+    'home.screenshotAfter': '截图{text}',
     'home.shortcut': '快捷键',
     'home.shortcut.registered': '注册成功',
     'home.shortcut.unregistered': '注册中断，可能是快捷键被重复设置',
     'home.shortcut.error': '注册失败，快捷键已被其他应用占用',
     'home.exit': '退出',
+    'home.about': '关于 Snow Shot',
 };

@@ -244,41 +244,46 @@ const DrawPageCore: React.FC = () => {
         await appWindowRef.current.hide();
     }, []);
 
-    const finishCapture = useCallback<DrawContextType['finishCapture']>(async () => {
-        hideWindow();
-        appWindowRef.current.setSize(new PhysicalSize(0, 0));
-        scrollScreenshotClear();
+    const finishCapture = useCallback<DrawContextType['finishCapture']>(
+        async (ignoreReload: boolean = false) => {
+            hideWindow();
+            appWindowRef.current.setSize(new PhysicalSize(0, 0));
+            scrollScreenshotClear();
 
-        if (process.env.NODE_ENV !== 'development') {
-            location.reload();
-            return;
-        }
+            if (process.env.NODE_ENV !== 'development') {
+                if (!ignoreReload) {
+                    location.reload();
+                }
+                return;
+            }
 
-        window.getSelection()?.removeAllRanges();
-        await Promise.all([
-            drawLayerActionRef.current?.onCaptureFinish(),
-            selectLayerActionRef.current?.onCaptureFinish(),
-            drawCacheLayerActionRef.current?.onCaptureFinish(),
-        ]);
+            window.getSelection()?.removeAllRanges();
+            await Promise.all([
+                drawLayerActionRef.current?.onCaptureFinish(),
+                selectLayerActionRef.current?.onCaptureFinish(),
+                drawCacheLayerActionRef.current?.onCaptureFinish(),
+            ]);
 
-        setCaptureEvent({
-            event: CaptureEvent.onCaptureFinish,
-        });
-        imageBufferRef.current = undefined;
-        resetCaptureStep();
-        resetDrawState();
-        resetScreenshotType();
-        drawToolbarActionRef.current?.setEnable(false);
-        capturingRef.current = false;
-        history.clear();
-    }, [
-        hideWindow,
-        history,
-        resetCaptureStep,
-        resetDrawState,
-        resetScreenshotType,
-        setCaptureEvent,
-    ]);
+            setCaptureEvent({
+                event: CaptureEvent.onCaptureFinish,
+            });
+            imageBufferRef.current = undefined;
+            resetCaptureStep();
+            resetDrawState();
+            resetScreenshotType();
+            drawToolbarActionRef.current?.setEnable(false);
+            capturingRef.current = false;
+            history.clear();
+        },
+        [
+            hideWindow,
+            history,
+            resetCaptureStep,
+            resetDrawState,
+            resetScreenshotType,
+            setCaptureEvent,
+        ],
+    );
 
     /** 执行截图 */
     const excuteScreenshot = useCallback(
@@ -331,7 +336,7 @@ const DrawPageCore: React.FC = () => {
             drawLayerActionRef.current,
             drawCacheLayerActionRef.current,
             async () => {
-                finishCapture();
+                finishCapture(true);
             },
         );
     }, [finishCapture, getDrawState]);
@@ -422,7 +427,7 @@ const DrawPageCore: React.FC = () => {
             drawLayerActionRef.current,
             drawCacheLayerActionRef.current,
             async () => {
-                finishCapture();
+                finishCapture(true);
             },
         );
     }, [finishCapture, getDrawState]);

@@ -42,6 +42,7 @@ import { en } from '@/messages/en';
 import { ItemType, MenuItemType } from 'antd/es/menu/interface';
 import { PageNav, PageNavActionType } from './components/pageNav';
 import { useStateSubscriber } from '@/hooks/useStateSubscriber';
+import { GlobalEventHandler } from './components/globalEventHandler';
 
 type MenuItem = ItemType<MenuItemType>;
 
@@ -552,6 +553,7 @@ const MenuLayoutCore: React.FC<{ children: React.ReactNode }> = ({ children }) =
     return (
         <>
             <TrayIconLoader />
+            <GlobalEventHandler />
             <div className="menu-layout-wrap">
                 <Layout>
                     <MenuSider menuItems={menuItems} darkMode={darkMode} pathname={pathname} />

@@ -74,6 +74,7 @@ export type AppSettingsData = {
         translationDomain: TranslationDomain;
         targetLanguage: string;
         ocrTranslateAutoReplace: boolean;
+        colorPickerColorFormatIndex: number;
     };
     [AppSettingsGroup.DrawToolbarKeyEvent]: Record<
         DrawToolbarKeyEventKey,
@@ -135,6 +136,7 @@ export const defaultAppSettingsData: AppSettingsData = {
         translationDomain: TranslationDomain.General,
         targetLanguage: '',
         ocrTranslateAutoReplace: true,
+        colorPickerColorFormatIndex: 0,
     },
     [AppSettingsGroup.DrawToolbarKeyEvent]: defaultDrawToolbarKeyEventSettings,
     [AppSettingsGroup.KeyEvent]: defaultKeyEventSettings,
@@ -363,6 +365,10 @@ const ContextWrapCore: React.FC<{ children: React.ReactNode }> = ({ children }) 
                         typeof newSettings?.ocrTranslateAutoReplace === 'boolean'
                             ? newSettings.ocrTranslateAutoReplace
                             : (prevSettings?.ocrTranslateAutoReplace ?? true),
+                    colorPickerColorFormatIndex:
+                        typeof newSettings?.colorPickerColorFormatIndex === 'number'
+                            ? newSettings.colorPickerColorFormatIndex
+                            : (prevSettings?.colorPickerColorFormatIndex ?? 0),
                 };
             } else if (group === AppSettingsGroup.Screenshot) {
                 newSettings = newSettings as AppSettingsData[typeof group];

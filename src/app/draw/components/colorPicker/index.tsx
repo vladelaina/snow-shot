@@ -30,7 +30,12 @@ import { EnableKeyEventPublisher } from '../drawToolbar/components/keyEventWrap/
 import { KeyEventWrap } from '../drawToolbar/components/keyEventWrap';
 import { debounce } from 'es-toolkit';
 import { ScreenshotType } from '@/functions/screenshot';
-import { AppSettingsGroup, AppSettingsPublisher } from '@/app/contextWrap';
+import {
+    AppSettingsActionContext,
+    AppSettingsGroup,
+    AppSettingsPublisher,
+} from '@/app/contextWrap';
+import Color from 'color';
 
 const previewScale = 12;
 const previewPickerSize = 10 + 1;
@@ -55,6 +60,18 @@ export type ColorPickerActionType = {
     getCurrentImageData: () => ImageData | undefined;
 };
 
+export enum ColorPickerColorFormat {
+    RGB = 'rgb',
+    HEX = 'hex',
+    HSL = 'hsl',
+}
+
+const colorPickerColorFormatList = [
+    ColorPickerColorFormat.RGB,
+    ColorPickerColorFormat.HEX,
+    ColorPickerColorFormat.HSL,
+];
+
 const ColorPickerCore: React.FC<{
     onCopyColor?: () => void;
     actionRef: React.Ref<ColorPickerActionType | undefined>;
@@ -65,6 +82,8 @@ const ColorPickerCore: React.FC<{
     const [getCaptureEvent] = useStateSubscriber(CaptureEventPublisher, undefined);
     const [getScreenshotType] = useStateSubscriber(ScreenshotTypePublisher, undefined);
     const [getAppSettings] = useStateSubscriber(AppSettingsPublisher, undefined);
+
+    const { updateAppSettings } = useContext(AppSettingsActionContext);
 
     const { token } = theme.useToken();
 
@@ -166,20 +185,48 @@ const ColorPickerCore: React.FC<{
     // usestate 的性能太低了，直接用 ref 更新
     const colorElementRef = useRef<HTMLDivElement>(null);
     const previewColorElementRef = useRef<HTMLDivElement>(null);
-    const updateColor = useCallback((red: number, green: number, blue: number) => {
-        colorRef.current.red = red;
-        colorRef.current.green = green;
-        colorRef.current.blue = blue;
-        if (!colorElementRef.current || !previewColorElementRef.current) {
-            return;
-        }
 
-        colorElementRef.current.style.backgroundColor = `rgb(${red}, ${green}, ${blue})`;
-        colorElementRef.current.style.color =
-            red + green + blue < 383 ? 'rgba(255,255,255,0.85)' : 'rgba(0,0,0,0.88)';
-        colorElementRef.current.textContent = `RGB (${red}, ${green}, ${blue})`;
-        previewColorElementRef.current.style.boxShadow = `0 0 0 1px ${colorElementRef.current.style.color}`;
-    }, []);
+    const getFormatColor = useCallback(
+        (red: number, green: number, blue: number) => {
+            const currentColor = new Color({
+                r: red,
+                g: green,
+                b: blue,
+            });
+            const colorFormatIndex =
+                colorPickerColorFormatList[
+                    getAppSettings()[AppSettingsGroup.Cache].colorPickerColorFormatIndex
+                ] ?? ColorPickerColorFormat.RGB;
+
+            switch (colorFormatIndex) {
+                case ColorPickerColorFormat.HEX:
+                    return currentColor.hex().toString();
+                case ColorPickerColorFormat.HSL:
+                    return currentColor.hsl().string();
+                case ColorPickerColorFormat.RGB:
+                default:
+                    return currentColor.rgb().string();
+            }
+        },
+        [getAppSettings],
+    );
+    const updateColor = useCallback(
+        (red: number, green: number, blue: number) => {
+            colorRef.current.red = red;
+            colorRef.current.green = green;
+            colorRef.current.blue = blue;
+            if (!colorElementRef.current || !previewColorElementRef.current) {
+                return;
+            }
+
+            colorElementRef.current.style.backgroundColor = `rgb(${red}, ${green}, ${blue})`;
+            colorElementRef.current.style.color =
+                red + green + blue < 383 ? 'rgba(255,255,255,0.85)' : 'rgba(0,0,0,0.88)';
+            colorElementRef.current.textContent = getFormatColor(red, green, blue);
+            previewColorElementRef.current.style.boxShadow = `0 0 0 1px ${colorElementRef.current.style.color}`;
+        },
+        [getFormatColor],
+    );
 
     const pickerPositionElementRef = useRef<HTMLDivElement>(null);
 
@@ -434,7 +481,11 @@ const ColorPickerCore: React.FC<{
                     }
 
                     navigator.clipboard.writeText(
-                        `rgb(${colorRef.current.red}, ${colorRef.current.green}, ${colorRef.current.blue})`,
+                        getFormatColor(
+                            colorRef.current.red,
+                            colorRef.current.green,
+                            colorRef.current.blue,
+                        ),
                     );
                     onCopyColor?.();
                 }}
@@ -469,6 +520,36 @@ const ColorPickerCore: React.FC<{
                 componentKey={KeyEventKey.ColorPickerMoveRight}
                 onKeyDown={() => {
                     moveCursor(1, 0);
+                }}
+            >
+                <div />
+            </KeyEventWrap>
+            <KeyEventWrap
+                componentKey={KeyEventKey.SwitchColorFormat}
+                onKeyDown={() => {
+                    updateAppSettings(
+                        AppSettingsGroup.Cache,
+                        {
+                            colorPickerColorFormatIndex:
+                                (getAppSettings()[AppSettingsGroup.Cache]
+                                    .colorPickerColorFormatIndex +
+                                    1) %
+                                colorPickerColorFormatList.length,
+                        },
+                        false,
+                        true,
+                        false,
+                        true,
+                        false,
+                    );
+                    const colorFormatIndex =
+                        getAppSettings()[AppSettingsGroup.Cache].colorPickerColorFormatIndex;
+                    console.log(colorFormatIndex);
+                    updateColor(
+                        colorRef.current.red,
+                        colorRef.current.green,
+                        colorRef.current.blue,
+                    );
                 }}
             >
                 <div />
