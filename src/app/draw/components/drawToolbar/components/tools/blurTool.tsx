@@ -229,7 +229,7 @@ const BlurToolCore: React.FC = () => {
                 drawLayerActionRef.current.getCanvasApp()!.render();
             }
         },
-        [drawLayerActionRef],
+        [drawCacheLayerActionRef, drawLayerActionRef],
     );
     const updateBlurRender = useCallbackRender(updateBlur);
 

@@ -690,6 +690,10 @@ impl ScrollScreenshotService {
         // 提取当前图片的特征点
         let image_corners = self.get_corners(&gray_image);
 
+        if image_corners.is_empty() {
+            return None;
+        }
+
         // 针对滚动方向，裁切特征点
         let crop_valid_size = if self.current_direction == ScrollDirection::Vertical {
             self.image_height as i32 - 100

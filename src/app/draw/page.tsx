@@ -249,7 +249,7 @@ const DrawPageCore: React.FC = () => {
         appWindowRef.current.setSize(new PhysicalSize(0, 0));
         scrollScreenshotClear();
 
-        if (process.env.NODE_ENV !== 'development' && getCaptureStep() !== CaptureStep.Select) {
+        if (process.env.NODE_ENV !== 'development') {
             location.reload();
             return;
         }
@@ -272,7 +272,6 @@ const DrawPageCore: React.FC = () => {
         capturingRef.current = false;
         history.clear();
     }, [
-        getCaptureStep,
         hideWindow,
         history,
         resetCaptureStep,
