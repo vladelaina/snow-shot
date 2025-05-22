@@ -6,6 +6,7 @@ import { DrawStatePublisher } from '@/app/draw/extra';
 import { useStateSubscriber } from '@/hooks/useStateSubscriber';
 import { getButtonTypeByState } from '../../extra';
 import { KeyEventKey } from '../keyEventWrap/extra';
+import { HotkeysScope } from '@/components/globalLayoutExtra';
 
 const ToolButtonCore: React.FC<{
     componentKey: KeyEventKey;
@@ -15,6 +16,7 @@ const ToolButtonCore: React.FC<{
     drawState: DrawState;
     disable?: boolean;
     confirmTip?: React.ReactNode;
+    hotkeyScope?: HotkeysScope;
 }> = ({
     componentKey,
     disableOnDrawing,
@@ -23,6 +25,7 @@ const ToolButtonCore: React.FC<{
     drawState: propDrawState,
     disable,
     confirmTip,
+    hotkeyScope,
 }) => {
     const [buttonType, setButtonType] = useState(getButtonTypeByState(false));
     const updateButtonType = useCallback(
@@ -40,6 +43,7 @@ const ToolButtonCore: React.FC<{
             disableOnDrawing={disableOnDrawing}
             confirmTip={confirmTip}
             enable={disable ? false : undefined}
+            hotkeyScope={hotkeyScope}
         >
             <Button icon={icon} type={buttonType} onClick={onClick} disabled={disable} />
         </KeyEventWrap>

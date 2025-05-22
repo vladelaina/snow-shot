@@ -42,6 +42,7 @@ export const FetchErrorHandler: React.FC<{ children: React.ReactNode }> = ({ chi
 };
 
 export enum HotkeysScope {
+    All = '*',
     DrawTool = 'draw_tool',
     None = 'none',
 }

@@ -1,3 +1,4 @@
+import { HotkeysScope } from '@/components/globalLayoutExtra';
 import { useEffect, useState } from 'react';
 import { HotkeyCallback, Keys, useHotkeys, useHotkeysContext } from 'react-hotkeys-hook';
 import { OptionsOrDependencyArray } from 'react-hotkeys-hook/packages/react-hotkeys-hook/dist/types';
@@ -14,7 +15,9 @@ export const useHotkeysApp = (
 
     useEffect(() => {
         if (options && 'scopes' in options && typeof options.scopes === 'string') {
-            setEnable(activeScopes.includes(options.scopes));
+            setEnable(
+                activeScopes.includes(options.scopes) || activeScopes.includes(HotkeysScope.All),
+            );
         }
     }, [activeScopes, options]);
 

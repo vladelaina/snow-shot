@@ -9,6 +9,7 @@ import { AntdContext, HotkeysScope } from '@/components/globalLayoutExtra';
 import { Translator, TranslatorActionType } from '@/components/translator';
 import { useStateSubscriber } from '@/hooks/useStateSubscriber';
 import { Form, Modal, Switch, theme } from 'antd';
+import { trim } from 'es-toolkit';
 import React, {
     useCallback,
     useContext,
@@ -56,7 +57,7 @@ export const ModalTranslator: React.FC<{
             textLines[`line${index + 1}`] = block.text;
         });
 
-        translatorActionRef.current?.setSourceContent(JSON.stringify(textLines, undefined, 2));
+        translatorActionRef.current?.setSourceContent(JSON.stringify(textLines, undefined, 1));
     }, [ocrResult]);
 
     useImperativeHandle(
@@ -75,25 +76,30 @@ export const ModalTranslator: React.FC<{
             return;
         }
 
-        let jsonResult: Record<string, string> = {};
-        try {
-            jsonResult = JSON.parse(translateResult.current);
-        } catch {
-            message.error(intl.formatMessage({ id: 'draw.ocrDetect.translate.error' }));
-            return;
-        }
+        const resultLines = translateResult.current.split('\n').map((line) => trim(line));
 
-        const keys = Object.keys(jsonResult);
-        if (keys.length !== ocrResult.text_blocks.length) {
+        if (resultLines.length < ocrResult.text_blocks.length) {
             message.warning(intl.formatMessage({ id: 'draw.ocrDetect.translate.error2' }));
         }
 
         const result: OcrDetectResult = {
             ...ocrResult,
-            text_blocks: ocrResult.text_blocks.map((block, index) => ({
-                ...block,
-                text: keys[index] ? jsonResult[keys[index]] : block.text,
-            })),
+            text_blocks: ocrResult.text_blocks.map((block, index) => {
+                let text = block.text;
+
+                const line = resultLines[index + 1];
+                const linePrefixLength = 4 + index.toString().length + 5;
+                const lineSuffixLength = 2;
+                console.log(line, linePrefixLength, lineSuffixLength);
+                if (line && line.length > linePrefixLength + lineSuffixLength) {
+                    text = line.slice(linePrefixLength, line.length - lineSuffixLength);
+                }
+
+                return {
+                    ...block,
+                    text,
+                };
+            }),
         };
 
         onReplaceCallback(result);

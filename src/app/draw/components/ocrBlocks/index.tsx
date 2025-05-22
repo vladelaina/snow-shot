@@ -14,7 +14,7 @@ import { CaptureStepPublisher } from '../../extra';
 import { CaptureStep } from '../../types';
 import { Menu } from '@tauri-apps/api/menu';
 import { useHotkeysApp } from '@/hooks/useHotkeysApp';
-import { AntdContext, HotkeysScope } from '@/components/globalLayoutExtra';
+import { AntdContext } from '@/components/globalLayoutExtra';
 import OcrTool from '../drawToolbar/components/tools/ocrTool';
 
 // 定义角度阈值常量（以度为单位）
@@ -263,7 +263,6 @@ export const OcrBlocks: React.FC<{
             preventDefault: true,
             keyup: false,
             keydown: true,
-            scopes: HotkeysScope.DrawTool,
         },
     );
 

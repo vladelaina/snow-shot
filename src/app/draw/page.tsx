@@ -249,7 +249,7 @@ const DrawPageCore: React.FC = () => {
         appWindowRef.current.setSize(new PhysicalSize(0, 0));
         scrollScreenshotClear();
 
-        if (process.env.NODE_ENV !== 'development') {
+        if (process.env.NODE_ENV !== 'development' && getCaptureStep() !== CaptureStep.Select) {
             location.reload();
             return;
         }
@@ -272,6 +272,7 @@ const DrawPageCore: React.FC = () => {
         capturingRef.current = false;
         history.clear();
     }, [
+        getCaptureStep,
         hideWindow,
         history,
         resetCaptureStep,
@@ -402,6 +403,7 @@ const DrawPageCore: React.FC = () => {
         }
 
         const selected = window.getSelection();
+
         if (getDrawState() === DrawState.OcrDetect && selected && selected.toString()) {
             navigator.clipboard.writeText(selected.toString());
             finishCapture();
@@ -499,13 +501,13 @@ const DrawPageCore: React.FC = () => {
 
     useEffect(() => {
         document.oncopy = function () {
-            if (getCaptureStep() === CaptureStep.Fixed) {
+            if (getCaptureStep() === CaptureStep.Fixed || getDrawState() === DrawState.OcrDetect) {
                 return true;
             }
 
             return false;
         };
-    }, [getCaptureStep, onCopyToClipboard]);
+    }, [getCaptureStep, getDrawState, onCopyToClipboard]);
 
     return (
         <DrawContext.Provider value={drawContextValue}>

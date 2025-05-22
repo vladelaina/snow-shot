@@ -21,19 +21,27 @@ const KeyEventHandleCore: React.FC<{
     onKeyUpChildren: () => void;
     componentKey: KeyEventKey;
     children: JSX.Element;
-}> = ({ keyEventValue, onKeyDownChildren, onKeyUpChildren, componentKey, children }) => {
+    hotkeyScope?: HotkeysScope;
+}> = ({
+    keyEventValue,
+    onKeyDownChildren,
+    onKeyUpChildren,
+    componentKey,
+    children,
+    hotkeyScope,
+}) => {
     const intl = useIntl();
     useHotkeysApp(keyEventValue.hotKey, onKeyDownChildren, {
         keydown: true,
         keyup: false,
         preventDefault: true,
-        scopes: HotkeysScope.DrawTool,
+        scopes: hotkeyScope ?? HotkeysScope.DrawTool,
     });
     useHotkeysApp(keyEventValue.hotKey, onKeyUpChildren, {
         keydown: false,
         keyup: true,
         preventDefault: true,
-        scopes: HotkeysScope.DrawTool,
+        scopes: hotkeyScope ?? HotkeysScope.DrawTool,
     });
 
     const buttonTitle = useMemo(() => {
@@ -72,6 +80,7 @@ const KeyEventWrapCore: React.FC<{
     confirmTip?: React.ReactNode;
     disableOnDrawing?: boolean;
     enable?: boolean;
+    hotkeyScope?: HotkeysScope;
 }> = ({
     onKeyDownEventPropName,
     onKeyUpEventPropName,
@@ -82,6 +91,7 @@ const KeyEventWrapCore: React.FC<{
     confirmTip,
     disableOnDrawing = false,
     enable,
+    hotkeyScope,
 }) => {
     const enableRef = useRef<boolean | undefined>(enable);
     useEffect(() => {
@@ -180,6 +190,7 @@ const KeyEventWrapCore: React.FC<{
                 onKeyDownChildren={onKeyDownChildren}
                 onKeyUpChildren={onKeyUpChildren}
                 componentKey={componentKey}
+                hotkeyScope={hotkeyScope}
             >
                 {children}
             </KeyEventHandle>
