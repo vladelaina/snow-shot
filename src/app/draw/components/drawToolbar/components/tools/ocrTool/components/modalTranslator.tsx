@@ -76,10 +76,32 @@ export const ModalTranslator: React.FC<{
             return;
         }
 
+        try {
+            const jsonResult = JSON.parse(translateResult.current);
+
+            const keys = Object.keys(jsonResult);
+            if (keys.length !== ocrResult.text_blocks.length) {
+                message.warning(intl.formatMessage({ id: 'draw.ocrDetect.translate.error2' }));
+                throw new Error();
+            }
+
+            const result: OcrDetectResult = {
+                ...ocrResult,
+                text_blocks: ocrResult.text_blocks.map((block, index) => ({
+                    ...block,
+                    text: keys[index] ? jsonResult[keys[index]] : block.text,
+                })),
+            };
+
+            onReplaceCallback(result);
+            return;
+        } catch {}
+
+        // 如果 json 解析失败，则按行解析
         const resultLines = translateResult.current.split('\n').map((line) => trim(line));
 
         if (resultLines.length < ocrResult.text_blocks.length) {
-            message.warning(intl.formatMessage({ id: 'draw.ocrDetect.translate.error2' }));
+            message.warning(intl.formatMessage({ id: 'draw.ocrDetect.translate.error3' }));
         }
 
         const result: OcrDetectResult = {

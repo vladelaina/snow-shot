@@ -42,6 +42,7 @@ export enum KeyEventKey {
     MaintainAspectRatioPicker = 'maintainAspectRatioPicker',
     RotateWithDiscreteAnglePicker = 'rotateWithDiscreteAnglePicker',
     AutoAlignPicker = 'autoAlignPicker',
+    SwitchColorFormat = 'switchColorFormat',
 }
 
 export const defaultDrawToolbarKeyEventSettings: Record<KeyEventKey, KeyEventValue> = {
@@ -132,6 +133,9 @@ export const defaultDrawToolbarKeyEventSettings: Record<KeyEventKey, KeyEventVal
         hotKey: 'Shift',
     },
     [KeyEventKey.RotateWithDiscreteAnglePicker]: {
+        hotKey: 'Shift',
+    },
+    [KeyEventKey.SwitchColorFormat]: {
         hotKey: 'Shift',
     },
     [KeyEventKey.AutoAlignPicker]: {

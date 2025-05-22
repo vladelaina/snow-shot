@@ -233,19 +233,23 @@ const BlurToolCore: React.FC = () => {
     );
     const updateBlurRender = useCallbackRender(updateBlur);
 
-    const handleEraser = useCallback((params: ExcalidrawOnHandleEraserParams | undefined) => {
-        if (!params) {
-            return;
-        }
-
-        params.elements.forEach((id) => {
-            const blurSprite = blurSpriteMapRef.current.get(id);
-            if (!blurSprite) {
+    const handleEraser = useCallback(
+        (params: ExcalidrawOnHandleEraserParams | undefined) => {
+            if (!params) {
                 return;
             }
-            blurSprite.sprite.alpha = (blurSprite.props.opacity / 100) * 0.2;
-        });
-    }, []);
+
+            params.elements.forEach((id) => {
+                const blurSprite = blurSpriteMapRef.current.get(id);
+                if (!blurSprite) {
+                    return;
+                }
+                blurSprite.sprite.alpha = (blurSprite.props.opacity / 100) * 0.2;
+                drawLayerActionRef.current?.getCanvasApp()!.render();
+            });
+        },
+        [drawLayerActionRef],
+    );
     const handleEraserRender = useCallbackRender(handleEraser);
 
     useStateSubscriber(ExcalidrawOnChangePublisher, updateBlurRender);

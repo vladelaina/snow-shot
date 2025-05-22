@@ -56,7 +56,6 @@ export const en = {
     'home.translationSelectText': 'Translate Selected Text',
     'home.translation': 'Translation',
     'home.screenshot': 'Screenshot',
-    'home.screenshotAfter': 'After screenshot {text}',
     'home.shortcut': 'Hotkey',
     'home.shortcut.registered': 'Registered successfully',
     'home.shortcut.unregistered': 'Registration interrupted (possible hotkey conflict)',

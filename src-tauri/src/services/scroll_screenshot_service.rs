@@ -606,12 +606,15 @@ impl ScrollScreenshotService {
                     dx
                 };
 
-                if min_diff < 0 && min_diff < diff {
-                    return None;
-                }
+                // 保留 0 的偏移防止，出现画面不变，记录意料外的截图
+                if diff != 0 {
+                    if min_diff < 0 && min_diff < diff {
+                        return None;
+                    }
 
-                if min_diff > 0 && min_diff > diff {
-                    return None;
+                    if min_diff > 0 && min_diff > diff {
+                        return None;
+                    }
                 }
 
                 if dist < 0.1 {

@@ -87,6 +87,7 @@ const StatusBar: React.FC = () => {
             rotateWithDiscreteAnglePicker: { hotKey: rotateWithDiscreteAnglePickerHotKey },
             resizeFromCenterPicker: { hotKey: resizeFromCenterPickerHotKey },
             autoAlignPicker: { hotKey: autoAlignPickerHotKey },
+            switchColorFormat: { hotKey: switchColorFormatHotKey },
         } = getAppSettings()[AppSettingsGroup.DrawToolbarKeyEvent];
 
         const items: DescriptionsItemType[] = [
@@ -131,6 +132,11 @@ const StatusBar: React.FC = () => {
                     key: 'colorPickerCopy',
                     label: <FormattedMessage id="draw.colorPickerCopy" />,
                     children: <KeyLabel hotKey={colorPickerCopyHotKey} />,
+                },
+                {
+                    key: 'switchColorFormat',
+                    label: <FormattedMessage id="draw.switchColorFormat" />,
+                    children: <KeyLabel hotKey={switchColorFormatHotKey} />,
                 },
             ].forEach((item) => {
                 items.push(item);

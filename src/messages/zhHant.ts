@@ -54,7 +54,6 @@ export const zhHant = {
     'home.translationSelectText': '翻譯選取的文字',
     'home.translation': '翻譯',
     'home.screenshot': '截圖',
-    'home.screenshotAfter': '截圖後 {text}',
     'home.shortcut': '快速鍵',
     'home.shortcut.registered': '註冊成功',
     'home.shortcut.unregistered': '註冊中斷，可能是快捷鍵被重複設定',

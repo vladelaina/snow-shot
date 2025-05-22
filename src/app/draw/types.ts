@@ -64,7 +64,7 @@ export enum CanvasLayer {
 }
 
 export type DrawContextType = {
-    finishCapture: () => Promise<void>;
+    finishCapture: (ignoreReload?: boolean) => Promise<void>;
     drawLayerActionRef: React.RefObject<DrawLayerActionType | undefined>;
     selectLayerActionRef: React.RefObject<SelectLayerActionType | undefined>;
     imageBufferRef: React.RefObject<ImageBuffer | undefined>;

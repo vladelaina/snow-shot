@@ -373,7 +373,7 @@ const SelectLayerCore: React.FC<SelectLayerProps> = ({ actionRef }) => {
     );
 
     const onCaptureFinish = useCallback<BaseLayerEventActionType['onCaptureFinish']>(async () => {
-        selectLayerCanvasContextRef.current!.clearRect(
+        selectLayerCanvasContextRef.current?.clearRect(
             0,
             0,
             imageBufferRef.current!.monitorWidth,
