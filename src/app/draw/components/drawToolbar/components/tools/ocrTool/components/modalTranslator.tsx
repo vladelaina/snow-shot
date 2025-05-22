@@ -90,7 +90,6 @@ export const ModalTranslator: React.FC<{
                 const line = resultLines[index + 1];
                 const linePrefixLength = 4 + index.toString().length + 5;
                 const lineSuffixLength = 2;
-                console.log(line, linePrefixLength, lineSuffixLength);
                 if (line && line.length > linePrefixLength + lineSuffixLength) {
                     text = line.slice(linePrefixLength, line.length - lineSuffixLength);
                 }
