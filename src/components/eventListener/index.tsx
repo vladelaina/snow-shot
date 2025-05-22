@@ -101,6 +101,10 @@ const EventListenerCore: React.FC<{ children: React.ReactNode }> = ({ children }
                     event: 'execute-screenshot',
                     callback: async () => {},
                 });
+                defaultListener.push({
+                    event: 'finish-screenshot',
+                    callback: async () => {},
+                });
             }
         }
 

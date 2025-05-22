@@ -187,6 +187,9 @@ const DrawCacheLayerCore: React.FC<{
                 excalidrawAPIRef.current?.history.clear();
                 history.clear();
             },
+            getAppState: () => {
+                return excalidrawAPIRef.current?.getAppState();
+            },
             getImageData,
             getCanvasContext,
             getCanvas,

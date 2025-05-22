@@ -13,6 +13,7 @@ export type DrawCacheLayerActionType = {
     getImageData: (selectRect: ElementRect) => Promise<ImageData | undefined>;
     getCanvasContext: () => CanvasRenderingContext2D | null | undefined;
     getCanvas: () => HTMLCanvasElement | null;
+    getAppState: () => AppState | undefined;
 };
 
 export type ExcalidrawKeyEvent = {

@@ -41,7 +41,7 @@ import { FormattedMessage, useIntl } from 'react-intl';
 import { BlurTool } from './components/tools/blurTool';
 import { ScreenshotType } from '@/functions/screenshot';
 import { ScrollScreenshot } from './components/tools/scrollScreenshotTool';
-import { AntdContext } from '@/app/layout';
+import { AntdContext } from '@/components/globalLayoutExtra';
 
 export type DrawToolbarProps = {
     actionRef: React.RefObject<DrawToolbarActionType | undefined>;
@@ -218,6 +218,10 @@ const DrawToolbarCore: React.FC<DrawToolbarProps> = ({
                     });
                     break;
                 case DrawState.OcrDetect:
+                    drawCacheLayerActionRef.current?.setEnable(false);
+                    drawCacheLayerActionRef.current?.setActiveTool({
+                        type: 'hand',
+                    });
                     onOcrDetect();
                     break;
                 default:

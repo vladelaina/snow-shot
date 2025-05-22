@@ -21,6 +21,7 @@ type BlurSpriteProps = {
     angle: number;
     opacity: number;
     valid: boolean;
+    zoom: number;
 };
 
 const isEqualBlurSpriteProps = (
@@ -34,12 +35,13 @@ const isEqualBlurSpriteProps = (
         a.width === b.width &&
         a.height === b.height &&
         a.angle === b.angle &&
+        a.zoom === b.zoom &&
         a.opacity === b.opacity
     );
 };
 
 const BlurToolCore: React.FC = () => {
-    const { drawLayerActionRef } = useContext(DrawContext);
+    const { drawLayerActionRef, drawCacheLayerActionRef } = useContext(DrawContext);
     const imageTextureRef = useRef<PIXI.Texture | undefined>(undefined);
     const imageBufferRef = useRef<ImageBuffer | undefined>(undefined);
     const blurSpriteMapRef = useRef<
@@ -122,14 +124,26 @@ const BlurToolCore: React.FC = () => {
                     continue;
                 }
 
+                const appState = drawCacheLayerActionRef.current?.getAppState();
+                if (!appState) {
+                    return;
+                }
+
+                const { scrollY, scrollX, zoom } = appState;
+
                 const blurProps = {
                     blur: element.blur,
-                    x: Math.round(element.x * imageBufferRef.current.monitorScaleFactor),
-                    y: Math.round(element.y * imageBufferRef.current.monitorScaleFactor),
+                    x:
+                        Math.round(element.x * imageBufferRef.current.monitorScaleFactor) +
+                        scrollX * imageBufferRef.current.monitorScaleFactor,
+                    y:
+                        Math.round(element.y * imageBufferRef.current.monitorScaleFactor) +
+                        scrollY * imageBufferRef.current.monitorScaleFactor,
                     width: Math.round(element.width * imageBufferRef.current.monitorScaleFactor),
                     height: Math.round(element.height * imageBufferRef.current.monitorScaleFactor),
                     angle: element.angle,
                     opacity: element.opacity,
+                    zoom: zoom.value,
                     valid: true,
                 };
 
@@ -181,6 +195,7 @@ const BlurToolCore: React.FC = () => {
                         blurProps.x + blurProps.width * 0.5,
                         blurProps.y + blurProps.height * 0.5,
                     )
+                    .scaleTransform(blurProps.zoom, blurProps.zoom)
                     .rect(
                         -blurProps.width * 0.5,
                         -blurProps.height * 0.5,

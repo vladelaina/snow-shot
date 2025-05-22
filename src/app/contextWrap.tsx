@@ -73,6 +73,7 @@ export type AppSettingsData = {
         translationType: TranslationType | string;
         translationDomain: TranslationDomain;
         targetLanguage: string;
+        ocrTranslateAutoReplace: boolean;
     };
     [AppSettingsGroup.DrawToolbarKeyEvent]: Record<
         DrawToolbarKeyEventKey,
@@ -133,6 +134,7 @@ export const defaultAppSettingsData: AppSettingsData = {
         translationType: TranslationType.Youdao,
         translationDomain: TranslationDomain.General,
         targetLanguage: '',
+        ocrTranslateAutoReplace: true,
     },
     [AppSettingsGroup.DrawToolbarKeyEvent]: defaultDrawToolbarKeyEventSettings,
     [AppSettingsGroup.KeyEvent]: defaultKeyEventSettings,
@@ -357,6 +359,10 @@ const ContextWrapCore: React.FC<{ children: React.ReactNode }> = ({ children }) 
                         typeof newSettings?.targetLanguage === 'string'
                             ? newSettings.targetLanguage
                             : (prevSettings?.targetLanguage ?? ''),
+                    ocrTranslateAutoReplace:
+                        typeof newSettings?.ocrTranslateAutoReplace === 'boolean'
+                            ? newSettings.ocrTranslateAutoReplace
+                            : (prevSettings?.ocrTranslateAutoReplace ?? true),
                 };
             } else if (group === AppSettingsGroup.Screenshot) {
                 newSettings = newSettings as AppSettingsData[typeof group];

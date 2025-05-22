@@ -5,7 +5,7 @@ import { HolderOutlined } from '@ant-design/icons';
 import { Flex, theme } from 'antd';
 import { useCallback, useContext, useEffect, useMemo, useRef } from 'react';
 import { useIntl } from 'react-intl';
-import { updateElementPosition } from '../../../dragButton/extra';
+import { updateElementPosition } from './dragButton/extra';
 import { DrawContext } from '@/app/draw/types';
 
 export const SubTools: React.FC<{ buttons: React.ReactNode[] }> = ({ buttons }) => {
@@ -158,6 +158,10 @@ export const SubTools: React.FC<{ buttons: React.ReactNode[] }> = ({ buttons }) 
                     margin-top: -${token.marginXXS / 2}px;
                     transform: rotate(90deg);
                     font-size: 18px;
+                }
+
+                .sub-tools :global(.ant-btn) :global(.ant-btn-icon) {
+                    font-size: 24px;
                 }
             `}</style>
         </div>

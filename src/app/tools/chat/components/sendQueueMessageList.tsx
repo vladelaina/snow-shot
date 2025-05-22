@@ -38,7 +38,6 @@ export const SendQueueMessageList: React.FC<{
             <Modal
                 open={open}
                 onCancel={() => setOpen(false)}
-                onClose={() => setOpen(false)}
                 onOk={() => setOpen(false)}
                 title={<FormattedMessage id="tools.chat.sendQueue.title" />}
                 cancelButtonProps={{ style: { display: 'none' } }}

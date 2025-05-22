@@ -2,11 +2,10 @@ import { useCallback, useContext, useEffect, useImperativeHandle, useRef } from 
 import { ElementRect, ImageBuffer } from '@/commands';
 import { ocrDetect, OcrDetectResult } from '@/commands/ocr';
 import { useStateSubscriber } from '@/hooks/useStateSubscriber';
-import { DrawStatePublisher } from '../../extra';
+import { DrawEvent, DrawEventPublisher, DrawStatePublisher } from '../../extra';
 import { DrawState } from '../../types';
 import { zIndexs } from '@/utils/zIndex';
 import { FormattedMessage, useIntl } from 'react-intl';
-import { AntdContext } from '@/app/layout';
 import { theme } from 'antd';
 import Color from 'color';
 import { DrawContext } from '../../types';
@@ -14,7 +13,9 @@ import { getCurrentWindow, LogicalPosition } from '@tauri-apps/api/window';
 import { CaptureStepPublisher } from '../../extra';
 import { CaptureStep } from '../../types';
 import { Menu } from '@tauri-apps/api/menu';
-import { useHotkeys } from 'react-hotkeys-hook';
+import { useHotkeysApp } from '@/hooks/useHotkeysApp';
+import { AntdContext } from '@/components/globalLayoutExtra';
+import OcrTool from '../drawToolbar/components/tools/ocrTool';
 
 // 定义角度阈值常量（以度为单位）
 const ROTATION_THRESHOLD = 3; // 小于3度的旋转被视为误差，不进行旋转
@@ -76,9 +77,15 @@ export const OcrBlocks: React.FC<{
         ),
     );
     const [getCaptureStep] = useStateSubscriber(CaptureStepPublisher, undefined);
+    const [, setDrawEvent] = useStateSubscriber(DrawEventPublisher, undefined);
 
+    const selectRectRef = useRef<ElementRect>({} as ElementRect);
+    const imageBufferRef = useRef<ImageBuffer>({} as ImageBuffer);
     const updateOcrTextElements = useCallback(
-        (selectRect: ElementRect, imageBuffer: ImageBuffer, ocrResult: OcrDetectResult) => {
+        (ocrResult: OcrDetectResult) => {
+            const imageBuffer = imageBufferRef.current;
+            const selectRect = selectRectRef.current;
+
             const transformScale = 1 / imageBuffer.monitorScaleFactor;
 
             const baseX = selectRect.min_x * transformScale;
@@ -162,7 +169,7 @@ export const OcrBlocks: React.FC<{
 
                 setTimeout(() => {
                     const textWidth = textElement.getBoundingClientRect().width;
-                    const textHeight = textElement.getBoundingClientRect().height;
+                    const textHeight = textElement.getBoundingClientRect().height - 3;
                     const scale = Math.min(height / textHeight, width / textWidth);
                     textElement.style.transform = `scale(${scale})`;
                     textWrapElement.style.transform = `translate(${centerX - width * 0.5}px, ${centerY - height * 0.5}px) rotate(${rotationDeg}deg)`;
@@ -195,7 +202,15 @@ export const OcrBlocks: React.FC<{
 
                 if (imageBlob) {
                     const ocrResult = await ocrDetect(await imageBlob.arrayBuffer());
-                    updateOcrTextElements(selectRect, imageBuffer, ocrResult);
+                    selectRectRef.current = selectRect;
+                    imageBufferRef.current = imageBuffer;
+                    updateOcrTextElements(ocrResult);
+                    setDrawEvent({
+                        event: DrawEvent.OcrDetect,
+                        params: {
+                            result: ocrResult,
+                        },
+                    });
                 }
 
                 hideLoading();
@@ -203,7 +218,7 @@ export const OcrBlocks: React.FC<{
             setEnable,
             setScale,
         }),
-        [message, setEnable, setScale, updateOcrTextElements],
+        [message, setDrawEvent, setEnable, setScale, updateOcrTextElements],
     );
 
     const menuRef = useRef<Menu>(undefined);
@@ -233,7 +248,7 @@ export const OcrBlocks: React.FC<{
         };
     }, [initMenu]);
 
-    useHotkeys(
+    useHotkeysApp(
         'Ctrl+A',
         () => {
             const selection = window.getSelection();
@@ -251,8 +266,17 @@ export const OcrBlocks: React.FC<{
         },
     );
 
+    const onReplace = useCallback(
+        (result: OcrDetectResult) => {
+            updateOcrTextElements(result);
+        },
+        [updateOcrTextElements],
+    );
+
     return (
         <>
+            <OcrTool onReplace={onReplace} />
+
             <div
                 style={{
                     zIndex: zIndexs.Draw_OcrResult,
