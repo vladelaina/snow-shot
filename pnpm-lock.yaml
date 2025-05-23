@@ -132,6 +132,9 @@ importers:
       '@tauri-apps/cli':
         specifier: ^2.5.0
         version: 2.5.0
+      '@types/isurl':
+        specifier: ^4.0.0
+        version: 4.0.0
       '@types/markdown-it':
         specifier: ^14.1.2
         version: 14.1.2
@@ -1167,6 +1170,9 @@ packages:
 
   '@types/hoist-non-react-statics@3.3.6':
     resolution: {integrity: sha512-lPByRJUer/iN/xa4qpyL0qmL11DqNW81iU/IG1S3uvRUq4oKagz8VCxZjiWkumgt66YT3vOdDgZ0o32sGKtCEw==}
+
+  '@types/isurl@4.0.0':
+    resolution: {integrity: sha512-uhdJNIT2zk8O+gpH1jYwqGq0/FHQvDSF1Z+cO2k13PtlLMDdkSLc8zsfbaTyd2/+PvgjAO0mGzbAApBVaiiDsQ==}
 
   '@types/json-schema@7.0.15':
     resolution: {integrity: sha512-5+fP8P8MFNC+AyZCDxrB2pkZFPGzqQWUzpSeuuVLvm8VMcorNYavBqoFcxK8bQz4Qsbn4oUEEem4wDLfcysGHA==}
@@ -5090,6 +5096,8 @@ snapshots:
     dependencies:
       '@types/react': 19.1.5
       hoist-non-react-statics: 3.3.2
+
+  '@types/isurl@4.0.0': {}
 
   '@types/json-schema@7.0.15': {}
 

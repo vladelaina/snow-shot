@@ -149,6 +149,16 @@ export const ModalTranslator: React.FC<{
         [autoReplace, replaceOcrResult],
     );
 
+    useEffect(() => {
+        const getTranslatorAction = () => {
+            return translatorActionRef.current;
+        };
+
+        return () => {
+            getTranslatorAction()?.stopTranslate();
+        };
+    }, []);
+
     return (
         <Modal
             width={800}
@@ -157,6 +167,7 @@ export const ModalTranslator: React.FC<{
             onOk={() => {
                 replaceOcrResult();
                 setOpen(false);
+                translatorActionRef.current?.stopTranslate();
             }}
             centered
             forceRender={!!ocrResult}

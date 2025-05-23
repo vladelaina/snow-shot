@@ -117,6 +117,7 @@ export type TranslatorActionType = {
     getTranslatedContentRef: () => string;
     setSourceContent: (content: string, ignoreDebounce?: boolean) => void;
     getSourceContentRef: () => InputRef | null;
+    stopTranslate: () => void;
 };
 
 const TranslatorCore: React.FC<{
@@ -522,6 +523,9 @@ const TranslatorCore: React.FC<{
                     ignoreDebounceRef.current = ignoreDebounce ?? false;
                 },
                 getSourceContentRef: () => sourceContentRef.current,
+                stopTranslate: () => {
+                    currentRequestSignRef.current++;
+                },
             }),
             [translatedContentRef],
         ),

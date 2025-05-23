@@ -54,6 +54,7 @@
         "@eslint/eslintrc": "^3.3.1",
         "@next/eslint-plugin-next": "^15.3.2",
         "@tauri-apps/cli": "^2.5.0",
+        "@types/isurl": "^4.0.0",
         "@types/markdown-it": "^14.1.2",
         "@types/node": "^20.17.50",
         "@types/react": "^19.1.5",
