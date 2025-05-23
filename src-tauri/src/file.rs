@@ -31,7 +31,7 @@ pub async fn save_file(request: tauri::ipc::Request<'_>) -> Result<(), ()> {
 
     // 如果是 avif 则重写解码写入
     if file_type == "image/avif" {
-        let image = match image::load(Cursor::new(file_data), image::ImageFormat::Png) {
+        let image = match image::load(Cursor::new(file_data), image::ImageFormat::WebP) {
             Ok(image) => image,
             Err(_) => return Err(()),
         };

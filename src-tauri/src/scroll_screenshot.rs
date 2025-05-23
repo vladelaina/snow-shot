@@ -1,5 +1,5 @@
 use image::codecs::jpeg::JpegEncoder;
-use image::{codecs::webp::WebPEncoder, imageops::FilterType};
+use image::imageops::FilterType;
 use serde::Serialize;
 use std::fs;
 use std::sync::Mutex;
