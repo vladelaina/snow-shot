@@ -1,4 +1,4 @@
-import { useContext, useEffect, useRef, useState } from 'react';
+import { useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { Spin, theme, Typography } from 'antd';
 import { DrawContext } from '@/app/draw/types';
 import { zIndexs } from '@/utils/zIndex';
@@ -6,6 +6,7 @@ import QrScanner from 'qr-scanner';
 import { AntdContext } from '@/components/globalLayoutExtra';
 import { useIntl } from 'react-intl';
 import { useHotkeysApp } from '@/hooks/useHotkeysApp';
+import { openUrl } from '@tauri-apps/plugin-opener';
 
 export const ScanQrcodeTool: React.FC<{
     finishCapture: () => void;
@@ -111,6 +112,28 @@ export const ScanQrcodeTool: React.FC<{
         },
     );
 
+    const qrCodeContent = useMemo(() => {
+        if (!qrCode) {
+            return '';
+        }
+
+        // 简单判断下
+        if (qrCode.startsWith('http') || qrCode.startsWith('https')) {
+            return (
+                <a
+                    onClick={() => {
+                        openUrl(qrCode);
+                        finishCapture();
+                    }}
+                >
+                    {qrCode}
+                </a>
+            );
+        }
+
+        return qrCode;
+    }, [finishCapture, qrCode]);
+
     return (
         <div
             style={{
@@ -143,7 +166,7 @@ export const ScanQrcodeTool: React.FC<{
                             : false
                     }
                 >
-                    {qrCode}
+                    {qrCodeContent}
                 </Typography.Paragraph>
             )}
         </div>

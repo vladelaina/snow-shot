@@ -153,7 +153,7 @@ const ColorPickerCore: React.FC<{
                 // 获取选区的状态，如果是未选定的状态，加个透明度
                 const selectState = selectLayerActionRef.current?.getSelectState();
                 if (selectState === SelectState.Manual || selectState === SelectState.Drag) {
-                    opacity = '0.72';
+                    opacity = '0.5';
                 } else if (selectState === SelectState.Auto && colorPickerRef.current) {
                     // 这时是自动选区，那就根据是否在边缘判断
                     // 一般都是从左上到右下，所以只判断右下边缘即可
@@ -164,7 +164,7 @@ const ColorPickerCore: React.FC<{
                         imageBuffer.monitorHeight -
                         colorPickerRef.current!.clientHeight * imageBuffer.monitorScaleFactor;
                     if (mouseX > maxX || mouseY > maxY) {
-                        opacity = '0.72';
+                        opacity = '0.5';
                     }
                 }
             }

@@ -202,7 +202,7 @@ export const ScrollScreenshot = () => {
         [imageBufferRef, intl, message, selectLayerActionRef, setLoading, updateImageUrlList],
     );
     const captuerDebounce = useMemo(() => {
-        return debounce(captureImage, 83);
+        return debounce(captureImage, 64);
     }, [captureImage]);
 
     const init = useCallback(

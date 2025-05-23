@@ -340,6 +340,10 @@ const DrawToolbarCore: React.FC<DrawToolbarProps> = ({
                         setDrawToolbarState({ ...getDrawToolbarState(), mouseHover: false });
                     }}
                     className="draw-toolbar"
+                    onDoubleClick={(e) => {
+                        e.stopPropagation();
+                        e.preventDefault();
+                    }}
                     ref={drawToolbarRef}
                 >
                     <Flex align="center" gap={token.paddingXS}>
