@@ -313,7 +313,7 @@ const SelectLayerCore: React.FC<SelectLayerProps> = ({ actionRef }) => {
             const opacity = Math.min(
                 Math.max(
                     (100 -
-                        getAppSettings()[AppSettingsGroup.FunctionScreenshot]
+                        getAppSettings()[AppSettingsGroup.Screenshot]
                             .beyondSelectRectElementOpacity) /
                         100,
                     0,
@@ -425,10 +425,19 @@ const SelectLayerCore: React.FC<SelectLayerProps> = ({ actionRef }) => {
         [changeCursor, getSelectRect],
     );
 
-    const setSelectRect = useCallback((rect: ElementRect, ignoreAnimation: boolean = false) => {
-        drawSelectRectAnimationRef.current?.update(rect, ignoreAnimation);
-        resizeToolbarActionRef.current?.setSize(rect.max_x - rect.min_x, rect.max_y - rect.min_y);
-    }, []);
+    const setSelectRect = useCallback(
+        (rect: ElementRect, ignoreAnimation: boolean = false) => {
+            drawSelectRectAnimationRef.current?.update(
+                rect,
+                ignoreAnimation || getAppSettings()[AppSettingsGroup.Screenshot].disableAnimation,
+            );
+            resizeToolbarActionRef.current?.setSize(
+                rect.max_x - rect.min_x,
+                rect.max_y - rect.min_y,
+            );
+        },
+        [getAppSettings],
+    );
 
     const onMouseDown = useCallback(
         (mousePosition: MousePosition) => {

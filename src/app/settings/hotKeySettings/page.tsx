@@ -15,7 +15,7 @@ import {
     KeyEventKey,
 } from '@/core/hotKeys';
 import { useAppSettingsLoad } from '@/hooks/useAppSettingsLoad';
-import { Col, Form, Row, Spin, theme } from 'antd';
+import { Col, Divider, Form, Row, Spin, theme } from 'antd';
 import { useCallback, useContext, useMemo, useState } from 'react';
 import { FormattedMessage } from 'react-intl';
 
@@ -144,11 +144,12 @@ export default function HotKeySettings() {
         return groupFormItemMap;
     }, [keyEvent, updateAppSettings]);
 
+    const keyEventFormItemListKeys = Object.keys(keyEventFormItemList);
     return (
         <div className="settings-wrap">
             {/* 这里用 form 控制值的更新和保存的话反而很麻烦，所以 */}
             <Form className="settings-form common-settings-form" form={keyEventForm}>
-                {Object.keys(keyEventFormItemList).map((key) => {
+                {keyEventFormItemListKeys.map((key, index) => {
                     return (
                         <div key={key}>
                             <GroupTitle
@@ -170,10 +171,14 @@ export default function HotKeySettings() {
                             <Spin spinning={appSettingsLoading}>
                                 <Row gutter={token.margin}>{keyEventFormItemList[key]}</Row>
                             </Spin>
+
+                            {index !== keyEventFormItemListKeys.length - 1 && <Divider />}
                         </div>
                     );
                 })}
             </Form>
+
+            <Divider />
 
             <GroupTitle
                 id="drawingHotKey"

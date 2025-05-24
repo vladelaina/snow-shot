@@ -14,9 +14,13 @@ export const home = {
     'home.shortcut': '快捷键',
     'home.shortcut.registered': '注册成功',
     'home.shortcut.unregistered': '注册中断，可能是快捷键被重复设置',
+    'home.shortcut.none': '未设置',
     'home.shortcut.error': '注册失败，快捷键已被其他应用占用',
     'home.exit': '退出',
     'home.about': '关于 Snow Shot',
     'home.disableShortcut': '禁用快捷键',
     'home.enableShortcut': '启用快捷键',
+    'home.trayIcon.error': '托盘图标设置失败',
+    'home.trayIcon.error3': '托盘图标尺寸过大，推荐使用 32x32 或 64x64 的图片',
+    'home.trayIcon.error4': '托盘图标读取失败',
 };

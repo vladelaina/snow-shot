@@ -13,10 +13,8 @@ import {
     ArrowIcon,
     ArrowSelectIcon,
     CircleIcon,
-    DiamondIcon,
     EraserIcon,
     FixedIcon,
-    LineIcon,
     MosaicIcon,
     OcrDetectIcon,
     PenIcon,
@@ -42,6 +40,8 @@ import { BlurTool } from './components/tools/blurTool';
 import { ScreenshotType } from '@/functions/screenshot';
 import { ScrollScreenshot } from './components/tools/scrollScreenshotTool';
 import { AntdContext } from '@/components/globalLayoutExtra';
+import { AppSettingsData, AppSettingsGroup, AppSettingsPublisher } from '@/app/contextWrap';
+import { DrawSubTools } from './components/tools/drawSubTools';
 
 export type DrawToolbarProps = {
     actionRef: React.RefObject<DrawToolbarActionType | undefined>;
@@ -87,10 +87,17 @@ const DrawToolbarCore: React.FC<DrawToolbarProps> = ({
 
     const enableRef = useRef(false);
     const [enableScrollScreenshot, setEnableScrollScreenshot] = useState(false);
+    const [shortcutCanleTip, setShortcutCanleTip] = useState(false);
     const drawToolarContainerRef = useRef<HTMLDivElement | null>(null);
     const drawToolbarRef = useRef<HTMLDivElement | null>(null);
     const dragButtonActionRef = useRef<DragButtonActionType | undefined>(undefined);
     const [, setEnableKeyEvent] = useStateSubscriber(EnableKeyEventPublisher, undefined);
+    useStateSubscriber(
+        AppSettingsPublisher,
+        useCallback((settings: AppSettingsData) => {
+            setShortcutCanleTip(settings[AppSettingsGroup.FunctionScreenshot].shortcutCanleTip);
+        }, []),
+    );
     const draggingRef = useRef(false);
 
     const updateEnableKeyEvent = useCallback(() => {
@@ -122,15 +129,23 @@ const DrawToolbarCore: React.FC<DrawToolbarProps> = ({
 
             if (drawState === DrawState.ScrollScreenshot) {
                 const selectRect = selectLayerActionRef.current?.getSelectRect();
-                if (
-                    !selectRect ||
-                    Math.min(
-                        selectRect.max_x - selectRect.min_x,
-                        selectRect.max_y - selectRect.min_y,
-                    ) < 300
-                ) {
+
+                if (!selectRect) {
                     message.error(intl.formatMessage({ id: 'draw.scrollScreenshot.limitTip' }));
                     return;
+                }
+
+                const minSize = Math.min(
+                    selectRect.max_x - selectRect.min_x,
+                    selectRect.max_y - selectRect.min_y,
+                );
+                if (minSize < 200) {
+                    message.error(intl.formatMessage({ id: 'draw.scrollScreenshot.limitTip' }));
+                    return;
+                } else if (minSize < 300) {
+                    message.warning(
+                        intl.formatMessage({ id: 'draw.scrollScreenshot.limitTip.warning' }),
+                    );
                 }
             }
 
@@ -332,6 +347,8 @@ const DrawToolbarCore: React.FC<DrawToolbarProps> = ({
             ref={drawToolarContainerRef}
         >
             <DrawToolbarContext.Provider value={drawToolbarContextValue}>
+                <DrawSubTools onToolClick={onToolClick} />
+
                 <div
                     onMouseEnter={() => {
                         setDrawToolbarState({ ...getDrawToolbarState(), mouseHover: true });
@@ -377,20 +394,10 @@ const DrawToolbarCore: React.FC<DrawToolbarProps> = ({
                             componentKey={KeyEventKey.RectTool}
                             icon={<RectIcon style={{ fontSize: '1em' }} />}
                             disable={disableNormalScreenshotTool}
+                            extraDrawState={[DrawState.Diamond]}
                             drawState={DrawState.Rect}
                             onClick={() => {
                                 onToolClick(DrawState.Rect);
-                            }}
-                        />
-
-                        {/* 菱形 */}
-                        <ToolButton
-                            componentKey={KeyEventKey.DiamondTool}
-                            icon={<DiamondIcon style={{ fontSize: '1em' }} />}
-                            drawState={DrawState.Diamond}
-                            disable={disableNormalScreenshotTool}
-                            onClick={() => {
-                                onToolClick(DrawState.Diamond);
                             }}
                         />
 
@@ -410,20 +417,10 @@ const DrawToolbarCore: React.FC<DrawToolbarProps> = ({
                             componentKey={KeyEventKey.ArrowTool}
                             icon={<ArrowIcon style={{ fontSize: '0.83em' }} />}
                             drawState={DrawState.Arrow}
+                            extraDrawState={[DrawState.Line]}
                             disable={disableNormalScreenshotTool}
                             onClick={() => {
                                 onToolClick(DrawState.Arrow);
-                            }}
-                        />
-
-                        {/* 线条 */}
-                        <ToolButton
-                            componentKey={KeyEventKey.LineTool}
-                            icon={<LineIcon style={{ fontSize: '1.16em' }} />}
-                            drawState={DrawState.Line}
-                            disable={disableNormalScreenshotTool}
-                            onClick={() => {
-                                onToolClick(DrawState.Line);
                             }}
                         />
 
@@ -545,7 +542,11 @@ const DrawToolbarCore: React.FC<DrawToolbarProps> = ({
                                     style={{ fontSize: '0.83em', color: token.colorError }}
                                 />
                             }
-                            confirmTip={<FormattedMessage id="draw.cancel.tip1" />}
+                            confirmTip={
+                                shortcutCanleTip ? (
+                                    <FormattedMessage id="draw.cancel.tip1" />
+                                ) : undefined
+                            }
                             drawState={DrawState.Cancel}
                             onClick={() => {
                                 onCancel();

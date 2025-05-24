@@ -67,7 +67,27 @@ pub async fn scroll_through(
 
         // 让用户的鼠标也能触发滚轮事件
         sleep(Duration::from_millis(128));
-        window.set_ignore_cursor_events(false).unwrap();
+        match window.set_ignore_cursor_events(false) {
+            Ok(_) => (),
+            Err(_) => (),
+        }
+    }
+
+    Ok(())
+}
+
+/// 鼠标滚轮穿透
+#[command]
+pub async fn click_through(window: tauri::Window) -> Result<(), ()> {
+    let result = window.set_ignore_cursor_events(true);
+    if result.is_err() {
+        return Ok(());
+    }
+
+    sleep(Duration::from_millis(128));
+    match window.set_ignore_cursor_events(false) {
+        Ok(_) => (),
+        Err(_) => (),
     }
 
     Ok(())

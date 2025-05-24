@@ -32,9 +32,10 @@ import { ImageFormat } from '@/utils/file';
 
 export enum AppSettingsGroup {
     Common = 'common',
+    CommonTrayIcon = 'commonTrayIcon',
     Cache = 'cache',
     Screenshot = 'screenshot',
-    DrawToolbarKeyEvent = 'drawToolbarKeyEvent',
+    DrawToolbarKeyEvent = 'drawToolbarKeyEvent_20250524',
     KeyEvent = 'KeyEvent',
     AppFunction = 'appFunction',
     Render = 'render',
@@ -68,8 +69,18 @@ export type AppSettingsData = {
     [AppSettingsGroup.Screenshot]: {
         /** 选区控件样式 */
         controlNode: AppSettingsControlNode;
+        /** 颜色选择器模式 */
+        colorPickerShowMode: ColorPickerShowMode;
+        /** 超出选区范围的元素透明度 */
+        beyondSelectRectElementOpacity: number;
         /** 固定屏幕后边框颜色 */
         fixedBorderColor: string;
+        /** 禁用动画 */
+        disableAnimation: boolean;
+    };
+    [AppSettingsGroup.CommonTrayIcon]: {
+        /** 自定义托盘图标 */
+        iconPath: string;
     };
     [AppSettingsGroup.Cache]: {
         menuCollapsed: boolean;
@@ -112,12 +123,10 @@ export type AppSettingsData = {
     [AppSettingsGroup.FunctionScreenshot]: {
         /** 选取窗口子元素 */
         findChildrenElements: boolean;
-        /** 颜色选择器模式 */
-        colorPickerShowMode: ColorPickerShowMode;
-        /** 超出选区范围的元素透明度 */
-        beyondSelectRectElementOpacity: number;
         /** 固定屏幕后自动 OCR */
         autoOcrAfterFixed: boolean;
+        /** 截图快捷键提示 */
+        shortcutCanleTip: boolean;
     };
     [AppSettingsGroup.SystemScrollScreenshot]: {
         minSide: number;
@@ -137,6 +146,12 @@ export const defaultAppSettingsData: AppSettingsData = {
     [AppSettingsGroup.Screenshot]: {
         controlNode: AppSettingsControlNode.Circle,
         fixedBorderColor: '#dbdbdb',
+        disableAnimation: false,
+        colorPickerShowMode: ColorPickerShowMode.BeyondSelectRect,
+        beyondSelectRectElementOpacity: 100,
+    },
+    [AppSettingsGroup.CommonTrayIcon]: {
+        iconPath: '',
     },
     [AppSettingsGroup.Cache]: {
         menuCollapsed: false,
@@ -180,9 +195,8 @@ export const defaultAppSettingsData: AppSettingsData = {
     },
     [AppSettingsGroup.FunctionScreenshot]: {
         findChildrenElements: true,
-        colorPickerShowMode: ColorPickerShowMode.BeyondSelectRect,
-        beyondSelectRectElementOpacity: 100,
         autoOcrAfterFixed: true,
+        shortcutCanleTip: true,
     },
     [AppSettingsGroup.SystemScrollScreenshot]: {
         imageFeatureThreshold: 32,
@@ -436,6 +450,20 @@ const ContextWrapCore: React.FC<{ children: React.ReactNode }> = ({ children }) 
                         typeof newSettings?.fixedBorderColor === 'string'
                             ? newSettings.fixedBorderColor
                             : (prevSettings?.fixedBorderColor ?? '#dbdbdb'),
+                    disableAnimation:
+                        typeof newSettings?.disableAnimation === 'boolean'
+                            ? newSettings.disableAnimation
+                            : (prevSettings?.disableAnimation ?? false),
+                    colorPickerShowMode:
+                        typeof newSettings?.colorPickerShowMode === 'number'
+                            ? newSettings.colorPickerShowMode
+                            : (prevSettings?.colorPickerShowMode ??
+                              defaultAppSettingsData[group].colorPickerShowMode),
+                    beyondSelectRectElementOpacity:
+                        typeof newSettings?.beyondSelectRectElementOpacity === 'number'
+                            ? Math.min(Math.max(newSettings.beyondSelectRectElementOpacity, 0), 100)
+                            : (prevSettings?.beyondSelectRectElementOpacity ??
+                              defaultAppSettingsData[group].beyondSelectRectElementOpacity),
                 };
             } else if (group === AppSettingsGroup.DrawToolbarKeyEvent) {
                 newSettings = newSettings as AppSettingsData[typeof group];
@@ -702,21 +730,16 @@ const ContextWrapCore: React.FC<{ children: React.ReactNode }> = ({ children }) 
 
                 settings = {
                     findChildrenElements,
-                    colorPickerShowMode:
-                        typeof newSettings?.colorPickerShowMode === 'number'
-                            ? newSettings.colorPickerShowMode
-                            : (prevSettings?.colorPickerShowMode ??
-                              defaultAppSettingsData[group].colorPickerShowMode),
-                    beyondSelectRectElementOpacity:
-                        typeof newSettings?.beyondSelectRectElementOpacity === 'number'
-                            ? Math.min(Math.max(newSettings.beyondSelectRectElementOpacity, 0), 100)
-                            : (prevSettings?.beyondSelectRectElementOpacity ??
-                              defaultAppSettingsData[group].beyondSelectRectElementOpacity),
                     autoOcrAfterFixed:
                         typeof newSettings?.autoOcrAfterFixed === 'boolean'
                             ? newSettings.autoOcrAfterFixed
                             : (prevSettings?.autoOcrAfterFixed ??
                               defaultAppSettingsData[group].autoOcrAfterFixed),
+                    shortcutCanleTip:
+                        typeof newSettings?.shortcutCanleTip === 'boolean'
+                            ? newSettings.shortcutCanleTip
+                            : (prevSettings?.shortcutCanleTip ??
+                              defaultAppSettingsData[group].shortcutCanleTip),
                 };
             } else if (group === AppSettingsGroup.SystemScrollScreenshot) {
                 newSettings = newSettings as AppSettingsData[typeof group];
@@ -748,6 +771,18 @@ const ContextWrapCore: React.FC<{ children: React.ReactNode }> = ({ children }) 
                             ? Math.min(Math.max(newSettings.imageFeatureDescriptionLength, 8), 128)
                             : (prevSettings?.imageFeatureDescriptionLength ??
                               defaultAppSettingsData[group].imageFeatureDescriptionLength),
+                };
+            } else if (group === AppSettingsGroup.CommonTrayIcon) {
+                newSettings = newSettings as AppSettingsData[typeof group];
+                const prevSettings = appSettingsRef.current[group] as
+                    | AppSettingsData[typeof group]
+                    | undefined;
+
+                settings = {
+                    iconPath:
+                        typeof newSettings?.iconPath === 'string'
+                            ? newSettings.iconPath
+                            : (prevSettings?.iconPath ?? ''),
                 };
             } else {
                 return defaultAppSettingsData[group];

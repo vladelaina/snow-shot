@@ -151,14 +151,14 @@ export default function Home() {
                     icon: buttonIcon,
                     onClick,
                     onKeyChange: async (value: string, prevValue: string) => {
-                        if (!value) {
-                            return false;
-                        }
-
                         if (prevValue) {
                             if (await isRegistered(prevValue)) {
                                 await unregister(prevValue);
                             }
+                        }
+
+                        if (!value) {
+                            return false;
                         }
 
                         if (await isRegistered(value)) {
@@ -228,15 +228,22 @@ export default function Home() {
             await Promise.all(
                 appFunctionComponentConfigsKeys.map(async (key) => {
                     const config = defaultAppFunctionComponentConfigs[key as AppFunction];
+                    const currentShortcutKey = settings[key as AppFunction].shortcutKey;
+
                     try {
                         const isSuccess = await config.onKeyChange(
-                            settings[key as AppFunction].shortcutKey,
+                            currentShortcutKey,
                             (previousAppFunctionSettingsRef.current ?? settings)[key as AppFunction]
                                 .shortcutKey,
                         );
-                        keyStatus[key as AppFunction] = isSuccess
-                            ? ShortcutKeyStatus.Registered
-                            : ShortcutKeyStatus.Unregistered;
+
+                        if (!currentShortcutKey) {
+                            keyStatus[key as AppFunction] = ShortcutKeyStatus.None;
+                        } else {
+                            keyStatus[key as AppFunction] = isSuccess
+                                ? ShortcutKeyStatus.Registered
+                                : ShortcutKeyStatus.Unregistered;
+                        }
                     } catch {
                         keyStatus[key as AppFunction] = ShortcutKeyStatus.Error;
                     }
@@ -377,6 +384,8 @@ export default function Home() {
                                 extra={
                                     <ResetSettingsButton
                                         title={<FormattedMessage id="home.otherFunction" />}
+                                        appSettingsGroup={AppSettingsGroup.AppFunction}
+                                        filter={resetFliter(AppFunctionGroup.Other)}
                                     />
                                 }
                             >
@@ -396,18 +405,41 @@ export default function Home() {
                             <Space direction="vertical" size="middle" style={{ display: 'flex' }}>
                                 {configs.map((config) => {
                                     const key = config.configKey;
+                                    const currentShortcutKey =
+                                        appFunctionSettings?.[key as AppFunction]?.shortcutKey;
                                     const statusColor = appSettingsLoading
                                         ? undefined
                                         : convertShortcutKeyStatusToButtonColor(
                                               shortcutKeyStatus?.[key as AppFunction],
                                           );
+
                                     const statusTip = appSettingsLoading
                                         ? undefined
                                         : convertShortcutKeyStatusToTip(
                                               shortcutKeyStatus?.[key as AppFunction],
                                           );
-                                    const currentShortcutKey =
-                                        appFunctionSettings?.[key as AppFunction]?.shortcutKey;
+
+                                    let children = <></>;
+                                    if (
+                                        shortcutKeyStatus?.[key as AppFunction] ===
+                                        ShortcutKeyStatus.None
+                                    ) {
+                                        children = (
+                                            <div style={{ color: token.colorTextDescription }}>
+                                                <FormattedMessage id="home.shortcut.none" />
+                                            </div>
+                                        );
+                                    } else if (statusTip) {
+                                        children = (
+                                            <Tooltip
+                                                title={convertShortcutKeyStatusToTip(
+                                                    shortcutKeyStatus?.[key as AppFunction],
+                                                )}
+                                            >
+                                                <InfoCircleOutlined />
+                                            </Tooltip>
+                                        );
+                                    }
 
                                     return (
                                         <div key={`${group}-${key}`}>
@@ -423,19 +455,7 @@ export default function Home() {
                                                     buttonProps={{
                                                         variant: 'dashed',
                                                         color: statusColor,
-                                                        children: statusTip ? (
-                                                            <Tooltip
-                                                                title={convertShortcutKeyStatusToTip(
-                                                                    shortcutKeyStatus?.[
-                                                                        key as AppFunction
-                                                                    ],
-                                                                )}
-                                                            >
-                                                                <InfoCircleOutlined />
-                                                            </Tooltip>
-                                                        ) : (
-                                                            <></>
-                                                        ),
+                                                        children,
                                                         onClick: () => {
                                                             disableShortcutKeyRef.current = true;
                                                         },

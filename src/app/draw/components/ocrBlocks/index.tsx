@@ -163,13 +163,23 @@ export const OcrBlocks: React.FC<{
                 textWrapElement.style.backgroundColor = Color(token.colorBgContainer)
                     .alpha(0.42)
                     .toString();
+                const isVertical = height > width * 1.5;
+                if (isVertical) {
+                    textWrapElement.style.writingMode = 'vertical-rl';
+                }
 
                 textWrapElement.appendChild(textElement);
                 textContainerElement.appendChild(textWrapElement);
 
                 setTimeout(() => {
-                    const textWidth = textElement.getBoundingClientRect().width;
-                    const textHeight = textElement.getBoundingClientRect().height - 3;
+                    let textWidth = textElement.getBoundingClientRect().width;
+                    let textHeight = textElement.getBoundingClientRect().height;
+                    if (isVertical) {
+                        textWidth -= 3;
+                    } else {
+                        textHeight -= 3;
+                    }
+
                     const scale = Math.min(height / textHeight, width / textWidth);
                     textElement.style.transform = `scale(${scale})`;
                     textWrapElement.style.transform = `translate(${centerX - width * 0.5}px, ${centerY - height * 0.5}px) rotate(${rotationDeg}deg)`;

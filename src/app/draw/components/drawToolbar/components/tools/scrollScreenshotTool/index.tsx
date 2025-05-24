@@ -1,7 +1,7 @@
 import { DrawStatePublisher } from '@/app/draw/extra';
 import { DrawContext, DrawState } from '@/app/draw/types';
 import { ElementRect } from '@/commands';
-import { scrollThrough } from '@/commands/core';
+import { clickThrough, scrollThrough } from '@/commands/core';
 import {
     SCROLL_SCREENSHOT_CAPTURE_RESULT_EXTRA_DATA_SIZE,
     ScrollDirection,
@@ -27,7 +27,7 @@ import {
     useState,
     WheelEventHandler,
 } from 'react';
-import { useIntl } from 'react-intl';
+import { FormattedMessage, useIntl } from 'react-intl';
 import { SubTools } from '../../subTools';
 import { RotateIcon } from '@/components/icons';
 import { AppSettingsGroup, AppSettingsPublisher } from '@/app/contextWrap';
@@ -205,6 +205,7 @@ export const ScrollScreenshot = () => {
         return debounce(captureImage, 64);
     }, [captureImage]);
 
+    const [showTip, setShowTip] = useState(false);
     const init = useCallback(
         async (rect: ElementRect, direction: ScrollDirection) => {
             const scale = 1 / imageBufferRef.current!.monitorScaleFactor;
@@ -214,6 +215,7 @@ export const ScrollScreenshot = () => {
                 max_x: rect.max_x * scale,
                 max_y: rect.max_y * scale,
             });
+            setShowTip(true);
 
             const scrollSettings = getAppSettings()[AppSettingsGroup.SystemScrollScreenshot];
             const maxSide = Math.max(scrollSettings.maxSide, scrollSettings.minSide);
@@ -269,6 +271,8 @@ export const ScrollScreenshot = () => {
                 return;
             }
 
+            setShowTip(false);
+
             pendingScrollThroughRef.current = true;
             scrollThrough(event.deltaY > 0 ? 1 : -1).finally(() => {
                 pendingScrollThroughRef.current = false;
@@ -282,6 +286,17 @@ export const ScrollScreenshot = () => {
         },
         [captuerDebounce, loadingRef, scrollDirectionRef],
     );
+
+    const enableIgnoreCursorEventsRef = useRef(false);
+    const onClick = useCallback(async () => {
+        if (enableIgnoreCursorEventsRef.current) {
+            return;
+        }
+
+        enableIgnoreCursorEventsRef.current = true;
+        await clickThrough();
+        enableIgnoreCursorEventsRef.current = false;
+    }, []);
 
     const startCapture = useCallback(() => {
         setCaptuerEdgePosition(undefined);
@@ -365,13 +380,28 @@ export const ScrollScreenshot = () => {
                     transform: `translate(${positionRect.min_x}px, ${positionRect.min_y}px)`,
                 }}
                 onWheel={onWheel}
+                onClick={(event) => {
+                    event.stopPropagation();
+                    event.preventDefault();
+                    onClick();
+                }}
+                onDoubleClick={(event) => {
+                    event.stopPropagation();
+                    event.preventDefault();
+                }}
             >
                 <div
                     style={{
                         width: positionRect.max_x - positionRect.min_x,
                         height: positionRect.max_y - positionRect.min_y,
                     }}
-                />
+                >
+                    {showTip && (
+                        <div className="tip">
+                            <FormattedMessage id="draw.scrollScreenshot.tip" />
+                        </div>
+                    )}
+                </div>
             </div>
 
             <div
@@ -477,6 +507,14 @@ export const ScrollScreenshot = () => {
                 .scroll-screenshot-tool-touch-area-content {
                     width: 100%;
                     height: 100%;
+                }
+
+                .scroll-screenshot-tool-touch-area .tip {
+                    color: white;
+                    text-align: center;
+                    width: 100%;
+                    transform: translateY(-100%);
+                    opacity: 0.83;
                 }
 
                 .thumbnail-list {

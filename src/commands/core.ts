@@ -19,3 +19,8 @@ export const scrollThrough = async (length: number) => {
     });
     return result;
 };
+
+export const clickThrough = async () => {
+    const result = await invoke<void>('click_through');
+    return result;
+};

@@ -7,6 +7,7 @@ import { useCallback, useContext, useEffect, useMemo, useRef } from 'react';
 import { useIntl } from 'react-intl';
 import { updateElementPosition } from './dragButton/extra';
 import { DrawContext } from '@/app/draw/types';
+import { zIndexs } from '@/utils/zIndex';
 
 export const SubTools: React.FC<{ buttons: React.ReactNode[] }> = ({ buttons }) => {
     const intl = useIntl();
@@ -96,12 +97,12 @@ export const SubTools: React.FC<{ buttons: React.ReactNode[] }> = ({ buttons }) 
     }, [intl]);
 
     useEffect(() => {
-        if (!subToolsContainerRef.current) {
-            return;
-        }
-
-        subToolsContainerRef.current.style.opacity = '1';
         updateDrawToolbarStyleRender();
+        requestAnimationFrame(() => {
+            if (subToolsRef.current) {
+                subToolsRef.current.style.opacity = '1';
+            }
+        });
     }, [updateDrawToolbarStyleRender]);
 
     useEffect(() => {
@@ -135,14 +136,13 @@ export const SubTools: React.FC<{ buttons: React.ReactNode[] }> = ({ buttons }) 
             <style jsx>{`
                 .sub-tools-container {
                     position: fixed;
-                    z-index: 999;
+                    z-index: ${zIndexs.Draw_SubToolbar};
                     top: 0;
                     left: 0;
-                    transition: opacity ${token.motionDurationFast} ${token.motionEaseInOut};
-                    opacity: 0;
                 }
 
                 .sub-tools {
+                    opacity: 0;
                     pointer-events: auto;
                     padding: ${token.paddingSM}px ${token.paddingXXS}px;
                     box-sizing: border-box;
@@ -151,7 +151,7 @@ export const SubTools: React.FC<{ buttons: React.ReactNode[] }> = ({ buttons }) 
                     cursor: default; /* 防止非拖动区域也变成可拖动状态 */
                     color: ${token.colorText};
                     box-shadow: 0 0 3px 0px ${token.colorPrimaryHover};
-                    transition: opacity ${token.motionDurationFast} ${token.motionEaseInOut};
+                    transition: opacity ${token.motionDurationMid} ${token.motionEaseInOut};
                 }
 
                 .drag-button {

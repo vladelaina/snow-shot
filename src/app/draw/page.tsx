@@ -241,7 +241,7 @@ const DrawPageCore: React.FC = () => {
                 process.env.NODE_ENV === 'development' &&
                 getScreenshotType() !== ScreenshotType.TopWindow
             ) {
-                await appWindow.setAlwaysOnTop(false);
+                // await appWindow.setAlwaysOnTop(false);
             }
 
             setDrawWindowStyle();
@@ -547,18 +547,10 @@ const DrawPageCore: React.FC = () => {
             mousePositionRef.current = new MousePosition(e.clientX, e.clientY);
         };
 
-        const doubleClick = (e: MouseEvent) => {
-            if (e.button === 0) {
-                onCopyToClipboard();
-            }
-        };
-
         document.addEventListener('mousemove', handleMouseMove);
-        document.addEventListener('dblclick', doubleClick);
 
         return () => {
             document.removeEventListener('mousemove', handleMouseMove);
-            document.removeEventListener('dblclick', doubleClick);
         };
     }, [isFixed, onCopyToClipboard]);
 
@@ -582,9 +574,22 @@ const DrawPageCore: React.FC = () => {
         };
     }, [getCaptureStep, getDrawState, onCopyToClipboard]);
 
+    const onDoubleClick = useCallback<React.MouseEventHandler<HTMLDivElement>>(
+        (e) => {
+            if (e.button === 0) {
+                onCopyToClipboard();
+            }
+        },
+        [onCopyToClipboard],
+    );
+
     return (
         <DrawContext.Provider value={drawContextValue}>
-            <div className={styles.layerContainer} ref={layerContainerRef}>
+            <div
+                className={styles.layerContainer}
+                ref={layerContainerRef}
+                onDoubleClick={onDoubleClick}
+            >
                 <FixedImage
                     actionRef={fixedImageActionRef}
                     onLoad={() => {

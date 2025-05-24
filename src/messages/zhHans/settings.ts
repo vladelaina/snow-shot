@@ -6,6 +6,7 @@ export const settings = {
     'settings.controlNode.circle': '圆形',
     'settings.controlNode.polyline': '多边形',
     'settings.screenshotSettings': '截图设置',
+    'settings.disableAnimation': '禁用动画',
     'settings.fixedBorderColor': '固定屏幕边框颜色',
     'settings.enableQrcodeScan': '启用二维码识别',
     'settings.findChildrenElements': '查找窗口子元素',
@@ -91,6 +92,7 @@ export const settings = {
     'settings.functionSettings.screenshotSettings.beyondSelectRectElementOpacity.tip':
         '选定截图区域后，绘制的元素在超出选区范围时显示的透明度',
     'settings.functionSettings.screenshotSettings.autoOcrAfterFixed': '固定屏幕后自动 OCR',
+    'settings.functionSettings.screenshotSettings.shortcutCanleTip': '快捷键取消截图提示',
     'settings.systemSettings.scrollScreenshotSettings': '滚动截图设置',
     'settings.systemSettings.scrollScreenshotSettings.imageFeatureThreshold': '图片特征阈值',
     'settings.systemSettings.scrollScreenshotSettings.imageFeatureThreshold.tip':
@@ -108,4 +110,7 @@ export const settings = {
         '图片特征描述大小',
     'settings.systemSettings.scrollScreenshotSettings.imageFeatureDescriptionLength.tip':
         '如果是 8 则以特征点为中心选取 8x8 的区域进行比较',
+    'settings.commonSettings.trayIconSettings': '托盘设置',
+    'settings.commonSettings.trayIconSettings.iconPath': '图标路径',
+    'settings.commonSettings.trayIconSettings.iconPath.tip': '建议 32x32 或 64x64 的图标',
 };

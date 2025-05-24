@@ -2,7 +2,7 @@
 
 import { defaultWindowIcon } from '@tauri-apps/api/app';
 import { TrayIcon, TrayIconOptions } from '@tauri-apps/api/tray';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useContext, useEffect, useState } from 'react';
 import { getCurrentWindow } from '@tauri-apps/api/window';
 import React from 'react';
 import { Menu } from '@tauri-apps/api/menu';
@@ -23,6 +23,8 @@ import {
 } from '@/functions/tools';
 import { openUrl } from '@tauri-apps/plugin-opener';
 import { createPublisher } from '@/hooks/useStatePublisher';
+import { AntdContext } from '@/components/globalLayoutExtra';
+import { Image } from '@tauri-apps/api/image';
 
 export const TrayIconStatePublisher = createPublisher<{
     disableShortcut: boolean;
@@ -32,6 +34,7 @@ export const TrayIconStatePublisher = createPublisher<{
 
 const TrayIconLoaderComponent = () => {
     const intl = useIntl();
+    const { message } = useContext(AntdContext);
 
     const [disableShortcut, _setDisableShortcut] = useState(false);
     const [, setTrayIconState] = useStateSubscriber(
@@ -47,23 +50,24 @@ const TrayIconLoaderComponent = () => {
     const [shortcutKeys, setShortcutKeys, shortcutKeysRef] = useStateRef<
         Record<AppFunction, AppFunctionConfig> | undefined
     >(undefined);
+    const [iconPath, setIconPath] = useState('');
     useStateSubscriber(
         AppSettingsPublisher,
         useCallback(
             (settings: AppSettingsData, previous: AppSettingsData) => {
                 if (
-                    shortcutKeysRef.current !== undefined &&
-                    isEqual(
+                    shortcutKeysRef.current === undefined ||
+                    !isEqual(
                         settings[AppSettingsGroup.AppFunction],
                         previous[AppSettingsGroup.AppFunction],
                     )
                 ) {
-                    return;
+                    setShortcutKeys(settings[AppSettingsGroup.AppFunction]);
                 }
 
-                setShortcutKeys(settings[AppSettingsGroup.AppFunction]);
+                setIconPath(settings[AppSettingsGroup.CommonTrayIcon].iconPath);
             },
-            [setShortcutKeys, shortcutKeysRef],
+            [setShortcutKeys, shortcutKeysRef, setIconPath],
         ),
     );
 
@@ -76,9 +80,28 @@ const TrayIconLoaderComponent = () => {
         const init = async () => {
             const appWindow = getCurrentWindow();
 
+            let iconImage: Image | undefined = undefined;
+            try {
+                if (iconPath) {
+                    iconImage = await Image.fromPath(iconPath);
+                }
+            } catch {
+                message.error(intl.formatMessage({ id: 'home.trayIcon.error4' }));
+                return;
+            }
+
+            if (iconImage) {
+                const size = await iconImage.size();
+                if (size.width > 128 || size.height > 128) {
+                    message.error(intl.formatMessage({ id: 'home.trayIcon.error3' }));
+                    return;
+                }
+            }
+
             const options: TrayIconOptions = {
-                icon: (await defaultWindowIcon()) ?? '',
+                icon: iconImage ? iconImage : ((await defaultWindowIcon()) ?? ''),
                 title: 'Snow Shot',
+                showMenuOnLeftClick: false,
                 tooltip: 'Snow Shot',
                 action: (event) => {
                     switch (event.type) {
@@ -215,7 +238,12 @@ const TrayIconLoaderComponent = () => {
                 }),
             };
 
-            trayIcon = await TrayIcon.new(options);
+            try {
+                trayIcon = await TrayIcon.new(options);
+            } catch (error) {
+                console.error(error);
+                message.error(intl.formatMessage({ id: 'home.trayIcon.error' }));
+            }
         };
         init();
 
@@ -236,7 +264,7 @@ const TrayIconLoaderComponent = () => {
             closeTrayIcon();
             window.removeEventListener('beforeunload', closeTrayIcon);
         };
-    }, [disableShortcut, intl, setTrayIconState, shortcutKeys]);
+    }, [disableShortcut, iconPath, intl, message, setTrayIconState, shortcutKeys]);
 
     return null;
 };
