@@ -39,31 +39,31 @@ export const defaultAppFunctionConfigs: Record<AppFunction, AppFunctionConfig> =
         group: AppFunctionGroup.Screenshot,
     },
     [AppFunction.ScreenshotFixed]: {
-        shortcutKey: 'Ctrl+Alt+F',
+        shortcutKey: '',
         group: AppFunctionGroup.Screenshot,
     },
     [AppFunction.ScreenshotOcr]: {
-        shortcutKey: 'Ctrl+Alt+D',
+        shortcutKey: '',
         group: AppFunctionGroup.Screenshot,
     },
     [AppFunction.ChatSelectText]: {
-        shortcutKey: 'F3',
+        shortcutKey: '',
         group: AppFunctionGroup.Chat,
     },
     [AppFunction.Chat]: {
-        shortcutKey: 'Ctrl+Alt+C',
+        shortcutKey: '',
         group: AppFunctionGroup.Chat,
     },
     [AppFunction.TranslationSelectText]: {
-        shortcutKey: 'F4',
+        shortcutKey: '',
         group: AppFunctionGroup.Translation,
     },
     [AppFunction.Translation]: {
-        shortcutKey: 'Ctrl+Alt+T',
+        shortcutKey: '',
         group: AppFunctionGroup.Translation,
     },
     [AppFunction.TopWindow]: {
-        shortcutKey: 'Ctrl+Alt+W',
+        shortcutKey: '',
         group: AppFunctionGroup.Other,
     },
 };
@@ -72,6 +72,7 @@ export enum ShortcutKeyStatus {
     Registered = 'registered',
     Unregistered = 'unregistered',
     Error = 'error',
+    None = 'none',
 }
 
 export const convertShortcutKeyStatusToButtonColor = (
@@ -105,6 +106,8 @@ export const convertShortcutKeyStatusToTip = (
             return <FormattedMessage id="home.shortcut.unregistered" />;
         case ShortcutKeyStatus.Error:
             return <FormattedMessage id="home.shortcut.error" />;
+        case ShortcutKeyStatus.None:
+            return <FormattedMessage id="home.shortcut.none" />;
         default:
             return undefined;
     }

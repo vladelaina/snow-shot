@@ -81,6 +81,7 @@ pub fn run() {
             core::get_selected_text,
             core::set_enable_proxy,
             core::scroll_through,
+            core::click_through,
             scroll_screenshot::scroll_screenshot_init,
             scroll_screenshot::scroll_screenshot_capture,
             scroll_screenshot::scroll_screenshot_save_to_file,

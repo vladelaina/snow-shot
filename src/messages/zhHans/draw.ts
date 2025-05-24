@@ -74,7 +74,8 @@ export const draw = {
     'draw.selectPrevRectTool': '选择之前选定的区域',
     'draw.ocrLoading': 'OCR 识别中',
     'draw.copySelectedText': '复制选中文本',
-    'draw.scrollScreenshot.limitTip': '所选区域过小，无法进行滚动截图（最小边需 > 300px）',
+    'draw.scrollScreenshot.limitTip': '所选区域过小，无法进行滚动截图（最小边需 > 200px）',
+    'draw.scrollScreenshot.limitTip.warning': '所选区域过小，建议最小边长大于 300px',
     'draw.scrollScreenshot.initError': '初始化失败，请向开发者反馈 [1]',
     'draw.scrollScreenshot.captureError': '滚动截图失败，请向开发者反馈 [2]',
     'draw.scrollScreenshot.changeDirection': '切换滚动方向',
@@ -86,4 +87,6 @@ export const draw = {
     'draw.switchColorFormat': '切换颜色格式',
     'draw.extraTool.scanQrcode': '扫描二维码',
     'draw.extraTool.scanQrcode.error': '未识别到有效二维码',
+    'draw.scrollScreenshot.tip':
+        '如果无法滚动窗口，请双击截图区域以聚焦窗口',
 };

@@ -1,7 +1,7 @@
 'use client';
 
 import { GroupTitle } from '@/components/groupTitle';
-import { Alert, Col, Flex, Form, Row, Spin, Switch, theme, Typography } from 'antd';
+import { Alert, Col, Divider, Flex, Form, Row, Spin, Switch, theme, Typography } from 'antd';
 import { AppSettingsActionContext, AppSettingsData, AppSettingsGroup } from '../../contextWrap';
 import { useCallback, useContext, useState } from 'react';
 import { useAppSettingsLoad } from '@/hooks/useAppSettingsLoad';
@@ -11,8 +11,6 @@ import { IconLabel } from '@/components/iconLable';
 import { ResetSettingsButton } from '@/components/resetSettingsButton';
 import ProForm, {
     ProFormList,
-    ProFormRadio,
-    ProFormSlider,
     ProFormSwitch,
     ProFormText,
     ProFormTextArea,
@@ -22,7 +20,6 @@ import {
     TARGET_LANGUAGE_ENV_VARIABLE,
     TRANSLATION_DOMAIN_ENV_VARIABLE,
 } from '@/app/tools/translation/extra';
-import { ColorPickerShowMode } from '@/app/draw/components/colorPicker';
 
 export default function SystemSettings() {
     const intl = useIntl();
@@ -110,58 +107,6 @@ export default function SystemSettings() {
                                 }
                             />
                         </Col>
-                        <Col span={12}>
-                            <ProFormRadio.Group
-                                name="colorPickerShowMode"
-                                layout="horizontal"
-                                label={
-                                    <FormattedMessage id="settings.functionSettings.screenshotSettings.colorPickerShowMode" />
-                                }
-                                options={[
-                                    {
-                                        label: (
-                                            <FormattedMessage id="settings.functionSettings.screenshotSettings.beyondSelectRect" />
-                                        ),
-                                        value: ColorPickerShowMode.BeyondSelectRect,
-                                    },
-                                    {
-                                        label: (
-                                            <FormattedMessage id="settings.functionSettings.screenshotSettings.alwaysShowColorPicker" />
-                                        ),
-                                        value: ColorPickerShowMode.Always,
-                                    },
-                                    {
-                                        label: (
-                                            <FormattedMessage id="settings.functionSettings.screenshotSettings.neverShowColorPicker" />
-                                        ),
-                                        value: ColorPickerShowMode.Never,
-                                    },
-                                ]}
-                            />
-                        </Col>
-
-                        <Col span={12}>
-                            <ProFormSlider
-                                label={
-                                    <IconLabel
-                                        label={
-                                            <FormattedMessage id="settings.functionSettings.screenshotSettings.beyondSelectRectElementOpacity" />
-                                        }
-                                        tooltipTitle={
-                                            <FormattedMessage id="settings.functionSettings.screenshotSettings.beyondSelectRectElementOpacity.tip" />
-                                        }
-                                    />
-                                }
-                                name="beyondSelectRectElementOpacity"
-                                min={0}
-                                max={100}
-                                step={1}
-                                marks={{
-                                    0: '0%',
-                                    100: '100%',
-                                }}
-                            />
-                        </Col>
 
                         <Col span={12}>
                             <ProFormSwitch
@@ -172,9 +117,21 @@ export default function SystemSettings() {
                                 layout="horizontal"
                             />
                         </Col>
+
+                        <Col span={12}>
+                            <ProFormSwitch
+                                label={
+                                    <FormattedMessage id="settings.functionSettings.screenshotSettings.shortcutCanleTip" />
+                                }
+                                name="shortcutCanleTip"
+                                layout="horizontal"
+                            />
+                        </Col>
                     </Row>
                 </ProForm>
             </Spin>
+
+            <Divider />
 
             <GroupTitle
                 id="translationSettings"
@@ -261,6 +218,8 @@ export default function SystemSettings() {
                     />
                 </ProForm>
             </Spin>
+
+            <Divider />
 
             <GroupTitle
                 id="functionSettings"

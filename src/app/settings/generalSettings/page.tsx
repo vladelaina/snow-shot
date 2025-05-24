@@ -17,8 +17,10 @@ import { DarkModeIcon, LanguageIcon } from '@/components/icons';
 import { IconLabel } from '@/components/iconLable';
 import { ResetSettingsButton } from '@/components/resetSettingsButton';
 import { useStateRef } from '@/hooks/useStateRef';
-import ProForm from '@ant-design/pro-form';
+import ProForm, { ProFormRadio, ProFormSlider, ProFormSwitch } from '@ant-design/pro-form';
 import { AggregationColor } from 'antd/es/color-picker/color';
+import { PathInput } from '@/components/pathInput';
+import { ColorPickerShowMode } from '@/app/draw/components/colorPicker';
 
 const { Option } = Select;
 
@@ -29,6 +31,7 @@ export default function GeneralSettings() {
     const { updateAppSettings } = useContext(AppSettingsActionContext);
     const [commonForm] = Form.useForm<AppSettingsData[AppSettingsGroup.Common]>();
     const [screenshotForm] = Form.useForm<AppSettingsData[AppSettingsGroup.Screenshot]>();
+    const [trayIconForm] = Form.useForm<AppSettingsData[AppSettingsGroup.CommonTrayIcon]>();
 
     const [appSettingsLoading, setAppSettingsLoading] = useStateRef(true);
     useAppSettingsLoad(
@@ -49,8 +52,16 @@ export default function GeneralSettings() {
                 ) {
                     screenshotForm.setFieldsValue(settings[AppSettingsGroup.Screenshot]);
                 }
+
+                if (
+                    preSettings === undefined ||
+                    preSettings[AppSettingsGroup.CommonTrayIcon] !==
+                        settings[AppSettingsGroup.CommonTrayIcon]
+                ) {
+                    trayIconForm.setFieldsValue(settings[AppSettingsGroup.CommonTrayIcon]);
+                }
             },
-            [commonForm, screenshotForm, setAppSettingsLoading],
+            [commonForm, screenshotForm, setAppSettingsLoading, trayIconForm],
         ),
         true,
     );
@@ -152,7 +163,7 @@ export default function GeneralSettings() {
                         false,
                     );
                 }}
-                layout="horizontal"
+                layout="vertical"
             >
                 <Spin spinning={appSettingsLoading}>
                     <Row gutter={token.margin}>
@@ -177,6 +188,59 @@ export default function GeneralSettings() {
                         </Col>
 
                         <Col span={12}>
+                            <ProFormRadio.Group
+                                name="colorPickerShowMode"
+                                layout="horizontal"
+                                label={
+                                    <FormattedMessage id="settings.functionSettings.screenshotSettings.colorPickerShowMode" />
+                                }
+                                options={[
+                                    {
+                                        label: (
+                                            <FormattedMessage id="settings.functionSettings.screenshotSettings.beyondSelectRect" />
+                                        ),
+                                        value: ColorPickerShowMode.BeyondSelectRect,
+                                    },
+                                    {
+                                        label: (
+                                            <FormattedMessage id="settings.functionSettings.screenshotSettings.alwaysShowColorPicker" />
+                                        ),
+                                        value: ColorPickerShowMode.Always,
+                                    },
+                                    {
+                                        label: (
+                                            <FormattedMessage id="settings.functionSettings.screenshotSettings.neverShowColorPicker" />
+                                        ),
+                                        value: ColorPickerShowMode.Never,
+                                    },
+                                ]}
+                            />
+                        </Col>
+
+                        <Col span={12}>
+                            <ProFormSlider
+                                label={
+                                    <IconLabel
+                                        label={
+                                            <FormattedMessage id="settings.functionSettings.screenshotSettings.beyondSelectRectElementOpacity" />
+                                        }
+                                        tooltipTitle={
+                                            <FormattedMessage id="settings.functionSettings.screenshotSettings.beyondSelectRectElementOpacity.tip" />
+                                        }
+                                    />
+                                }
+                                name="beyondSelectRectElementOpacity"
+                                min={0}
+                                max={100}
+                                step={1}
+                                marks={{
+                                    0: '0%',
+                                    100: '100%',
+                                }}
+                            />
+                        </Col>
+
+                        <Col span={12}>
                             <ProForm.Item
                                 name="fixedBorderColor"
                                 label={
@@ -187,6 +251,74 @@ export default function GeneralSettings() {
                                 required={false}
                             >
                                 <ColorPicker showText placement="bottom" />
+                            </ProForm.Item>
+                        </Col>
+
+                        <Col span={12}>
+                            <ProFormSwitch
+                                name="disableAnimation"
+                                label={<FormattedMessage id="settings.disableAnimation" />}
+                            />
+                        </Col>
+                    </Row>
+                </Spin>
+            </ProForm>
+
+            <Divider />
+
+            <GroupTitle
+                id="trayIconSettings"
+                extra={
+                    <ResetSettingsButton
+                        title={intl.formatMessage({
+                            id: 'settings.commonSettings.trayIconSettings',
+                        })}
+                        appSettingsGroup={AppSettingsGroup.CommonTrayIcon}
+                    />
+                }
+            >
+                <FormattedMessage id="settings.commonSettings.trayIconSettings" />
+            </GroupTitle>
+
+            <ProForm<AppSettingsData[AppSettingsGroup.CommonTrayIcon]>
+                form={trayIconForm}
+                submitter={false}
+                onValuesChange={(_, values) => {
+                    updateAppSettings(
+                        AppSettingsGroup.CommonTrayIcon,
+                        values,
+                        true,
+                        true,
+                        false,
+                        true,
+                        false,
+                    );
+                }}
+                layout="horizontal"
+            >
+                <Spin spinning={appSettingsLoading}>
+                    <Row gutter={token.margin}>
+                        <Col span={12}>
+                            <ProForm.Item
+                                name="iconPath"
+                                label={
+                                    <IconLabel
+                                        label={
+                                            <FormattedMessage id="settings.commonSettings.trayIconSettings.iconPath" />
+                                        }
+                                        tooltipTitle={
+                                            <FormattedMessage id="settings.commonSettings.trayIconSettings.iconPath.tip" />
+                                        }
+                                    />
+                                }
+                                required={false}
+                            >
+                                <PathInput
+                                    filters={[
+                                        { name: 'PNG(*.png)', extensions: ['png'] },
+                                        { name: 'ICO(*.ico)', extensions: ['ico'] },
+                                    ]}
+                                />
                             </ProForm.Item>
                         </Col>
                     </Row>

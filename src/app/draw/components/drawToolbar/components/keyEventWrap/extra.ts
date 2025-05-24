@@ -16,9 +16,7 @@ export enum KeyEventKey {
     SelectTool = 'selectTool',
     RectTool = 'rectTool',
     EllipseTool = 'ellipseTool',
-    DiamondTool = 'diamondTool',
     ArrowTool = 'arrowTool',
-    LineTool = 'lineTool',
     PenTool = 'penTool',
     // HighlightTool = 'highlightTool',
     BlurTool = 'blurTool',
@@ -60,36 +58,28 @@ export const defaultDrawToolbarKeyEventSettings: Record<KeyEventKey, KeyEventVal
         hotKey: '1',
         unique: true,
     },
-    [KeyEventKey.DiamondTool]: {
+    [KeyEventKey.EllipseTool]: {
         hotKey: '2',
         unique: true,
     },
-    [KeyEventKey.EllipseTool]: {
+    [KeyEventKey.ArrowTool]: {
         hotKey: '3',
         unique: true,
     },
-    [KeyEventKey.ArrowTool]: {
+    [KeyEventKey.PenTool]: {
         hotKey: '4',
         unique: true,
     },
-    [KeyEventKey.LineTool]: {
-        hotKey: '5',
-        unique: true,
-    },
-    [KeyEventKey.PenTool]: {
-        hotKey: '6',
-        unique: true,
-    },
     [KeyEventKey.TextTool]: {
-        hotKey: '7, T',
+        hotKey: '5, T',
         unique: true,
     },
     [KeyEventKey.BlurTool]: {
-        hotKey: '8',
+        hotKey: '6',
         unique: true,
     },
     [KeyEventKey.EraserTool]: {
-        hotKey: '9, E',
+        hotKey: '7, E',
         unique: true,
     },
     [KeyEventKey.UndoTool]: {

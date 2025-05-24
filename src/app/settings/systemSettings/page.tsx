@@ -1,7 +1,7 @@
 'use client';
 
 import { GroupTitle } from '@/components/groupTitle';
-import { Col, Form, Row, Spin, Switch, theme } from 'antd';
+import { Col, Divider, Form, Row, Spin, Switch, theme } from 'antd';
 import { AppSettingsActionContext, AppSettingsData, AppSettingsGroup } from '../../contextWrap';
 import { useCallback, useContext, useState } from 'react';
 import { useAppSettingsLoad } from '@/hooks/useAppSettingsLoad';
@@ -119,6 +119,8 @@ export default function SystemSettings() {
                 </ProForm>
             </Spin>
 
+            <Divider />
+
             <GroupTitle
                 id="renderSettings"
                 extra={
@@ -151,6 +153,8 @@ export default function SystemSettings() {
                     </ProForm.Item>
                 </ProForm>
             </Spin>
+
+            <Divider />
 
             <GroupTitle
                 id="networkSettings"
@@ -195,6 +199,8 @@ export default function SystemSettings() {
                     </ProForm.Item>
                 </ProForm>
             </Spin>
+
+            <Divider />
 
             <GroupTitle
                 id="scrollScreenshotSettings"
@@ -340,6 +346,8 @@ export default function SystemSettings() {
                     </Row>
                 </ProForm>
             </Spin>
+
+            <Divider />
 
             <GroupTitle
                 id="chatSettings"
