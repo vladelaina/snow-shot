@@ -95,7 +95,7 @@ export default function SystemSettings() {
                         );
                     }}
                     submitter={false}
-                    layout="vertical"
+                    layout="horizontal"
                 >
                     <Row gutter={token.padding}>
                         <Col span={12}>

@@ -435,6 +435,12 @@ const MenuLayoutCore: React.FC<{ children: React.ReactNode }> = ({ children }) =
                                 key: 'screenshotSettings',
                                 label: intl.formatMessage({ id: 'settings.screenshotSettings' }),
                             },
+                            {
+                                key: 'trayIconSettings',
+                                label: intl.formatMessage({
+                                    id: 'settings.commonSettings.trayIconSettings',
+                                }),
+                            },
                         ],
                     },
                     {
@@ -500,6 +506,12 @@ const MenuLayoutCore: React.FC<{ children: React.ReactNode }> = ({ children }) =
                                 key: 'networkSettings',
                                 label: intl.formatMessage({
                                     id: 'settings.systemSettings.networkSettings',
+                                }),
+                            },
+                            {
+                                key: 'scrollScreenshotSettings',
+                                label: intl.formatMessage({
+                                    id: 'settings.systemSettings.scrollScreenshotSettings',
                                 }),
                             },
                             {
