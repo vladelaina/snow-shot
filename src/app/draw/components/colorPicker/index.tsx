@@ -120,7 +120,7 @@ const ColorPickerCore: React.FC<{
             const mouseX = mousePositionRef.current.mouseX * imageBuffer.monitorScaleFactor;
             const mouseY = mousePositionRef.current.mouseY * imageBuffer.monitorScaleFactor;
             if (
-                getAppSettings()[AppSettingsGroup.FunctionScreenshot].colorPickerShowMode ===
+                getAppSettings()[AppSettingsGroup.Screenshot].colorPickerShowMode ===
                 ColorPickerShowMode.BeyondSelectRect
             ) {
                 const selectRect = selectLayerActionRef.current?.getSelectRect();
@@ -141,7 +141,7 @@ const ColorPickerCore: React.FC<{
                     opacity = '0';
                 }
             } else if (
-                getAppSettings()[AppSettingsGroup.FunctionScreenshot].colorPickerShowMode ===
+                getAppSettings()[AppSettingsGroup.Screenshot].colorPickerShowMode ===
                 ColorPickerShowMode.Never
             ) {
                 opacity = '0';

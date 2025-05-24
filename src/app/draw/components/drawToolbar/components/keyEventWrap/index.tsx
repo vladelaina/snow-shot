@@ -10,7 +10,7 @@ import {
     KeyEventKey,
     KeyEventValue,
 } from './extra';
-import { AppSettingsData } from '@/app/contextWrap';
+import { AppSettingsData, AppSettingsGroup } from '@/app/contextWrap';
 import { AntdContext, HotkeysScope } from '@/components/globalLayoutExtra';
 import { useHotkeysApp } from '@/hooks/useHotkeysApp';
 
@@ -110,7 +110,7 @@ const KeyEventWrapCore: React.FC<{
         useCallback(
             (appSettings: AppSettingsData) => {
                 setKeyEventValue(
-                    appSettings?.drawToolbarKeyEvent?.[componentKey] ??
+                    appSettings[AppSettingsGroup.DrawToolbarKeyEvent][componentKey] ??
                         defaultDrawToolbarKeyEventSettings[componentKey],
                 );
             },
