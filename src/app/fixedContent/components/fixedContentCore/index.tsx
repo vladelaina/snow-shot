@@ -500,6 +500,12 @@ export const FixedContentCore: React.FC<{
         [scaleWindowRender],
     );
 
+    const onContextMenu = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+        e.preventDefault();
+
+        menuRef.current?.popup(new LogicalPosition(e.clientX, e.clientY));
+    }, []);
+
     return (
         <div
             className="fixed-image-container"
@@ -510,13 +516,14 @@ export const FixedContentCore: React.FC<{
                 pointerEvents:
                     canvasImageUrl || htmlContent || textContent || imageUrl ? 'auto' : 'none',
             }}
-            onContextMenu={async (e) => {
-                e.preventDefault();
-
-                menuRef.current?.popup(new LogicalPosition(e.clientX, e.clientY));
-            }}
+            onContextMenu={onContextMenu}
         >
-            <OcrResult actionRef={ocrResultActionRef} zIndex={1} onWheel={onWheel} />
+            <OcrResult
+                actionRef={ocrResultActionRef}
+                zIndex={1}
+                onWheel={onWheel}
+                onContextMenu={onContextMenu}
+            />
 
             {canvasImageUrl && (
                 <Image
