@@ -53,6 +53,7 @@ _注意：软件正在快速迭代中，Bug 和使用问题难以避免。且因
 
 - 提交 [Issue](https://github.com/mg-chao/snow-shot/issues)
 - B 站账号 [3N0W](https://space.bilibili.com/3546897042114689)
+- QQ 交流群 974311403
 
 ### 开源协议说明
 
