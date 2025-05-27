@@ -13,6 +13,7 @@ use enigo::{Enigo, Settings};
 use ocr::OcrLiteWrap;
 use os::ui_automation::UIElements;
 use paddle_ocr_rs::ocr_lite::OcrLite;
+use tauri::Manager;
 use tauri_plugin_log::{Target, TargetKind};
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -29,7 +30,18 @@ pub fn run() {
     let ui_elements = Mutex::new(UIElements::new());
     let auto_start_hide_window = Mutex::new(false);
 
-    tauri::Builder::default()
+    let mut app_builder = tauri::Builder::default();
+
+    #[cfg(desktop)]
+    {
+        app_builder = app_builder.plugin(tauri_plugin_single_instance::init(|app, _, _| {
+            let app_window = app.get_webview_window("main").expect("no main window");
+            app_window.unminimize().unwrap();
+            app_window.set_focus().unwrap();
+            app_window.show().unwrap();
+        }));
+    }
+    app_builder
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_clipboard_manager::init())
         .plugin(tauri_plugin_store::Builder::new().build())
