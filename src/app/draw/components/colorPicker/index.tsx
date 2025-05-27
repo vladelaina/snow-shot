@@ -226,7 +226,24 @@ const ColorPickerCore: React.FC<{
     ]);
     const updateEnableDebounce = useMemo(() => debounce(updateEnable, 17), [updateEnable]);
     useStateSubscriber(CaptureStepPublisher, updateEnableDebounce);
-    useStateSubscriber(DrawStatePublisher, updateEnableDebounce);
+    useStateSubscriber(
+        DrawStatePublisher,
+        useCallback(
+            (drawState: DrawState) => {
+                if (colorPickerRef.current) {
+                    // 直接隐藏取色器，方式滚动截图干扰
+                    if (drawState === DrawState.ScrollScreenshot) {
+                        colorPickerRef.current.style.scale = '0';
+                    } else {
+                        colorPickerRef.current.style.scale = '1';
+                    }
+                }
+
+                updateEnableDebounce();
+            },
+            [updateEnableDebounce],
+        ),
+    );
     useStateSubscriber(CaptureEventPublisher, updateEnableDebounce);
     useStateSubscriber(ScreenshotTypePublisher, updateEnableDebounce);
     useStateSubscriber(DrawToolbarStatePublisher, updateEnableDebounce);
