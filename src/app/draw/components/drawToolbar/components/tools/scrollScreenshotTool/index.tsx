@@ -324,7 +324,10 @@ export const ScrollScreenshot = () => {
                     return;
                 }
 
-                startCapture();
+                // 延迟 1 帧，确保取色器隐藏
+                requestAnimationFrame(() => {
+                    startCapture();
+                });
             },
             [setPositionRect, startCapture],
         ),
