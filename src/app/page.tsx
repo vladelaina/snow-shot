@@ -244,7 +244,9 @@ export default function Home() {
                                 .shortcutKey,
                         );
 
-                        if (!currentShortcutKey) {
+                        if (currentShortcutKey === 'PrintScreen') {
+                            keyStatus[key as AppFunction] = ShortcutKeyStatus.PrintScreen;
+                        } else if (!currentShortcutKey) {
                             keyStatus[key as AppFunction] = ShortcutKeyStatus.None;
                         } else {
                             keyStatus[key as AppFunction] = isSuccess

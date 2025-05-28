@@ -12,6 +12,8 @@ type KeyConfig = {
 };
 
 const convertKeyConfigToString = (keys: Set<string>, spicalRecordKeys?: Record<string, number>) => {
+    console.log(keys, spicalRecordKeys);
+
     const keysArray = Array.from(keys).map((item) => {
         return `${item[0].toUpperCase()}${item.slice(1).toLowerCase()}`;
     });
@@ -132,6 +134,10 @@ export const KeyButton: React.FC<{
             return;
         }
 
+        if (recordKeys.size === 0 && Object.keys(spicalRecordKeys).length === 0) {
+            return;
+        }
+
         keyConfigListRef.current[inputAnyKeyConfigIndexRef.current].recordKeys =
             convertKeyConfigToString(recordKeys, spicalRecordKeys);
 
@@ -148,6 +154,7 @@ export const KeyButton: React.FC<{
                 onCancel={() => {
                     onCancel?.();
                     setOpen(false);
+                    setSpicalRecordKeys({});
                 }}
                 confirmLoading={confirmLoading}
                 onOk={() => {
@@ -197,7 +204,8 @@ export const KeyButton: React.FC<{
                                     >
                                         {inputAnyKeyConfigIndex === keyConfig.index ? (
                                             <>
-                                                {recordKeys.size > 0 ? (
+                                                {recordKeys.size > 0 ||
+                                                Object.keys(spicalRecordKeys).length > 0 ? (
                                                     convertKeyConfigToString(
                                                         recordKeys,
                                                         spicalRecordKeys,
