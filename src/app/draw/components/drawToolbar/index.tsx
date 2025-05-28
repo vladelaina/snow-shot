@@ -666,6 +666,10 @@ const DrawToolbarCore: React.FC<DrawToolbarProps> = ({
                     transition: opacity ${token.motionDurationFast} ${token.motionEaseInOut};
                 }
 
+                .draw-toolbar-container:hover {
+                    z-index: ${zIndexs.Draw_ToolbarHover};
+                }
+
                 .draw-toolbar {
                     position: absolute;
                     opacity: 0;

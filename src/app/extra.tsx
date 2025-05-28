@@ -78,6 +78,7 @@ export enum ShortcutKeyStatus {
     Unregistered = 'unregistered',
     Error = 'error',
     None = 'none',
+    PrintScreen = 'printScreen',
 }
 
 export const convertShortcutKeyStatusToButtonColor = (
@@ -91,6 +92,7 @@ export const convertShortcutKeyStatusToButtonColor = (
         case ShortcutKeyStatus.Registered:
             return 'green';
         case ShortcutKeyStatus.Unregistered:
+        case ShortcutKeyStatus.PrintScreen:
             return 'orange';
         case ShortcutKeyStatus.Error:
             return 'danger';
@@ -113,6 +115,8 @@ export const convertShortcutKeyStatusToTip = (
             return <FormattedMessage id="home.shortcut.error" />;
         case ShortcutKeyStatus.None:
             return <FormattedMessage id="home.shortcut.none" />;
+        case ShortcutKeyStatus.PrintScreen:
+            return <FormattedMessage id="settings.printScreen.tip" />;
         default:
             return undefined;
     }

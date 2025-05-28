@@ -127,4 +127,5 @@ export const settings = {
     'settings.hotKeySettings.fixedContent.fixedContentCloseWindow': '关闭窗口',
     'settings.functionSettings.fixedContentSettings': '固定到屏幕',
     'settings.functionSettings.fixedContentSettings.zoomWithMouse': '以鼠标为中心缩放',
+    'settings.printScreen.tip': '目前无法单独捕获 PrintScreen 按键，请使用任意组合键代替',
 };

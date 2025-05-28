@@ -244,7 +244,9 @@ export default function Home() {
                                 .shortcutKey,
                         );
 
-                        if (!currentShortcutKey) {
+                        if (currentShortcutKey === 'PrintScreen') {
+                            keyStatus[key as AppFunction] = ShortcutKeyStatus.PrintScreen;
+                        } else if (!currentShortcutKey) {
                             keyStatus[key as AppFunction] = ShortcutKeyStatus.None;
                         } else {
                             keyStatus[key as AppFunction] = isSuccess
@@ -402,6 +404,13 @@ export default function Home() {
                         break;
                 }
 
+                let speicalKeys: string[] | undefined;
+                switch (group) {
+                    case AppFunctionGroup.Screenshot:
+                        speicalKeys = ['PrintScreen'];
+                        break;
+                }
+
                 return (
                     <div key={`${group}`} style={{ marginBottom: token.marginLG }}>
                         {groupTitle}
@@ -456,6 +465,7 @@ export default function Home() {
                                                 onClick={config.onClick}
                                             >
                                                 <KeyButton
+                                                    speicalKeys={speicalKeys}
                                                     title={config.title}
                                                     maxWidth={128}
                                                     keyValue={currentShortcutKey ?? ''}
