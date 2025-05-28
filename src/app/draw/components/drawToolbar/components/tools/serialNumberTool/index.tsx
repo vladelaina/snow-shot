@@ -19,6 +19,7 @@ import { useStateRef } from '@/hooks/useStateRef';
 import { useStateSubscriber } from '@/hooks/useStateSubscriber';
 import { zIndexs } from '@/utils/zIndex';
 import { AppState } from '@mg-chao/excalidraw/types';
+import Color from 'color';
 import React, {
     useCallback,
     useContext,
@@ -56,6 +57,22 @@ const generateSerialNumber = (
         textHeight = 45;
     }
 
+    let ellipseBackgroundColor = appState.currentItemBackgroundColor;
+    const ellipseBackgroundColorInstance = new Color(ellipseBackgroundColor);
+    if (ellipseBackgroundColorInstance.alpha() === 0) {
+        const alpha = 0.08;
+        const whiteBackground = new Color('#ffffff');
+
+        const fg = new Color(appState.currentItemStrokeColor).rgb();
+        const bg = whiteBackground.rgb();
+
+        const blendedR = Math.ceil(fg.red() * alpha + bg.red() * (1 - alpha));
+        const blendedG = Math.ceil(fg.green() * alpha + bg.green() * (1 - alpha));
+        const blendedB = Math.ceil(fg.blue() * alpha + bg.blue() * (1 - alpha));
+
+        ellipseBackgroundColor = new Color({ r: blendedR, g: blendedG, b: blendedB }).hex();
+    }
+
     return [
         {
             id: ellipseId,
@@ -66,7 +83,7 @@ const generateSerialNumber = (
             height: ellipseHeight,
             angle: 0,
             strokeColor: appState.currentItemStrokeColor,
-            backgroundColor: appState.currentItemBackgroundColor,
+            backgroundColor: ellipseBackgroundColor,
             fillStyle: appState.currentItemFillStyle,
             strokeWidth: appState.currentItemStrokeWidth,
             strokeStyle: appState.currentItemStrokeStyle,
@@ -229,7 +246,7 @@ export const SerialNumberTool: React.FC = () => {
                     item.startBinding = {
                         elementId: serialNumberElement[0].id,
                         focus: 0,
-                        gap: 0,
+                        gap: 8,
                         fixedPoint: [1, 0.5],
                     };
                 }
@@ -264,7 +281,7 @@ export const SerialNumberTool: React.FC = () => {
         AppSettingsPublisher,
         useCallback(
             (appSettings: AppSettingsData) => {
-                setDisableArrow(appSettings[AppSettingsGroup.Cache].disableArrowPicker);
+                setDisableArrow(appSettings[AppSettingsGroup.CacheV2].disableArrowPicker);
                 setDisableArrowHotKey(
                     appSettings[AppSettingsGroup.DrawToolbarKeyEvent].serialNumberDisableArrow
                         .hotKey,
@@ -277,24 +294,18 @@ export const SerialNumberTool: React.FC = () => {
     useHotkeysApp(
         disableArrowHotKey,
         useCallback(() => {
-            setDisableArrow((prev) => {
-                const res = !prev;
-
-                updateAppSettings(
-                    AppSettingsGroup.Cache,
-                    {
-                        disableArrowPicker: res,
-                    },
-                    true,
-                    true,
-                    false,
-                    true,
-                    true,
-                );
-
-                return res;
-            });
-        }, [setDisableArrow, updateAppSettings]),
+            updateAppSettings(
+                AppSettingsGroup.CacheV2,
+                {
+                    disableArrowPicker: !disableArrowRef.current,
+                },
+                true,
+                true,
+                false,
+                true,
+                false,
+            );
+        }, [disableArrowRef, updateAppSettings]),
         {
             preventDefault: true,
             keyup: true,
@@ -305,21 +316,26 @@ export const SerialNumberTool: React.FC = () => {
 
     const enableMask = disableArrow && enable;
 
-    useEffect(() => {
+    const updateActiveTool = useCallback(() => {
         if (!enableRef.current) {
             return;
         }
 
-        if (disableArrow) {
+        if (disableArrowRef.current) {
             drawCacheLayerActionRef.current?.setActiveTool({
                 type: 'ellipse',
+                locked: true,
             });
         } else {
             drawCacheLayerActionRef.current?.setActiveTool({
                 type: 'arrow',
+                locked: true,
             });
         }
-    }, [disableArrow, drawCacheLayerActionRef, enableRef]);
+    }, [disableArrowRef, drawCacheLayerActionRef, enableRef]);
+    useEffect(() => {
+        updateActiveTool();
+    }, [updateActiveTool, enable, disableArrow]);
 
     const onMaskWheel = useCallback<WheelEventHandler<HTMLDivElement>>(
         (ev) => {

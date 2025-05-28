@@ -34,6 +34,7 @@ export enum AppSettingsGroup {
     Common = 'common',
     CommonTrayIcon = 'commonTrayIcon',
     Cache = 'cache',
+    CacheV2 = 'cacheV2',
     Screenshot = 'screenshot',
     DrawToolbarKeyEvent = 'drawToolbarKeyEvent_20250526',
     KeyEvent = 'KeyEvent',
@@ -95,6 +96,8 @@ export type AppSettingsData = {
         colorPickerColorFormatIndex: number;
         prevImageFormat: ImageFormat;
         prevSelectRect: ElementRect;
+    };
+    [AppSettingsGroup.CacheV2]: {
         disableArrowPicker: boolean;
     };
     [AppSettingsGroup.DrawToolbarKeyEvent]: Record<
@@ -187,7 +190,9 @@ export const defaultAppSettingsData: AppSettingsData = {
             max_x: 0,
             max_y: 0,
         },
-        disableArrowPicker: false,
+    },
+    [AppSettingsGroup.CacheV2]: {
+        disableArrowPicker: true,
     },
     [AppSettingsGroup.DrawToolbarKeyEvent]: defaultDrawToolbarKeyEventSettings,
     [AppSettingsGroup.KeyEvent]: defaultKeyEventSettings,
@@ -456,10 +461,18 @@ const ContextWrapCore: React.FC<{ children: React.ReactNode }> = ({ children }) 
                             ? newSettings.prevImageFormat
                             : (prevSettings?.prevImageFormat ?? ImageFormat.PNG),
                     prevSelectRect,
+                };
+            } else if (group === AppSettingsGroup.CacheV2) {
+                newSettings = newSettings as AppSettingsData[typeof group];
+                const prevSettings = appSettingsRef.current[group] as
+                    | AppSettingsData[typeof group]
+                    | undefined;
+
+                settings = {
                     disableArrowPicker:
                         typeof newSettings?.disableArrowPicker === 'boolean'
                             ? newSettings.disableArrowPicker
-                            : (prevSettings?.disableArrowPicker ?? false),
+                            : (prevSettings?.disableArrowPicker ?? true),
                 };
             } else if (group === AppSettingsGroup.Screenshot) {
                 newSettings = newSettings as AppSettingsData[typeof group];

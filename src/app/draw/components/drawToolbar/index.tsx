@@ -241,10 +241,6 @@ const DrawToolbarCore: React.FC<DrawToolbarProps> = ({
                     break;
                 case DrawState.SerialNumber:
                     drawCacheLayerActionRef.current?.setEnable(true);
-                    drawCacheLayerActionRef.current?.setActiveTool({
-                        type: 'arrow',
-                        locked: true,
-                    });
                     break;
                 case DrawState.Blur:
                     drawCacheLayerActionRef.current?.setEnable(true);
