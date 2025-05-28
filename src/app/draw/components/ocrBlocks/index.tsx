@@ -96,6 +96,7 @@ export const OcrBlocks: React.FC<{
                     result: ocrResult,
                 },
             });
+            setDrawEvent(undefined);
         },
         [setDrawEvent],
     );

@@ -3,13 +3,20 @@ import { useCallbackRender } from '@/hooks/useCallbackRender';
 import { MousePosition } from '@/utils/mousePosition';
 import { HolderOutlined } from '@ant-design/icons';
 import { Flex, theme } from 'antd';
-import { useCallback, useContext, useEffect, useMemo, useRef } from 'react';
+import { useCallback, useContext, useEffect, useImperativeHandle, useMemo, useRef } from 'react';
 import { useIntl } from 'react-intl';
 import { updateElementPosition } from './dragButton/extra';
 import { DrawContext } from '@/app/draw/types';
 import { zIndexs } from '@/utils/zIndex';
 
-export const SubTools: React.FC<{ buttons: React.ReactNode[] }> = ({ buttons }) => {
+export type SubToolsActionType = {
+    getSubToolContainer: () => HTMLDivElement | null;
+};
+
+export const SubTools: React.FC<{
+    buttons: React.ReactNode[];
+    actionRef: React.RefObject<SubToolsActionType | undefined>;
+}> = ({ buttons, actionRef }) => {
     const intl = useIntl();
     const { token } = theme.useToken();
 
@@ -118,6 +125,15 @@ export const SubTools: React.FC<{ buttons: React.ReactNode[] }> = ({ buttons }) 
             document.removeEventListener('mouseup', handleMouseUp);
         };
     }, [handleMouseMove, handleMouseUp]);
+
+    useImperativeHandle(
+        actionRef,
+        useCallback(() => {
+            return {
+                getSubToolContainer: () => subToolsContainerRef.current,
+            };
+        }, []),
+    );
 
     return (
         <div className="sub-tools-container" ref={subToolsContainerRef}>

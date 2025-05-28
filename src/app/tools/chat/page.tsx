@@ -852,17 +852,21 @@ const Chat = () => {
                                             size="small"
                                             icon={<CopyOutlined />}
                                             onClick={() => {
+                                                let textContent = '';
                                                 if (
-                                                    !content ||
-                                                    typeof content !== 'object' ||
-                                                    !('props' in content)
+                                                    content &&
+                                                    typeof content === 'object' &&
+                                                    'props' in content
                                                 ) {
+                                                    textContent =
+                                                        content['props']['clipboardContent'];
+                                                } else if (typeof content === 'string') {
+                                                    textContent = content;
+                                                } else {
                                                     return;
                                                 }
 
-                                                navigator.clipboard.writeText(
-                                                    content['props']['clipboardContent'],
-                                                );
+                                                navigator.clipboard.writeText(textContent);
                                             }}
                                         />
                                     </div>

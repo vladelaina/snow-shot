@@ -386,6 +386,7 @@ const DrawCacheLayerCore: React.FC<{
                     pointerDownState,
                 },
             });
+            setExcalidrawEvent(undefined);
         },
         [setExcalidrawEvent],
     );
@@ -444,6 +445,7 @@ const DrawCacheLayerCore: React.FC<{
                             files,
                         },
                     });
+                    setExcalidrawEvent(undefined);
                 }}
                 langCode={convertLocalToLocalCode(intl.locale)}
             />
