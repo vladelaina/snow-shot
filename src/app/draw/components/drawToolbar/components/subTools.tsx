@@ -15,7 +15,7 @@ export type SubToolsActionType = {
 
 export const SubTools: React.FC<{
     buttons: React.ReactNode[];
-    actionRef: React.RefObject<SubToolsActionType | undefined>;
+    actionRef?: React.RefObject<SubToolsActionType | undefined>;
 }> = ({ buttons, actionRef }) => {
     const intl = useIntl();
     const { token } = theme.useToken();
