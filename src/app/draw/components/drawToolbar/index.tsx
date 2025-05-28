@@ -29,6 +29,9 @@ import {
     CaptureEvent,
     CaptureEventPublisher,
     CaptureStepPublisher,
+    DrawEvent,
+    DrawEventParams,
+    DrawEventPublisher,
     DrawStatePublisher,
     ScreenshotTypePublisher,
 } from '../../extra';
@@ -40,10 +43,14 @@ import { ToolButton } from './components/toolButton';
 import { FormattedMessage, useIntl } from 'react-intl';
 import { BlurTool } from './components/tools/blurTool';
 import { ScreenshotType } from '@/functions/screenshot';
-import { ScrollScreenshot } from './components/tools/scrollScreenshotTool';
+import {
+    ScrollScreenshot,
+    ScrollScreenshotActionType,
+} from './components/tools/scrollScreenshotTool';
 import { AntdContext } from '@/components/globalLayoutExtra';
 import { AppSettingsData, AppSettingsGroup, AppSettingsPublisher } from '@/app/contextWrap';
 import { DrawSubTools } from './components/tools/drawSubTools';
+import { debounce } from 'es-toolkit';
 
 export type DrawToolbarProps = {
     actionRef: React.RefObject<DrawToolbarActionType | undefined>;
@@ -92,6 +99,8 @@ const DrawToolbarCore: React.FC<DrawToolbarProps> = ({
     const [enableScrollScreenshot, setEnableScrollScreenshot] = useState(false);
     const [shortcutCanleTip, setShortcutCanleTip] = useState(false);
     const drawToolarContainerRef = useRef<HTMLDivElement | null>(null);
+    const drawToolbarOpacityWrapRef = useRef<HTMLDivElement | null>(null);
+    const scrollScreenshotToolActionRef = useRef<ScrollScreenshotActionType | undefined>(undefined);
     const drawToolbarRef = useRef<HTMLDivElement | null>(null);
     const dragButtonActionRef = useRef<DragButtonActionType | undefined>(undefined);
     const [, setEnableKeyEvent] = useStateSubscriber(EnableKeyEventPublisher, undefined);
@@ -348,6 +357,45 @@ const DrawToolbarCore: React.FC<DrawToolbarProps> = ({
     }, [setEnable]);
 
     const disableNormalScreenshotTool = enableScrollScreenshot;
+
+    const showDrawToolbar = useMemo(() => {
+        return debounce(() => {
+            const subToolContainer =
+                scrollScreenshotToolActionRef.current?.getScrollScreenshotSubToolContainer();
+            if (!drawToolbarOpacityWrapRef.current || !subToolContainer) {
+                return;
+            }
+
+            subToolContainer.style.transition = `opacity ${token.motionDurationMid} ${token.motionEaseInOut}`;
+            subToolContainer.style.opacity = '1';
+            drawToolbarOpacityWrapRef.current.style.transition = subToolContainer.style.transition;
+            drawToolbarOpacityWrapRef.current.style.opacity = subToolContainer.style.opacity;
+        }, 1000);
+    }, [token.motionDurationMid, token.motionEaseInOut]);
+    useStateSubscriber(
+        DrawEventPublisher,
+        useCallback(
+            (event: DrawEventParams | undefined) => {
+                const subToolContainer =
+                    scrollScreenshotToolActionRef.current?.getScrollScreenshotSubToolContainer();
+                if (!drawToolbarOpacityWrapRef.current || !subToolContainer) {
+                    return;
+                }
+
+                if (event?.event === DrawEvent.ScrollScreenshot) {
+                    subToolContainer.style.transition = 'unset';
+                    subToolContainer.style.opacity = '0';
+                    drawToolbarOpacityWrapRef.current.style.transition =
+                        subToolContainer.style.transition;
+                    drawToolbarOpacityWrapRef.current.style.opacity =
+                        subToolContainer.style.opacity;
+                    showDrawToolbar();
+                }
+            },
+            [showDrawToolbar],
+        ),
+    );
+
     return (
         <div
             className="draw-toolbar-container"
@@ -358,252 +406,254 @@ const DrawToolbarCore: React.FC<DrawToolbarProps> = ({
             ref={drawToolarContainerRef}
         >
             <DrawToolbarContext.Provider value={drawToolbarContextValue}>
-                <DrawSubTools onToolClick={onToolClick} />
+                <div ref={drawToolbarOpacityWrapRef}>
+                    <DrawSubTools onToolClick={onToolClick} />
 
-                <div
-                    onMouseEnter={() => {
-                        setDrawToolbarState({ ...getDrawToolbarState(), mouseHover: true });
-                    }}
-                    onMouseLeave={() => {
-                        setDrawToolbarState({ ...getDrawToolbarState(), mouseHover: false });
-                    }}
-                    className="draw-toolbar"
-                    onDoubleClick={(e) => {
-                        e.stopPropagation();
-                        e.preventDefault();
-                    }}
-                    ref={drawToolbarRef}
-                >
-                    <Flex align="center" gap={token.paddingXS}>
-                        <DragButton actionRef={dragButtonActionRef} />
+                    <div
+                        onMouseEnter={() => {
+                            setDrawToolbarState({ ...getDrawToolbarState(), mouseHover: true });
+                        }}
+                        onMouseLeave={() => {
+                            setDrawToolbarState({ ...getDrawToolbarState(), mouseHover: false });
+                        }}
+                        className="draw-toolbar"
+                        onDoubleClick={(e) => {
+                            e.stopPropagation();
+                            e.preventDefault();
+                        }}
+                        ref={drawToolbarRef}
+                    >
+                        <Flex align="center" gap={token.paddingXS}>
+                            <DragButton actionRef={dragButtonActionRef} />
 
-                        {/* 默认状态 */}
-                        <ToolButton
-                            componentKey={KeyEventKey.MoveTool}
-                            icon={<DragOutlined />}
-                            drawState={DrawState.Idle}
-                            onClick={() => {
-                                onToolClick(DrawState.Idle);
-                            }}
-                        />
-
-                        {/* 选择状态 */}
-                        <ToolButton
-                            componentKey={KeyEventKey.SelectTool}
-                            icon={<ArrowSelectIcon style={{ fontSize: '1.08em' }} />}
-                            drawState={DrawState.Select}
-                            disable={disableNormalScreenshotTool}
-                            onClick={() => {
-                                onToolClick(DrawState.Select);
-                            }}
-                        />
-
-                        <div className="draw-toolbar-splitter" />
-
-                        {/* 矩形 */}
-                        <ToolButton
-                            componentKey={KeyEventKey.RectTool}
-                            icon={<RectIcon style={{ fontSize: '1em' }} />}
-                            disable={disableNormalScreenshotTool}
-                            extraDrawState={[DrawState.Diamond]}
-                            drawState={DrawState.Rect}
-                            onClick={() => {
-                                onToolClick(DrawState.Rect);
-                            }}
-                        />
-
-                        {/* 椭圆 */}
-                        <ToolButton
-                            componentKey={KeyEventKey.EllipseTool}
-                            icon={<CircleIcon style={{ fontSize: '1em' }} />}
-                            drawState={DrawState.Ellipse}
-                            disable={disableNormalScreenshotTool}
-                            onClick={() => {
-                                onToolClick(DrawState.Ellipse);
-                            }}
-                        />
-
-                        {/* 箭头 */}
-                        <ToolButton
-                            componentKey={KeyEventKey.ArrowTool}
-                            icon={<ArrowIcon style={{ fontSize: '0.83em' }} />}
-                            drawState={DrawState.Arrow}
-                            extraDrawState={[DrawState.Line]}
-                            disable={disableNormalScreenshotTool}
-                            onClick={() => {
-                                onToolClick(DrawState.Arrow);
-                            }}
-                        />
-
-                        {/* 画笔 */}
-                        <ToolButton
-                            componentKey={KeyEventKey.PenTool}
-                            icon={<PenIcon style={{ fontSize: '1.08em' }} />}
-                            drawState={DrawState.Pen}
-                            disable={disableNormalScreenshotTool}
-                            onClick={() => {
-                                onToolClick(DrawState.Pen);
-                            }}
-                        />
-
-                        {/* 文本 */}
-                        <ToolButton
-                            componentKey={KeyEventKey.TextTool}
-                            icon={<TextIcon style={{ fontSize: '1.08em' }} />}
-                            drawState={DrawState.Text}
-                            disable={disableNormalScreenshotTool}
-                            onClick={() => {
-                                onToolClick(DrawState.Text);
-                            }}
-                        />
-
-                        {/* 序列号 */}
-                        <ToolButton
-                            componentKey={KeyEventKey.SerialNumberTool}
-                            icon={<SerialNumberIcon style={{ fontSize: '1.16em' }} />}
-                            drawState={DrawState.SerialNumber}
-                            disable={disableNormalScreenshotTool}
-                            onClick={() => {
-                                onToolClick(DrawState.SerialNumber);
-                            }}
-                        />
-
-                        {/* 模糊 */}
-                        <ToolButton
-                            componentKey={KeyEventKey.BlurTool}
-                            icon={<MosaicIcon />}
-                            drawState={DrawState.Blur}
-                            disable={disableNormalScreenshotTool}
-                            onClick={() => {
-                                onToolClick(DrawState.Blur);
-                            }}
-                        />
-
-                        {/* 橡皮擦 */}
-                        <ToolButton
-                            componentKey={KeyEventKey.EraserTool}
-                            icon={<EraserIcon style={{ fontSize: '0.9em' }} />}
-                            drawState={DrawState.Eraser}
-                            disable={disableNormalScreenshotTool}
-                            onClick={() => {
-                                onToolClick(DrawState.Eraser);
-                            }}
-                        />
-
-                        <div className="draw-toolbar-splitter" />
-
-                        <HistoryControls disable={enableScrollScreenshot} />
-
-                        <div className="draw-toolbar-splitter" />
-
-                        {/* 额外工具 */}
-                        <ToolButton
-                            componentKey={KeyEventKey.ExtraToolsTool}
-                            icon={<AppstoreOutlined />}
-                            drawState={DrawState.ExtraTools}
-                            extraDrawState={[DrawState.ScanQrcode]}
-                            disable={enableScrollScreenshot}
-                            onClick={() => {
-                                onToolClick(DrawState.ExtraTools);
-                            }}
-                        />
-
-                        {/* 固定到屏幕 */}
-                        <ToolButton
-                            componentKey={KeyEventKey.FixedTool}
-                            icon={<FixedIcon style={{ fontSize: '1.1em' }} />}
-                            drawState={DrawState.Fixed}
-                            onClick={() => {
-                                onFixed();
-                            }}
-                        />
-
-                        {/* OCR */}
-                        <ToolButton
-                            componentKey={KeyEventKey.OcrDetectTool}
-                            icon={<OcrDetectIcon style={{ fontSize: '0.88em' }} />}
-                            drawState={DrawState.OcrDetect}
-                            disable={disableNormalScreenshotTool}
-                            onClick={() => {
-                                onToolClick(DrawState.OcrDetect);
-                            }}
-                        />
-
-                        {/* 滚动截图 */}
-                        <ToolButton
-                            componentKey={KeyEventKey.ScrollScreenshotTool}
-                            icon={
-                                <div style={{ position: 'relative', top: '0.11em' }}>
-                                    <ScrollScreenshotIcon style={{ fontSize: '1.2em' }} />
-                                </div>
-                            }
-                            drawState={DrawState.ScrollScreenshot}
-                            onClick={() => {
-                                onToolClick(DrawState.ScrollScreenshot);
-                            }}
-                        />
-
-                        {/* 快速保存截图 */}
-                        {enableFastSave && (
+                            {/* 默认状态 */}
                             <ToolButton
-                                componentKey={KeyEventKey.FastSaveTool}
-                                icon={<FastSaveIcon style={{ fontSize: '1.08em' }} />}
-                                drawState={DrawState.FastSave}
+                                componentKey={KeyEventKey.MoveTool}
+                                icon={<DragOutlined />}
+                                drawState={DrawState.Idle}
                                 onClick={() => {
-                                    onSave(true);
+                                    onToolClick(DrawState.Idle);
                                 }}
                             />
-                        )}
 
-                        {/* 保存截图 */}
-                        <ToolButton
-                            componentKey={KeyEventKey.SaveTool}
-                            icon={<SaveIcon style={{ fontSize: '1em' }} />}
-                            drawState={DrawState.Save}
-                            onClick={() => {
-                                onSave();
-                            }}
-                        />
+                            {/* 选择状态 */}
+                            <ToolButton
+                                componentKey={KeyEventKey.SelectTool}
+                                icon={<ArrowSelectIcon style={{ fontSize: '1.08em' }} />}
+                                drawState={DrawState.Select}
+                                disable={disableNormalScreenshotTool}
+                                onClick={() => {
+                                    onToolClick(DrawState.Select);
+                                }}
+                            />
 
-                        <div className="draw-toolbar-splitter" />
+                            <div className="draw-toolbar-splitter" />
 
-                        {/* 取消截图 */}
-                        <ToolButton
-                            componentKey={KeyEventKey.CancelTool}
-                            icon={
-                                <CloseOutlined
-                                    style={{ fontSize: '0.83em', color: token.colorError }}
+                            {/* 矩形 */}
+                            <ToolButton
+                                componentKey={KeyEventKey.RectTool}
+                                icon={<RectIcon style={{ fontSize: '1em' }} />}
+                                disable={disableNormalScreenshotTool}
+                                extraDrawState={[DrawState.Diamond]}
+                                drawState={DrawState.Rect}
+                                onClick={() => {
+                                    onToolClick(DrawState.Rect);
+                                }}
+                            />
+
+                            {/* 椭圆 */}
+                            <ToolButton
+                                componentKey={KeyEventKey.EllipseTool}
+                                icon={<CircleIcon style={{ fontSize: '1em' }} />}
+                                drawState={DrawState.Ellipse}
+                                disable={disableNormalScreenshotTool}
+                                onClick={() => {
+                                    onToolClick(DrawState.Ellipse);
+                                }}
+                            />
+
+                            {/* 箭头 */}
+                            <ToolButton
+                                componentKey={KeyEventKey.ArrowTool}
+                                icon={<ArrowIcon style={{ fontSize: '0.83em' }} />}
+                                drawState={DrawState.Arrow}
+                                extraDrawState={[DrawState.Line]}
+                                disable={disableNormalScreenshotTool}
+                                onClick={() => {
+                                    onToolClick(DrawState.Arrow);
+                                }}
+                            />
+
+                            {/* 画笔 */}
+                            <ToolButton
+                                componentKey={KeyEventKey.PenTool}
+                                icon={<PenIcon style={{ fontSize: '1.08em' }} />}
+                                drawState={DrawState.Pen}
+                                disable={disableNormalScreenshotTool}
+                                onClick={() => {
+                                    onToolClick(DrawState.Pen);
+                                }}
+                            />
+
+                            {/* 文本 */}
+                            <ToolButton
+                                componentKey={KeyEventKey.TextTool}
+                                icon={<TextIcon style={{ fontSize: '1.08em' }} />}
+                                drawState={DrawState.Text}
+                                disable={disableNormalScreenshotTool}
+                                onClick={() => {
+                                    onToolClick(DrawState.Text);
+                                }}
+                            />
+
+                            {/* 序列号 */}
+                            <ToolButton
+                                componentKey={KeyEventKey.SerialNumberTool}
+                                icon={<SerialNumberIcon style={{ fontSize: '1.16em' }} />}
+                                drawState={DrawState.SerialNumber}
+                                disable={disableNormalScreenshotTool}
+                                onClick={() => {
+                                    onToolClick(DrawState.SerialNumber);
+                                }}
+                            />
+
+                            {/* 模糊 */}
+                            <ToolButton
+                                componentKey={KeyEventKey.BlurTool}
+                                icon={<MosaicIcon />}
+                                drawState={DrawState.Blur}
+                                disable={disableNormalScreenshotTool}
+                                onClick={() => {
+                                    onToolClick(DrawState.Blur);
+                                }}
+                            />
+
+                            {/* 橡皮擦 */}
+                            <ToolButton
+                                componentKey={KeyEventKey.EraserTool}
+                                icon={<EraserIcon style={{ fontSize: '0.9em' }} />}
+                                drawState={DrawState.Eraser}
+                                disable={disableNormalScreenshotTool}
+                                onClick={() => {
+                                    onToolClick(DrawState.Eraser);
+                                }}
+                            />
+
+                            <div className="draw-toolbar-splitter" />
+
+                            <HistoryControls disable={enableScrollScreenshot} />
+
+                            <div className="draw-toolbar-splitter" />
+
+                            {/* 额外工具 */}
+                            <ToolButton
+                                componentKey={KeyEventKey.ExtraToolsTool}
+                                icon={<AppstoreOutlined />}
+                                drawState={DrawState.ExtraTools}
+                                extraDrawState={[DrawState.ScanQrcode]}
+                                disable={enableScrollScreenshot}
+                                onClick={() => {
+                                    onToolClick(DrawState.ExtraTools);
+                                }}
+                            />
+
+                            {/* 固定到屏幕 */}
+                            <ToolButton
+                                componentKey={KeyEventKey.FixedTool}
+                                icon={<FixedIcon style={{ fontSize: '1.1em' }} />}
+                                drawState={DrawState.Fixed}
+                                onClick={() => {
+                                    onFixed();
+                                }}
+                            />
+
+                            {/* OCR */}
+                            <ToolButton
+                                componentKey={KeyEventKey.OcrDetectTool}
+                                icon={<OcrDetectIcon style={{ fontSize: '0.88em' }} />}
+                                drawState={DrawState.OcrDetect}
+                                disable={disableNormalScreenshotTool}
+                                onClick={() => {
+                                    onToolClick(DrawState.OcrDetect);
+                                }}
+                            />
+
+                            {/* 滚动截图 */}
+                            <ToolButton
+                                componentKey={KeyEventKey.ScrollScreenshotTool}
+                                icon={
+                                    <div style={{ position: 'relative', top: '0.11em' }}>
+                                        <ScrollScreenshotIcon style={{ fontSize: '1.2em' }} />
+                                    </div>
+                                }
+                                drawState={DrawState.ScrollScreenshot}
+                                onClick={() => {
+                                    onToolClick(DrawState.ScrollScreenshot);
+                                }}
+                            />
+
+                            {/* 快速保存截图 */}
+                            {enableFastSave && (
+                                <ToolButton
+                                    componentKey={KeyEventKey.FastSaveTool}
+                                    icon={<FastSaveIcon style={{ fontSize: '1.08em' }} />}
+                                    drawState={DrawState.FastSave}
+                                    onClick={() => {
+                                        onSave(true);
+                                    }}
                                 />
-                            }
-                            confirmTip={
-                                shortcutCanleTip ? (
-                                    <FormattedMessage id="draw.cancel.tip1" />
-                                ) : undefined
-                            }
-                            drawState={DrawState.Cancel}
-                            onClick={() => {
-                                onCancel();
-                            }}
-                        />
+                            )}
 
-                        {/* 复制截图 */}
-                        <ToolButton
-                            componentKey={KeyEventKey.CopyTool}
-                            icon={
-                                <CopyOutlined
-                                    style={{ fontSize: '0.92em', color: token.colorPrimary }}
-                                />
-                            }
-                            drawState={DrawState.Copy}
-                            onClick={() => {
-                                onCopyToClipboard();
-                            }}
-                        />
-                    </Flex>
+                            {/* 保存截图 */}
+                            <ToolButton
+                                componentKey={KeyEventKey.SaveTool}
+                                icon={<SaveIcon style={{ fontSize: '1em' }} />}
+                                drawState={DrawState.Save}
+                                onClick={() => {
+                                    onSave();
+                                }}
+                            />
+
+                            <div className="draw-toolbar-splitter" />
+
+                            {/* 取消截图 */}
+                            <ToolButton
+                                componentKey={KeyEventKey.CancelTool}
+                                icon={
+                                    <CloseOutlined
+                                        style={{ fontSize: '0.83em', color: token.colorError }}
+                                    />
+                                }
+                                confirmTip={
+                                    shortcutCanleTip ? (
+                                        <FormattedMessage id="draw.cancel.tip1" />
+                                    ) : undefined
+                                }
+                                drawState={DrawState.Cancel}
+                                onClick={() => {
+                                    onCancel();
+                                }}
+                            />
+
+                            {/* 复制截图 */}
+                            <ToolButton
+                                componentKey={KeyEventKey.CopyTool}
+                                icon={
+                                    <CopyOutlined
+                                        style={{ fontSize: '0.92em', color: token.colorPrimary }}
+                                    />
+                                }
+                                drawState={DrawState.Copy}
+                                onClick={() => {
+                                    onCopyToClipboard();
+                                }}
+                            />
+                        </Flex>
+                    </div>
                 </div>
 
                 <BlurTool />
-                <ScrollScreenshot />
+                <ScrollScreenshot actionRef={scrollScreenshotToolActionRef} />
             </DrawToolbarContext.Provider>
             <style jsx>{`
                 .draw-toolbar-container {
@@ -629,7 +679,7 @@ const DrawToolbarCore: React.FC<DrawToolbarProps> = ({
                     cursor: default; /* 防止非拖动区域也变成可拖动状态 */
                     color: ${token.colorText};
                     box-shadow: 0 0 3px 0px ${token.colorPrimaryHover};
-                    transition: opacity ${token.motionDurationFast} ${token.motionEaseInOut};
+                    transition: opacity ${token.motionDurationMid} ${token.motionEaseInOut};
                 }
 
                 .draw-subtoolbar {

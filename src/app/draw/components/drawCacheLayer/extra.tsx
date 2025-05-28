@@ -75,6 +75,7 @@ export type ExcalidrawEventParams =
 
 export const ExcalidrawEventPublisher = createPublisher<ExcalidrawEventParams | undefined>(
     undefined,
+    true,
 );
 
 export type ExcalidrawOnHandleEraserParams = {

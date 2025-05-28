@@ -219,7 +219,7 @@ export const SerialNumberTool: React.FC = () => {
 
             sceneElements.forEach((item) => {
                 if (item.id === newArrowElement.id) {
-                    serialNumberElement[1].boundElements = [
+                    serialNumberElement[0].boundElements = [
                         {
                             id: newArrowElement.id,
                             type: 'arrow',
@@ -227,7 +227,7 @@ export const SerialNumberTool: React.FC = () => {
                     ] as never[];
 
                     item.startBinding = {
-                        elementId: serialNumberElement[1].id,
+                        elementId: serialNumberElement[0].id,
                         focus: 0,
                         gap: 0,
                         fixedPoint: [1, 0.5],
