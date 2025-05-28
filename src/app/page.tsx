@@ -244,14 +244,19 @@ export default function Home() {
                                 .shortcutKey,
                         );
 
-                        if (currentShortcutKey === 'PrintScreen') {
-                            keyStatus[key as AppFunction] = ShortcutKeyStatus.PrintScreen;
-                        } else if (!currentShortcutKey) {
+                        if (!currentShortcutKey) {
                             keyStatus[key as AppFunction] = ShortcutKeyStatus.None;
                         } else {
                             keyStatus[key as AppFunction] = isSuccess
                                 ? ShortcutKeyStatus.Registered
                                 : ShortcutKeyStatus.Unregistered;
+                        }
+
+                        if (
+                            keyStatus[key as AppFunction] === ShortcutKeyStatus.Registered &&
+                            currentShortcutKey === 'PrintScreen'
+                        ) {
+                            keyStatus[key as AppFunction] = ShortcutKeyStatus.PrintScreen;
                         }
                     } catch {
                         keyStatus[key as AppFunction] = ShortcutKeyStatus.Error;

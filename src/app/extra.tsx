@@ -89,10 +89,10 @@ export const convertShortcutKeyStatusToButtonColor = (
     }
 
     switch (status) {
+        case ShortcutKeyStatus.PrintScreen:
         case ShortcutKeyStatus.Registered:
             return 'green';
         case ShortcutKeyStatus.Unregistered:
-        case ShortcutKeyStatus.PrintScreen:
             return 'orange';
         case ShortcutKeyStatus.Error:
             return 'danger';
