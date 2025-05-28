@@ -63,7 +63,8 @@ export const FixedContentCore: React.FC<{
     onHtmlLoad?: ({ width, height }: { width: number; height: number }) => void;
     onTextLoad?: (container: HTMLDivElement | null) => void;
     onImageLoad?: (image: HTMLImageElement | null) => void;
-}> = ({ actionRef, onDrawLoad, onHtmlLoad, onTextLoad, onImageLoad }) => {
+    disabled?: boolean;
+}> = ({ actionRef, onDrawLoad, onHtmlLoad, onTextLoad, onImageLoad, disabled }) => {
     const intl = useIntl();
     const { token } = theme.useToken();
 
@@ -652,11 +653,13 @@ export const FixedContentCore: React.FC<{
     useHotkeys(hotkeys?.[KeyEventKey.FixedContentSwitchThumbnail]?.hotKey ?? '', switchThumbnail, {
         keyup: false,
         keydown: true,
+        enabled: !disabled,
     });
 
     useHotkeys(hotkeys?.[KeyEventKey.FixedContentCloseWindow]?.hotKey ?? '', closeWindowComplete, {
         keyup: false,
         keydown: true,
+        enabled: !disabled,
     });
 
     return (
