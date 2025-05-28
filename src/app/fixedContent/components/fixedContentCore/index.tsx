@@ -577,7 +577,7 @@ export const FixedContentCore: React.FC<{
             ocrResultActionRef.current?.setScale(targetScale);
             showScaleInfoTemporary();
         },
-        [getAppSettings, scaleRef, setScale, showScaleInfoTemporary, styleRef],
+        [getAppSettings, scaleRef, setScale, showScaleInfoTemporary, styleRef, switchThumbnail],
     );
     const scaleWindowRender = useCallbackRender(scaleWindow);
 

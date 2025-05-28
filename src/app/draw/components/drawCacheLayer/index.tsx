@@ -474,7 +474,7 @@ const DrawCacheLayerCore: React.FC<{
 
                 .draw-cache-layer :global(.excalidraw .layout-menu-render) {
                     position: fixed;
-                    z-index: 204;
+                    z-index: ${zIndexs.Draw_ExcalidrawToolbar};
                     left: 0;
                     top: 0;
                     box-sizing: border-box;

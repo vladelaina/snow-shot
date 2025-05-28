@@ -682,12 +682,14 @@ const DrawPageCore: React.FC = () => {
                 ref={layerContainerRef}
                 onDoubleClick={onDoubleClick}
             >
-                <FixedContentCore
-                    actionRef={fixedContentActionRef}
-                    onDrawLoad={() => {
-                        setIsFixed(true);
-                    }}
-                />
+                {isFixed && (
+                    <FixedContentCore
+                        actionRef={fixedContentActionRef}
+                        onDrawLoad={() => {
+                            setIsFixed(true);
+                        }}
+                    />
+                )}
 
                 {!isFixed && (
                     <>

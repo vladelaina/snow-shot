@@ -11,12 +11,30 @@ type KeyConfig = {
     index: number;
 };
 
-const convertKeyConfigToString = (keys: Set<string>) => {
-    return Array.from(keys)
-        .map((item) => {
-            return `${item[0].toUpperCase()}${item.slice(1).toLowerCase()}`;
-        })
-        .join('+');
+const convertKeyConfigToString = (keys: Set<string>, spicalRecordKeys?: Record<string, number>) => {
+    const keysArray = Array.from(keys).map((item) => {
+        return `${item[0].toUpperCase()}${item.slice(1).toLowerCase()}`;
+    });
+
+    // 如果没有特殊按键，直接返回原有逻辑
+    if (!spicalRecordKeys || Object.keys(spicalRecordKeys).length === 0) {
+        return keysArray.join('+');
+    }
+
+    // 创建结果数组，初始为普通按键
+    const result = [...keysArray];
+
+    // 将特殊按键按照位置从大到小排序，这样插入时不会影响前面的位置
+    const sortedSpecialKeys = Object.entries(spicalRecordKeys).sort(
+        ([, positionA], [, positionB]) => positionB - positionA,
+    );
+
+    // 按位置插入特殊按键
+    sortedSpecialKeys.forEach(([key, position]) => {
+        result.splice(position, 0, key);
+    });
+
+    return result.join('+');
 };
 
 export const KeyButton: React.FC<{
@@ -28,7 +46,18 @@ export const KeyButton: React.FC<{
     buttonProps?: ButtonProps;
     maxLength: number;
     onCancel?: () => void;
-}> = ({ title, keyValue, onKeyChange, width, maxWidth, buttonProps, maxLength, onCancel }) => {
+    speicalKeys?: string[];
+}> = ({
+    title,
+    keyValue,
+    onKeyChange,
+    width,
+    maxWidth,
+    buttonProps,
+    maxLength,
+    onCancel,
+    speicalKeys,
+}) => {
     const { token } = theme.useToken();
 
     const [open, setOpen] = useState(false);
@@ -52,7 +81,12 @@ export const KeyButton: React.FC<{
         _setInputAnyKeyConfigIndex(index);
     }, []);
 
-    const [recordKeys, { start: startRecord, stop: stopRecord }] = useRecordHotkeys();
+    const [spicalRecordKeys, setSpicalRecordKeys] = useState<Record<string, number>>({});
+    const [recordKeys, { start: startRecord, stop: _stopRecord }] = useRecordHotkeys();
+    const stopRecord = useCallback(() => {
+        _stopRecord();
+        setSpicalRecordKeys({});
+    }, [_stopRecord]);
 
     useEffect(() => {
         if (!open) {
@@ -94,21 +128,17 @@ export const KeyButton: React.FC<{
     const stopRecordAndSave = useCallback(() => {
         stopRecord();
 
-        if (recordKeys.size === 0) {
-            return;
-        }
-
         if (inputAnyKeyConfigIndexRef.current === undefined) {
             return;
         }
 
         keyConfigListRef.current[inputAnyKeyConfigIndexRef.current].recordKeys =
-            convertKeyConfigToString(recordKeys);
+            convertKeyConfigToString(recordKeys, spicalRecordKeys);
 
         setInputAnyKeyConfigIndex(undefined);
 
         updateKeyConfig();
-    }, [recordKeys, setInputAnyKeyConfigIndex, stopRecord, updateKeyConfig]);
+    }, [recordKeys, setInputAnyKeyConfigIndex, spicalRecordKeys, stopRecord, updateKeyConfig]);
 
     return (
         <>
@@ -137,73 +167,105 @@ export const KeyButton: React.FC<{
             >
                 {keyConfigList.map((keyConfig) => {
                     return (
-                        <Flex
-                            align="center"
-                            justify="space-between"
-                            wrap
-                            style={{ marginBottom: token.margin }}
-                            key={keyConfig.index}
-                        >
-                            <Space>
-                                <Button
-                                    onClick={() => {
-                                        keyConfig.recordKeys = '';
-                                        setInputAnyKeyConfigIndex(keyConfig.index);
-                                        startRecord();
-                                    }}
-                                    loading={inputAnyKeyConfigIndex === keyConfig.index}
-                                    style={{
-                                        opacity:
-                                            inputAnyKeyConfigIndex === keyConfig.index ? 0.42 : 1,
-                                    }}
-                                    icon={
-                                        inputAnyKeyConfigIndex === keyConfig.index ? undefined : (
-                                            <KeyboardGrayIcon />
-                                        )
-                                    }
-                                >
-                                    {inputAnyKeyConfigIndex === keyConfig.index ? (
-                                        <>
-                                            {recordKeys.size > 0 ? (
-                                                convertKeyConfigToString(recordKeys)
-                                            ) : (
-                                                <FormattedMessage id="settings.pleasePressTheKey" />
-                                            )}
-                                        </>
-                                    ) : (
-                                        keyConfig.recordKeys
-                                    )}
-                                </Button>
-                            </Space>
+                        <div key={keyConfig.index}>
+                            <Flex
+                                align="center"
+                                justify="space-between"
+                                wrap
+                                style={{ marginBottom: token.margin }}
+                            >
+                                <Space>
+                                    <Button
+                                        onClick={() => {
+                                            keyConfig.recordKeys = '';
+                                            setInputAnyKeyConfigIndex(keyConfig.index);
+                                            startRecord();
+                                        }}
+                                        loading={inputAnyKeyConfigIndex === keyConfig.index}
+                                        style={{
+                                            opacity:
+                                                inputAnyKeyConfigIndex === keyConfig.index
+                                                    ? 0.42
+                                                    : 1,
+                                        }}
+                                        icon={
+                                            inputAnyKeyConfigIndex ===
+                                            keyConfig.index ? undefined : (
+                                                <KeyboardGrayIcon />
+                                            )
+                                        }
+                                    >
+                                        {inputAnyKeyConfigIndex === keyConfig.index ? (
+                                            <>
+                                                {recordKeys.size > 0 ? (
+                                                    convertKeyConfigToString(
+                                                        recordKeys,
+                                                        spicalRecordKeys,
+                                                    )
+                                                ) : (
+                                                    <FormattedMessage id="settings.pleasePressTheKey" />
+                                                )}
+                                            </>
+                                        ) : (
+                                            keyConfig.recordKeys
+                                        )}
+                                    </Button>
+                                </Space>
 
-                            {inputAnyKeyConfigIndex !== keyConfig.index ? (
-                                <Button
-                                    danger
-                                    onClick={() => {
-                                        setKeyConfigList((pre) => {
-                                            return pre.filter(
-                                                (item) => item.index !== keyConfig.index,
-                                            );
-                                        });
-                                    }}
-                                    type="text"
-                                    variant="outlined"
-                                    color="red"
-                                    icon={<DeleteOutlined />}
-                                ></Button>
-                            ) : (
-                                <Button
-                                    disabled={recordKeys.size === 0}
-                                    onClick={() => {
-                                        stopRecordAndSave();
-                                    }}
-                                    type="default"
-                                    variant="outlined"
-                                    color="green"
-                                    icon={<CheckOutlined />}
-                                ></Button>
+                                {inputAnyKeyConfigIndex !== keyConfig.index ? (
+                                    <Button
+                                        danger
+                                        onClick={() => {
+                                            setKeyConfigList((pre) => {
+                                                return pre.filter(
+                                                    (item) => item.index !== keyConfig.index,
+                                                );
+                                            });
+                                        }}
+                                        type="text"
+                                        variant="outlined"
+                                        color="red"
+                                        icon={<DeleteOutlined />}
+                                    ></Button>
+                                ) : (
+                                    <Button
+                                        disabled={recordKeys.size === 0}
+                                        onClick={() => {
+                                            stopRecordAndSave();
+                                        }}
+                                        type="default"
+                                        variant="outlined"
+                                        color="green"
+                                        icon={<CheckOutlined />}
+                                    ></Button>
+                                )}
+                            </Flex>
+                            {inputAnyKeyConfigIndex === keyConfig.index && speicalKeys && (
+                                <Space>
+                                    {speicalKeys?.map((item) => {
+                                        return (
+                                            <Button
+                                                key={item}
+                                                type="text"
+                                                variant="outlined"
+                                                color="blue"
+                                                size="small"
+                                                onClick={() => {
+                                                    setSpicalRecordKeys((pre) => {
+                                                        return {
+                                                            ...pre,
+                                                            [item]: recordKeys.size,
+                                                        };
+                                                    });
+                                                }}
+                                            >
+                                                {item}
+                                            </Button>
+                                        );
+                                    })}
+                                </Space>
                             )}
-                        </Flex>
+                        </div>
                     );
                 })}
                 {maxLength > 1 && (
