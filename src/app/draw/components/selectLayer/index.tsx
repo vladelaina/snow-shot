@@ -27,8 +27,8 @@ import {
     SelectState,
 } from './extra';
 import { MousePosition } from '@/utils/mousePosition';
-import { DrawStatePublisher, getMonitorRect, ScreenshotTypePublisher } from '../../extra';
-import { CaptureStep, DrawContext, DrawState } from '../../types';
+import { getMonitorRect, ScreenshotTypePublisher } from '../../extra';
+import { CaptureStep, DrawContext } from '../../types';
 import { useStateSubscriber } from '@/hooks/useStateSubscriber';
 import { CaptureStepPublisher } from '../../extra';
 import { ResizeToolbar, ResizeToolbarActionType } from './components/resizeToolbar';
@@ -36,6 +36,7 @@ import { ScreenshotType } from '@/functions/screenshot';
 import { zIndexs } from '@/utils/zIndex';
 import { isHotkeyPressed } from 'react-hotkeys-hook';
 import { KeyEventKey } from '../drawToolbar/components/keyEventWrap/extra';
+import { DrawState, DrawStatePublisher } from '@/app/fullScreenDraw/components/drawCore/extra';
 
 export type SelectLayerActionType = {
     getSelectRect: () => ElementRect | undefined;

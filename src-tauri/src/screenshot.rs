@@ -12,20 +12,24 @@ use crate::os;
 use crate::os::ElementRect;
 use crate::os::ui_automation::UIElements;
 
-fn get_device_mouse_position() -> (i32, i32) {
+pub fn get_device_mouse_position() -> (i32, i32) {
     let device_state = DeviceState::new();
     let mouse: MouseState = device_state.get_mouse();
 
     mouse.coords
 }
 
+pub fn get_target_monitor() -> (i32, i32, Monitor) {
+    let (mouse_x, mouse_y) = get_device_mouse_position();
+    let monitor = Monitor::from_point(mouse_x, mouse_y).unwrap();
+
+    (mouse_x, mouse_y, monitor)
+}
+
 #[command]
 pub async fn capture_current_monitor(encoder: String) -> Response {
     // 获取当前鼠标的位置
-    let (mouse_x, mouse_y) = get_device_mouse_position();
-
-    // 获取当前鼠标所在屏幕的截图图像
-    let monitor = Monitor::from_point(mouse_x, mouse_y).unwrap();
+    let (mouse_x, mouse_y, monitor) = get_target_monitor();
 
     let image_buffer = monitor.capture_image().unwrap();
 

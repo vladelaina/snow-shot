@@ -18,54 +18,6 @@ export enum CaptureStep {
     Fixed = 3,
 }
 
-export enum DrawState {
-    Idle = 0,
-    // 选择元素
-    Select = 1,
-    // 矩形
-    Rect = 2,
-    // 菱形
-    Diamond = 3,
-    // 椭圆
-    Ellipse = 4,
-    // 箭头
-    Arrow = 5,
-    // 线条
-    Line = 6,
-    // 画笔
-    Pen = 7,
-    // 文本
-    Text = 8,
-    // 序列号
-    SerialNumber = 9,
-    // 模糊
-    Blur = 10,
-    // 橡皮擦
-    Eraser = 11,
-    // 撤销
-    Undo = 101,
-    // 重做
-    Redo = 102,
-    // 取消
-    Cancel = 103,
-    // 保存
-    Save = 104,
-    // 快速保存
-    FastSave = 105,
-    // 固定
-    Fixed = 106,
-    // 复制
-    Copy = 107,
-    // OCR
-    OcrDetect = 108,
-    // 滚动截图
-    ScrollScreenshot = 109,
-    // 额外工具
-    ExtraTools = 110,
-    // 扫描二维码
-    ScanQrcode = 111,
-}
-
 export enum CanvasLayer {
     Draw = 1,
     Select = 2,

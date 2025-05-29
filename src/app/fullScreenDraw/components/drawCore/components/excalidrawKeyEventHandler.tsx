@@ -4,10 +4,12 @@ import { useStateSubscriber } from '@/hooks/useStateSubscriber';
 import { ExcalidrawKeyEvent, ExcalidrawKeyEventPublisher } from '../extra';
 import { AppSettingsGroup } from '@/app/contextWrap';
 import { useAppSettingsLoad } from '@/hooks/useAppSettingsLoad';
-import { defaultDrawToolbarKeyEventSettings } from '../../drawToolbar/components/keyEventWrap/extra';
-import { KeyEventKey } from '../../drawToolbar/components/keyEventWrap/extra';
 import { HotkeysScope } from '@/components/globalLayoutExtra';
 import { useHotkeysApp } from '@/hooks/useHotkeysApp';
+import {
+    defaultDrawToolbarKeyEventSettings,
+    KeyEventKey,
+} from '@/app/draw/components/drawToolbar/components/keyEventWrap/extra';
 
 type HotKeys = {
     [key in keyof ExcalidrawKeyEvent]: string;

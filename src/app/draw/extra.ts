@@ -1,4 +1,4 @@
-import { CanvasLayer, CaptureStep, DrawState } from './types';
+import { CanvasLayer, CaptureStep } from './types';
 import { DrawLayerActionType } from './components/drawLayer';
 import { SelectLayerActionType } from './components/selectLayer';
 import { ImageBuffer } from '@/commands';
@@ -63,7 +63,6 @@ export type CaptureEventParams =
       };
 
 export const CaptureStepPublisher = createPublisher<CaptureStep>(CaptureStep.Select);
-export const DrawStatePublisher = createPublisher<DrawState>(DrawState.Idle);
 export const CaptureLoadingPublisher = createPublisher<boolean>(true);
 export const CaptureEventPublisher = createPublisher<CaptureEventParams | undefined>(undefined);
 export const ScreenshotTypePublisher = createPublisher<ScreenshotType>(ScreenshotType.Default);

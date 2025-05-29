@@ -1,4 +1,4 @@
-import { DrawState } from '@/app/draw/types';
+import { DrawState } from '@/app/fullScreenDraw/components/drawCore/extra';
 import { BaseButtonProps } from 'antd/es/button/button';
 import React from 'react';
 

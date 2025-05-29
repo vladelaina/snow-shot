@@ -4,9 +4,9 @@ import { SubTools } from '../../subTools';
 import { useIntl } from 'react-intl';
 import { ScanOutlined } from '@ant-design/icons';
 import { useState, useCallback } from 'react';
-import { DrawStatePublisher } from '@/app/draw/extra';
+import { DrawStatePublisher } from '@/app/fullScreenDraw/components/drawCore/extra';
 import { useStateSubscriber } from '@/hooks/useStateSubscriber';
-import { DrawState } from '@/app/draw/types';
+import { DrawState } from '@/app/fullScreenDraw/components/drawCore/extra';
 import { ScanQrcodeTool } from './components/scanQrcode';
 import { getButtonTypeByState } from '../../../extra';
 

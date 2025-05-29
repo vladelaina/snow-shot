@@ -67,7 +67,16 @@ const EventListenerCore: React.FC<{ children: React.ReactNode }> = ({ children }
     const { reloadAppSettings } = useContext(AppSettingsActionContext);
 
     const inited = useRef(false);
-    const isDrawPage = useMemo(() => pathname === '/draw', [pathname]);
+    const { isDrawPage, isFullScreenDraw } = useMemo(() => {
+        let isDrawPage = false;
+        let isFullScreenDraw = false;
+        if (pathname === '/draw') {
+            isDrawPage = true;
+        } else if (pathname === '/fullScreenDraw') {
+            isFullScreenDraw = true;
+        }
+        return { isDrawPage, isFullScreenDraw };
+    }, [pathname]);
     useEffect(() => {
         if (inited.current) {
             return;
@@ -120,6 +129,13 @@ const EventListenerCore: React.FC<{ children: React.ReactNode }> = ({ children }
                 });
                 defaultListener.push({
                     event: 'finish-screenshot',
+                    callback: async () => {},
+                });
+            }
+
+            if (isFullScreenDraw) {
+                defaultListener.push({
+                    event: 'full-screen-draw-change-mouse-through',
                     callback: async () => {},
                 });
             }

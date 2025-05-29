@@ -1,15 +1,15 @@
-import { DrawState } from '@/app/draw/types';
+import { DrawState } from '@/app/fullScreenDraw/components/drawCore/extra';
 import { KeyEventWrap } from '@/app/draw/components/drawToolbar/components/keyEventWrap';
 import React, { useCallback, useState } from 'react';
 import { Button } from 'antd';
-import { DrawStatePublisher } from '@/app/draw/extra';
+import { DrawStatePublisher } from '@/app/fullScreenDraw/components/drawCore/extra';
 import { useStateSubscriber } from '@/hooks/useStateSubscriber';
 import { getButtonTypeByState } from '../../extra';
 import { KeyEventKey } from '../keyEventWrap/extra';
 import { HotkeysScope } from '@/components/globalLayoutExtra';
 
 const ToolButtonCore: React.FC<{
-    componentKey: KeyEventKey;
+    componentKey?: KeyEventKey;
     icon: React.ReactNode;
     onClick: () => void;
     drawState: DrawState;
@@ -17,6 +17,7 @@ const ToolButtonCore: React.FC<{
     disable?: boolean;
     confirmTip?: React.ReactNode;
     hotkeyScope?: HotkeysScope;
+    buttonProps?: React.ComponentProps<typeof Button>;
 }> = ({
     componentKey,
     icon,
@@ -26,6 +27,7 @@ const ToolButtonCore: React.FC<{
     disable,
     confirmTip,
     hotkeyScope,
+    buttonProps,
 }) => {
     const [buttonType, setButtonType] = useState(getButtonTypeByState(false));
     const updateButtonType = useCallback(
@@ -40,6 +42,21 @@ const ToolButtonCore: React.FC<{
     );
 
     useStateSubscriber(DrawStatePublisher, updateButtonType);
+
+    const buttonDom = (
+        <Button
+            {...buttonProps}
+            icon={icon}
+            type={buttonType}
+            onClick={onClick}
+            disabled={disable}
+        />
+    );
+
+    if (!componentKey) {
+        return buttonDom;
+    }
+
     return (
         <KeyEventWrap
             onKeyUpEventPropName="onClick"
@@ -48,7 +65,7 @@ const ToolButtonCore: React.FC<{
             enable={disable ? false : undefined}
             hotkeyScope={hotkeyScope}
         >
-            <Button icon={icon} type={buttonType} onClick={onClick} disabled={disable} />
+            {buttonDom}
         </KeyEventWrap>
     );
 };

@@ -1,5 +1,5 @@
 import { Descriptions, theme } from 'antd';
-import { CaptureStep, DrawContext, DrawState } from '../../types';
+import { CaptureStep, DrawContext } from '../../types';
 import Color from 'color';
 import { FormattedMessage } from 'react-intl';
 import {
@@ -15,7 +15,6 @@ import { zIndexs } from '@/utils/zIndex';
 import {
     CaptureLoadingPublisher,
     CaptureStepPublisher,
-    DrawStatePublisher,
     ScreenshotTypePublisher,
 } from '../../extra';
 import { useStateSubscriber } from '@/hooks/useStateSubscriber';
@@ -24,6 +23,7 @@ import { MousePosition } from '@/utils/mousePosition';
 import { useCallbackRender } from '@/hooks/useCallbackRender';
 import { debounce } from 'es-toolkit';
 import { ScreenshotType } from '@/functions/screenshot';
+import { DrawState, DrawStatePublisher } from '@/app/fullScreenDraw/components/drawCore/extra';
 
 const KeyLabel: React.FC<{
     messageId?: string;

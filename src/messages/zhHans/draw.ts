@@ -76,6 +76,8 @@ export const draw = {
     'draw.rotateWithDiscreteAnglePicker': '固定角度旋转',
     'draw.autoAlignPicker': '自动对齐',
     'draw.selectPrevRectTool': '选择之前选定的区域',
+    'draw.laserPointerTool': '激光笔',
+    'draw.mouseThroughTool': '鼠标穿透',
     'draw.ocrLoading': 'OCR 识别中',
     'draw.copySelectedText': '复制选中文本',
     'draw.scrollScreenshot.limitTip': '所选区域过小，无法进行滚动截图（最小边需 > 200px）',
@@ -91,8 +93,7 @@ export const draw = {
     'draw.switchColorFormat': '切换颜色格式',
     'draw.extraTool.scanQrcode': '扫描二维码',
     'draw.extraTool.scanQrcode.error': '未识别到有效二维码',
-    'draw.scrollScreenshot.tip':
-        '如果无法滚动窗口，请双击截图区域以聚焦窗口',
+    'draw.scrollScreenshot.tip': '如果无法滚动窗口，请双击截图区域以聚焦窗口',
     'draw.selectText': '选取文本/拖拽窗口',
     'draw.switchThumbnail': '切换缩略图',
 };

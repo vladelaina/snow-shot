@@ -6,6 +6,7 @@ export const home = {
     'home.otherFunction': '其它功能',
     'home.topWindow': '置顶/取消置顶窗口',
     'home.fixedContent': '固定剪贴板内容到屏幕',
+    'home.fullScreenDraw': '全屏画布（启用/取消画布鼠标穿透）',
     'home.translationSelectText': '翻译选中的文本',
     'home.translation': '翻译',
     'home.screenshot': '截图',

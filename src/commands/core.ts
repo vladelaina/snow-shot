@@ -41,3 +41,8 @@ export const readImageFromClipboard = async (): Promise<Blob | undefined> => {
 
     return new Blob([result]);
 };
+
+export const createFullScreenDrawWindow = async () => {
+    const result = await invoke<void>('create_full_screen_draw_window');
+    return result;
+};

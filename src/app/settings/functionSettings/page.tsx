@@ -244,6 +244,7 @@ export default function SystemSettings() {
                                                             value: ImageFormat.JPEG_XL,
                                                         },
                                                     ]}
+                                                    disabled={!enhanceSaveFile}
                                                 />
                                             </ProForm.Item>
                                         </Col>

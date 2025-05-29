@@ -1,7 +1,7 @@
 import { ExcalidrawPropsCustomOptions } from '@mg-chao/excalidraw/types';
 import React from 'react';
 import { Button } from 'antd';
-import { getButtonTypeByState } from '../../drawToolbar/extra';
+import { getButtonTypeByState } from '@/app/draw/components/drawToolbar/extra';
 
 export const ButtonIcon = React.forwardRef<
     HTMLButtonElement,

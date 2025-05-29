@@ -1,5 +1,5 @@
-import { DrawEvent, DrawEventPublisher, DrawStatePublisher } from '@/app/draw/extra';
-import { DrawContext, DrawState } from '@/app/draw/types';
+import { DrawEvent, DrawEventPublisher } from '@/app/draw/extra';
+import { DrawContext } from '@/app/draw/types';
 import { ElementRect } from '@/commands';
 import { clickThrough, scrollThrough } from '@/commands/core';
 import {
@@ -33,6 +33,8 @@ import { SubTools, SubToolsActionType } from '../../subTools';
 import { RotateIcon } from '@/components/icons';
 import { AppSettingsGroup, AppSettingsPublisher } from '@/app/contextWrap';
 import { AntdContext } from '@/components/globalLayoutExtra';
+import { DrawState } from '@/app/fullScreenDraw/components/drawCore/extra';
+import { DrawStatePublisher } from '@/app/fullScreenDraw/components/drawCore/extra';
 
 const THUMBNAIL_WIDTH = 128;
 

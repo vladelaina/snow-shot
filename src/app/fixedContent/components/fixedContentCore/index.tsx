@@ -325,20 +325,58 @@ export const FixedContentCore: React.FC<{
     }, [canvasImageUrl]);
 
     const [isThumbnail, setIsThumbnail] = useState(false);
-    const originWindowSizeRef = useRef<PhysicalSize | undefined>(undefined);
+    const originWindowSizeAndPositionRef = useRef<
+        | {
+              size: PhysicalSize;
+              position: PhysicalPosition;
+          }
+        | undefined
+    >(undefined);
     const switchThumbnail = useCallback(async () => {
-        if (originWindowSizeRef.current) {
-            await getCurrentWindow().setSize(originWindowSizeRef.current);
-            originWindowSizeRef.current = undefined;
+        if (originWindowSizeAndPositionRef.current) {
+            await getCurrentWindow().setSize(originWindowSizeAndPositionRef.current.size);
+            await getCurrentWindow().setPosition(originWindowSizeAndPositionRef.current.position);
+            originWindowSizeAndPositionRef.current = undefined;
             setIsThumbnail(false);
         } else {
-            originWindowSizeRef.current = await getCurrentWindow().innerSize();
-            getCurrentWindow().setSize(
-                new PhysicalSize(42 * window.devicePixelRatio, 42 * window.devicePixelRatio),
-            );
+            const [windowSize, windowPosition] = await Promise.all([
+                getCurrentWindow().innerSize(),
+                getCurrentWindow().outerPosition(),
+            ]);
+
+            originWindowSizeAndPositionRef.current = {
+                size: windowSize,
+                position: windowPosition,
+            };
+
+            const zoomWithMouse =
+                getAppSettings()[AppSettingsGroup.FunctionFixedContent].zoomWithMouse;
+
+            const thumbnailSize = 42 * window.devicePixelRatio;
+
+            if (zoomWithMouse) {
+                // 获取当前鼠标位置
+                const [mouseX, mouseY] = await getMousePosition();
+
+                // 计算缩略图窗口的新位置，使其以鼠标为中心
+                const newX = mouseX - thumbnailSize / 2;
+                const newY = mouseY - thumbnailSize / 2;
+
+                // 同时设置窗口大小和位置
+                await Promise.all([
+                    getCurrentWindow().setSize(new PhysicalSize(thumbnailSize, thumbnailSize)),
+                    getCurrentWindow().setPosition(
+                        new PhysicalPosition(Math.round(newX), Math.round(newY)),
+                    ),
+                ]);
+            } else {
+                // 普通缩略图，只改变窗口大小
+                getCurrentWindow().setSize(new PhysicalSize(thumbnailSize, thumbnailSize));
+            }
+
             setIsThumbnail(true);
         }
-    }, []);
+    }, [getAppSettings]);
 
     const menuRef = useRef<Menu>(undefined);
 
@@ -516,7 +554,7 @@ export const FixedContentCore: React.FC<{
                 return;
             }
 
-            if (originWindowSizeRef.current) {
+            if (originWindowSizeAndPositionRef.current) {
                 switchThumbnail();
                 return;
             }

@@ -11,6 +11,7 @@ export enum AppFunction {
     TranslationSelectText = 'translationSelectText',
     TopWindow = 'topWindow',
     FixedContent = 'fixedContent',
+    FullScreenDraw = 'fullScreenDraw',
 }
 
 export enum AppFunctionGroup {
@@ -68,6 +69,10 @@ export const defaultAppFunctionConfigs: Record<AppFunction, AppFunctionConfig> =
         group: AppFunctionGroup.Other,
     },
     [AppFunction.FixedContent]: {
+        shortcutKey: '',
+        group: AppFunctionGroup.Other,
+    },
+    [AppFunction.FullScreenDraw]: {
         shortcutKey: '',
         group: AppFunctionGroup.Other,
     },

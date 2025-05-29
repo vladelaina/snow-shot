@@ -1,10 +1,10 @@
 import { KeyEventKey } from '../keyEventWrap/extra';
 import { RedoOutlined, UndoOutlined } from '@ant-design/icons';
-import { useHistory } from '../../../historyContext';
 import { useEffect, useState } from 'react';
 import React from 'react';
-import { DrawState } from '@/app/draw/types';
+import { DrawState } from '@/app/fullScreenDraw/components/drawCore/extra';
 import { ToolButton } from '../toolButton';
+import { useHistory } from '@/app/fullScreenDraw/components/drawCore/components/historyContext';
 
 const HistoryControlsCore: React.FC<{ disable: boolean }> = ({ disable }) => {
     const { history } = useHistory();

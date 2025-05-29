@@ -25,7 +25,7 @@ import { openUrl } from '@tauri-apps/plugin-opener';
 import { createPublisher } from '@/hooks/useStatePublisher';
 import { AntdContext } from '@/components/globalLayoutExtra';
 import { Image } from '@tauri-apps/api/image';
-import { createFixedContentWindow } from '@/commands/core';
+import { createFixedContentWindow, createFullScreenDrawWindow } from '@/commands/core';
 
 export const TrayIconStatePublisher = createPublisher<{
     disableShortcut: boolean;
@@ -222,6 +222,13 @@ const TrayIconLoaderComponent = () => {
                                 : shortcutKeys[AppFunction.FixedContent].shortcutKey,
                             action: async () => {
                                 createFixedContentWindow();
+                            },
+                        },
+                        {
+                            id: `${appWindow.label}-screenshot-fullScreenDraw`,
+                            text: intl.formatMessage({ id: 'home.fullScreenDraw' }),
+                            action: async () => {
+                                createFullScreenDrawWindow();
                             },
                         },
                         {
