@@ -1,4 +1,4 @@
-import { DrawContext, DrawState } from '@/app/draw/types';
+import { DrawContext } from '@/app/draw/types';
 import { useCallbackRender } from '@/hooks/useCallbackRender';
 import { MousePosition } from '@/utils/mousePosition';
 import { HolderOutlined } from '@ant-design/icons';
@@ -16,7 +16,7 @@ import { DrawToolbarContext, isEnableSubToolbar } from '../../extra';
 import { ElementRect } from '@/commands';
 import { updateElementPosition } from './extra';
 import { useStateSubscriber } from '@/hooks/useStateSubscriber';
-import { DrawStatePublisher } from '@/app/draw/extra';
+import { DrawState, DrawStatePublisher } from '@/app/fullScreenDraw/components/drawCore/extra';
 
 export type DragButtonActionType = {
     setEnable: (enable: boolean) => void;

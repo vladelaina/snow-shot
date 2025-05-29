@@ -1,13 +1,8 @@
 import { useCallback, useRef, useState } from 'react';
 import { SubTools } from '../../subTools';
 import { useStateSubscriber } from '@/hooks/useStateSubscriber';
-import { DrawState } from '@/app/draw/types';
-import {
-    DrawEvent,
-    DrawEventParams,
-    DrawEventPublisher,
-    DrawStatePublisher,
-} from '@/app/draw/extra';
+import { DrawState, DrawStatePublisher } from '@/app/fullScreenDraw/components/drawCore/extra';
+import { DrawEvent, DrawEventParams, DrawEventPublisher } from '@/app/draw/extra';
 import { Button } from 'antd';
 import { OcrDetectResult } from '@/commands/ocr';
 import { OcrTranslateIcon } from '@/components/icons';

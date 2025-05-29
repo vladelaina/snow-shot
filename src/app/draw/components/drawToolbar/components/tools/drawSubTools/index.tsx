@@ -1,4 +1,4 @@
-import { DrawState } from '@/app/draw/types';
+import { DrawState } from '@/app/fullScreenDraw/components/drawCore/extra';
 import { useCallback, useState } from 'react';
 import { SubTools } from '../../subTools';
 import { ToolButton } from '../../toolButton';
@@ -7,7 +7,7 @@ import { ArrowIcon, DiamondIcon, LineIcon, RectIcon } from '@/components/icons';
 import { getButtonTypeByState } from '../../../extra';
 import { KeyEventKey } from '../../keyEventWrap/extra';
 import { useStateSubscriber } from '@/hooks/useStateSubscriber';
-import { DrawStatePublisher } from '@/app/draw/extra';
+import { DrawStatePublisher } from '@/app/fullScreenDraw/components/drawCore/extra';
 
 export const DrawSubTools: React.FC<{ onToolClick: (drawState: DrawState) => void }> = ({
     onToolClick,

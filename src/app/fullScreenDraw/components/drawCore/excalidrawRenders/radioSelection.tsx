@@ -1,9 +1,9 @@
 import { useStateSubscriber } from '@/hooks/useStateSubscriber';
 import {
     ExcalidrawEventCallbackPublisher,
-    ExcalidrawEventCallbackType,
     ExcalidrawEventCallbackParams,
-} from '@/app/draw/components/drawCacheLayer/extra';
+    ExcalidrawEventCallbackType,
+} from '@/app/fullScreenDraw/components/drawCore/extra';
 import { ExcalidrawPropsCustomOptions } from '@mg-chao/excalidraw/types';
 import { Radio } from 'antd';
 import { useCallback, useEffect, useRef } from 'react';

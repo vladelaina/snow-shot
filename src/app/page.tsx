@@ -8,6 +8,7 @@ import {
     ChatIcon,
     ClipboardIcon,
     FixedIcon,
+    FullScreenDrawIcon,
     OcrDetectIcon,
     ScreenshotIcon,
     SelectTextIcon,
@@ -53,7 +54,7 @@ import {
     executeTranslateSelectedText,
 } from '@/functions/tools';
 import { TrayIconStatePublisher } from './trayIcon';
-import { createFixedContentWindow } from '@/commands/core';
+import { createFixedContentWindow, createFullScreenDrawWindow } from '@/commands/core';
 
 export default function Home() {
     const { token } = theme.useToken();
@@ -135,6 +136,11 @@ export default function Home() {
                         buttonTitle = <FormattedMessage id="home.fixedContent" />;
                         buttonIcon = <ClipboardIcon style={{ fontSize: '1.1em' }} />;
                         buttonOnClick = () => createFixedContentWindow();
+                        break;
+                    case AppFunction.FullScreenDraw:
+                        buttonTitle = <FormattedMessage id="home.fullScreenDraw" />;
+                        buttonIcon = <FullScreenDrawIcon style={{ fontSize: '1.1em' }} />;
+                        buttonOnClick = () => createFullScreenDrawWindow();
                         break;
                     case AppFunction.Screenshot:
                     default:

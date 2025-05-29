@@ -1,24 +1,21 @@
-import { DrawContext } from '@/app/draw/types';
 import { ExcalidrawPropsCustomOptions } from '@mg-chao/excalidraw/types';
 import { useCallback, useContext, useEffect, useMemo, useRef } from 'react';
-import { updateElementPosition } from '../../drawToolbar/components/dragButton/extra';
 import { MousePosition } from '@/utils/mousePosition';
 import { ElementRect } from '@/commands';
-import { theme } from 'antd';
 import { useCallbackRender } from '@/hooks/useCallbackRender';
 import { HolderOutlined } from '@ant-design/icons';
 import { useIntl } from 'react-intl';
 import { useStateSubscriber } from '@/hooks/useStateSubscriber';
-import { ExcalidrawEventParams, ExcalidrawEventPublisher } from '../extra';
+import { DrawCoreContext, ExcalidrawEventParams, ExcalidrawEventPublisher } from '../extra';
+import { updateElementPosition } from '@/app/draw/components/drawToolbar/components/dragButton/extra';
 
 const LayoutMenuRender: React.FC<{
     children: React.ReactNode;
 }> = ({ children }) => {
     const intl = useIntl();
-    const { token } = theme.useToken();
 
     const layoutMenuRenderRef = useRef<HTMLDivElement>(null);
-    const { selectLayerActionRef, imageBufferRef } = useContext(DrawContext);
+    const { getLimitRect, getBaseOffset, getDevicePixelRatio } = useContext(DrawCoreContext);
 
     const mouseOriginPositionRef = useRef<MousePosition>(new MousePosition(0, 0));
     const mouseCurrentPositionRef = useRef<MousePosition>(new MousePosition(0, 0));
@@ -36,18 +33,20 @@ const LayoutMenuRender: React.FC<{
             return;
         }
 
-        const imageBuffer = imageBufferRef.current;
-        if (!imageBuffer) {
+        const limitRect = getLimitRect();
+        if (!limitRect) {
             return;
         }
 
-        const selectedRect = selectLayerActionRef.current?.getSelectRect();
+        const selectedRect = limitRect;
         if (!selectedRect) {
             return;
         }
 
-        const baseOffsetX = selectedRect.max_x / imageBuffer.monitorScaleFactor + token.marginXXS;
-        const baseOffsetY = selectedRect.min_y / imageBuffer.monitorScaleFactor;
+        const { x: baseOffsetX, y: baseOffsetY } = getBaseOffset(
+            selectedRect,
+            getDevicePixelRatio(),
+        );
 
         const dragRes = updateElementPosition(
             element,
@@ -60,7 +59,7 @@ const LayoutMenuRender: React.FC<{
 
         toolbarCurrentRectRef.current = dragRes.rect;
         mouseOriginPositionRef.current = dragRes.originPosition;
-    }, [imageBufferRef, selectLayerActionRef, token.marginXXS]);
+    }, [getBaseOffset, getDevicePixelRatio, getLimitRect]);
     const updateDrawToolbarStyleRender = useCallbackRender(updateDrawToolbarStyle);
 
     useEffect(() => {

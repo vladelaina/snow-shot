@@ -6,9 +6,11 @@ use std::{
     thread::sleep,
     time::{Duration, SystemTime, UNIX_EPOCH},
 };
-use tauri::ipc::Response;
+use tauri::{Emitter, ipc::Response};
 use tauri::{Manager, command};
 use tauri_plugin_clipboard;
+
+use crate::screenshot::get_target_monitor;
 
 #[command]
 pub async fn exit_app(window: tauri::Window, handle: tauri::AppHandle) {
@@ -104,6 +106,11 @@ pub async fn click_through(window: tauri::Window) -> Result<(), ()> {
 /// 创建内容固定到屏幕的窗口
 #[command]
 pub async fn create_fixed_content_window(app: tauri::AppHandle, scroll_screenshot: bool) {
+    let (_, _, monitor) = get_target_monitor();
+
+    let monitor_x = monitor.x().unwrap() as f64;
+    let monitor_y = monitor.y().unwrap() as f64;
+
     let window = tauri::WebviewWindowBuilder::new(
         &app,
         format!(
@@ -124,7 +131,7 @@ pub async fn create_fixed_content_window(app: tauri::AppHandle, scroll_screensho
     .minimizable(false)
     .fullscreen(false)
     .title("Snow Shot - Fixed Content")
-    .center()
+    .position(monitor_x, monitor_y)
     .decorations(false)
     .shadow(false)
     .transparent(false)
@@ -135,6 +142,7 @@ pub async fn create_fixed_content_window(app: tauri::AppHandle, scroll_screensho
     .unwrap();
 
     window.hide().unwrap();
+    window.center().unwrap();
 }
 
 #[command]
@@ -146,4 +154,50 @@ pub async fn read_image_from_clipboard(handle: tauri::AppHandle) -> Response {
     };
 
     return Response::new(image_data);
+}
+
+/// 创建全屏绘制窗口
+#[command]
+pub async fn create_full_screen_draw_window(app: tauri::AppHandle) {
+    let window_label = "full-screen-draw";
+
+    let window = app.get_webview_window(window_label);
+
+    if let Some(window) = window {
+        // 发送改变鼠标穿透的消息
+        window
+            .emit("full-screen-draw-change-mouse-through", ())
+            .unwrap();
+
+        return;
+    }
+
+    // 首先先查询是否存在窗口
+
+    let (_, _, monitor) = get_target_monitor();
+
+    let monitor_x = monitor.x().unwrap() as f64;
+    let monitor_y = monitor.y().unwrap() as f64;
+    let monitor_width = monitor.width().unwrap() as f64;
+    let monitor_height = monitor.height().unwrap() as f64;
+
+    tauri::WebviewWindowBuilder::new(
+        &app,
+        window_label,
+        tauri::WebviewUrl::App(PathBuf::from(format!("/fullScreenDraw"))),
+    )
+    .always_on_top(true)
+    .resizable(false)
+    .maximizable(false)
+    .minimizable(false)
+    .title("Snow Shot - Full Screen Draw")
+    .position(monitor_x, monitor_y)
+    .inner_size(monitor_width, monitor_height)
+    .decorations(false)
+    .shadow(false)
+    .transparent(true)
+    .skip_taskbar(true)
+    .resizable(false)
+    .build()
+    .unwrap();
 }

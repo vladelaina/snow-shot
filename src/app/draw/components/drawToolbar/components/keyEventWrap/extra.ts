@@ -46,6 +46,7 @@ export enum KeyEventKey {
     SwitchColorFormat = 'switchColorFormat',
     ExtraToolsTool = 'extraToolsTool',
     SelectPrevRectTool = 'selectPrevRectTool',
+    LaserPointerTool = 'laserPointerTool',
 }
 
 export const defaultDrawToolbarKeyEventSettings: Record<KeyEventKey, KeyEventValue> = {
@@ -174,6 +175,10 @@ export const defaultDrawToolbarKeyEventSettings: Record<KeyEventKey, KeyEventVal
     },
     [KeyEventKey.ColorPickerMoveRight]: {
         hotKey: 'D, ArrowRight',
+        unique: true,
+    },
+    [KeyEventKey.LaserPointerTool]: {
+        hotKey: 'Ctrl+L',
         unique: true,
     },
 };

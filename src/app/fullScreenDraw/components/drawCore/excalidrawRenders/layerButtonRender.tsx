@@ -1,12 +1,12 @@
 import { ExcalidrawPropsCustomOptions } from '@mg-chao/excalidraw/types';
 import React, { useCallback, useMemo, useState } from 'react';
 import { Button } from 'antd';
-import { KeyEventKey } from '../../drawToolbar/components/keyEventWrap/extra';
 import { useAppSettingsLoad } from '@/hooks/useAppSettingsLoad';
 import { AppSettingsGroup } from '@/app/contextWrap';
 import { useIntl } from 'react-intl';
 import { HotkeysScope } from '@/components/globalLayoutExtra';
 import { useHotkeysApp } from '@/hooks/useHotkeysApp';
+import { KeyEventKey } from '@/app/draw/components/drawToolbar/components/keyEventWrap/extra';
 
 const DeleteSelectedElementsButton: NonNullable<
     NonNullable<ExcalidrawPropsCustomOptions['pickerRenders']>['layerButtonRender']

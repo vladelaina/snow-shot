@@ -485,7 +485,9 @@ const MenuLayoutCore: React.FC<{ children: React.ReactNode }> = ({ children }) =
                             },
                             {
                                 key: 'fixedContent',
-                                label: intl.formatMessage({ id: 'settings.hotKeySettings.fixedContent' }),
+                                label: intl.formatMessage({
+                                    id: 'settings.hotKeySettings.fixedContent',
+                                }),
                             },
                             {
                                 key: 'drawingHotKey',
@@ -619,7 +621,11 @@ const ML = React.memo(withStatePublisher(MenuLayoutCore, TrayIconStatePublisher)
 
 export const MenuLayout = ({ children }: { children: React.ReactNode }) => {
     const pathname = usePathname();
-    const noLayout = pathname === '/draw' || pathname === '/fixedContent';
+    const noLayout = useMemo(
+        () =>
+            pathname === '/draw' || pathname === '/fixedContent' || pathname === '/fullScreenDraw',
+        [pathname],
+    );
     const mainWindow = !noLayout;
     return (
         <MenuLayoutContext.Provider value={{ noLayout, pathname, mainWindow }}>

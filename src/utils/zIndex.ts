@@ -47,4 +47,11 @@ export const zIndexs = {
     Draw_ToolbarHover: 208,
 
     // Draw 截图窗口 END
+
+    // FullscreenDraw 全屏截图窗口 BEGIN
+    /** 全屏截图绘制图层 */
+    FullScreenDraw_DrawLayer: 0,
+    /** 全屏截图绘制图层 */
+    FullScreenDraw_LayoutMenu: 1,
+    // FullscreenDraw 全屏截图窗口 END
 };

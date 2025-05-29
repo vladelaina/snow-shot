@@ -4,15 +4,14 @@ import {
     AppSettingsGroup,
     AppSettingsPublisher,
 } from '@/app/contextWrap';
-import { ExcalidrawEventPublisher } from '@/app/draw/components/drawCacheLayer/extra';
-import { ExcalidrawEventParams } from '@/app/draw/components/drawCacheLayer/extra';
+import { CaptureEvent, CaptureEventParams, CaptureEventPublisher } from '@/app/draw/extra';
 import {
-    CaptureEvent,
-    CaptureEventParams,
-    CaptureEventPublisher,
+    DrawCoreContext,
+    DrawState,
     DrawStatePublisher,
-} from '@/app/draw/extra';
-import { DrawContext, DrawState } from '@/app/draw/types';
+    ExcalidrawEventParams,
+    ExcalidrawEventPublisher,
+} from '@/app/fullScreenDraw/components/drawCore/extra';
 import { HotkeysScope } from '@/components/globalLayoutExtra';
 import { useHotkeysApp } from '@/hooks/useHotkeysApp';
 import { useStateRef } from '@/hooks/useStateRef';
@@ -36,6 +35,7 @@ const generateSerialNumber = (
 ) => {
     const id = new Date().valueOf();
 
+    const ellipseBackgroundId = `snow-shot_serial-number_${id}-ellipse-background`;
     const ellipseId = `snow-shot_serial-number_${id}-ellipse`;
     const textId = `snow-shot_serial-number_${id}-text`;
     const serialNumberGroupNumber = `snow-shot_serial-number_${id}-group-number`;
@@ -57,23 +57,62 @@ const generateSerialNumber = (
         textHeight = 45;
     }
 
+    const res = [];
+
     let ellipseBackgroundColor = appState.currentItemBackgroundColor;
     const ellipseBackgroundColorInstance = new Color(ellipseBackgroundColor);
-    if (ellipseBackgroundColorInstance.alpha() === 0) {
+    // 如果不存在背景色，或者背景色不是实心的，则进行填充
+    if (ellipseBackgroundColorInstance.alpha() === 0 || appState.currentItemFillStyle !== 'solid') {
         const alpha = 0.08;
-        const whiteBackground = new Color('#ffffff');
+        let backgroundColor = new Color('#ffffff');
+        const strokeColorInstance = new Color(appState.currentItemStrokeColor);
+        // 如果文字颜色很亮的话，则背景色为灰色
+        if (
+            strokeColorInstance.red() + strokeColorInstance.green() + strokeColorInstance.blue() >
+            680
+        ) {
+            backgroundColor = new Color('rgb(169,169,169)');
+        }
 
         const fg = new Color(appState.currentItemStrokeColor).rgb();
-        const bg = whiteBackground.rgb();
+        const bg = backgroundColor.rgb();
 
         const blendedR = Math.ceil(fg.red() * alpha + bg.red() * (1 - alpha));
         const blendedG = Math.ceil(fg.green() * alpha + bg.green() * (1 - alpha));
         const blendedB = Math.ceil(fg.blue() * alpha + bg.blue() * (1 - alpha));
 
         ellipseBackgroundColor = new Color({ r: blendedR, g: blendedG, b: blendedB }).hex();
+
+        res.push({
+            id: ellipseBackgroundId,
+            type: 'ellipse',
+            x: position.x - ellipseWidth / 2,
+            y: position.y - ellipseHeight / 2,
+            width: ellipseWidth,
+            height: ellipseHeight,
+            angle: 0,
+            strokeColor: appState.currentItemStrokeColor,
+            backgroundColor: ellipseBackgroundColor,
+            fillStyle: 'solid',
+            strokeWidth: appState.currentItemStrokeWidth,
+            strokeStyle: appState.currentItemStrokeStyle,
+            roughness: 0,
+            opacity: appState.currentItemOpacity,
+            groupIds: [serialNumberGroupNumber],
+            frameId: null,
+            roundness: null,
+            version: 304,
+            versionNonce: 1149037384,
+            isDeleted: false,
+            boundElements: [],
+            fontSize: fontSize,
+            fontFamily: appState.currentItemFontFamily,
+            link: null,
+            locked: false,
+        });
     }
 
-    return [
+    res.push(
         {
             id: ellipseId,
             type: 'ellipse',
@@ -83,7 +122,7 @@ const generateSerialNumber = (
             height: ellipseHeight,
             angle: 0,
             strokeColor: appState.currentItemStrokeColor,
-            backgroundColor: ellipseBackgroundColor,
+            backgroundColor: appState.currentItemBackgroundColor,
             fillStyle: appState.currentItemFillStyle,
             strokeWidth: appState.currentItemStrokeWidth,
             strokeStyle: appState.currentItemStrokeStyle,
@@ -135,12 +174,14 @@ const generateSerialNumber = (
             autoResize: false,
             lineHeight: 1.25,
         },
-    ];
+    );
+
+    return res;
 };
 
 export const SerialNumberTool: React.FC = () => {
-    const { drawCacheLayerActionRef, imageBufferRef, selectLayerActionRef, mousePositionRef } =
-        useContext(DrawContext);
+    const { getLimitRect, getDevicePixelRatio, getAction, getMousePosition } =
+        useContext(DrawCoreContext);
 
     const arrowElementIdsRef = useRef<Set<string>>(new Set());
     const [enable, setEnable, enableRef] = useStateRef(false);
@@ -153,8 +194,8 @@ export const SerialNumberTool: React.FC = () => {
                 const isEnable = drawState === DrawState.SerialNumber;
                 setEnable(isEnable);
 
-                const selectRect = selectLayerActionRef.current?.getSelectRect();
-                const monitorScaleFactor = imageBufferRef.current?.monitorScaleFactor;
+                const selectRect = getLimitRect();
+                const monitorScaleFactor = getDevicePixelRatio();
                 if (isEnable && selectRect && monitorScaleFactor) {
                     setMaskStyle({
                         left: selectRect.min_x / monitorScaleFactor,
@@ -164,7 +205,7 @@ export const SerialNumberTool: React.FC = () => {
                     });
                 }
             },
-            [imageBufferRef, selectLayerActionRef, setEnable],
+            [getDevicePixelRatio, getLimitRect, setEnable],
         ),
     );
     useStateSubscriber(
@@ -173,7 +214,7 @@ export const SerialNumberTool: React.FC = () => {
             (event: CaptureEventParams | undefined) => {
                 if (event?.event === CaptureEvent.onExecuteScreenshot) {
                     arrowElementIdsRef.current = new Set(
-                        drawCacheLayerActionRef.current
+                        getAction()
                             ?.getExcalidrawAPI()
                             ?.getSceneElements()
                             .filter((item) => item.type === 'arrow')
@@ -181,27 +222,23 @@ export const SerialNumberTool: React.FC = () => {
                     );
                 }
             },
-            [drawCacheLayerActionRef],
+            [getAction],
         ),
     );
 
     const [disableArrow, setDisableArrow, disableArrowRef] = useStateRef(false);
     const onMouseDown = useCallback(() => {
-        const mousePosition = mousePositionRef.current;
-
-        const imageBuffer = imageBufferRef.current;
-        if (!imageBuffer) {
+        const mousePosition = getMousePosition();
+        if (!mousePosition) {
             return;
         }
 
-        const appState = drawCacheLayerActionRef.current?.getAppState();
+        const appState = getAction()?.getAppState();
         if (!appState) {
             return;
         }
 
-        const sceneElements = drawCacheLayerActionRef.current
-            ?.getExcalidrawAPI()
-            ?.getSceneElements();
+        const sceneElements = getAction()?.getExcalidrawAPI()?.getSceneElements();
         if (!sceneElements) {
             return;
         }
@@ -253,11 +290,11 @@ export const SerialNumberTool: React.FC = () => {
             });
         }
 
-        drawCacheLayerActionRef.current?.updateScene({
+        getAction()?.updateScene({
             elements: [...sceneElements, ...serialNumberElement],
             captureUpdate: 'IMMEDIATELY',
         });
-    }, [disableArrowRef, drawCacheLayerActionRef, imageBufferRef, mousePositionRef]);
+    }, [disableArrowRef, getAction, getMousePosition]);
 
     useStateSubscriber(
         ExcalidrawEventPublisher,
@@ -322,26 +359,26 @@ export const SerialNumberTool: React.FC = () => {
         }
 
         if (disableArrowRef.current) {
-            drawCacheLayerActionRef.current?.setActiveTool({
+            getAction()?.setActiveTool({
                 type: 'ellipse',
                 locked: true,
             });
         } else {
-            drawCacheLayerActionRef.current?.setActiveTool({
+            getAction()?.setActiveTool({
                 type: 'arrow',
                 locked: true,
             });
         }
-    }, [disableArrowRef, drawCacheLayerActionRef, enableRef]);
+    }, [disableArrowRef, getAction, enableRef]);
     useEffect(() => {
         updateActiveTool();
     }, [updateActiveTool, enable, disableArrow]);
 
     const onMaskWheel = useCallback<WheelEventHandler<HTMLDivElement>>(
         (ev) => {
-            drawCacheLayerActionRef.current?.handleWheel(ev);
+            getAction()?.handleWheel(ev);
         },
-        [drawCacheLayerActionRef],
+        [getAction],
     );
 
     return (

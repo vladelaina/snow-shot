@@ -11,7 +11,7 @@ import React, {
     useRef,
 } from 'react';
 import { getCurrentWindow, Window as AppWindow, PhysicalPosition } from '@tauri-apps/api/window';
-import { CaptureStep, DrawContext, DrawState } from '@/app/draw/types';
+import { CaptureStep, DrawContext } from '@/app/draw/types';
 import { KeyEventKey } from '../drawToolbar/components/keyEventWrap/extra';
 import { useCallbackRender, useCallbackRenderSlow } from '@/hooks/useCallbackRender';
 import { MousePosition } from '@/utils/mousePosition';
@@ -22,7 +22,6 @@ import {
     CaptureEventPublisher,
     CaptureLoadingPublisher,
     CaptureStepPublisher,
-    DrawStatePublisher,
     ScreenshotTypePublisher,
 } from '../../extra';
 import { withStatePublisher } from '@/hooks/useStatePublisher';
@@ -38,6 +37,7 @@ import {
 import Color from 'color';
 import { DrawToolbarStatePublisher } from '../drawToolbar';
 import { SelectState } from '../selectLayer/extra';
+import { DrawState, DrawStatePublisher } from '@/app/fullScreenDraw/components/drawCore/extra';
 
 const previewScale = 12;
 const previewPickerSize = 10 + 1;
@@ -295,7 +295,9 @@ const ColorPickerCore: React.FC<{
 
             colorElementRef.current.style.backgroundColor = `rgb(${red}, ${green}, ${blue})`;
             colorElementRef.current.style.color =
-                red + green + blue < 383 ? 'rgba(255,255,255,0.85)' : 'rgba(0,0,0,0.88)';
+                red > 128 || green > 128 || blue > 128
+                    ? 'rgba(0,0,0,0.88)'
+                    : 'rgba(255,255,255,0.85)';
             colorElementRef.current.textContent = getFormatColor(red, green, blue);
             previewColorElementRef.current.style.boxShadow = `0 0 0 1px ${colorElementRef.current.style.color}`;
         },

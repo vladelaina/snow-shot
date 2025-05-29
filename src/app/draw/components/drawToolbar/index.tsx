@@ -1,7 +1,7 @@
 'use client';
 
 import { zIndexs } from '@/utils/zIndex';
-import { CaptureStep, DrawContext, DrawState } from '../../types';
+import { CaptureStep, DrawContext } from '../../types';
 import { useCallback, useContext, useImperativeHandle, useMemo, useRef, useState } from 'react';
 import { Flex, theme } from 'antd';
 import React from 'react';
@@ -32,7 +32,6 @@ import {
     DrawEvent,
     DrawEventParams,
     DrawEventPublisher,
-    DrawStatePublisher,
     ScreenshotTypePublisher,
 } from '../../extra';
 import { useStateSubscriber } from '@/hooks/useStateSubscriber';
@@ -51,6 +50,7 @@ import { AntdContext } from '@/components/globalLayoutExtra';
 import { AppSettingsData, AppSettingsGroup, AppSettingsPublisher } from '@/app/contextWrap';
 import { DrawSubTools } from './components/tools/drawSubTools';
 import { debounce } from 'es-toolkit';
+import { DrawState, DrawStatePublisher } from '@/app/fullScreenDraw/components/drawCore/extra';
 
 export type DrawToolbarProps = {
     actionRef: React.RefObject<DrawToolbarActionType | undefined>;

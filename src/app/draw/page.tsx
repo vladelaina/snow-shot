@@ -6,13 +6,12 @@ import React, { useMemo, useState } from 'react';
 import { useCallback, useContext, useEffect, useRef } from 'react';
 import { PhysicalPosition, PhysicalSize } from '@tauri-apps/api/dpi';
 import * as PIXI from 'pixi.js';
-import { CanvasLayer, CaptureStep, DrawContext, DrawContextType, DrawState } from './types';
+import { CanvasLayer, CaptureStep, DrawContext, DrawContextType } from './types';
 import SelectLayer, { SelectLayerActionType } from './components/selectLayer';
 import DrawLayer, { DrawLayerActionType } from './components/drawLayer';
 import { Window as AppWindow, getCurrentWindow } from '@tauri-apps/api/window';
 import {
     CaptureLoadingPublisher,
-    DrawStatePublisher,
     CaptureStepPublisher,
     switchLayer,
     CaptureEventPublisher,
@@ -27,7 +26,6 @@ import {
 } from './components/drawToolbar';
 import { BaseLayerEventActionType } from './components/baseLayer';
 import { ColorPicker, ColorPickerActionType } from './components/colorPicker';
-import { HistoryContext, withCanvasHistory } from './components/historyContext';
 import { withStatePublisher } from '@/hooks/useStatePublisher';
 import { useStateSubscriber } from '@/hooks/useStateSubscriber';
 import StatusBar from './components/statusBar';
@@ -36,11 +34,7 @@ import { EnableKeyEventPublisher } from './components/drawToolbar/components/key
 import { zIndexs } from '@/utils/zIndex';
 import styles from './page.module.css';
 import dynamic from 'next/dynamic';
-import {
-    DrawCacheLayerActionType,
-    ExcalidrawEventPublisher,
-    ExcalidrawOnHandleEraserPublisher,
-} from './components/drawCacheLayer/extra';
+import { DrawCacheLayerActionType } from './components/drawCacheLayer/extra';
 import { copyToClipboard, fixedToScreen, handleOcrDetect, saveToFile } from './actions';
 import {
     FixedContentCore,
@@ -62,8 +56,17 @@ import { scrollScreenshotSaveToFile } from '@/commands/scrollScreenshot';
 import { AppSettingsActionContext, AppSettingsGroup } from '../contextWrap';
 import { AppSettingsPublisher } from '../contextWrap';
 import { ExtraTool } from './components/drawToolbar/components/tools/extraTool';
-import { SerialNumberTool } from './components/drawToolbar/components/tools/serialNumberTool';
 import { createFixedContentWindow } from '@/commands/core';
+import {
+    DrawState,
+    DrawStatePublisher,
+    ExcalidrawEventPublisher,
+    ExcalidrawOnHandleEraserPublisher,
+} from '../fullScreenDraw/components/drawCore/extra';
+import {
+    HistoryContext,
+    withCanvasHistory,
+} from '../fullScreenDraw/components/drawCore/components/historyContext';
 
 const DrawCacheLayer = dynamic(
     async () => (await import('./components/drawCacheLayer')).DrawCacheLayer,
@@ -665,10 +668,7 @@ const DrawPageCore: React.FC = () => {
 
     const onDoubleClick = useCallback<React.MouseEventHandler<HTMLDivElement>>(
         (e) => {
-            if (
-                e.button === 0 &&
-                !drawCacheLayerActionRef.current?.getExcalidrawAPI()?.getAppState()
-            ) {
+            if (e.button === 0) {
                 onCopyToClipboard();
             }
         },
@@ -699,8 +699,6 @@ const DrawPageCore: React.FC = () => {
                         <div className={styles.drawLayerWrap} ref={drawLayerWrapRef}>
                             <DrawLayer actionRef={drawLayerActionRef} />
                             <DrawCacheLayer actionRef={drawCacheLayerActionRef} />
-
-                            <SerialNumberTool />
                         </div>
                         <SelectLayer actionRef={selectLayerActionRef} />
                         <DrawToolbar

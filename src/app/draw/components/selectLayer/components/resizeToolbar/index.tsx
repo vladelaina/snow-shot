@@ -1,5 +1,5 @@
 import { MousePosition } from '@/utils/mousePosition';
-import { DrawContext, DrawState } from '@/app/draw/types';
+import { DrawContext } from '@/app/draw/types';
 import { zIndexs } from '@/utils/zIndex';
 import { Flex, theme } from 'antd';
 import React, {
@@ -15,12 +15,12 @@ import { ElementRect } from '@/commands';
 import {
     CaptureEvent,
     CaptureEventPublisher,
-    DrawStatePublisher,
     ScreenshotTypePublisher,
 } from '@/app/draw/extra';
 import { useStateSubscriber } from '@/hooks/useStateSubscriber';
 import { ScreenshotType } from '@/functions/screenshot';
 import { debounce } from 'es-toolkit';
+import { DrawState, DrawStatePublisher } from '@/app/fullScreenDraw/components/drawCore/extra';
 
 export type ResizeToolbarActionType = {
     updateStyle: (selectedRect: ElementRect) => void;
