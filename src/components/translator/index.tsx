@@ -11,6 +11,8 @@ import { useStateRef } from '@/hooks/useStateRef';
 import {
     getTranslationTypes,
     translate,
+    translateTextDeepL,
+    translateTextGoogleWeb,
     TranslationDomain,
     TranslationType,
     TranslationTypeOption,
@@ -29,11 +31,19 @@ import {
     useState,
 } from 'react';
 import { FormattedMessage, useIntl } from 'react-intl';
-import { ChatApiConfig } from '@/app/settings/functionSettings/extra';
+import {
+    ChatApiConfig,
+    convertLanguageCodeToDeepLSourceLanguageCode,
+    convertLanguageCodeToDeepLTargetLanguageCode,
+    convertLanguageCodeToGoogleLanguageCode,
+    TranslationApiConfig,
+    TranslationApiType,
+} from '@/app/settings/functionSettings/extra';
 import OpenAI from 'openai';
 import { defaultTranslationPrompt, getTranslationPrompt } from '@/app/tools/translation/extra';
 import { ModelSelectLabel } from '@/app/tools/chat/components/modelSelectLabel';
 import React from 'react';
+import { appFetch } from '@/services/tools';
 
 const SelectLabel: React.FC<{
     label: React.ReactNode;
@@ -110,7 +120,12 @@ type TranslationServiceConfig =
     | {
           name: string;
           type: string;
-          apiConfig?: ChatApiConfig;
+          apiConfig: ChatApiConfig;
+      }
+    | {
+          name: string;
+          type: TranslationApiType;
+          translationApiConfig: TranslationApiConfig;
       };
 
 export type TranslatorActionType = {
@@ -118,15 +133,16 @@ export type TranslatorActionType = {
     setSourceContent: (content: string, ignoreDebounce?: boolean) => void;
     getSourceContentRef: () => InputRef | null;
     stopTranslate: () => void;
+    getTranslationType: () => TranslationType | string;
 };
 
 const TranslatorCore: React.FC<{
     actionRef: React.RefObject<TranslatorActionType | undefined>;
     onTranslateComplete?: (result: string) => void;
     disableInput?: boolean;
-}> = ({ actionRef, onTranslateComplete, disableInput }) => {
+    tryCatchTranslation?: boolean;
+}> = ({ actionRef, onTranslateComplete, disableInput, tryCatchTranslation }) => {
     const intl = useIntl();
-
     const defaultTranslationTypes: TranslationTypeOption[] = useMemo(
         () => [
             {
@@ -138,6 +154,19 @@ const TranslatorCore: React.FC<{
                 name: intl.formatMessage({ id: 'tools.translation.type.deepseek' }),
             },
         ],
+        [intl],
+    );
+    const getTranslationApiConfigTypeName = useCallback(
+        (apiConfigType: TranslationApiType) => {
+            switch (apiConfigType) {
+                case TranslationApiType.DeepL:
+                    return intl.formatMessage({ id: 'tools.translation.type.deepl' });
+                case TranslationApiType.GoogleWeb:
+                    return intl.formatMessage({ id: 'tools.translation.type.googleWeb' });
+                default:
+                    return apiConfigType;
+            }
+        },
         [intl],
     );
 
@@ -213,9 +242,9 @@ const TranslatorCore: React.FC<{
 
     const [sourceLanguage, setSourceLanguage] = useState<string>('auto');
     const [targetLanguage, setTargetLanguage] = useState<string>('zh-CHS');
-    const [translationType, setTranslationType] = useState<TranslationType | string>(
-        TranslationType.Youdao,
-    );
+    const [translationType, setTranslationType, translationTypeRef] = useStateRef<
+        TranslationType | string
+    >(TranslationType.Youdao);
     const [translationDomain, setTranslationDomain] = useState<TranslationDomain>(
         TranslationDomain.General,
     );
@@ -223,6 +252,9 @@ const TranslatorCore: React.FC<{
     const [chatApiConfigList, setChatApiConfigList] = useState<ChatApiConfig[] | undefined>(
         undefined,
     );
+    const [translationApiConfigList, setTranslationApiConfigList] = useState<
+        TranslationApiConfig[] | undefined
+    >(undefined);
     const { updateAppSettings } = useContext(AppSettingsActionContext);
     const [chatConfig, setChatConfig] = useState<AppSettingsData[AppSettingsGroup.SystemChat]>();
     const [translationConfig, setTranslationConfig] =
@@ -233,6 +265,9 @@ const TranslatorCore: React.FC<{
                 setTranslationDomain(settings[AppSettingsGroup.Cache].translationDomain);
                 setTranslationType(settings[AppSettingsGroup.Cache].translationType);
                 setChatApiConfigList(settings[AppSettingsGroup.FunctionChat].chatApiConfigList);
+                setTranslationApiConfigList(
+                    settings[AppSettingsGroup.FunctionTranslation].translationApiConfigList,
+                );
                 setChatConfig(settings[AppSettingsGroup.SystemChat]);
                 setTranslationConfig(settings[AppSettingsGroup.FunctionTranslation]);
             },
@@ -275,9 +310,32 @@ const TranslatorCore: React.FC<{
                     apiConfig: item,
                 };
             }) ?? []),
+            ...(translationApiConfigList?.map((item): TranslationServiceConfig => {
+                return {
+                    type: item.api_type,
+                    name: getTranslationApiConfigTypeName(item.api_type),
+                    translationApiConfig: item,
+                };
+            }) ?? []),
+            {
+                type: TranslationApiType.GoogleWeb,
+                name: intl.formatMessage({ id: 'tools.translation.type.googleWeb' }),
+                translationApiConfig: {
+                    api_type: TranslationApiType.GoogleWeb,
+                    api_uri: '',
+                    api_key: '',
+                },
+            },
             ...onlineTranslationTypes,
         ]);
-    }, [chatApiConfigList, onlineTranslationTypes, setSupportedTranslationTypes]);
+    }, [
+        chatApiConfigList,
+        getTranslationApiConfigTypeName,
+        intl,
+        onlineTranslationTypes,
+        setSupportedTranslationTypes,
+        translationApiConfigList,
+    ]);
 
     const sourceContentRef = useRef<InputRef | null>(null);
     const [sourceContent, setSourceContent] = useState<string>('');
@@ -302,7 +360,62 @@ const TranslatorCore: React.FC<{
             const config = supportedTranslationTypesRef.current.find(
                 (item) => item.type === params.translationType,
             );
-            if (!config || typeof config.type !== 'string' || !config.apiConfig) {
+            if (!config || typeof config.type !== 'string') {
+                return false;
+            }
+
+            if ('translationApiConfig' in config) {
+                setStartLoading(true);
+
+                if (config.type === TranslationApiType.DeepL) {
+                    let paramsContent: string[] = [params.sourceContent];
+
+                    if (tryCatchTranslation) {
+                        try {
+                            const jsonContent = JSON.parse(paramsContent[0]);
+                            paramsContent = Object.keys(jsonContent)
+                                .sort()
+                                .map((key) => jsonContent[key]);
+                        } catch {}
+                    }
+
+                    const result = await translateTextDeepL(
+                        config.translationApiConfig.api_uri,
+                        config.translationApiConfig.api_key,
+                        paramsContent,
+                        convertLanguageCodeToDeepLSourceLanguageCode(params.sourceLanguage),
+                        convertLanguageCodeToDeepLTargetLanguageCode(params.targetLanguage),
+                        config.translationApiConfig.deepl_prefer_quality_optimized ?? false,
+                    );
+
+                    if (!result) {
+                        setStartLoading(false);
+                        return false;
+                    }
+
+                    setTranslatedContent(result.translations.map((item) => item.text).join('\n'));
+                } else if (config.type === TranslationApiType.GoogleWeb) {
+                    const result = await translateTextGoogleWeb(
+                        params.sourceContent,
+                        convertLanguageCodeToGoogleLanguageCode(params.sourceLanguage),
+                        convertLanguageCodeToGoogleLanguageCode(params.targetLanguage),
+                    );
+
+                    if (!result || !Array.isArray(result.sentences)) {
+                        setStartLoading(false);
+                        return false;
+                    }
+
+                    setTranslatedContent(result.sentences.map((item) => item.trans).join('\n'));
+                }
+
+                setStartLoading(false);
+
+                onTranslateComplete?.(translatedContentRef.current);
+                return true;
+            }
+
+            if (!('apiConfig' in config)) {
                 return false;
             }
 
@@ -312,6 +425,7 @@ const TranslatorCore: React.FC<{
                 apiKey: config.apiConfig.api_key,
                 baseURL: config.apiConfig.api_uri,
                 dangerouslyAllowBrowser: true,
+                fetch: appFetch,
             });
 
             const stream_response = await client.chat.completions.create({
@@ -372,6 +486,7 @@ const TranslatorCore: React.FC<{
             translatedContentRef,
             translationConfig?.chatPrompt,
             translationDomain,
+            tryCatchTranslation,
         ],
     );
 
@@ -526,10 +641,22 @@ const TranslatorCore: React.FC<{
                 stopTranslate: () => {
                     currentRequestSignRef.current++;
                 },
+                getTranslationType: () => translationTypeRef.current,
             }),
-            [translatedContentRef],
+            [translatedContentRef, translationTypeRef],
         ),
     );
+
+    const supportDomain = useMemo(() => {
+        if (
+            translationType === TranslationApiType.DeepL ||
+            translationType === TranslationApiType.GoogleWeb
+        ) {
+            return false;
+        }
+
+        return true;
+    }, [translationType]);
 
     return (
         <>
@@ -648,11 +775,14 @@ const TranslatorCore: React.FC<{
                                         <ModelSelectLabel
                                             modelName={item.name}
                                             custom={
-                                                typeof item.type === 'string' && !!item.apiConfig
+                                                typeof item.type === 'string' &&
+                                                ('translationApiConfig' in item ||
+                                                    'apiConfig' in item)
                                             }
                                             reasoner={
                                                 typeof item.type === 'string' &&
-                                                item.apiConfig?.support_thinking
+                                                'apiConfig' in item &&
+                                                item.apiConfig.support_thinking
                                             }
                                         />
                                     ),
@@ -673,6 +803,7 @@ const TranslatorCore: React.FC<{
                         <Form.Item
                             style={{ marginBottom: token.marginXS }}
                             label={<FormattedMessage id="tools.translation.domain" />}
+                            hidden={!supportDomain}
                         >
                             <Select
                                 showSearch

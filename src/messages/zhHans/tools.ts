@@ -39,6 +39,8 @@ export const tools = {
     'tools.translation.domain': '翻译领域',
     'tools.translation.type.youdao': '有道翻译',
     'tools.translation.type.deepseek': 'DeepSeek',
+    'tools.translation.type.deepl': 'DeepL 翻译',
+    'tools.translation.type.googleWeb': 'Google 网页翻译',
     'tools.translation.domain.general': '通用领域',
     'tools.translation.domain.computers': '计算机领域',
     'tools.translation.domain.medicine': '医学领域',
@@ -66,4 +68,6 @@ export const tools = {
     'tools.chat.workflowStep.message': '消息内容',
     'tools.chat.workflowStep.environmentVariable': '环境变量',
     'tools.chat.workflowStep.environmentVariable.userInput': '用户输入：',
+    'tools.translation.googleWeb.tooManyRequests': 'Google 翻译请求过于频繁，请稍后再试',
+    'tools.translation.googleWeb.failed': 'Google 翻译失败',
 };

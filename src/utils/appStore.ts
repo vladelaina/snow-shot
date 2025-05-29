@@ -102,3 +102,21 @@ export class ChatWorkflowConfigStore extends BaseStore<ChatWorkflowConfig> {
         super('chat-workflow-config', 0);
     }
 }
+
+export const clearAllAppStore = async () => {
+    const chatHistoryStore = new ChatHistoryStore();
+    const excalidrawAppStateStore = new ExcalidrawAppStateStore();
+    const chatWorkflowConfigStore = new ChatWorkflowConfigStore();
+
+    await Promise.all([
+        chatHistoryStore.init(),
+        excalidrawAppStateStore.init(),
+        chatWorkflowConfigStore.init(),
+    ]);
+
+    await Promise.all([
+        chatHistoryStore.clear(),
+        excalidrawAppStateStore.clear(),
+        chatWorkflowConfigStore.clear(),
+    ]);
+};

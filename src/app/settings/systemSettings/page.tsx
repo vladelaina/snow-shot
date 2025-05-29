@@ -1,18 +1,29 @@
 'use client';
 
 import { GroupTitle } from '@/components/groupTitle';
-import { Col, Divider, Form, Row, Spin, Switch, theme } from 'antd';
-import { AppSettingsActionContext, AppSettingsData, AppSettingsGroup } from '../../contextWrap';
-import { useCallback, useContext, useState } from 'react';
+import { Button, Col, Divider, Form, Row, Space, Spin, Switch, theme, Typography } from 'antd';
+import {
+    AppSettingsActionContext,
+    AppSettingsData,
+    AppSettingsGroup,
+    clearAllConfig,
+    getConfigDirPath,
+} from '../../contextWrap';
+import { useCallback, useContext, useEffect, useState } from 'react';
 import { useAppSettingsLoad } from '@/hooks/useAppSettingsLoad';
 import { FormattedMessage } from 'react-intl';
 import { ContentWrap } from '@/components/contentWrap';
 import { IconLabel } from '@/components/iconLable';
 import { ResetSettingsButton } from '@/components/resetSettingsButton';
 import ProForm, { ProFormSlider } from '@ant-design/pro-form';
+import { openPath } from '@tauri-apps/plugin-opener';
+import { AntdContext } from '@/components/globalLayoutExtra';
+import { clearAllAppStore } from '@/utils/appStore';
+import { relaunch } from '@tauri-apps/plugin-process';
 
 export default function SystemSettings() {
     const { token } = theme.useToken();
+    const { modal, message } = useContext(AntdContext);
 
     const { updateAppSettings } = useContext(AppSettingsActionContext);
     const [commonForm] = Form.useForm<AppSettingsData[AppSettingsGroup.SystemCommon]>();
@@ -73,6 +84,14 @@ export default function SystemSettings() {
         ),
         true,
     );
+
+    const [configDirPath, setConfigDirPath] = useState<string>('');
+    useEffect(() => {
+        getConfigDirPath().then((path) => {
+            setConfigDirPath(path);
+        });
+    }, []);
+
     return (
         <ContentWrap>
             <GroupTitle
@@ -437,6 +456,84 @@ export default function SystemSettings() {
                             8192: '8192',
                         }}
                     />
+                </ProForm>
+            </Spin>
+
+            <GroupTitle id="dataFileSettings">
+                <FormattedMessage id="settings.systemSettings.dataFile" />
+            </GroupTitle>
+
+            <Spin spinning={!configDirPath}>
+                <ProForm submitter={false} layout="horizontal">
+                    <Row gutter={token.margin}>
+                        <Col span={24}>
+                            <ProForm.Item
+                                label={
+                                    <IconLabel
+                                        label={
+                                            <FormattedMessage id="settings.systemSettings.dataFilePath" />
+                                        }
+                                    />
+                                }
+                            >
+                                <Space wrap>
+                                    <Typography.Text
+                                        copyable={{
+                                            text: configDirPath,
+                                        }}
+                                    >
+                                        {configDirPath}
+                                    </Typography.Text>
+                                    <Button
+                                        onClick={async () => {
+                                            try {
+                                                await openPath(configDirPath);
+                                            } catch {
+                                                message.error(
+                                                    <FormattedMessage id="settings.systemSettings.dataFilePath.open.failed" />,
+                                                );
+                                            }
+                                        }}
+                                    >
+                                        <FormattedMessage id="settings.systemSettings.dataFilePath.open" />
+                                    </Button>
+                                </Space>
+                            </ProForm.Item>
+                        </Col>
+                        <Col span={12}>
+                            <ProForm.Item
+                                label={
+                                    <IconLabel
+                                        label={
+                                            <FormattedMessage id="settings.systemSettings.dataFile.clearAll" />
+                                        }
+                                    />
+                                }
+                            >
+                                <Button
+                                    type="primary"
+                                    danger
+                                    onClick={() => {
+                                        modal.confirm({
+                                            title: (
+                                                <FormattedMessage id="settings.systemSettings.dataFile.clearAll.confirm" />
+                                            ),
+                                            type: 'error',
+                                            onOk: async () => {
+                                                await Promise.all([
+                                                    clearAllAppStore(),
+                                                    clearAllConfig(),
+                                                ]);
+                                                relaunch();
+                                            },
+                                        });
+                                    }}
+                                >
+                                    <FormattedMessage id="settings.systemSettings.dataFile.clearAll" />
+                                </Button>
+                            </ProForm.Item>
+                        </Col>
+                    </Row>
                 </ProForm>
             </Spin>
         </ContentWrap>

@@ -1,4 +1,10 @@
-import { serviceFetch, streamFetch, StreamFetchEventOptions } from '.';
+import {
+    serviceBaseFetch,
+    serviceFetch,
+    ServiceResponse,
+    streamFetch,
+    StreamFetchEventOptions,
+} from '.';
 
 export enum TranslationType {
     Youdao = 0,
@@ -74,4 +80,76 @@ export const getTranslationTypes = async () => {
     return serviceFetch<TranslationTypeOption[]>('/api/v1/translation/types', {
         method: 'GET',
     });
+};
+
+export type DeepLTranslateResult = {
+    translations: {
+        detected_source_language: string;
+        text: string;
+    }[];
+};
+
+export const translateTextDeepL = async (
+    apiUri: string,
+    apiKey: string,
+    sourceContent: string[],
+    sourceLanguage: string | null,
+    targetLanguage: string,
+    preferQualityOptimized: boolean,
+): Promise<DeepLTranslateResult | undefined> => {
+    const response = await serviceBaseFetch(apiUri, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            Authorization: `DeepL-Auth-Key ${apiKey}`,
+        },
+        data: {
+            text: sourceContent,
+            source_lang: sourceLanguage,
+            target_lang: targetLanguage,
+            preserve_formatting: true,
+            model_type: preferQualityOptimized ? 'prefer_quality_optimized' : 'latency_optimized',
+        },
+    });
+
+    if (response instanceof ServiceResponse) {
+        response.success();
+        return undefined;
+    }
+
+    return (await response.json()) as DeepLTranslateResult;
+};
+
+export type GoogleWebTranslateResult = {
+    sentences: {
+        trans: string;
+        orig: string;
+    }[];
+    src: string;
+    confidence: number;
+};
+
+export const translateTextGoogleWeb = async (
+    sourceContent: string,
+    sourceLanguage: string,
+    targetLanguage: string,
+): Promise<GoogleWebTranslateResult | undefined> => {
+    const response = await serviceBaseFetch(`https://translate.google.com/translate_a/single`, {
+        method: 'GET',
+        params: {
+            client: 'gtx',
+            dt: 't',
+            dj: '1',
+            sl: sourceLanguage,
+            tl: targetLanguage,
+            q: sourceContent,
+        },
+    });
+
+    if (response instanceof ServiceResponse) {
+        response.success();
+        return undefined;
+    }
+
+    return (await response.json()) as GoogleWebTranslateResult;
 };

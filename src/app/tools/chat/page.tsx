@@ -346,6 +346,7 @@ const Chat = () => {
                 request: XRequest({
                     baseURL: path.join(customConfig.api_uri, '/chat/completions'),
                     dangerouslyApiKey: `Bearer ${customConfig.api_key}`,
+                    fetch: appFetch,
                 }),
                 config: customConfig,
             };

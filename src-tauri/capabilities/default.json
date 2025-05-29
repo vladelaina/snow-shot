@@ -31,6 +31,7 @@
         "dialog:allow-save",
         "dialog:allow-open",
         "opener:allow-open-url",
+        "opener:allow-open-path",
         "opener:default",
         "log:default",
         "store:default",
@@ -42,6 +43,7 @@
         "clipboard:read-all",
         "clipboard:allow-write-image-binary",
         "clipboard:write-all",
+        "process:allow-restart",
         {
             "identifier": "http:default",
             "allow": [
@@ -62,6 +64,18 @@
                 },
                 {
                     "url": "https://snowshot.mgchao.top"
+                },
+                {
+                    "url": "https://*.deepl.com"
+                },
+                {
+                    "url": "https://*.google.com"
+                },
+                {
+                    "url": "https://*"
+                },
+                {
+                    "url": "http://*"
                 }
             ]
         }

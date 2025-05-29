@@ -26,6 +26,7 @@
         "@tauri-apps/plugin-http": "~2.4.4",
         "@tauri-apps/plugin-log": "^2.4.0",
         "@tauri-apps/plugin-opener": "~2",
+        "@tauri-apps/plugin-process": "~2.2.1",
         "@tauri-apps/plugin-store": "~2.2.0",
         "@tweenjs/tween.js": "^25.0.0",
         "@types/sanitize-html": "^2.16.0",

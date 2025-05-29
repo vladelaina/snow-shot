@@ -129,4 +129,31 @@ export const settings = {
     'settings.functionSettings.fixedContentSettings.zoomWithMouse': '以鼠标为中心缩放',
     'settings.printScreen.tip':
         'Windows 下如无法唤起截图，请禁用系统的截图工具后再次尝试，如无响应可尝试重启',
+    'settings.functionSettings.translationSettings.apiConfig': 'API 配置',
+    'settings.functionSettings.translationSettings.apiConfig.apiType': '翻译服务',
+    'settings.functionSettings.translationSettings.apiConfig.apiType.deepL': 'DeepL',
+    'settings.functionSettings.translationSettings.apiConfig.apiUri': 'API 地址',
+    'settings.functionSettings.translationSettings.apiConfig.apiUri.tip':
+        '请直接指向翻译接口，如：https://api-free.deepl.com/v2/translate',
+    'settings.functionSettings.translationSettings.apiConfig.apiKey': 'API Key',
+    'settings.functionSettings.translationSettings.apiConfig.apiKey.tip':
+        '注意该配置在本地明文保存（也不会上传到云端）',
+    'settings.functionSettings.translationSettings.apiConfig.apiUri.required': '请输入 API 地址',
+    'settings.functionSettings.translationSettings.apiConfig.add': '添加 API 配置',
+    'settings.functionSettings.translationSettings.apiConfig.apiKey.required': '请输入 API Key',
+    'settings.functionSettings.translationSettings.apiConfig.deeplPreferQualityOptimized':
+        '高质量模型',
+    'settings.functionSettings.translationSettings.apiConfig.deeplPreferQualityOptimized.tip':
+        '如果开启，DeepL 会优先使用延迟更高、质量更高的翻译模型',
+    'settings.systemSettings.dataFile': '软件数据',
+    'settings.systemSettings.dataFilePath': '配置目录',
+    'settings.systemSettings.dataFilePath.open': '打开目录',
+    'settings.systemSettings.dataFile.clearAll': '清除所有数据',
+    'settings.systemSettings.dataFile.clearAll.tip':
+        '清除所有所有持久存储的数据，包括配置、AI 对话历史等',
+    'settings.systemSettings.dataFile.clearAll.confirm':
+        '确定清除所有数据吗？完成清除后将自动重启软件（重启后会自动生成默认配置的数据）',
+    'settings.systemSettings.dataFilePath.open.failed': '打开配置目录失败，请手动复制目录打开',
+    'settings.functionSettings.chatSettings.testChat': '测试 API 配置',
+    'settings.functionSettings.chatSettings.testPrompt': '测试提示词: "Say "Hello, world!""',
 };
