@@ -30,7 +30,7 @@ pub fn run() {
     let ui_elements = Mutex::new(UIElements::new());
     let auto_start_hide_window = Mutex::new(false);
 
-    let mut app_builder = tauri::Builder::default();
+    let mut app_builder = tauri::Builder::default().plugin(tauri_plugin_process::init());
 
     #[cfg(desktop)]
     {

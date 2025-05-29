@@ -24,6 +24,7 @@ import { ResetSettingsButton } from '@/components/resetSettingsButton';
 import ProForm, {
     ProFormDependency,
     ProFormList,
+    ProFormSelect,
     ProFormSwitch,
     ProFormText,
     ProFormTextArea,
@@ -35,6 +36,8 @@ import {
 } from '@/app/tools/translation/extra';
 import { DirectoryInput } from '@/components/directoryInput';
 import { ImageFormat } from '@/utils/file';
+import { TranslationApiType } from './extra';
+import { TestChat } from './components/testChat';
 
 export default function SystemSettings() {
     const intl = useIntl();
@@ -91,6 +94,7 @@ export default function SystemSettings() {
         ),
         true,
     );
+
     return (
         <ContentWrap>
             <GroupTitle
@@ -335,6 +339,136 @@ export default function SystemSettings() {
                     }}
                     submitter={false}
                 >
+                    <ProFormList
+                        name="translationApiConfigList"
+                        label={
+                            <IconLabel
+                                label={
+                                    <FormattedMessage id="settings.functionSettings.translationSettings.apiConfig" />
+                                }
+                            />
+                        }
+                        creatorButtonProps={{
+                            creatorButtonText: intl.formatMessage({
+                                id: 'settings.functionSettings.translationSettings.apiConfig.add',
+                            }),
+                        }}
+                        className="api-config-list"
+                        min={0}
+                        itemRender={({ listDom, action }) => (
+                            <Flex align="end" justify="space-between">
+                                {listDom}
+
+                                <div>{action}</div>
+                            </Flex>
+                        )}
+                        creatorRecord={() => ({
+                            api_uri: '',
+                            api_key: '',
+                            api_type: TranslationApiType.DeepL,
+                        })}
+                    >
+                        <Row gutter={token.padding} style={{ width: '100%' }}>
+                            <Col span={12}>
+                                <ProFormSelect
+                                    name="api_type"
+                                    label={
+                                        <IconLabel
+                                            label={
+                                                <FormattedMessage id="settings.functionSettings.translationSettings.apiConfig.apiType" />
+                                            }
+                                        />
+                                    }
+                                    allowClear={false}
+                                    options={[
+                                        {
+                                            label: (
+                                                <FormattedMessage id="settings.functionSettings.translationSettings.apiConfig.apiType.deepL" />
+                                            ),
+                                            value: TranslationApiType.DeepL,
+                                        },
+                                    ]}
+                                />
+                            </Col>
+                            <Col span={12}>
+                                <ProFormText
+                                    name="api_uri"
+                                    label={
+                                        <IconLabel
+                                            label={
+                                                <FormattedMessage id="settings.functionSettings.translationSettings.apiConfig.apiUri" />
+                                            }
+                                            tooltipTitle={
+                                                <FormattedMessage id="settings.functionSettings.translationSettings.apiConfig.apiUri.tip" />
+                                            }
+                                        />
+                                    }
+                                    rules={[
+                                        {
+                                            required: true,
+                                            message: intl.formatMessage({
+                                                id: 'settings.functionSettings.translationSettings.apiConfig.apiUri.required',
+                                            }),
+                                        },
+                                    ]}
+                                />
+                            </Col>
+                            <Col span={12}>
+                                <ProFormText.Password
+                                    name="api_key"
+                                    label={
+                                        <IconLabel
+                                            label={
+                                                <FormattedMessage id="settings.functionSettings.translationSettings.apiConfig.apiKey" />
+                                            }
+                                            tooltipTitle={
+                                                <FormattedMessage id="settings.functionSettings.translationSettings.apiConfig.apiKey.tip" />
+                                            }
+                                        />
+                                    }
+                                    rules={[
+                                        {
+                                            required: true,
+                                            message: intl.formatMessage({
+                                                id: 'settings.functionSettings.translationSettings.apiConfig.apiKey.required',
+                                            }),
+                                        },
+                                    ]}
+                                />
+                            </Col>
+
+                            <ProFormDependency<{ api_type: TranslationApiType }>
+                                name={['api_type']}
+                            >
+                                {({ api_type }) => {
+                                    if (api_type === TranslationApiType.DeepL) {
+                                        return (
+                                            <>
+                                                <Col span={12}>
+                                                    <ProFormSwitch
+                                                        name="deepl_prefer_quality_optimized"
+                                                        label={
+                                                            <IconLabel
+                                                                label={
+                                                                    <FormattedMessage id="settings.functionSettings.translationSettings.apiConfig.deeplPreferQualityOptimized" />
+                                                                }
+                                                                tooltipTitle={
+                                                                    <FormattedMessage id="settings.functionSettings.translationSettings.apiConfig.deeplPreferQualityOptimized.tip" />
+                                                                }
+                                                            />
+                                                        }
+                                                    />
+                                                </Col>
+                                            </>
+                                        );
+                                    }
+
+                                    return null;
+                                }}
+                            </ProFormDependency>
+                        </Row>
+                    </ProFormList>
+
                     <Alert
                         message={
                             <Typography>
@@ -452,6 +586,18 @@ export default function SystemSettings() {
                             creatorButtonText: intl.formatMessage({
                                 id: 'settings.functionSettings.chatSettings.apiConfig.add',
                             }),
+                        }}
+                        actionRender={(...params) => {
+                            const [field, , defaultActionDom] = params;
+                            return [
+                                defaultActionDom,
+                                <TestChat
+                                    key="test-chat"
+                                    config={
+                                        functionForm.getFieldValue('chatApiConfigList')[field.name]
+                                    }
+                                />,
+                            ];
                         }}
                         className="api-config-list"
                         min={0}

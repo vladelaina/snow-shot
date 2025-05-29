@@ -96,7 +96,7 @@ export class ServiceResponse<T> {
     }
 }
 
-export const serviceFetch = async <R>(
+export const serviceBaseFetch = async (
     url: string,
     options: {
         method: 'POST' | 'GET';
@@ -104,7 +104,7 @@ export const serviceFetch = async <R>(
         data?: any | Record<string, any>;
         headers?: Record<string, string>;
     },
-): Promise<ServiceResponse<R | undefined>> => {
+): Promise<Response | ServiceResponse<undefined>> => {
     let response: Response;
     try {
         response = await fetch(getUrl(url, options.params), {
@@ -128,6 +128,24 @@ export const serviceFetch = async <R>(
 
     if (response.status !== 200) {
         return ServiceResponse.httpError(response);
+    }
+
+    return response;
+};
+
+export const serviceFetch = async <R>(
+    url: string,
+    options: {
+        method: 'POST' | 'GET';
+        params?: any | Record<string, any>;
+        data?: any | Record<string, any>;
+        headers?: Record<string, string>;
+    },
+): Promise<ServiceResponse<R | undefined>> => {
+    const response = await serviceBaseFetch(url, options);
+
+    if (response instanceof ServiceResponse) {
+        return response;
     }
 
     const data = (await response.json()) as ResponseData<R>;

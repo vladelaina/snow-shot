@@ -1,7 +1,14 @@
 'use client';
 
 import { createContext, RefObject, useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { BaseDirectory, exists, mkdir, readTextFile, writeTextFile } from '@tauri-apps/plugin-fs';
+import {
+    BaseDirectory,
+    exists,
+    mkdir,
+    readTextFile,
+    writeTextFile,
+    remove,
+} from '@tauri-apps/plugin-fs';
 import { ConfigProvider, theme } from 'antd';
 import { debounce, isEqual, trim } from 'es-toolkit';
 import zhCN from 'antd/es/locale/zh_CN';
@@ -25,10 +32,11 @@ import * as appAutostart from '@tauri-apps/plugin-autostart';
 import { defaultKeyEventSettings, KeyEventKey, KeyEventValue } from '@/core/hotKeys';
 import { TranslationDomain, TranslationType } from '@/services/tools/translation';
 import { setEnableProxy } from '@/commands/core';
-import { ChatApiConfig } from './settings/functionSettings/extra';
+import { ChatApiConfig, TranslationApiConfig } from './settings/functionSettings/extra';
 import { defaultTranslationPrompt } from './tools/translation/extra';
 import { ColorPickerShowMode } from './draw/components/colorPicker';
 import { ImageFormat } from '@/utils/file';
+import { appConfigDir, join as joinPath } from '@tauri-apps/api/path';
 
 export enum AppSettingsGroup {
     Common = 'common',
@@ -126,6 +134,7 @@ export type AppSettingsData = {
     };
     [AppSettingsGroup.FunctionTranslation]: {
         chatPrompt: string;
+        translationApiConfigList: TranslationApiConfig[];
     };
     [AppSettingsGroup.FunctionScreenshot]: {
         /** 选取窗口子元素 */
@@ -170,7 +179,7 @@ export const defaultAppSettingsData: AppSettingsData = {
         disableAnimation: false,
         colorPickerShowMode: ColorPickerShowMode.BeyondSelectRect,
         beyondSelectRectElementOpacity: 100,
-        fullScreenAuxiliaryLineColor: '#00000',
+        fullScreenAuxiliaryLineColor: '#00000000',
     },
     [AppSettingsGroup.CommonTrayIcon]: {
         iconPath: '',
@@ -217,6 +226,7 @@ export const defaultAppSettingsData: AppSettingsData = {
     },
     [AppSettingsGroup.FunctionTranslation]: {
         chatPrompt: defaultTranslationPrompt,
+        translationApiConfigList: [],
     },
     [AppSettingsGroup.FunctionScreenshot]: {
         findChildrenElements: true,
@@ -271,8 +281,14 @@ export type ScreenshotContextType = {
 };
 
 const configDir = 'configs';
+export const getConfigDirPath = async () => {
+    return joinPath(await appConfigDir(), configDir);
+};
+export const clearAllConfig = async () => {
+    await remove(configDir, { recursive: true, baseDir: BaseDirectory.AppConfig });
+};
 const getFileName = (group: AppSettingsGroup) => {
-    return `${configDir}\\${group}.json`;
+    return `${configDir}/${group}.json`;
 };
 
 export type AppContextType = {
@@ -764,6 +780,18 @@ const ContextWrapCore: React.FC<{ children: React.ReactNode }> = ({ children }) 
                         typeof newSettings?.chatPrompt === 'string'
                             ? newSettings.chatPrompt
                             : (prevSettings?.chatPrompt ?? ''),
+                    translationApiConfigList: Array.isArray(newSettings?.translationApiConfigList)
+                        ? newSettings.translationApiConfigList.map((item) => ({
+                              api_uri: `${item.api_uri ?? ''}`,
+                              api_key: `${item.api_key ?? ''}`,
+                              api_type: item.api_type,
+                              deepl_prefer_quality_optimized:
+                                  typeof item.deepl_prefer_quality_optimized === 'boolean'
+                                      ? item.deepl_prefer_quality_optimized
+                                      : false,
+                          }))
+                        : (prevSettings?.translationApiConfigList ??
+                          defaultAppSettingsData[group].translationApiConfigList),
                 };
             } else if (group === AppSettingsGroup.FunctionScreenshot) {
                 newSettings = newSettings as AppSettingsData[typeof group];

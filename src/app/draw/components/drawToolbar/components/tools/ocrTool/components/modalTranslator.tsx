@@ -4,6 +4,7 @@ import {
     AppSettingsGroup,
     AppSettingsPublisher,
 } from '@/app/contextWrap';
+import { TranslationApiType } from '@/app/settings/functionSettings/extra';
 import { OcrDetectResult } from '@/commands/ocr';
 import { AntdContext, HotkeysScope } from '@/components/globalLayoutExtra';
 import { Translator, TranslatorActionType } from '@/components/translator';
@@ -74,6 +75,23 @@ export const ModalTranslator: React.FC<{
     const replaceOcrResult = useCallback(() => {
         if (!translateResult.current || !ocrResult) {
             return;
+        }
+
+        if (translatorActionRef.current?.getTranslationType() === TranslationApiType.DeepL) {
+            // DeepL 支持批量翻译
+            const values = translateResult.current.split('\n').map((line) => trim(line));
+            if (values.length === ocrResult.text_blocks.length) {
+                const result: OcrDetectResult = {
+                    ...ocrResult,
+                    text_blocks: ocrResult.text_blocks.map((block, index) => ({
+                        ...block,
+                        text: values[index],
+                    })),
+                };
+
+                onReplaceCallback(result);
+                return;
+            }
         }
 
         try {
@@ -177,6 +195,7 @@ export const ModalTranslator: React.FC<{
                     disableInput
                     actionRef={translatorActionRef}
                     onTranslateComplete={onTranslateComplete}
+                    tryCatchTranslation
                 />
             )}
 
