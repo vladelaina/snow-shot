@@ -60,6 +60,7 @@ import { WorkflowList } from './components/workflowList';
 import { ChatApiConfig } from '@/app/settings/functionSettings/extra';
 import path from 'path';
 import { ModelSelectLabel } from './components/modelSelectLabel';
+import { openUrl } from '@tauri-apps/plugin-opener';
 
 type BubbleDataType = AntdBubbleDataType & {
     flow_config?: ChatMessageFlowConfig;
@@ -141,6 +142,19 @@ const MarkdownContent: React.FC<{
                             <code {...rest} className={className}>
                                 {children}
                             </code>
+                        );
+                    },
+                    a: (props) => {
+                        return (
+                            <a
+                                {...props}
+                                onClick={(e) => {
+                                    e.preventDefault();
+                                    if (props.href) {
+                                        openUrl(props.href);
+                                    }
+                                }}
+                            />
                         );
                     },
                 }}

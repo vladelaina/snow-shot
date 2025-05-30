@@ -1,0 +1,17 @@
+export const about = {
+    'about.title': 'Snow Shot',
+    'about.subtitle': '以简洁优雅作为理念设计的工具软件 ❄️',
+    'about.version': '版本',
+    'about.author': '作者: mg-chao',
+    'about.license.title': '📄 开源协议',
+    'about.license.description': '本项目采用双重许可模式：',
+    'about.license.nonCommercial': '非商用场景：',
+    'about.license.nonCommercialType': '适用于 Apache v2.0 许可',
+    'about.license.commercial': '商用场景：',
+    'about.license.commercialType': '适用于 GPL v3 许可',
+    'about.contact.title': '📞 问题反馈与联系',
+    'about.contact.github': 'GitHub Issue',
+    'about.contact.bilibili': 'B站 3N0W',
+    'about.contact.email': '邮件: chao@mgchao.top',
+    'about.contact.qqGroup': 'QQ 交流群：',
+}; 

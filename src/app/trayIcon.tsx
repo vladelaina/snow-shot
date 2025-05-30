@@ -21,11 +21,11 @@ import {
     executeTranslate,
     executeTranslateSelectedText,
 } from '@/functions/tools';
-import { openUrl } from '@tauri-apps/plugin-opener';
 import { createPublisher } from '@/hooks/useStatePublisher';
 import { AntdContext } from '@/components/globalLayoutExtra';
 import { Image } from '@tauri-apps/api/image';
 import { createFixedContentWindow, createFullScreenDrawWindow } from '@/commands/core';
+import { useRouter } from 'next/navigation';
 
 export const TrayIconStatePublisher = createPublisher<{
     disableShortcut: boolean;
@@ -36,6 +36,7 @@ export const TrayIconStatePublisher = createPublisher<{
 const TrayIconLoaderComponent = () => {
     const intl = useIntl();
     const { message } = useContext(AntdContext);
+    const router = useRouter();
 
     const [disableShortcut, _setDisableShortcut] = useState(false);
     const [, setTrayIconState] = useStateSubscriber(
@@ -252,7 +253,8 @@ const TrayIconLoaderComponent = () => {
                             id: `${appWindow.label}-about`,
                             text: intl.formatMessage({ id: 'home.about' }),
                             action: async () => {
-                                openUrl('https://github.com/mg-chao/snow-shot');
+                                showWindow();
+                                router.push('/about');
                             },
                         },
                         {
