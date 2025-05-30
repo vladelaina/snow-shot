@@ -297,7 +297,7 @@ const TrayIconLoaderComponent = () => {
             closeTrayIcon();
             window.removeEventListener('beforeunload', closeTrayIcon);
         };
-    }, [disableShortcut, iconPath, intl, message, setTrayIconState, shortcutKeys]);
+    }, [disableShortcut, iconPath, intl, message, router, setTrayIconState, shortcutKeys]);
 
     return null;
 };
