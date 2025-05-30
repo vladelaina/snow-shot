@@ -1,6 +1,6 @@
 'use client';
 
-import { captureCurrentMonitor, ImageBuffer, ImageEncoder } from '@/commands';
+import { captureCurrentMonitor, createDrawWindow, ImageBuffer, ImageEncoder } from '@/commands';
 import { EventListenerContext } from '@/components/eventListener';
 import React, { useMemo, useState } from 'react';
 import { useCallback, useContext, useEffect, useRef } from 'react';
@@ -42,7 +42,11 @@ import {
 } from '../fixedContent/components/fixedContentCore';
 import { OcrBlocks, OcrBlocksActionType } from './components/ocrBlocks';
 import { ocrInit } from '@/commands/ocr';
-import { ScreenshotType } from '@/functions/screenshot';
+import {
+    executeScreenshot as executeScreenshotFunc,
+    releaseDrawPage,
+    ScreenshotType,
+} from '@/functions/screenshot';
 import { showWindow as showCurrentWindow } from '@/utils/window';
 import { setDrawWindowStyle, switchAlwaysOnTop } from '@/commands/screenshot';
 import { debounce } from 'es-toolkit';
@@ -56,7 +60,7 @@ import { scrollScreenshotSaveToFile } from '@/commands/scrollScreenshot';
 import { AppSettingsActionContext, AppSettingsGroup } from '../contextWrap';
 import { AppSettingsPublisher } from '../contextWrap';
 import { ExtraTool } from './components/drawToolbar/components/tools/extraTool';
-import { createFixedContentWindow } from '@/commands/core';
+import { createFixedContentWindow, getCurrentMonitorInfo, MonitorInfo } from '@/commands/core';
 import {
     DrawState,
     DrawStatePublisher,
@@ -75,6 +79,17 @@ const DrawCacheLayer = dynamic(
     },
 );
 
+enum DrawPageState {
+    /** 初始化状态 */
+    Init = 'init',
+    /** 激活状态 */
+    Active = 'active',
+    /** 等待释放状态 */
+    WaitRelease = 'wait-release',
+    /** 释放状态 */
+    Release = 'release',
+}
+
 const DrawPageCore: React.FC = () => {
     const appWindowRef = useRef<AppWindow>(undefined as unknown as AppWindow);
     useEffect(() => {
@@ -83,6 +98,7 @@ const DrawPageCore: React.FC = () => {
 
     // 截图原始数据
     const imageBufferRef = useRef<ImageBuffer | undefined>(undefined);
+    const monitorInfoRef = useRef<MonitorInfo | undefined>(undefined);
     const imageBlobUrlRef = useRef<string | undefined>(undefined);
     const { addListener, removeListener } = useContext(EventListenerContext);
 
@@ -99,6 +115,7 @@ const DrawPageCore: React.FC = () => {
     const ocrBlocksActionRef = useRef<OcrBlocksActionType | undefined>(undefined);
 
     // 状态
+    const drawPageStateRef = useRef<DrawPageState>(DrawPageState.Init);
     const mousePositionRef = useRef<MousePosition>(new MousePosition(0, 0));
     const [getAppSettings] = useStateSubscriber(AppSettingsPublisher, undefined);
     const { updateAppSettings } = useContext(AppSettingsActionContext);
@@ -114,12 +131,14 @@ const DrawPageCore: React.FC = () => {
     const [, setCaptureLoading] = useStateSubscriber(CaptureLoadingPublisher, undefined);
     const [, setCaptureEvent] = useStateSubscriber(CaptureEventPublisher, undefined);
     const onCaptureLoad = useCallback<BaseLayerEventActionType['onCaptureLoad']>(
-        async (texture: PIXI.Texture, imageBuffer: ImageBuffer) => {
-            await Promise.all([drawLayerActionRef.current?.onCaptureLoad(texture, imageBuffer)]);
+        async (texture: PIXI.Texture, imageBuffer: ImageBuffer, monitorInfo: MonitorInfo) => {
+            await Promise.all([
+                drawLayerActionRef.current?.onCaptureLoad(texture, imageBuffer, monitorInfo),
+            ]);
 
             setCaptureEvent({
                 event: CaptureEvent.onCaptureLoad,
-                params: [texture, imageBuffer],
+                params: [texture, imageBuffer, monitorInfo],
             });
         },
         [setCaptureEvent],
@@ -178,10 +197,8 @@ const DrawPageCore: React.FC = () => {
 
     /** 截图准备 */
     const readyCapture = useCallback(
-        async (imageBuffer: ImageBuffer) => {
-            capturingRef.current = true;
+        async (imageBuffer: ImageBuffer, monitorInfo: MonitorInfo) => {
             setCaptureLoading(true);
-            drawToolbarActionRef.current?.setEnable(false);
 
             if (imageBlobUrlRef.current) {
                 const tempUrl = imageBlobUrlRef.current;
@@ -197,49 +214,56 @@ const DrawPageCore: React.FC = () => {
                 loadParser: 'loadTextures',
             });
             mousePositionRef.current = new MousePosition(
-                Math.floor(imageBuffer.mouseX / imageBuffer.monitorScaleFactor),
-                Math.floor(imageBuffer.mouseY / imageBuffer.monitorScaleFactor),
+                Math.floor(
+                    monitorInfoRef.current!.mouse_x / monitorInfoRef.current!.monitor_scale_factor,
+                ),
+                Math.floor(
+                    monitorInfoRef.current!.mouse_y / monitorInfoRef.current!.monitor_scale_factor,
+                ),
             );
 
             await Promise.all([
-                drawLayerActionRef.current?.onCaptureReady(imageTexture, imageBuffer),
-                selectLayerActionRef.current?.onCaptureReady(imageTexture, imageBuffer),
+                drawLayerActionRef.current?.onCaptureReady(imageTexture, imageBuffer, monitorInfo),
                 drawCacheLayerActionRef.current?.onCaptureReady(),
             ]);
             setCaptureEvent({
                 event: CaptureEvent.onCaptureReady,
-                params: [imageTexture, imageBuffer],
+                params: [imageTexture, imageBuffer, monitorInfo],
             });
             setCaptureLoading(false);
 
-            onCaptureLoad(imageTexture, imageBuffer);
+            onCaptureLoad(imageTexture, imageBuffer, monitorInfo);
         },
         [onCaptureLoad, setCaptureLoading, setCaptureEvent],
     );
 
     /** 显示截图窗口 */
     const showWindow = useCallback(
-        async (imageBuffer: ImageBuffer) => {
+        async ({
+            monitor_x,
+            monitor_y,
+            monitor_width,
+            monitor_height,
+            monitor_scale_factor,
+        }: MonitorInfo) => {
             const appWindow = appWindowRef.current;
-
-            const { monitorX, monitorY, monitorWidth, monitorHeight } = imageBuffer;
 
             await Promise.all([
                 appWindow.setAlwaysOnTop(true),
-                appWindow.setPosition(new PhysicalPosition(monitorX, monitorY)),
-                appWindow.setSize(new PhysicalSize(monitorWidth, monitorHeight)),
-                Webview.getCurrent().setSize(new PhysicalSize(monitorWidth, monitorHeight)),
+                appWindow.setPosition(new PhysicalPosition(monitor_x, monitor_y)),
+                appWindow.setSize(new PhysicalSize(monitor_width, monitor_height)),
+                Webview.getCurrent().setSize(new PhysicalSize(monitor_width, monitor_height)),
                 Webview.getCurrent().setZoom(1),
             ]);
 
-            const browserScaleFactor = monitorWidth / window.screen.width;
-            imageBuffer.monitorScaleFactor =
+            const browserScaleFactor = monitor_width / window.screen.width;
+            monitorInfoRef.current!.monitor_scale_factor =
                 window.devicePixelRatio ??
-                (browserScaleFactor === 0 ? imageBuffer.monitorScaleFactor : browserScaleFactor);
+                (browserScaleFactor === 0 ? monitor_scale_factor : browserScaleFactor);
 
             if (layerContainerRef.current) {
-                const documentWidth = monitorWidth / imageBuffer.monitorScaleFactor;
-                const documentHeight = monitorHeight / imageBuffer.monitorScaleFactor;
+                const documentWidth = monitor_width / monitor_scale_factor;
+                const documentHeight = monitor_height / monitor_scale_factor;
 
                 layerContainerRef.current.style.width = `${documentWidth}px`;
                 layerContainerRef.current.style.height = `${documentHeight}px`;
@@ -261,19 +285,29 @@ const DrawPageCore: React.FC = () => {
         await appWindowRef.current.hide();
     }, []);
 
-    const finishCapture = useCallback<DrawContextType['finishCapture']>(
-        async (ignoreReload: boolean = false, clearScrollScreenshot: boolean = true) => {
-            hideWindow();
-            appWindowRef.current.setSize(new PhysicalSize(0, 0));
-            if (clearScrollScreenshot) {
-                scrollScreenshotClear();
+    const releasePage = useMemo(() => {
+        return debounce(async () => {
+            if (drawPageStateRef.current !== DrawPageState.WaitRelease) {
+                return;
             }
 
-            if (process.env.NODE_ENV !== 'development') {
-                if (!ignoreReload) {
-                    location.reload();
-                }
-                return;
+            drawPageStateRef.current = DrawPageState.Release;
+            await createDrawWindow();
+            // 隔一段时间释放，防止释放中途用户唤起
+            setTimeout(() => {
+                appWindowRef.current.close();
+            }, 1000 * 8);
+        }, 1000 * 16);
+    }, []);
+
+    const finishCapture = useCallback<DrawContextType['finishCapture']>(
+        async (clearScrollScreenshot: boolean = true) => {
+            drawPageStateRef.current = DrawPageState.WaitRelease;
+            releasePage();
+
+            hideWindow();
+            if (clearScrollScreenshot) {
+                scrollScreenshotClear();
             }
 
             window.getSelection()?.removeAllRanges();
@@ -297,6 +331,7 @@ const DrawPageCore: React.FC = () => {
         [
             hideWindow,
             history,
+            releasePage,
             resetCaptureStep,
             resetDrawState,
             resetScreenshotType,
@@ -304,11 +339,21 @@ const DrawPageCore: React.FC = () => {
         ],
     );
 
-    const excuteScreenshotSign = useRef(0);
+    const initMonitorInfoAndShowWindow = useCallback(async () => {
+        const monitorInfo = await getCurrentMonitorInfo();
+        monitorInfoRef.current = monitorInfo;
+        await Promise.all([
+            showWindow(monitorInfo),
+            selectLayerActionRef.current?.onMonitorInfoReady(monitorInfo),
+            drawLayerActionRef.current?.onMonitorInfoReady(monitorInfo),
+        ]);
+    }, [showWindow]);
+
     /** 执行截图 */
     const excuteScreenshot = useCallback(
         async (excuteScreenshotType: ScreenshotType) => {
-            excuteScreenshotSign.current++;
+            capturingRef.current = true;
+            drawToolbarActionRef.current?.setEnable(false);
 
             setScreenshotType(excuteScreenshotType);
             const layerOnExecuteScreenshotPromise = Promise.all([
@@ -319,18 +364,17 @@ const DrawPageCore: React.FC = () => {
                 event: CaptureEvent.onExecuteScreenshot,
             });
 
-            // 发起截图
-            const imageBuffer = await captureCurrentMonitor(ImageEncoder.WebP);
-            imageBufferRef.current = imageBuffer;
+            const initMonitorInfoPromise = initMonitorInfoAndShowWindow();
+            imageBufferRef.current = await captureCurrentMonitor(ImageEncoder.WebP);
+            await initMonitorInfoPromise;
 
             // 因为窗口是空的，所以窗口显示和图片显示先后顺序倒无所谓
             await Promise.all([
-                showWindow(imageBuffer),
-                readyCapture(imageBuffer),
+                readyCapture(imageBufferRef.current, monitorInfoRef.current!),
                 layerOnExecuteScreenshotPromise,
             ]);
         },
-        [setScreenshotType, setCaptureEvent, showWindow, readyCapture],
+        [setScreenshotType, setCaptureEvent, initMonitorInfoAndShowWindow, readyCapture],
     );
 
     const saveCurrentSelectRect = useCallback(() => {
@@ -346,16 +390,6 @@ const DrawPageCore: React.FC = () => {
             false,
         );
     }, [updateAppSettings]);
-
-    const releasePage = useCallback((sign: number) => {
-        if (sign !== excuteScreenshotSign.current) {
-            return;
-        }
-
-        if (process.env.NODE_ENV !== 'development') {
-            location.reload();
-        }
-    }, []);
 
     const onSave = useCallback(
         async (fastSave: boolean = false) => {
@@ -405,8 +439,6 @@ const DrawPageCore: React.FC = () => {
                 return;
             }
 
-            const sign = excuteScreenshotSign.current;
-
             saveToFile(
                 selectLayerActionRef.current,
                 drawLayerActionRef.current,
@@ -426,7 +458,7 @@ const DrawPageCore: React.FC = () => {
                         );
                     }
 
-                    finishCapture(true);
+                    finishCapture();
                 },
                 getAppSettings()[AppSettingsGroup.Cache].prevImageFormat,
                 fastSave
@@ -434,31 +466,22 @@ const DrawPageCore: React.FC = () => {
                           getAppSettings()[AppSettingsGroup.FunctionScreenshot],
                       )
                     : undefined,
-            ).then(() => {
-                releasePage(sign);
-            });
+            );
         },
-        [
-            finishCapture,
-            getAppSettings,
-            getDrawState,
-            releasePage,
-            saveCurrentSelectRect,
-            updateAppSettings,
-        ],
+        [finishCapture, getAppSettings, getDrawState, saveCurrentSelectRect, updateAppSettings],
     );
 
     const onFixed = useCallback(async () => {
         if (getDrawState() === DrawState.ScrollScreenshot) {
             createFixedContentWindow(true);
-            finishCapture(undefined, false);
+            finishCapture(false);
             return;
         }
 
         if (
             !layerContainerRef.current ||
             !selectLayerActionRef.current ||
-            !imageBufferRef.current ||
+            !monitorInfoRef.current ||
             !drawLayerActionRef.current ||
             !drawCacheLayerActionRef.current ||
             !fixedContentActionRef.current ||
@@ -470,7 +493,7 @@ const DrawPageCore: React.FC = () => {
         saveCurrentSelectRect();
 
         await fixedToScreen(
-            imageBufferRef.current,
+            monitorInfoRef.current,
             appWindowRef.current,
             layerContainerRef.current,
             selectLayerActionRef.current,
@@ -495,7 +518,7 @@ const DrawPageCore: React.FC = () => {
 
     const onOcrDetect = useCallback(async () => {
         if (
-            !imageBufferRef.current ||
+            !monitorInfoRef.current ||
             !selectLayerActionRef.current ||
             !drawLayerActionRef.current ||
             !drawCacheLayerActionRef.current ||
@@ -505,7 +528,7 @@ const DrawPageCore: React.FC = () => {
         }
 
         handleOcrDetect(
-            imageBufferRef.current,
+            monitorInfoRef.current,
             selectLayerActionRef.current,
             drawLayerActionRef.current,
             drawCacheLayerActionRef.current,
@@ -556,8 +579,6 @@ const DrawPageCore: React.FC = () => {
             return;
         }
 
-        const sign = excuteScreenshotSign.current;
-
         await copyToClipboard(
             selectLayerActionRef.current,
             drawLayerActionRef.current,
@@ -565,7 +586,7 @@ const DrawPageCore: React.FC = () => {
             enableAutoSave
                 ? undefined
                 : async () => {
-                      finishCapture(true);
+                      finishCapture();
                   },
         );
 
@@ -575,16 +596,21 @@ const DrawPageCore: React.FC = () => {
                 drawLayerActionRef.current,
                 drawCacheLayerActionRef.current,
                 async () => {
-                    finishCapture(true);
+                    finishCapture();
                 },
                 undefined,
                 getImagePathFromSettings(getAppSettings()[AppSettingsGroup.FunctionScreenshot]),
             );
         }
+    }, [finishCapture, getAppSettings, getDrawState, saveCurrentSelectRect]);
 
-        releasePage(sign);
-    }, [finishCapture, getAppSettings, getDrawState, releasePage, saveCurrentSelectRect]);
-
+    const releaseExecuteScreenshotTimerRef = useRef<
+        | {
+              timer: NodeJS.Timeout | undefined;
+              type: ScreenshotType;
+          }
+        | undefined
+    >(undefined);
     useEffect(() => {
         if (isFixed) {
             return;
@@ -592,22 +618,60 @@ const DrawPageCore: React.FC = () => {
 
         // 监听截图命令
         const listenerId = addListener('execute-screenshot', (args) => {
+            const payload = (args as { payload: { type: ScreenshotType } }).payload;
+
             if (capturingRef.current) {
                 return;
             }
 
-            excuteScreenshot((args as { payload: { type: ScreenshotType } }).payload.type);
+            if (drawPageStateRef.current === DrawPageState.Init) {
+                return;
+            } else if (drawPageStateRef.current === DrawPageState.Release) {
+                // 这时候可能窗口还在加载中，每隔一段时间触发下截图
+                if (releaseExecuteScreenshotTimerRef.current?.timer) {
+                    clearInterval(releaseExecuteScreenshotTimerRef.current.timer);
+                }
+                releaseExecuteScreenshotTimerRef.current = {
+                    timer: setInterval(() => {
+                        executeScreenshotFunc(payload.type);
+                    }, 128),
+                    type: payload.type,
+                };
+
+                return;
+            } else if (drawPageStateRef.current === DrawPageState.WaitRelease) {
+                // 重置为激活状态
+                drawPageStateRef.current = DrawPageState.Active;
+            }
+
+            excuteScreenshot(payload.type);
         });
 
         const finishListenerId = addListener('finish-screenshot', () => {
             finishCapture();
         });
 
+        const releaseListenerId = addListener('release-draw-page', () => {
+            if (drawPageStateRef.current !== DrawPageState.Release) {
+                return;
+            }
+
+            if (releaseExecuteScreenshotTimerRef.current?.timer) {
+                clearInterval(releaseExecuteScreenshotTimerRef.current.timer);
+                executeScreenshotFunc(releaseExecuteScreenshotTimerRef.current.type);
+            }
+
+            setTimeout(() => {
+                getCurrentWindow().close();
+            }, 0);
+        });
+
         return () => {
             removeListener(listenerId);
             removeListener(finishListenerId);
+            removeListener(releaseListenerId);
         };
-    }, [addListener, excuteScreenshot, removeListener, isFixed, finishCapture]);
+    }, [addListener, excuteScreenshot, removeListener, isFixed, finishCapture, releasePage]);
 
     // 默认隐藏
     useEffect(() => {
@@ -627,6 +691,7 @@ const DrawPageCore: React.FC = () => {
             ocrBlocksActionRef,
             fixedContentActionRef,
             colorPickerActionRef,
+            monitorInfoRef,
         };
     }, [finishCapture]);
 
@@ -674,6 +739,13 @@ const DrawPageCore: React.FC = () => {
         },
         [onCopyToClipboard],
     );
+
+    useEffect(() => {
+        drawLayerActionRef.current?.initCanvas(false).then(() => {
+            drawPageStateRef.current = DrawPageState.Active;
+            releaseDrawPage();
+        });
+    }, []);
 
     return (
         <DrawContext.Provider value={drawContextValue}>

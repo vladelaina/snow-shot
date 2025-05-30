@@ -27,6 +27,7 @@ import {
 } from '@/components/icons';
 import {
     CaptureEvent,
+    CaptureEventParams,
     CaptureEventPublisher,
     CaptureStepPublisher,
     DrawEvent,
@@ -302,16 +303,24 @@ const DrawToolbarCore: React.FC<DrawToolbarProps> = ({
     }, [drawToolbarRef, draggingRef, setDragging]);
 
     const canHandleScreenshotTypeRef = useRef(false);
-    useStateSubscriber(CaptureEventPublisher, (event) => {
-        if (event?.event === CaptureEvent.onCaptureReady) {
-            canHandleScreenshotTypeRef.current = true;
-        }
-    });
+    useStateSubscriber(
+        CaptureEventPublisher,
+        useCallback((event: CaptureEventParams | undefined) => {
+            if (!event) {
+                return;
+            }
+
+            if (event.event === CaptureEvent.onCaptureReady) {
+                canHandleScreenshotTypeRef.current = true;
+            }
+        }, []),
+    );
 
     const onEnableChange = useCallback(
         (enable: boolean) => {
             enableRef.current = enable;
             dragButtonActionRef.current?.setEnable(enable);
+
             if (canHandleScreenshotTypeRef.current) {
                 switch (getScreenshotType()) {
                     case ScreenshotType.Fixed:
@@ -331,7 +340,7 @@ const DrawToolbarCore: React.FC<DrawToolbarProps> = ({
                 canHandleScreenshotTypeRef.current = false;
             }
         },
-        [onFixed, onToolClick, onTopWindow, getScreenshotType],
+        [getScreenshotType, onFixed, onToolClick, onTopWindow],
     );
 
     const setEnable = useCallback(
