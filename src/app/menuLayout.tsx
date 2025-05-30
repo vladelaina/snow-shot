@@ -12,6 +12,7 @@ import React, {
 import {
     AppstoreOutlined,
     CloseOutlined,
+    InfoCircleOutlined,
     MinusOutlined,
     SettingOutlined,
     ToolOutlined,
@@ -527,6 +528,18 @@ const MenuLayoutCore: React.FC<{ children: React.ReactNode }> = ({ children }) =
                         ],
                     },
                 ],
+            },
+            {
+                key: '/about',
+                path: '/about',
+                tabs: [
+                    {
+                        key: 'snowShot',
+                        label: intl.formatMessage({ id: 'home.snowShot' }),
+                    },
+                ],
+                label: intl.formatMessage({ id: 'menu.about' }),
+                icon: <InfoCircleOutlined />,
             },
         ];
 
