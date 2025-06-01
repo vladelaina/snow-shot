@@ -90,7 +90,20 @@ pub async fn init_ui_elements_cache(
         Err(_) => return Err(()),
     };
 
-    match ui_elements.init_cache() {
+    // 多显示器时会获取错误
+    // 临时用显示器坐标做个转换，后面兼容跨屏截图时取消
+    let (_, _, monitor) = get_target_monitor();
+    let monitor_x = monitor.x().unwrap_or(0);
+    let monitor_y = monitor.y().unwrap_or(0);
+    let monitor_width = monitor.width().unwrap_or(0) as i32;
+    let monitor_height = monitor.height().unwrap_or(0) as i32;
+
+    match ui_elements.init_cache(ElementRect {
+        min_x: monitor_x,
+        min_y: monitor_y,
+        max_x: monitor_x + monitor_width,
+        max_y: monitor_y + monitor_height,
+    }) {
         Ok(_) => (),
         Err(_) => return Err(()),
     }
@@ -169,10 +182,10 @@ pub async fn get_window_elements() -> Result<Vec<WindowElement>, ()> {
 
         rect_list.push(WindowElement {
             element_rect: ElementRect {
-                min_x: x,
-                min_y: y,
-                max_x: x + width as i32,
-                max_y: y + height as i32,
+                min_x: x - monitor_min_x,
+                min_y: y - monitor_min_y,
+                max_x: x + width as i32 - monitor_min_x,
+                max_y: y + height as i32 - monitor_min_y,
             },
             window_id,
         });

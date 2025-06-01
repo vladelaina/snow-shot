@@ -92,6 +92,7 @@ pub struct UIElements {
     element_rect_tree: Arena<uiautomation::types::Rect>,
     init_window: Option<UIElement>,
     init_window_runtime_id: Option<Vec<i32>>,
+    monitor_rect: ElementRect,
 }
 
 unsafe impl Send for UIElements {}
@@ -108,6 +109,12 @@ impl UIElements {
             element_rect_tree: Arena::new(),
             element_cache: RTree::new(),
             element_level_map: HashMap::new(),
+            monitor_rect: ElementRect {
+                min_x: 0,
+                min_y: 0,
+                max_x: 0,
+                max_y: 0,
+            },
         }
     }
 
@@ -170,7 +177,9 @@ impl UIElements {
     /**
      * 初始化窗口元素缓存
      */
-    pub fn init_cache(&mut self) -> Result<(), AutomationError> {
+    pub fn init_cache(&mut self, monitor_rect: ElementRect) -> Result<(), AutomationError> {
+        self.monitor_rect = monitor_rect;
+
         let automation_walker = self.automation_walker.clone().unwrap();
         let root_element = self.root_element.clone().unwrap();
 
@@ -180,13 +189,24 @@ impl UIElements {
 
         // 桌面的窗口索引应该是最高，因为其优先级最低
         let mut current_level = ElementLevel::min();
-        let root_element_rect = root_element.get_bounding_rectangle()?;
+        let root_element_rect = uiautomation::types::Rect::new(
+            self.monitor_rect.min_x,
+            self.monitor_rect.min_y,
+            self.monitor_rect.max_x,
+            self.monitor_rect.max_y,
+        );
+
         let root_tree_token = self.element_rect_tree.new_node(root_element_rect);
         let (parent_rtree_rect, parent_tree_token) = self.insert_element_cache(
             root_element.clone(),
             root_element_rect,
             current_level,
-            root_element_rect,
+            uiautomation::types::Rect::new(
+                self.monitor_rect.min_x - self.monitor_rect.min_x,
+                self.monitor_rect.min_y - self.monitor_rect.min_y,
+                self.monitor_rect.max_x - self.monitor_rect.min_x,
+                self.monitor_rect.max_y - self.monitor_rect.min_y,
+            ),
             root_tree_token,
         );
 
@@ -285,6 +305,13 @@ impl UIElements {
         parent_element_rect: uiautomation::types::Rect,
         parent_tree_token: Token,
     ) -> (uiautomation::types::Rect, Token) {
+        let element_rect = uiautomation::types::Rect::new(
+            element_rect.get_left() - self.monitor_rect.min_x,
+            element_rect.get_top() - self.monitor_rect.min_y,
+            element_rect.get_right() - self.monitor_rect.min_x,
+            element_rect.get_bottom() - self.monitor_rect.min_y,
+        );
+
         let element_rect = Self::clip_rect(element_rect, parent_element_rect);
         self.element_cache.insert(
             Self::convert_element_rect_to_rtree_rect(element_rect),
@@ -343,17 +370,20 @@ impl UIElements {
         mouse_y: i32,
     ) -> Result<Vec<ElementRect>, AutomationError> {
         let automation_walker = self.automation_walker.clone().unwrap();
-        let (parent_element, mut current_level, mut parent_rect, mut parent_tree_token) =
-            match self.get_element_from_cache(mouse_x, mouse_y) {
-                Some(element) => element,
-                None => (
-                    self.root_element.clone().unwrap(),
-                    ElementLevel::min(),
-                    uiautomation::types::Rect::new(0, 0, i32::MAX, i32::MAX),
-                    self.element_rect_tree
-                        .new_node(uiautomation::types::Rect::new(0, 0, i32::MAX, i32::MAX)),
-                ),
-            };
+        let (parent_element, mut current_level, mut parent_rect, mut parent_tree_token) = match self
+            .get_element_from_cache(
+                mouse_x - self.monitor_rect.min_x,
+                mouse_y - self.monitor_rect.min_y,
+            ) {
+            Some(element) => element,
+            None => (
+                self.root_element.clone().unwrap(),
+                ElementLevel::min(),
+                uiautomation::types::Rect::new(0, 0, i32::MAX, i32::MAX),
+                self.element_rect_tree
+                    .new_node(uiautomation::types::Rect::new(0, 0, i32::MAX, i32::MAX)),
+            ),
+        };
 
         // 父元素必然命中了 mouse position，所以直接取第一个元素
         let mut queue = VecDeque::with_capacity(128);

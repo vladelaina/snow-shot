@@ -11,7 +11,7 @@ use tauri::{Emitter, ipc::Response};
 use tauri::{Manager, command};
 use tauri_plugin_clipboard;
 
-use crate::screenshot::get_target_monitor;
+use crate::{screenshot::get_target_monitor, os::free_drag::set_window_proc};
 
 #[command]
 pub async fn exit_app(window: tauri::Window, handle: tauri::AppHandle) {
@@ -225,8 +225,8 @@ pub async fn get_current_monitor_info() -> Result<MonitorInfo, ()> {
     let monitor_scale_factor = monitor.scale_factor().unwrap();
 
     let monitor_info = MonitorInfo {
-        mouse_x: mouse_x,
-        mouse_y: mouse_y,
+        mouse_x: mouse_x - monitor_x,
+        mouse_y: mouse_y - monitor_y,
         monitor_x: monitor_x,
         monitor_y: monitor_y,
         monitor_width: monitor_width,
@@ -234,4 +234,11 @@ pub async fn get_current_monitor_info() -> Result<MonitorInfo, ()> {
         monitor_scale_factor: monitor_scale_factor,
     };
     Ok(monitor_info)
+}
+
+#[command]
+pub async fn enable_free_drag(window: tauri::Window) {
+    if let Ok(hwnd) = window.hwnd() {
+        let _ = set_window_proc(hwnd);
+    }
 }
