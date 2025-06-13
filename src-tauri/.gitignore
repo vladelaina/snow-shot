@@ -3,4 +3,5 @@
 /target/
 /gen/schemas
 /lib/onnxruntime.lib
+/lib/*
 /captuers
