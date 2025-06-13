@@ -421,8 +421,8 @@ const SelectLayerCore: React.FC<SelectLayerProps> = ({ actionRef }) => {
         selectLayerCanvasContextRef.current?.clearRect(
             0,
             0,
-            monitorInfoRef.current!.monitor_width,
-            monitorInfoRef.current!.monitor_height,
+            selectLayerCanvasContextRef.current.canvas.width,
+            selectLayerCanvasContextRef.current.canvas.height,
         );
         monitorInfoRef.current = undefined;
         selectWindowElementLoadingRef.current = true;

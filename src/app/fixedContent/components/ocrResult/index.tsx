@@ -172,13 +172,8 @@ export const OcrResult: React.FC<{
                 textContainerElement.appendChild(textWrapElement);
 
                 setTimeout(() => {
-                    let textWidth = textElement.getBoundingClientRect().width;
-                    let textHeight = textElement.getBoundingClientRect().height;
-                    if (isVertical) {
-                        textWidth -= 3;
-                    } else {
-                        textHeight -= 3;
-                    }
+                    const textWidth = textElement.getBoundingClientRect().width;
+                    const textHeight = textElement.getBoundingClientRect().height;
 
                     const scale = Math.min(height / textHeight, width / textWidth);
                     textElement.style.transform = `scale(${scale})`;

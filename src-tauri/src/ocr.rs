@@ -30,7 +30,7 @@ pub async fn ocr_init(
     ocr_instance
         .init_models(
             &resource_path
-                .join("ch_PP-OCRv4_det_infer.onnx")
+                .join("ch_PP-OCRv5_mobile_det.onnx")
                 .display()
                 .to_string(),
             &resource_path
@@ -38,11 +38,7 @@ pub async fn ocr_init(
                 .display()
                 .to_string(),
             &resource_path
-                .join("ch_PP-OCRv4_rec_infer.onnx")
-                .display()
-                .to_string(),
-            &resource_path
-                .join("ppocr_keys_v1.txt")
+                .join("ch_PP-OCRv5_rec_mobile_infer.onnx")
                 .display()
                 .to_string(),
             (num_cpus::get() / 2).max(1),
@@ -57,12 +53,12 @@ pub async fn ocr_detect(
     ocr_instance: tauri::State<'_, Mutex<OcrLiteWrap>>,
     request: tauri::ipc::Request<'_>,
 ) -> Result<String, ()> {
-    let ocr_wrap_instance = match ocr_instance.lock() {
+    let mut ocr_wrap_instance = match ocr_instance.lock() {
         Ok(ocr_instance) => ocr_instance,
         Err(_) => return Err(()),
     };
 
-    let ocr_instance = match &ocr_wrap_instance.ocr_instance {
+    let ocr_instance = match &mut ocr_wrap_instance.ocr_instance {
         Some(ocr_lite_instance) => ocr_lite_instance,
         None => return Err(()),
     };

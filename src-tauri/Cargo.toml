@@ -5,7 +5,6 @@ description = "A Tauri App"
 authors = ["mg-chao <chao@mgchao.top>"]
 repository = "https://github.com/mg-chao/snow-shot"
 edition = "2024"
-rust-version = "1.85.0"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
@@ -43,8 +42,8 @@ uiautomation = "^0.18"
 rtree_rs = "^0.1.4"
 atree = "^0.5.2"
 tauri-plugin-dialog = "^2"
-paddle-ocr-rs = "0.3.4"
-# paddle-ocr-rs = { git = "https://github.com/mg-chao/paddle-ocr-rs.git", branch = "20250515_auto_rollback_angle" }
+paddle-ocr-rs = "0.5.1"
+# paddle-ocr-rs = { git = "https://github.com/mg-chao/paddle-ocr-rs.git", branch = "main" }
 num_cpus = "^1.16.0"
 tauri-plugin-http = "2"
 get-selected-text = "0.1.6"

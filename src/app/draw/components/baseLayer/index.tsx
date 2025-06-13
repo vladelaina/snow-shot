@@ -77,7 +77,7 @@ export type BaseLayerEventActionType = {
     /**
      * 显示器信息准备
      */
-    onMonitorInfoReady: (monitorInfo: MonitorInfo) => void;
+    onMonitorInfoReady: (monitorInfo: MonitorInfo) => Promise<void>;
     /**
      * 截图加载完成
      */
@@ -140,7 +140,7 @@ export const defaultBaseLayerActions: BaseLayerActionType = {
     onCaptureReady: () => Promise.resolve(),
     onCaptureLoad: () => Promise.resolve(),
     onCaptureFinish: () => Promise.resolve(),
-    onMonitorInfoReady: () => {},
+    onMonitorInfoReady: () => Promise.resolve(),
     setEnable: () => {},
     onExecuteScreenshot: () => Promise.resolve(),
     getCanvasApp: () => null,
@@ -461,7 +461,7 @@ export function withBaseLayer<
                 const { monitor_width, monitor_height } = monitorInfo;
 
                 baseLayerCoreActionRef.current?.resizeCanvas(monitor_width, monitor_height);
-                layerActionRef.current?.onMonitorInfoReady(...args);
+                await layerActionRef.current?.onMonitorInfoReady(...args);
             },
             [],
         );

@@ -17,7 +17,7 @@ import { useStateRef } from '@/hooks/useStateRef';
 import { useStateSubscriber } from '@/hooks/useStateSubscriber';
 import { zIndexs } from '@/utils/zIndex';
 import { Button, Spin, theme } from 'antd';
-import { debounce } from 'es-toolkit';
+import { debounce, throttle } from 'es-toolkit';
 import {
     useCallback,
     useContext,
@@ -226,7 +226,7 @@ export const ScrollScreenshot: React.FC<{
         ],
     );
     const captuerDebounce = useMemo(() => {
-        return debounce(captureImage, 64);
+        return throttle(captureImage, 32, { edges: ['trailing'] });
     }, [captureImage]);
 
     const [showTip, setShowTip] = useState(false);
