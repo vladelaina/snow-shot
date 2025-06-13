@@ -4177,8 +4177,7 @@ dependencies = [
 [[package]]
 name = "paddle-ocr-rs"
 version = "0.3.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a663f4c2604e7b1555a088c58cad6df681b71a2bd61b41b620f880ee87dba7dd"
+source = "git+https://github.com/mg-chao/paddle-ocr-rs.git?branch=main#08cacb3881ef3db15c18a5472c3f338521c3d1c1"
 dependencies = [
  "clipper-sys",
  "geo-clipper",
@@ -4187,6 +4186,7 @@ dependencies = [
  "imageproc",
  "ndarray",
  "ort",
+ "ort-sys",
  "serde",
  "serde_json",
  "thiserror 2.0.12",

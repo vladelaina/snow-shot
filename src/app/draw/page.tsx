@@ -129,7 +129,7 @@ const DrawPageCore: React.FC = () => {
     );
     const [getDrawState, , resetDrawState] = useStateSubscriber(DrawStatePublisher, undefined);
     const [, setCaptureLoading] = useStateSubscriber(CaptureLoadingPublisher, undefined);
-    const [, setCaptureEvent] = useStateSubscriber(CaptureEventPublisher, undefined);
+    const [getCaptureEvent, setCaptureEvent] = useStateSubscriber(CaptureEventPublisher, undefined);
     const onCaptureLoad = useCallback<BaseLayerEventActionType['onCaptureLoad']>(
         async (texture: PIXI.Texture, imageBuffer: ImageBuffer, monitorInfo: MonitorInfo) => {
             await Promise.all([
@@ -368,13 +368,24 @@ const DrawPageCore: React.FC = () => {
             imageBufferRef.current = await captureCurrentMonitor(ImageEncoder.WebP);
             await initMonitorInfoPromise;
 
+            // 防止用户提前退出报错
+            if (getCaptureEvent()?.event !== CaptureEvent.onExecuteScreenshot) {
+                return;
+            }
+
             // 因为窗口是空的，所以窗口显示和图片显示先后顺序倒无所谓
             await Promise.all([
                 readyCapture(imageBufferRef.current, monitorInfoRef.current!),
                 layerOnExecuteScreenshotPromise,
             ]);
         },
-        [setScreenshotType, setCaptureEvent, initMonitorInfoAndShowWindow, readyCapture],
+        [
+            setScreenshotType,
+            setCaptureEvent,
+            initMonitorInfoAndShowWindow,
+            getCaptureEvent,
+            readyCapture,
+        ],
     );
 
     const saveCurrentSelectRect = useCallback(() => {
