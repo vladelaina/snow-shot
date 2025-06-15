@@ -530,11 +530,11 @@ const SelectLayerCore: React.FC<SelectLayerProps> = ({ actionRef }) => {
                 currentSelectRect.min_y = Math.max(currentSelectRect.min_y, 0);
                 currentSelectRect.max_x = Math.min(
                     currentSelectRect.max_x,
-                    monitorInfoRef.current!.monitor_width,
+                    monitorInfoRef.current?.monitor_width ?? 0,
                 );
                 currentSelectRect.max_y = Math.min(
                     currentSelectRect.max_y,
-                    monitorInfoRef.current!.monitor_height,
+                    monitorInfoRef.current?.monitor_height ?? 0,
                 );
 
                 if (

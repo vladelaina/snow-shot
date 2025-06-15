@@ -316,6 +316,25 @@ const DrawToolbarCore: React.FC<DrawToolbarProps> = ({
         }, []),
     );
 
+    const showDrawToolbarContainer = useCallback(() => {
+        if (drawToolbarOpacityWrapRef.current) {
+            drawToolbarOpacityWrapRef.current.style.transition = `opacity ${token.motionDurationMid} ${token.motionEaseInOut}`;
+            drawToolbarOpacityWrapRef.current.style.opacity = '1';
+        }
+
+        const subToolContainer =
+            scrollScreenshotToolActionRef.current?.getScrollScreenshotSubToolContainer();
+
+        if (subToolContainer) {
+            subToolContainer.style.transition = `opacity ${token.motionDurationMid} ${token.motionEaseInOut}`;
+            subToolContainer.style.opacity = '1';
+        }
+    }, [token.motionDurationMid, token.motionEaseInOut]);
+    const showDrawToolbarContainerDebounce = useMemo(
+        () => debounce(showDrawToolbarContainer, 512),
+        [showDrawToolbarContainer],
+    );
+
     const onEnableChange = useCallback(
         (enable: boolean) => {
             enableRef.current = enable;
@@ -339,8 +358,13 @@ const DrawToolbarCore: React.FC<DrawToolbarProps> = ({
                 }
                 canHandleScreenshotTypeRef.current = false;
             }
+
+            // 重置下工具栏样式，防止滚动截图时直接结束截图
+            if (enable) {
+                showDrawToolbarContainerDebounce();
+            }
         },
-        [getScreenshotType, onFixed, onToolClick, onTopWindow],
+        [getScreenshotType, onFixed, onToolClick, onTopWindow, showDrawToolbarContainerDebounce],
     );
 
     const setEnable = useCallback(
@@ -363,20 +387,6 @@ const DrawToolbarCore: React.FC<DrawToolbarProps> = ({
 
     const disableNormalScreenshotTool = enableScrollScreenshot;
 
-    const showDrawToolbar = useMemo(() => {
-        return debounce(() => {
-            const subToolContainer =
-                scrollScreenshotToolActionRef.current?.getScrollScreenshotSubToolContainer();
-            if (!drawToolbarOpacityWrapRef.current || !subToolContainer) {
-                return;
-            }
-
-            subToolContainer.style.transition = `opacity ${token.motionDurationMid} ${token.motionEaseInOut}`;
-            subToolContainer.style.opacity = '1';
-            drawToolbarOpacityWrapRef.current.style.transition = subToolContainer.style.transition;
-            drawToolbarOpacityWrapRef.current.style.opacity = subToolContainer.style.opacity;
-        }, 512);
-    }, [token.motionDurationMid, token.motionEaseInOut]);
     useStateSubscriber(
         DrawEventPublisher,
         useCallback(
@@ -394,10 +404,10 @@ const DrawToolbarCore: React.FC<DrawToolbarProps> = ({
                         subToolContainer.style.transition;
                     drawToolbarOpacityWrapRef.current.style.opacity =
                         subToolContainer.style.opacity;
-                    showDrawToolbar();
+                    showDrawToolbarContainerDebounce();
                 }
             },
-            [showDrawToolbar],
+            [showDrawToolbarContainerDebounce],
         ),
     );
 
