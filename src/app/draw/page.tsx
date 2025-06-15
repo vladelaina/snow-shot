@@ -262,8 +262,9 @@ const DrawPageCore: React.FC = () => {
                 (browserScaleFactor === 0 ? monitor_scale_factor : browserScaleFactor);
 
             if (layerContainerRef.current) {
-                const documentWidth = monitor_width / monitor_scale_factor;
-                const documentHeight = monitor_height / monitor_scale_factor;
+                const documentWidth = monitor_width / monitorInfoRef.current!.monitor_scale_factor;
+                const documentHeight =
+                    monitor_height / monitorInfoRef.current!.monitor_scale_factor;
 
                 layerContainerRef.current.style.width = `${documentWidth}px`;
                 layerContainerRef.current.style.height = `${documentHeight}px`;
