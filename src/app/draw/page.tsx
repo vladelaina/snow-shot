@@ -373,11 +373,20 @@ const DrawPageCore: React.FC = () => {
                 return;
             }
 
-            // 因为窗口是空的，所以窗口显示和图片显示先后顺序倒无所谓
-            await Promise.all([
-                readyCapture(imageBufferRef.current, monitorInfoRef.current!),
-                layerOnExecuteScreenshotPromise,
-            ]);
+            try {
+                // 因为窗口是空的，所以窗口显示和图片显示先后顺序倒无所谓
+                await Promise.all([
+                    readyCapture(imageBufferRef.current, monitorInfoRef.current!),
+                    layerOnExecuteScreenshotPromise,
+                ]);
+            } catch (error) {
+                // 防止用户提前退出报错
+                if (getCaptureEvent()?.event !== CaptureEvent.onExecuteScreenshot) {
+                    return;
+                }
+
+                throw error;
+            }
         },
         [
             setScreenshotType,

@@ -231,7 +231,7 @@ const ColorPickerCore: React.FC<{
         useCallback(
             (drawState: DrawState) => {
                 if (colorPickerRef.current) {
-                    // 直接隐藏取色器，方式滚动截图干扰
+                    // 直接隐藏取色器，防止滚动截图干扰
                     if (drawState === DrawState.ScrollScreenshot) {
                         colorPickerRef.current.style.scale = '0';
                     } else {
