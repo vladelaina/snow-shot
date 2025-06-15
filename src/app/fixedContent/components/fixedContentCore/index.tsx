@@ -376,20 +376,20 @@ export const FixedContentCore: React.FC<{
             const zoomWithMouse =
                 getAppSettings()[AppSettingsGroup.FunctionFixedContent].zoomWithMouse;
 
-            const thumbnailSize = 42 * window.devicePixelRatio;
+            const thumbnailSize = Math.floor(42 * window.devicePixelRatio);
 
             if (zoomWithMouse) {
                 // 获取当前鼠标位置
                 const [mouseX, mouseY] = await getMousePosition();
 
                 // 计算缩略图窗口的新位置，使其以鼠标为中心
-                const newX = mouseX - thumbnailSize / 2;
-                const newY = mouseY - thumbnailSize / 2;
+                const newX = Math.round(mouseX - thumbnailSize / 2);
+                const newY = Math.round(mouseY - thumbnailSize / 2);
 
                 // 同时设置窗口大小和位置
                 await Promise.all([
                     appWindow.setSize(new PhysicalSize(thumbnailSize, thumbnailSize)),
-                    appWindow.setPosition(new PhysicalPosition(Math.round(newX), Math.round(newY))),
+                    appWindow.setPosition(new PhysicalPosition(newX, newY)),
                     appWebView.setSize(new PhysicalSize(thumbnailSize, thumbnailSize)),
                 ]);
             } else {
@@ -630,16 +630,14 @@ export const FixedContentCore: React.FC<{
                     const mouseRelativeY = (mouseY - currentPosition.y) / currentSize.height;
 
                     // 计算缩放后窗口的新位置，使鼠标在窗口中的相对位置保持不变
-                    const newX = mouseX - newWidth * mouseRelativeX;
-                    const newY = mouseY - newHeight * mouseRelativeY;
+                    const newX = Math.round(mouseX - newWidth * mouseRelativeX);
+                    const newY = Math.round(mouseY - newHeight * mouseRelativeY);
 
                     // 同时设置窗口大小和位置
                     await Promise.all([
                         appWindow.setSize(new PhysicalSize(newWidth, newHeight)),
                         appWebView.setSize(new PhysicalSize(newWidth, newHeight)),
-                        appWindow.setPosition(
-                            new PhysicalPosition(Math.round(newX), Math.round(newY)),
-                        ),
+                        appWindow.setPosition(new PhysicalPosition(newX, newY)),
                     ]);
                 } catch (error) {
                     console.error('Error during mouse-centered scaling:', error);
