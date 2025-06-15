@@ -35,6 +35,7 @@ import { AppSettingsGroup, AppSettingsPublisher } from '@/app/contextWrap';
 import { AntdContext } from '@/components/globalLayoutExtra';
 import { DrawState } from '@/app/fullScreenDraw/components/drawCore/extra';
 import { DrawStatePublisher } from '@/app/fullScreenDraw/components/drawCore/extra';
+import { MessageType } from 'antd/es/message/interface';
 
 const THUMBNAIL_WIDTH = 128;
 
@@ -108,6 +109,10 @@ export const ScrollScreenshot: React.FC<{
 
     const updateImageUrlList = useCallback(
         async (captureResult: ScrollScreenshotCaptureResult) => {
+            if (captureResult.thumbnail_buffer === undefined) {
+                return;
+            }
+
             const currentScrollSize = await scrollScreenshotGetSize();
 
             const edgePosition = captureResult.edge_position!;
@@ -179,6 +184,7 @@ export const ScrollScreenshot: React.FC<{
         ],
     );
 
+    const lastCaptureMissHideRef = useRef<MessageType | undefined>(undefined);
     const captureImage = useCallback(
         async (scrollImageList: ScrollImageList) => {
             setDrawEvent({
@@ -209,7 +215,17 @@ export const ScrollScreenshot: React.FC<{
 
             setLoading(false);
 
-            if (captureResult.edge_position === undefined) {
+            if (captureResult.edge_position === 0 && captureResult.thumbnail_buffer === undefined) {
+                return;
+            } else if (captureResult.edge_position === undefined) {
+                if (lastCaptureMissHideRef.current) {
+                    try {
+                        lastCaptureMissHideRef.current();
+                    } catch {}
+                }
+                lastCaptureMissHideRef.current = message.warning(
+                    intl.formatMessage({ id: 'draw.scrollScreenshot.captureMiss' }),
+                );
                 return;
             }
 
@@ -255,8 +271,8 @@ export const ScrollScreenshot: React.FC<{
                     scrollSettings.imageFeatureThreshold,
                     scrollSettings.imageFeatureDescriptionLength,
                     scrollDirectionRef.current === ScrollDirection.Horizontal
-                        ? Math.ceil((rect.max_x - rect.min_x) / 1.5)
-                        : Math.ceil((rect.max_y - rect.min_y) / 1.5),
+                        ? Math.ceil((rect.max_x - rect.min_x) / 1.25)
+                        : Math.ceil((rect.max_y - rect.min_y) / 1.25),
                 );
             } catch (error) {
                 console.error(error);

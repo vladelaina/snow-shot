@@ -81,8 +81,12 @@ pub async fn scroll_screenshot_capture(
     //     .save(&format!("captuers/img_{}.png", timestamp))
     //     .unwrap();
 
-    let handle_result = scroll_screenshot_service
+    let (handle_result, is_origin) = scroll_screenshot_service
         .handle_image(image::DynamicImage::ImageRgba8(image), scroll_image_list);
+
+    if is_origin {
+        return Ok(Response::new(vec![1])); // 特殊标记，表示是未变化
+    }
 
     let handle_result = match handle_result {
         Some(result) => result,
@@ -110,8 +114,8 @@ pub async fn scroll_screenshot_capture(
     };
 
     let thumbnail = crop_image.resize(
-        (image_width as f32 * scale) as u32,
-        (image_height as f32 * scale) as u32,
+        ((image_width as f32 * scale) as u32).max(1), // 防止图片某一边为 0
+        ((image_height as f32 * scale) as u32).max(1),
         FilterType::Nearest,
     );
 
@@ -236,8 +240,6 @@ pub async fn scroll_screenshot_clear(
 pub async fn scroll_screenshot_get_image_data(
     scroll_screenshot_service: tauri::State<'_, Mutex<ScrollScreenshotService>>,
 ) -> Result<Response, ()> {
-    println!("scroll_screenshot_get_image_data1");
-
     let mut scroll_screenshot_service = match scroll_screenshot_service.lock() {
         Ok(service) => service,
         Err(_) => return Err(()),

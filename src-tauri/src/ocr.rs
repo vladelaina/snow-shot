@@ -73,11 +73,19 @@ pub async fn ocr_detect(
         Err(_) => return Err(()),
     };
 
+    let scale_factor: f32 = match request.headers().get("x-scale-factor") {
+        Some(header) => match header.to_str() {
+            Ok(scale_factor) => scale_factor.parse::<f32>().unwrap(),
+            Err(_) => return Err(()),
+        },
+        None => return Err(()),
+    };
+
     let image_buffer = image.to_rgb8();
     let ocr_result = ocr_instance.detect_angle_rollback(
         &image_buffer,
         50,
-        image.height().max(image.width()),
+        (image.height().max(image.width()) as f32 / scale_factor) as u32,
         0.5,
         0.3,
         1.6,

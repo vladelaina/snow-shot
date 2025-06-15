@@ -84,6 +84,7 @@ export const draw = {
     'draw.scrollScreenshot.limitTip.warning': '所选区域过小，建议最小边长大于 300px',
     'draw.scrollScreenshot.initError': '初始化失败，请向开发者反馈 [1]',
     'draw.scrollScreenshot.captureError': '滚动截图失败，请向开发者反馈 [2]',
+    'draw.scrollScreenshot.captureMiss': '滚动过快，请滚动到已截取的边缘再次尝试',
     'draw.scrollScreenshot.changeDirection': '切换滚动方向',
     'draw.ocrDetect.translate': '翻译',
     'draw.ocrDetect.translate.autoReplace': '自动替换识别结果',

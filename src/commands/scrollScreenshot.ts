@@ -40,7 +40,7 @@ export const scrollScreenshotInit = async (
 };
 
 export type ScrollScreenshotCaptureResult = {
-    thumbnail_buffer: ArrayBuffer;
+    thumbnail_buffer: ArrayBuffer | undefined;
     edge_position: number | undefined;
 };
 
@@ -74,6 +74,13 @@ export const scrollScreenshotCapture = async (
         return {
             thumbnail_buffer: result,
             edge_position: undefined,
+        };
+    }
+
+    if (result.byteLength === 1) {
+        return {
+            thumbnail_buffer: undefined,
+            edge_position: 0,
         };
     }
 

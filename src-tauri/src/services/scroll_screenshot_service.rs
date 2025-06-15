@@ -7,6 +7,7 @@ use image::{DynamicImage, GenericImageView, GrayImage};
 use imageproc::corners;
 use rayon::prelude::*;
 use serde::{Deserialize, Serialize};
+use std::sync::atomic::{AtomicUsize, Ordering};
 
 #[derive(PartialEq, Serialize, Deserialize, Debug, Clone, Copy)]
 pub enum ScrollDirection {
@@ -117,6 +118,8 @@ pub struct ScrollScreenshotService {
     pub image_dst_height: u32,
     /// 滚动方向的图片尺寸
     pub image_scroll_side_size: i32,
+    /// 是否启用 fast12 算法进行角点检测
+    pub enable_corner_fast12: Option<bool>,
 }
 
 impl ScrollScreenshotService {
@@ -212,6 +215,7 @@ impl ScrollScreenshotService {
             image_scroll_side_size: 0,
             top_image_ann_index: ScrollIndex::new(0),
             bottom_image_ann_index: ScrollIndex::new(0),
+            enable_corner_fast12: None,
         }
     }
 
@@ -275,6 +279,8 @@ impl ScrollScreenshotService {
         } else {
             self.image_width as i32
         };
+
+        self.enable_corner_fast12 = None;
     }
 
     fn get_descriptors(
@@ -381,8 +387,27 @@ impl ScrollScreenshotService {
             .collect()
     }
 
-    fn get_corners(&self, image: &image::GrayImage) -> Vec<ScrollOffset> {
-        corners::corners_fast12(image, self.corner_threshold)
+    fn get_corners(&mut self, image: &image::GrayImage) -> Vec<ScrollOffset> {
+        let corners;
+        if self.enable_corner_fast12.is_none() {
+            let fast12_corners = corners::corners_fast12(image, self.corner_threshold);
+
+            if fast12_corners.len() > 830 {
+                corners = fast12_corners;
+                self.enable_corner_fast12 = Some(true);
+            } else {
+                corners = corners::corners_fast9(image, self.corner_threshold);
+                self.enable_corner_fast12 = Some(false);
+            }
+        } else {
+            if self.enable_corner_fast12.unwrap() {
+                corners = corners::corners_fast12(image, self.corner_threshold);
+            } else {
+                corners = corners::corners_fast9(image, self.corner_threshold);
+            }
+        }
+
+        corners
             .iter()
             .map(|corner| ScrollOffset {
                 x: corner.x as i32,
@@ -544,7 +569,7 @@ impl ScrollScreenshotService {
         image_descriptors: &[Vec<f32>],
         image_corners: &[ScrollOffset],
         scroll_image_list: ScrollImageList,
-    ) -> Option<(&'a ScrollIndex, usize, usize)> {
+    ) -> (Option<(&'a ScrollIndex, usize, usize)>, bool) {
         let image_scroll_side_size = if self.current_direction == ScrollDirection::Vertical {
             self.image_height as i32
         } else {
@@ -555,6 +580,8 @@ impl ScrollScreenshotService {
         } else {
             (self.top_image_size + 1) + index.position
         };
+
+        let min_diff_count = AtomicUsize::new(0);
 
         let offsets: Vec<(i32, &'a ScrollIndex, usize, usize)> = image_descriptors
             .par_iter()
@@ -589,10 +616,12 @@ impl ScrollScreenshotService {
 
                 // 保留 0 的偏移防止，出现画面不变，记录意料外的截图
                 if min_diff < 0 && min_diff < diff {
+                    min_diff_count.fetch_add(1, Ordering::Relaxed);
                     return None;
                 }
 
                 if min_diff > 0 && min_diff > diff {
+                    min_diff_count.fetch_add(1, Ordering::Relaxed);
                     return None;
                 }
 
@@ -604,8 +633,12 @@ impl ScrollScreenshotService {
             })
             .collect();
 
+        if min_diff_count.load(Ordering::Relaxed) > (image_corners.len() as f32 * 0.5) as usize {
+            return (None, true);
+        }
+
         if offsets.is_empty() {
-            return None;
+            return (None, false);
         }
 
         // 寻找频率最高的偏移作为主要偏移模式
@@ -648,37 +681,40 @@ impl ScrollScreenshotService {
 
         let max_offset = match max_offset {
             Some(offset) => offset,
-            None => return None,
+            None => return (None, false),
         };
 
         if max_count < (image_corners.len() as i32 / 10) {
-            return None;
+            return (None, false);
         }
 
         if max_count < second_max_count * 2 {
-            return None;
+            return (None, false);
         }
 
         let (dominant_scroll_index, dominant_origin_position_index, dominant_new_position_index) =
             max_offset;
 
-        Some((
-            dominant_scroll_index,
-            *dominant_origin_position_index,
-            *dominant_new_position_index,
-        ))
+        (
+            Some((
+                dominant_scroll_index,
+                *dominant_origin_position_index,
+                *dominant_new_position_index,
+            )),
+            false,
+        )
     }
 
     pub fn handle_image(
         &mut self,
         image: DynamicImage,
         scroll_image_list: ScrollImageList,
-    ) -> Option<(i32, Option<ScrollImageList>)> {
+    ) -> (Option<(i32, Option<ScrollImageList>)>, bool) {
         let image_width = image.width();
         let image_height = image.height();
 
         if image_width != self.image_width || image_height != self.image_height {
-            return None;
+            return (None, false);
         }
 
         let gray_image = self.get_gray_image(&image);
@@ -687,7 +723,7 @@ impl ScrollScreenshotService {
         let image_corners = self.get_corners(&gray_image);
 
         if image_corners.is_empty() {
-            return None;
+            return (None, false);
         }
 
         let image_descriptors = self.get_descriptors(&gray_image, &image_corners);
@@ -723,45 +759,84 @@ impl ScrollScreenshotService {
 
             self.top_image_ann_index = new_top_image_ann_index;
 
-            return Some(bottom_image);
+            return (Some(bottom_image), false);
         }
 
-        let target_index = if scroll_image_list == ScrollImageList::Top {
+        // 优先从指定方向遍历，如果没有则再从另一个方向遍历
+        let first_index = if scroll_image_list == ScrollImageList::Top {
             &self.top_image_ann_index
         } else {
             &self.bottom_image_ann_index
         };
 
         // 从边缘遍历
-        let offsets = self.get_offsets(
-            target_index,
+        let mut offsets;
+        let (first_offsets, is_origin) = self.get_offsets(
+            first_index,
             &image_descriptors,
             &image_corners,
             scroll_image_list,
         );
 
+        if is_origin {
+            return (None, true);
+        }
+
+        offsets = first_offsets;
+
+        // 如果第一个方向没有找到匹配，尝试另一个方向
         if offsets.is_none() {
-            return None;
+            let second_index = if scroll_image_list == ScrollImageList::Top {
+                &self.bottom_image_ann_index
+            } else {
+                &self.top_image_ann_index
+            };
+
+            let second_scroll_image_list = if scroll_image_list == ScrollImageList::Top {
+                ScrollImageList::Bottom
+            } else {
+                ScrollImageList::Top
+            };
+
+            let (second_offsets, is_origin) = self.get_offsets(
+                second_index,
+                &image_descriptors,
+                &image_corners,
+                second_scroll_image_list,
+            );
+
+            if is_origin {
+                return (None, true);
+            }
+
+            offsets = second_offsets;
+        }
+
+        if offsets.is_none() {
+            return (None, false);
         }
 
         let (dominant_scroll_index, dominant_origin_position_index, dominant_new_position_index) =
             match offsets {
                 Some(offsets) => offsets,
-                None => return None,
+                None => return (None, false),
             };
 
         let origin_position = dominant_scroll_index.corners[dominant_origin_position_index];
         let new_position = image_corners[dominant_new_position_index];
 
         // 将偏移的图片推到列表中
-        Some(self.push_image(
-            image,
-            gray_image,
-            image_corners,
-            dominant_scroll_index.position,
-            origin_position,
-            new_position,
-        ))
+        (
+            Some(self.push_image(
+                image,
+                gray_image,
+                image_corners,
+                dominant_scroll_index.position,
+                origin_position,
+                new_position,
+            )),
+            false,
+        )
     }
 
     pub fn export(&mut self) -> Option<image::DynamicImage> {

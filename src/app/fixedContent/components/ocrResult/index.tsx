@@ -200,7 +200,10 @@ export const OcrResult: React.FC<{
             });
 
             if (imageBlob) {
-                const ocrResult = await ocrDetect(await imageBlob.arrayBuffer());
+                const ocrResult = await ocrDetect(
+                    await imageBlob.arrayBuffer(),
+                    monitorInfo.monitor_scale_factor,
+                );
                 selectRectRef.current = selectRect;
                 monitorScaleFactorRef.current = monitorInfo.monitor_scale_factor;
                 updateOcrTextElements(ocrResult);
@@ -237,7 +240,10 @@ export const OcrResult: React.FC<{
             monitorScaleFactorRef.current = params.monitorScaleFactor;
 
             if (imageBlob) {
-                const ocrResult = await ocrDetect(await imageBlob.arrayBuffer());
+                const ocrResult = await ocrDetect(
+                    await imageBlob.arrayBuffer(),
+                    monitorScaleFactorRef.current,
+                );
                 updateOcrTextElements(ocrResult);
                 onOcrDetect?.(ocrResult);
             }
