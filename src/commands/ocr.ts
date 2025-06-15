@@ -15,8 +15,15 @@ export interface OcrDetectResult {
     text_blocks: OcrDetectResultTextBlock[];
 }
 
-export const ocrDetect = async (data: ArrayBuffer | Uint8Array): Promise<OcrDetectResult> => {
-    const result = await invoke<string>('ocr_detect', data);
+export const ocrDetect = async (
+    data: ArrayBuffer | Uint8Array,
+    scaleFactor: number,
+): Promise<OcrDetectResult> => {
+    const result = await invoke<string>('ocr_detect', data, {
+        headers: {
+            'x-scale-factor': scaleFactor.toFixed(3),
+        },
+    });
     return JSON.parse(result) as OcrDetectResult;
 };
 
@@ -27,4 +34,3 @@ export const ocrInit = async (): Promise<void> => {
 export const ocrRelease = async (): Promise<void> => {
     await invoke<void>('ocr_release');
 };
-
