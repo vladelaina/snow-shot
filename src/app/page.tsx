@@ -418,6 +418,9 @@ export default function Home() {
                 let speicalKeys: string[] | undefined;
                 switch (group) {
                     case AppFunctionGroup.Screenshot:
+                    case AppFunctionGroup.Translation:
+                    case AppFunctionGroup.Chat:
+                    case AppFunctionGroup.Other:
                         speicalKeys = ['PrintScreen'];
                         break;
                 }
@@ -478,7 +481,7 @@ export default function Home() {
                                                 <KeyButton
                                                     speicalKeys={speicalKeys}
                                                     title={config.title}
-                                                    maxWidth={128}
+                                                    maxWidth={200}
                                                     keyValue={currentShortcutKey ?? ''}
                                                     buttonProps={{
                                                         variant: 'dashed',

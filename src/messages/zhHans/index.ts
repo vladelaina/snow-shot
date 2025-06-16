@@ -5,6 +5,7 @@ import { draw } from './draw';
 import { tools } from './tools';
 import { common } from './common';
 import { about } from './about';
+import { fullScreenDraw } from './fullScreenDraw';
 
 export const zhHans = {
     ...menu,
@@ -13,5 +14,6 @@ export const zhHans = {
     ...draw,
     ...tools,
     ...common,
+    ...fullScreenDraw,
     ...about,
 };

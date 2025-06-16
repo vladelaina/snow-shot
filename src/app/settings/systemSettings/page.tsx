@@ -1,7 +1,19 @@
 'use client';
 
 import { GroupTitle } from '@/components/groupTitle';
-import { Button, Col, Divider, Form, Row, Space, Spin, Switch, theme, Typography } from 'antd';
+import {
+    Button,
+    Col,
+    Divider,
+    Form,
+    Row,
+    Slider,
+    Space,
+    Spin,
+    Switch,
+    theme,
+    Typography,
+} from 'antd';
 import {
     AppSettingsActionContext,
     AppSettingsData,
@@ -395,7 +407,8 @@ export default function SystemSettings() {
                     }}
                     submitter={false}
                 >
-                    <ProFormSlider
+                    <ProForm.Item
+                        key="maxTokens"
                         label={
                             <IconLabel
                                 label={<FormattedMessage id="settings.chatSettings.maxTokens" />}
@@ -405,17 +418,21 @@ export default function SystemSettings() {
                             />
                         }
                         name="maxTokens"
-                        min={512}
-                        max={8192}
-                        step={128}
-                        marks={{
-                            512: '512',
-                            4096: '4096',
-                            8192: '8192',
-                        }}
-                    />
+                    >
+                        <Slider
+                            min={512}
+                            max={8192}
+                            step={128}
+                            marks={{
+                                512: '512',
+                                4096: '4096',
+                                8192: '8192',
+                            }}
+                        />
+                    </ProForm.Item>
 
                     <ProFormSlider
+                        key="temperature"
                         label={
                             <IconLabel
                                 label={<FormattedMessage id="settings.chatSettings.temperature" />}
@@ -436,6 +453,7 @@ export default function SystemSettings() {
                     />
 
                     <ProFormSlider
+                        key="thinkingBudgetTokens"
                         label={
                             <IconLabel
                                 label={
@@ -459,7 +477,9 @@ export default function SystemSettings() {
                 </ProForm>
             </Spin>
 
-            <GroupTitle id="dataFileSettings">
+            <Divider />
+
+            <GroupTitle id="dataFile">
                 <FormattedMessage id="settings.systemSettings.dataFile" />
             </GroupTitle>
 

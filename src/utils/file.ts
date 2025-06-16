@@ -3,8 +3,28 @@ import * as dialog from '@tauri-apps/plugin-dialog';
 import { AppSettingsData, AppSettingsGroup } from '@/app/contextWrap';
 import path from 'path';
 
-export const generateImageFileName = () => {
-    return `SnowShot_${dayjs().format('YYYY-MM-DD_HH-mm-ss')}`;
+const parseTemplate = (template: string): string => {
+    const regex = /\{([^}]+)\}/g;
+
+    return template.replace(regex, (match, content) => {
+        if (content.match(/^[YMDHmsAa\-_:\s\/\.]+$/)) {
+            return dayjs().format(content);
+        }
+        return match;
+    });
+};
+
+/**
+ * 生成图片文件名
+ * @param format 格式模板，例如 "SnowShot_{YYYY-MM-DD_HH-mm-ss}"
+ * @returns 生成的文件名
+ */
+export const generateImageFileName = (format: string) => {
+    if (!format) {
+        return '';
+    }
+
+    return parseTemplate(format);
 };
 
 export enum ImageFormat {
@@ -60,22 +80,43 @@ export const getImageFormat = (filePath: string) => {
 };
 
 export const getImagePathFromSettings = (
-    screenshotSettings: AppSettingsData[AppSettingsGroup.FunctionScreenshot] | undefined,
+    appSettings: AppSettingsData | undefined,
+    method: 'auto' | 'fast',
 ): ImagePath | undefined => {
-    if (!screenshotSettings || !screenshotSettings.enhanceSaveFile) {
+    if (!appSettings) {
         return undefined;
+    }
+
+    const screenshotSettings = appSettings[AppSettingsGroup.FunctionScreenshot];
+    const outputSettings = appSettings[AppSettingsGroup.FunctionOutput];
+
+    if (!screenshotSettings || !outputSettings || !screenshotSettings.enhanceSaveFile) {
+        return undefined;
+    }
+
+    let fileName = '';
+    switch (method) {
+        case 'auto':
+            fileName = generateImageFileName(outputSettings.autoSaveFileNameFormat);
+            break;
+        case 'fast':
+            fileName = generateImageFileName(outputSettings.fastSaveFileNameFormat);
+            break;
     }
 
     return {
         filePath: joinImagePath(
-            path.join(screenshotSettings.saveFileDirectory, generateImageFileName()),
+            path.join(screenshotSettings.saveFileDirectory, fileName),
             screenshotSettings.saveFileFormat,
         ),
         imageFormat: screenshotSettings.saveFileFormat,
     };
 };
 
-export const showImageDialog = async (prevFormat?: ImageFormat): Promise<ImagePath | undefined> => {
+export const showImageDialog = async (
+    appSettings: AppSettingsData,
+    prevFormat?: ImageFormat,
+): Promise<ImagePath | undefined> => {
     let firstFilter;
     switch (prevFormat) {
         case ImageFormat.JPEG:
@@ -135,7 +176,9 @@ export const showImageDialog = async (prevFormat?: ImageFormat): Promise<ImagePa
                 extensions: ['jxl'],
             },
         ],
-        defaultPath: generateImageFileName(),
+        defaultPath: generateImageFileName(
+            appSettings[AppSettingsGroup.FunctionOutput].manualSaveFileNameFormat,
+        ),
         canCreateDirectories: true,
     });
 

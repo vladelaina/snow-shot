@@ -21,7 +21,7 @@ import { CloseOutlined } from '@ant-design/icons';
 import { getCurrentWindow } from '@tauri-apps/api/window';
 import { useIntl } from 'react-intl';
 import { AppSettingsData, AppSettingsGroup, AppSettingsPublisher } from '@/app/contextWrap';
-import { fullScreenDrawChangeMouseThrough } from '@/functions/fullScreenDraw';
+import { fullScreenDrawChangeMouseThrough, closeFullScreenDraw } from '@/functions/fullScreenDraw';
 
 export type FullScreenDrawToolbarActionType = {
     setTool: (drawState: DrawState) => void;
@@ -38,6 +38,8 @@ export const FullScreenDrawToolbar: React.FC<{
 
     const onToolClick = useCallback(
         (drawState: DrawState) => {
+            console.log('onToolClick', drawState);
+
             const drawCoreAction = getDrawCoreAction();
 
             const prev = getDrawState();
@@ -134,11 +136,16 @@ export const FullScreenDrawToolbar: React.FC<{
     const [mouseThroughHotkey, setMouseThroughHotkey] = useState('');
     useStateSubscriber(
         AppSettingsPublisher,
-        useCallback((appSettings: AppSettingsData) => {
-            setMouseThroughHotkey(
-                appSettings[AppSettingsGroup.AppFunction].fullScreenDraw.shortcutKey,
-            );
-        }, []),
+        useCallback(
+            (appSettings: AppSettingsData) => {
+                setMouseThroughHotkey(
+                    appSettings[AppSettingsGroup.AppFunction].fullScreenDraw.shortcutKey,
+                );
+
+                onToolClick(appSettings[AppSettingsGroup.FunctionFullScreenDraw].defaultTool);
+            },
+            [onToolClick],
+        ),
     );
 
     const mouseThroughButtonTitle = useMemo(() => {
@@ -321,6 +328,7 @@ export const FullScreenDrawToolbar: React.FC<{
                         drawState={DrawState.Cancel}
                         onClick={() => {
                             getCurrentWindow().close();
+                            closeFullScreenDraw();
                         }}
                     />
 
@@ -341,7 +349,6 @@ export const FullScreenDrawToolbar: React.FC<{
                         }}
                         onClick={() => {
                             fullScreenDrawChangeMouseThrough();
-                            onToolClick(DrawState.MouseThrough);
                         }}
                     />
                 </Flex>
@@ -364,7 +371,7 @@ export const FullScreenDrawToolbar: React.FC<{
 
                 .full-screen-draw-toolbar {
                     pointer-events: auto;
-                    margin-top: ${token.margin}px;
+                    margin-top: ${token.marginLG}px;
                 }
 
                 .full-screen-draw-toolbar {

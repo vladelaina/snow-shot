@@ -37,6 +37,7 @@ import { defaultTranslationPrompt } from './tools/translation/extra';
 import { ColorPickerShowMode } from './draw/components/colorPicker';
 import { ImageFormat } from '@/utils/file';
 import { appConfigDir, join as joinPath } from '@tauri-apps/api/path';
+import { DrawState } from './fullScreenDraw/components/drawCore/extra';
 
 export enum AppSettingsGroup {
     Common = 'common',
@@ -55,6 +56,8 @@ export enum AppSettingsGroup {
     FunctionChat = 'functionChat',
     FunctionTranslation = 'functionTranslation',
     FunctionScreenshot = 'functionScreenshot',
+    FunctionFullScreenDraw = 'functionFullScreenDraw',
+    FunctionOutput = 'functionOutput',
     FunctionFixedContent = 'functionFixedContent',
 }
 
@@ -155,9 +158,21 @@ export type AppSettingsData = {
         /** 保存文件格式 */
         saveFileFormat: ImageFormat;
     };
+    [AppSettingsGroup.FunctionOutput]: {
+        /** 手动保存文件名格式 */
+        manualSaveFileNameFormat: string;
+        /** 自动保存文件名格式 */
+        autoSaveFileNameFormat: string;
+        /** 快速保存文件名格式 */
+        fastSaveFileNameFormat: string;
+    };
     [AppSettingsGroup.FunctionFixedContent]: {
         /** 以鼠标为中心缩放 */
         zoomWithMouse: boolean;
+    };
+    [AppSettingsGroup.FunctionFullScreenDraw]: {
+        /** 默认工具 */
+        defaultTool: DrawState;
     };
     [AppSettingsGroup.SystemScrollScreenshot]: {
         minSide: number;
@@ -249,6 +264,14 @@ export const defaultAppSettingsData: AppSettingsData = {
     },
     [AppSettingsGroup.FunctionFixedContent]: {
         zoomWithMouse: false,
+    },
+    [AppSettingsGroup.FunctionOutput]: {
+        manualSaveFileNameFormat: `SnowShot_{YYYY-MM-DD_HH-mm-ss}`,
+        autoSaveFileNameFormat: `SnowShot_{YYYY-MM-DD_HH-mm-ss}`,
+        fastSaveFileNameFormat: `SnowShot_{YYYY-MM-DD_HH-mm-ss}`,
+    },
+    [AppSettingsGroup.FunctionFullScreenDraw]: {
+        defaultTool: DrawState.Select,
     },
 };
 
@@ -843,6 +866,38 @@ const ContextWrapCore: React.FC<{ children: React.ReactNode }> = ({ children }) 
                         typeof newSettings?.saveFileFormat === 'string'
                             ? newSettings.saveFileFormat
                             : (prevSettings?.saveFileFormat ?? ImageFormat.PNG),
+                };
+            } else if (group === AppSettingsGroup.FunctionOutput) {
+                newSettings = newSettings as AppSettingsData[typeof group];
+                const prevSettings = appSettingsRef.current[group] as
+                    | AppSettingsData[typeof group]
+                    | undefined;
+
+                settings = {
+                    manualSaveFileNameFormat:
+                        typeof newSettings?.manualSaveFileNameFormat === 'string'
+                            ? newSettings.manualSaveFileNameFormat
+                            : (prevSettings?.manualSaveFileNameFormat ?? ''),
+                    autoSaveFileNameFormat:
+                        typeof newSettings?.autoSaveFileNameFormat === 'string'
+                            ? newSettings.autoSaveFileNameFormat
+                            : (prevSettings?.autoSaveFileNameFormat ?? ''),
+                    fastSaveFileNameFormat:
+                        typeof newSettings?.fastSaveFileNameFormat === 'string'
+                            ? newSettings.fastSaveFileNameFormat
+                            : (prevSettings?.fastSaveFileNameFormat ?? ''),
+                };
+            } else if (group === AppSettingsGroup.FunctionFullScreenDraw) {
+                newSettings = newSettings as AppSettingsData[typeof group];
+                const prevSettings = appSettingsRef.current[group] as
+                    | AppSettingsData[typeof group]
+                    | undefined;
+
+                settings = {
+                    defaultTool:
+                        typeof newSettings?.defaultTool === 'number'
+                            ? newSettings.defaultTool
+                            : (prevSettings?.defaultTool ?? DrawState.Select),
                 };
             } else if (group === AppSettingsGroup.SystemScrollScreenshot) {
                 newSettings = newSettings as AppSettingsData[typeof group];

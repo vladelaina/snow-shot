@@ -8,6 +8,7 @@ import { FixedContentActionType } from '../fixedContent/components/fixedContentC
 import { OcrBlocksActionType } from './components/ocrBlocks';
 import { showImageDialog, ImageFormat, ImagePath } from '@/utils/file';
 import { MonitorInfo } from '@/commands/core';
+import { AppSettingsData } from '../contextWrap';
 
 export const getCanvas = async (
     selectRect: ElementRect,
@@ -40,6 +41,7 @@ export const getCanvas = async (
  * 保存截图到指定文件
  */
 export const saveToFile = async (
+    appSettings: AppSettingsData,
     selectLayerAction: SelectLayerActionType,
     drawLayerAction: DrawLayerActionType,
     drawCacheLayerAction: DrawCacheLayerActionType,
@@ -54,7 +56,7 @@ export const saveToFile = async (
 
     const canvasPromise = getCanvas(selectRect, drawLayerAction, drawCacheLayerAction);
 
-    const imagePath = fastSavePath ?? (await showImageDialog(prevImageFormat));
+    const imagePath = fastSavePath ?? (await showImageDialog(appSettings, prevImageFormat));
 
     if (!imagePath) {
         return;

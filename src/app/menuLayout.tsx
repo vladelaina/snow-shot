@@ -455,6 +455,13 @@ const MenuLayoutCore: React.FC<{ children: React.ReactNode }> = ({ children }) =
                                     id: 'settings.functionSettings.screenshotSettings',
                                 }),
                             },
+
+                            {
+                                key: 'fixedContentSettings',
+                                label: intl.formatMessage({
+                                    id: 'settings.functionSettings.fixedContentSettings',
+                                }),
+                            },
                             {
                                 key: 'translationSettings',
                                 label: intl.formatMessage({
@@ -465,6 +472,12 @@ const MenuLayoutCore: React.FC<{ children: React.ReactNode }> = ({ children }) =
                                 key: 'functionSettings',
                                 label: intl.formatMessage({
                                     id: 'settings.functionSettings.chatSettings',
+                                }),
+                            },
+                            {
+                                key: 'outputSettings',
+                                label: intl.formatMessage({
+                                    id: 'settings.functionSettings.outputSettings',
                                 }),
                             },
                         ],
@@ -506,10 +519,6 @@ const MenuLayoutCore: React.FC<{ children: React.ReactNode }> = ({ children }) =
                                 label: intl.formatMessage({ id: 'settings.commonSettings' }),
                             },
                             {
-                                key: 'renderSettings',
-                                label: intl.formatMessage({ id: 'settings.renderSettings' }),
-                            },
-                            {
                                 key: 'networkSettings',
                                 label: intl.formatMessage({
                                     id: 'settings.systemSettings.networkSettings',
@@ -524,6 +533,12 @@ const MenuLayoutCore: React.FC<{ children: React.ReactNode }> = ({ children }) =
                             {
                                 key: 'chatSettings',
                                 label: intl.formatMessage({ id: 'settings.chatSettings' }),
+                            },
+                            {
+                                key: 'dataFile',
+                                label: intl.formatMessage({
+                                    id: 'settings.systemSettings.dataFile',
+                                }),
                             },
                         ],
                     },
@@ -636,7 +651,10 @@ export const MenuLayout = ({ children }: { children: React.ReactNode }) => {
     const pathname = usePathname();
     const noLayout = useMemo(
         () =>
-            pathname === '/draw' || pathname === '/fixedContent' || pathname === '/fullScreenDraw',
+            pathname === '/draw' ||
+            pathname === '/fixedContent' ||
+            pathname === '/fullScreenDraw' ||
+            pathname === '/fullScreenDraw/switchMouseThrough',
         [pathname],
     );
     const mainWindow = !noLayout;
