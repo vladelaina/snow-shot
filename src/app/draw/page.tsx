@@ -418,14 +418,8 @@ const DrawPageCore: React.FC = () => {
 
             if (getDrawState() === DrawState.ScrollScreenshot) {
                 const imagePath =
-                    getImagePathFromSettings(
-                        fastSave
-                            ? getAppSettings()[AppSettingsGroup.FunctionScreenshot]
-                            : undefined,
-                    ) ??
-                    (await showImageDialog(
-                        getAppSettings()[AppSettingsGroup.Cache].prevImageFormat,
-                    ));
+                    getImagePathFromSettings(fastSave ? getAppSettings() : undefined, 'fast') ??
+                    (await showImageDialog(getAppSettings()));
 
                 if (!imagePath) {
                     return;
@@ -461,6 +455,7 @@ const DrawPageCore: React.FC = () => {
             }
 
             saveToFile(
+                getAppSettings(),
                 selectLayerActionRef.current,
                 drawLayerActionRef.current,
                 drawCacheLayerActionRef.current,
@@ -482,11 +477,7 @@ const DrawPageCore: React.FC = () => {
                     finishCapture();
                 },
                 getAppSettings()[AppSettingsGroup.Cache].prevImageFormat,
-                fastSave
-                    ? getImagePathFromSettings(
-                          getAppSettings()[AppSettingsGroup.FunctionScreenshot],
-                      )
-                    : undefined,
+                fastSave ? getImagePathFromSettings(getAppSettings(), 'fast') : undefined,
             );
         },
         [finishCapture, getAppSettings, getDrawState, saveCurrentSelectRect, updateAppSettings],
@@ -565,9 +556,7 @@ const DrawPageCore: React.FC = () => {
             getAppSettings()[AppSettingsGroup.FunctionScreenshot].autoSaveOnCopy;
 
         if (getDrawState() === DrawState.ScrollScreenshot) {
-            const filePath = getImagePathFromSettings(
-                getAppSettings()[AppSettingsGroup.FunctionScreenshot],
-            )?.filePath;
+            const filePath = getImagePathFromSettings(getAppSettings(), 'auto')?.filePath;
             Promise.all([
                 scrollScreenshotSaveToClipboard(),
                 enableAutoSave && filePath
@@ -613,6 +602,7 @@ const DrawPageCore: React.FC = () => {
 
         if (enableAutoSave) {
             await saveToFile(
+                getAppSettings(),
                 selectLayerActionRef.current,
                 drawLayerActionRef.current,
                 drawCacheLayerActionRef.current,
@@ -620,7 +610,7 @@ const DrawPageCore: React.FC = () => {
                     finishCapture();
                 },
                 undefined,
-                getImagePathFromSettings(getAppSettings()[AppSettingsGroup.FunctionScreenshot]),
+                getImagePathFromSettings(getAppSettings(), 'auto'),
             );
         }
     }, [finishCapture, getAppSettings, getDrawState, saveCurrentSelectRect]);

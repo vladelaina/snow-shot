@@ -67,15 +67,18 @@ const EventListenerCore: React.FC<{ children: React.ReactNode }> = ({ children }
     const { reloadAppSettings } = useContext(AppSettingsActionContext);
 
     const inited = useRef(false);
-    const { isDrawPage, isFullScreenDraw } = useMemo(() => {
+    const { isDrawPage, isFullScreenDraw, isFullScreenDrawSwitchMouseThrough } = useMemo(() => {
         let isDrawPage = false;
         let isFullScreenDraw = false;
+        let isFullScreenDrawSwitchMouseThrough = false;
         if (pathname === '/draw') {
             isDrawPage = true;
         } else if (pathname === '/fullScreenDraw') {
             isFullScreenDraw = true;
+        } else if (pathname === '/fullScreenDraw/switchMouseThrough') {
+            isFullScreenDrawSwitchMouseThrough = true;
         }
-        return { isDrawPage, isFullScreenDraw };
+        return { isDrawPage, isFullScreenDraw, isFullScreenDrawSwitchMouseThrough };
     }, [pathname]);
     useEffect(() => {
         if (inited.current) {
@@ -137,9 +140,16 @@ const EventListenerCore: React.FC<{ children: React.ReactNode }> = ({ children }
                 });
             }
 
-            if (isFullScreenDraw) {
+            if (isFullScreenDraw || isFullScreenDrawSwitchMouseThrough) {
                 defaultListener.push({
                     event: 'full-screen-draw-change-mouse-through',
+                    callback: async () => {},
+                });
+            }
+
+            if (isFullScreenDrawSwitchMouseThrough) {
+                defaultListener.push({
+                    event: 'close-full-screen-draw',
                     callback: async () => {},
                 });
             }

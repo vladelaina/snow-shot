@@ -164,8 +164,8 @@ const FullScreenDrawPage = () => {
                         }
 
                         .full-screen-draw-page :global(.full-screen-draw-toolbar-container) {
-                            opacity: ${enableMouseThrough ? '0.12' : '1'};
-                            transition: opacity ${token.motionDurationMid} ${token.motionEaseInOut};
+                            opacity: ${enableMouseThrough ? '0' : '1'};
+                            transition: opacity ${token.motionDurationSlow} ${token.motionEaseInOut};
                         }
                     `}</style>
                 </div>

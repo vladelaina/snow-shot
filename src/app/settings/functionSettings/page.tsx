@@ -35,9 +35,10 @@ import {
     TRANSLATION_DOMAIN_ENV_VARIABLE,
 } from '@/app/tools/translation/extra';
 import { DirectoryInput } from '@/components/directoryInput';
-import { ImageFormat } from '@/utils/file';
+import { generateImageFileName, ImageFormat } from '@/utils/file';
 import { TranslationApiType } from './extra';
 import { TestChat } from './components/testChat';
+import { DrawState } from '@/app/fullScreenDraw/components/drawCore/extra';
 
 export default function SystemSettings() {
     const intl = useIntl();
@@ -47,6 +48,9 @@ export default function SystemSettings() {
     const [functionForm] = Form.useForm<AppSettingsData[AppSettingsGroup.FunctionChat]>();
     const [translationForm] = Form.useForm<AppSettingsData[AppSettingsGroup.FunctionTranslation]>();
     const [screenshotForm] = Form.useForm<AppSettingsData[AppSettingsGroup.FunctionScreenshot]>();
+    const [outputForm] = Form.useForm<AppSettingsData[AppSettingsGroup.FunctionOutput]>();
+    const [fullScreenDrawForm] =
+        Form.useForm<AppSettingsData[AppSettingsGroup.FunctionFullScreenDraw]>();
     const [fixedContentForm] =
         Form.useForm<AppSettingsData[AppSettingsGroup.FunctionFixedContent]>();
 
@@ -82,6 +86,14 @@ export default function SystemSettings() {
 
                 if (
                     preSettings === undefined ||
+                    preSettings[AppSettingsGroup.FunctionOutput] !==
+                        settings[AppSettingsGroup.FunctionOutput]
+                ) {
+                    outputForm.setFieldsValue(settings[AppSettingsGroup.FunctionOutput]);
+                }
+
+                if (
+                    preSettings === undefined ||
                     preSettings[AppSettingsGroup.FunctionFixedContent] !==
                         settings[AppSettingsGroup.FunctionFixedContent]
                 ) {
@@ -89,8 +101,25 @@ export default function SystemSettings() {
                         settings[AppSettingsGroup.FunctionFixedContent],
                     );
                 }
+
+                if (
+                    preSettings === undefined ||
+                    preSettings[AppSettingsGroup.FunctionFullScreenDraw] !==
+                        settings[AppSettingsGroup.FunctionFullScreenDraw]
+                ) {
+                    fullScreenDrawForm.setFieldsValue(
+                        settings[AppSettingsGroup.FunctionFullScreenDraw],
+                    );
+                }
             },
-            [translationForm, functionForm, screenshotForm, fixedContentForm],
+            [
+                translationForm,
+                functionForm,
+                screenshotForm,
+                outputForm,
+                fixedContentForm,
+                fullScreenDrawForm,
+            ],
         ),
         true,
     );
@@ -724,6 +753,198 @@ export default function SystemSettings() {
                             </Col>
                         </Row>
                     </ProFormList>
+                </ProForm>
+            </Spin>
+
+            <Divider />
+
+            <GroupTitle
+                id="fullScreenDrawSettings"
+                extra={
+                    <ResetSettingsButton
+                        title={
+                            <FormattedMessage id="settings.functionSettings.fullScreenDrawSettings" />
+                        }
+                        appSettingsGroup={AppSettingsGroup.FunctionFullScreenDraw}
+                    />
+                }
+            >
+                <FormattedMessage id="settings.functionSettings.fullScreenDrawSettings" />
+            </GroupTitle>
+
+            <Spin spinning={appSettingsLoading}>
+                <ProForm
+                    form={fullScreenDrawForm}
+                    onValuesChange={(_, values) => {
+                        updateAppSettings(
+                            AppSettingsGroup.FunctionFullScreenDraw,
+                            values,
+                            true,
+                            true,
+                            true,
+                            true,
+                            false,
+                        );
+                    }}
+                    submitter={false}
+                    layout="horizontal"
+                >
+                    <Row gutter={token.padding}>
+                        <Col span={12}>
+                            <ProFormSelect
+                                name="defaultTool"
+                                layout="horizontal"
+                                label={
+                                    <FormattedMessage id="settings.functionSettings.fullScreenDrawSettings.defaultTool" />
+                                }
+                                options={[
+                                    {
+                                        label: <FormattedMessage id="draw.selectTool" />,
+                                        value: DrawState.Select,
+                                    },
+                                    {
+                                        label: <FormattedMessage id="draw.penTool" />,
+                                        value: DrawState.Pen,
+                                    },
+                                    {
+                                        label: <FormattedMessage id="draw.laserPointerTool" />,
+                                        value: DrawState.LaserPointer,
+                                    },
+                                ]}
+                            />
+                        </Col>
+                    </Row>
+                </ProForm>
+            </Spin>
+
+            <Divider />
+
+            <GroupTitle
+                id="outputSettings"
+                extra={
+                    <ResetSettingsButton
+                        title={<FormattedMessage id="settings.functionSettings.outputSettings" />}
+                        appSettingsGroup={AppSettingsGroup.FunctionOutput}
+                    />
+                }
+            >
+                <FormattedMessage id="settings.functionSettings.outputSettings" />
+            </GroupTitle>
+
+            <Spin spinning={appSettingsLoading}>
+                <ProForm
+                    form={outputForm}
+                    onValuesChange={(_, values) => {
+                        updateAppSettings(
+                            AppSettingsGroup.FunctionOutput,
+                            values,
+                            true,
+                            true,
+                            true,
+                            true,
+                            false,
+                        );
+                    }}
+                    submitter={false}
+                    layout="horizontal"
+                >
+                    <Row gutter={token.padding}>
+                        <Col span={24}>
+                            <ProFormText
+                                name="manualSaveFileNameFormat"
+                                layout="horizontal"
+                                label={
+                                    <FormattedMessage id="settings.functionSettings.outputSettings.manualSaveFileNameFormat" />
+                                }
+                            />
+                        </Col>
+
+                        <ProFormDependency<{ manualSaveFileNameFormat: string }>
+                            name={['manualSaveFileNameFormat']}
+                        >
+                            {({ manualSaveFileNameFormat }) => {
+                                const text = generateImageFileName(manualSaveFileNameFormat);
+                                return (
+                                    <Col span={24}>
+                                        <ProFormText
+                                            layout="horizontal"
+                                            readonly
+                                            label={
+                                                <FormattedMessage id="settings.functionSettings.outputSettings.manualSaveFileNameFormatPreview" />
+                                            }
+                                            fieldProps={{
+                                                value: text,
+                                            }}
+                                        />
+                                    </Col>
+                                );
+                            }}
+                        </ProFormDependency>
+
+                        <Col span={24}>
+                            <ProFormText
+                                name="autoSaveFileNameFormat"
+                                layout="horizontal"
+                                label={
+                                    <FormattedMessage id="settings.functionSettings.outputSettings.autoSaveFileNameFormat" />
+                                }
+                            />
+                        </Col>
+
+                        <ProFormDependency<{ autoSaveFileNameFormat: string }>
+                            name={['autoSaveFileNameFormat']}
+                        >
+                            {({ autoSaveFileNameFormat }) => {
+                                const text = generateImageFileName(autoSaveFileNameFormat);
+                                return (
+                                    <Col span={24}>
+                                        <ProFormText
+                                            layout="horizontal"
+                                            readonly
+                                            label={
+                                                <FormattedMessage id="settings.functionSettings.outputSettings.autoSaveFileNameFormatPreview" />
+                                            }
+                                            fieldProps={{
+                                                value: text,
+                                            }}
+                                        />
+                                    </Col>
+                                );
+                            }}
+                        </ProFormDependency>
+
+                        <Col span={24}>
+                            <ProFormText
+                                name="fastSaveFileNameFormat"
+                                layout="horizontal"
+                                label={
+                                    <FormattedMessage id="settings.functionSettings.outputSettings.fastSaveFileNameFormat" />
+                                }
+                            />
+                        </Col>
+
+                        <ProFormDependency<{ fastSaveFileNameFormat: string }>
+                            name={['fastSaveFileNameFormat']}
+                        >
+                            {({ fastSaveFileNameFormat }) => {
+                                const text = generateImageFileName(fastSaveFileNameFormat);
+                                return (
+                                    <Col span={24}>
+                                        <ProFormText
+                                            layout="horizontal"
+                                            readonly
+                                            label={
+                                                <FormattedMessage id="settings.functionSettings.outputSettings.fastSaveFileNameFormatPreview" />
+                                            }
+                                            fieldProps={{
+                                                value: text,
+                                            }}
+                                        />
+                                    </Col>
+                                );
+                            }}
+                        </ProFormDependency>
+                    </Row>
                 </ProForm>
             </Spin>
 

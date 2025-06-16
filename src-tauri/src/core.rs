@@ -11,7 +11,7 @@ use tauri::{Emitter, ipc::Response};
 use tauri::{Manager, command};
 use tauri_plugin_clipboard;
 
-use crate::{screenshot::get_target_monitor, os::free_drag::set_window_proc};
+use crate::{os::free_drag::set_window_proc, screenshot::get_target_monitor};
 
 #[command]
 pub async fn exit_app(window: tauri::Window, handle: tauri::AppHandle) {
@@ -194,6 +194,26 @@ pub async fn create_full_screen_draw_window(app: tauri::AppHandle) {
     .title("Snow Shot - Full Screen Draw")
     .position(monitor_x, monitor_y)
     .inner_size(monitor_width, monitor_height)
+    .decorations(false)
+    .shadow(false)
+    .transparent(true)
+    .skip_taskbar(true)
+    .resizable(false)
+    .build()
+    .unwrap();
+
+    tauri::WebviewWindowBuilder::new(
+        &app,
+        format!("{}_switch_mouse_through", window_label),
+        tauri::WebviewUrl::App(PathBuf::from(format!("/fullScreenDraw/switchMouseThrough"))),
+    )
+    .always_on_top(true)
+    .resizable(false)
+    .maximizable(false)
+    .minimizable(false)
+    .title("Snow Shot - Full Screen Draw - Switch Mouse Through")
+    .position(monitor_x, monitor_y)
+    .inner_size(0.0, 0.0)
     .decorations(false)
     .shadow(false)
     .transparent(true)

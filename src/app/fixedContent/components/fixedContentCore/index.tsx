@@ -17,12 +17,12 @@ import Image from 'next/image';
 import { CloseOutlined } from '@ant-design/icons';
 import { OcrResult, OcrResultActionType } from '../ocrResult';
 import clipboard from 'tauri-plugin-clipboard-api';
-import { Base64 } from 'js-base64';
 import { KeyEventKey, KeyEventValue } from '@/core/hotKeys';
 import { useHotkeys } from 'react-hotkeys-hook';
 import { enableFreeDrag, MonitorInfo } from '@/commands/core';
 import { getCurrentWebview, Webview } from '@tauri-apps/api/webview';
 import { setDrawWindowStyle } from '@/commands/screenshot';
+import html2canvas from 'html2canvas';
 
 export type FixedContentInitDrawParams = {
     monitorInfo: MonitorInfo;
@@ -110,7 +110,7 @@ export const FixedContentCore: React.FC<{
     );
     const [enableSelectText, setEnableSelectText] = useState(false);
 
-    const [htmlContent, setHtmlContent] = useState<string | undefined>(undefined);
+    const [htmlBlobUrl, setHtmlBlobUrl] = useState<string | undefined>(undefined);
     const originHtmlContentRef = useRef<string | undefined>(undefined);
     const htmlContentContainerRef = useRef<HTMLIFrameElement>(null);
     const initHtml = useCallback(
@@ -172,7 +172,10 @@ export const FixedContentCore: React.FC<{
                 </html>`;
             }
             setFixedContentType(FixedContentType.Html);
-            setHtmlContent(Base64.encode(htmlContent));
+
+            const blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8' });
+            const blobUrl = URL.createObjectURL(blob);
+            setHtmlBlobUrl(blobUrl);
         },
         [token.colorBgContainer, token.padding],
     );
@@ -337,6 +340,16 @@ export const FixedContentCore: React.FC<{
         };
     }, [canvasImageUrl]);
 
+    useEffect(() => {
+        const blobUrl = htmlBlobUrl;
+
+        return () => {
+            if (blobUrl) {
+                URL.revokeObjectURL(blobUrl);
+            }
+        };
+    }, [htmlBlobUrl]);
+
     const [isThumbnail, setIsThumbnail] = useState(false);
     const originWindowSizeAndPositionRef = useRef<
         | {
@@ -458,7 +471,9 @@ export const FixedContentCore: React.FC<{
                     },
                 },
                 fixedContentType === FixedContentType.DrawCanvas ||
-                fixedContentType === FixedContentType.Image
+                fixedContentType === FixedContentType.Image ||
+                fixedContentType === FixedContentType.Text ||
+                fixedContentType === FixedContentType.Html
                     ? {
                           id: `${appWindow.label}-saveTool`,
                           text: intl.formatMessage({ id: 'draw.saveTool' }),
@@ -470,7 +485,10 @@ export const FixedContentCore: React.FC<{
                                           extensions: ['png'],
                                       },
                                   ],
-                                  defaultPath: generateImageFileName(),
+                                  defaultPath: generateImageFileName(
+                                      getAppSettings()[AppSettingsGroup.FunctionOutput]
+                                          .manualSaveFileNameFormat,
+                                  ),
                                   canCreateDirectories: true,
                               });
 
@@ -496,6 +514,32 @@ export const FixedContentCore: React.FC<{
                                       await imageBlobRef.current.arrayBuffer(),
                                       ImageFormat.PNG,
                                   );
+                              } else {
+                                  let htmlElement: HTMLElement | undefined | null;
+                                  if (fixedContentType === FixedContentType.Html) {
+                                      htmlElement =
+                                          htmlContentContainerRef.current?.contentWindow?.document
+                                              .body;
+                                  } else if (fixedContentType === FixedContentType.Text) {
+                                      htmlElement = textContentContainerRef.current;
+                                  }
+
+                                  if (!htmlElement) {
+                                      return;
+                                  }
+
+                                  html2canvas(htmlElement).then(function (canvas) {
+                                      canvas.toBlob(async (blob) => {
+                                          if (!blob) {
+                                              return;
+                                          }
+                                          await saveFile(
+                                              filePath,
+                                              await blob.arrayBuffer(),
+                                              ImageFormat.PNG,
+                                          );
+                                      });
+                                  });
                               }
                           },
                       }
@@ -751,7 +795,7 @@ export const FixedContentCore: React.FC<{
                 ...style,
                 zIndex: zIndexs.Draw_FixedImage,
                 pointerEvents:
-                    canvasImageUrl || htmlContent || textContent || imageUrl ? 'auto' : 'none',
+                    canvasImageUrl || htmlBlobUrl || textContent || imageUrl ? 'auto' : 'none',
             }}
             onContextMenu={handleContextMenu}
             onDoubleClick={switchThumbnail}
@@ -808,10 +852,10 @@ export const FixedContentCore: React.FC<{
                 />
             )}
 
-            {htmlContent && (
+            {htmlBlobUrl && (
                 <iframe
                     ref={htmlContentContainerRef}
-                    src={`data:text/html;charset=utf-8;base64,${htmlContent}`}
+                    src={htmlBlobUrl}
                     className="fixed-html-content"
                 />
             )}
