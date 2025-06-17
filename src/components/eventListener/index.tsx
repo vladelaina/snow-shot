@@ -196,7 +196,7 @@ const EventListenerCore: React.FC<{ children: React.ReactNode }> = ({ children }
             clear();
             window.removeEventListener('beforeunload', clear);
         };
-    }, [mainWindow, isDrawPage, reloadAppSettings, isFullScreenDraw]);
+    }, [mainWindow, isDrawPage, reloadAppSettings, isFullScreenDraw, isFullScreenDrawSwitchMouseThrough]);
 
     const eventListenerContextValue = useMemo(() => {
         return { addListener, removeListener };

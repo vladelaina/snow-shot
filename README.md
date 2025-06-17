@@ -6,14 +6,14 @@
 
 <h1>Snow Shot</h1>
 
-以简洁优雅作为理念设计的工具软件<img src="/docs/imgs/snowflake.png" height="24px" />
+简单优雅的工具软件<img src="/docs/imgs/snowflake.png" height="24px" />
 
 <img width="83%" src="/docs/imgs/snow_shot_home.png">
 </div>
 
 ### 软件介绍
 
-Snow Shot 是一款功能强大的截图工具，集成了文字识别、翻译和 AI 对话等功能。它采用简洁优雅的设计理念，致力于为用户带来流畅高效的使用体验。
+Snow Shot 是一款功能完备，纯粹社区驱动的工具软件
 
 _注意：软件正在快速迭代中，Bug 和使用问题难以避免。且因为尚处测试阶段，非本地功能（如翻译和 AI 对话）的 API 服务可能日后不会兼容旧的客户端，如果你试图寻求一个稳定的工具软件，目前请谨慎选择当前软件。_
 
@@ -53,7 +53,7 @@ _注意：软件正在快速迭代中，Bug 和使用问题难以避免。且因
 
 - 提交 [Issue](https://github.com/mg-chao/snow-shot/issues)
 - B 站账号 [3N0W](https://space.bilibili.com/3546897042114689)
-- QQ 交流群 974311403
+- QQ 交流群 [974311403](https://qm.qq.com/q/cyUPEV4nwk)
 
 ### 开源协议说明
 

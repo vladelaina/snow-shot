@@ -594,7 +594,7 @@ export const FixedContentCore: React.FC<{
             ].filter((item) => item !== undefined),
         });
         menuRef.current = menu;
-    }, [intl, fixedContentType, hotkeys, textContentRef, switchThumbnail]);
+    }, [intl, fixedContentType, hotkeys, textContentRef, getAppSettings, switchThumbnail]);
 
     useEffect(() => {
         initMenu();
