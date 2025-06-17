@@ -11,7 +11,7 @@ use tauri::{Emitter, ipc::Response};
 use tauri::{Manager, command};
 use tauri_plugin_clipboard;
 
-use crate::{os::free_drag::set_window_proc, screenshot::get_target_monitor};
+use crate::{os::{self, free_drag::set_window_proc}, screenshot::get_target_monitor};
 
 #[command]
 pub async fn exit_app(window: tauri::Window, handle: tauri::AppHandle) {
@@ -261,4 +261,9 @@ pub async fn enable_free_drag(window: tauri::Window) {
     if let Ok(hwnd) = window.hwnd() {
         let _ = set_window_proc(hwnd);
     }
+}
+
+#[command]
+pub async fn send_new_version_notification(title: String, body: String) {
+    os::notification::send_new_version_notification(title, body);
 }

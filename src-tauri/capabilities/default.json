@@ -47,6 +47,8 @@
         "clipboard-manager:allow-write-image",
         "clipboard-manager:allow-write-text",
         "clipboard-manager:allow-write-html",
+        "notification:default",
+        "notification:allow-register-listener",
         {
             "identifier": "http:default",
             "allow": [

@@ -45,6 +45,7 @@ import { PageNav, PageNavActionType } from './components/pageNav';
 import { useStateSubscriber } from '@/hooks/useStateSubscriber';
 import { GlobalEventHandler } from './components/globalEventHandler';
 import { withStatePublisher } from '@/hooks/useStatePublisher';
+import { CheckVersion } from '@/components/checkVersion';
 
 type MenuItem = ItemType<MenuItemType>;
 
@@ -601,6 +602,7 @@ const MenuLayoutCore: React.FC<{ children: React.ReactNode }> = ({ children }) =
         <>
             <TrayIconLoader />
             <GlobalEventHandler />
+            <CheckVersion />
             <div className="menu-layout-wrap">
                 <Layout>
                     <MenuSider menuItems={menuItems} darkMode={darkMode} pathname={pathname} />

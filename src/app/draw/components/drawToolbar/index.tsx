@@ -109,7 +109,10 @@ const DrawToolbarCore: React.FC<DrawToolbarProps> = ({
         AppSettingsPublisher,
         useCallback((settings: AppSettingsData) => {
             setShortcutCanleTip(settings[AppSettingsGroup.FunctionScreenshot].shortcutCanleTip);
-            setEnableFastSave(settings[AppSettingsGroup.FunctionScreenshot].fastSave);
+            setEnableFastSave(
+                settings[AppSettingsGroup.FunctionScreenshot].enhanceSaveFile &&
+                    settings[AppSettingsGroup.FunctionScreenshot].fastSave,
+            );
         }, []),
     );
     const draggingRef = useRef(false);
