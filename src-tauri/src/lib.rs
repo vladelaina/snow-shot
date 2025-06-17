@@ -12,8 +12,8 @@ use std::sync::Mutex;
 
 use enigo::{Enigo, Settings};
 use ocr::OcrLiteWrap;
+use os::free_drag::remove_window_proc;
 use os::ui_automation::UIElements;
-use os::free_drag::{remove_window_proc};
 use paddle_ocr_rs::ocr_lite::OcrLite;
 use tauri::Manager;
 use tauri_plugin_log::{Target, TargetKind};
@@ -32,7 +32,7 @@ pub fn run() {
     let ui_elements = Mutex::new(UIElements::new());
     let auto_start_hide_window = Mutex::new(false);
 
-    let mut app_builder = tauri::Builder::default().plugin(tauri_plugin_process::init());
+    let mut app_builder = tauri::Builder::default();
 
     #[cfg(desktop)]
     {
@@ -56,6 +56,8 @@ pub fn run() {
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_global_shortcut::Builder::new().build())
         .plugin(tauri_plugin_fs::init())
+        .plugin(tauri_plugin_notification::init())
+        .plugin(tauri_plugin_process::init())
         .setup(|app| {
             if cfg!(debug_assertions) {
                 app.handle().plugin(
@@ -109,6 +111,7 @@ pub fn run() {
             core::read_image_from_clipboard,
             core::create_full_screen_draw_window,
             core::get_current_monitor_info,
+            core::send_new_version_notification,
             scroll_screenshot::scroll_screenshot_get_image_data,
             scroll_screenshot::scroll_screenshot_init,
             scroll_screenshot::scroll_screenshot_capture,

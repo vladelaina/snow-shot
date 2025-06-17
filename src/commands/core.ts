@@ -66,3 +66,11 @@ export const enableFreeDrag = async () => {
     const result = await invoke<void>('enable_free_drag');
     return result;
 };
+
+export const sendNewVersionNotification = async (title: string, body: string) => {
+    const result = await invoke<void>('send_new_version_notification', {
+        title,
+        body,
+    });
+    return result;
+};

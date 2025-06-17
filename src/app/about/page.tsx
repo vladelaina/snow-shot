@@ -1,11 +1,12 @@
 'use client';
 
-import React, { useCallback, useEffect, useState } from 'react';
-import { Divider, Tag, Typography, Space, Button, theme } from 'antd';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { Divider, Tag, Typography, Space, Button, theme, Badge } from 'antd';
 import { GithubOutlined, MessageOutlined, MailOutlined } from '@ant-design/icons';
 import { getVersion } from '@tauri-apps/api/app';
 import { openUrl } from '@tauri-apps/plugin-opener';
 import { useIntl } from 'react-intl';
+import { getLatestVersion } from '@/components/checkVersion';
 
 const { Title, Paragraph, Text } = Typography;
 
@@ -13,10 +14,22 @@ const About = () => {
     const { token } = theme.useToken();
     const intl = useIntl();
     const [version, setVersion] = useState('0.1.3');
+    const [latestVersion, setLatestVersion] = useState<string>();
 
+    const inited = useRef(false);
     const init = useCallback(async () => {
+        if (inited.current) {
+            return;
+        }
+        inited.current = true;
+
         const version = await getVersion();
         setVersion(version);
+
+        const latestVersion = await getLatestVersion();
+        if (latestVersion) {
+            setLatestVersion(latestVersion);
+        }
     }, []);
 
     useEffect(() => {
@@ -41,14 +54,37 @@ const About = () => {
                         height={83}
                     />
                 </div>
+
                 <Title level={2} style={{ marginTop: token.marginSM }}>
-                    <span style={{ color: 'var(--snow-shot-purple-color)' }}>Snow </span>
-                    <span>Shot</span>
+                    <Badge
+                        count={
+                            latestVersion !== undefined && latestVersion !== version
+                                ? intl.formatMessage({ id: 'about.newVersion' })
+                                : undefined
+                        }
+                        style={{ display: 'block', cursor: 'pointer' }}
+                        size="small"
+                        onClick={() => openUrl('https://snowshot.top/')}
+                    >
+                        <div
+                            style={{ fontSize: token.fontSizeHeading2, marginTop: token.marginXS }}
+                        >
+                            <span style={{ color: 'var(--snow-shot-purple-color)' }}>Snow </span>
+                            <span>Shot</span>
+                        </div>
+                    </Badge>
                 </Title>
-                <Text type="secondary">{intl.formatMessage({ id: 'about.subtitle' })}</Text>
+                <div>
+                    <Text type="secondary">{intl.formatMessage({ id: 'about.subtitle' })}</Text>
+                </div>
                 <div style={{ marginTop: token.margin }}>
                     <Tag color="blue">
-                        {intl.formatMessage({ id: 'about.version' })} {version}
+                        <a
+                            style={{ color: token.colorLink }}
+                            onClick={() => openUrl('https://snowshot.top/')}
+                        >
+                            {intl.formatMessage({ id: 'about.version' })} {version}
+                        </a>
                     </Tag>
                     <Tag color="green">
                         <a
