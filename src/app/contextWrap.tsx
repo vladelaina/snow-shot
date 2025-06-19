@@ -123,6 +123,7 @@ export type AppSettingsData = {
     };
     [AppSettingsGroup.SystemCommon]: {
         autoStart: boolean;
+        autoCheckVersion: boolean;
     };
     [AppSettingsGroup.SystemChat]: {
         maxTokens: number;
@@ -228,6 +229,7 @@ export const defaultAppSettingsData: AppSettingsData = {
     },
     [AppSettingsGroup.SystemCommon]: {
         autoStart: true,
+        autoCheckVersion: true,
     },
     [AppSettingsGroup.SystemChat]: {
         maxTokens: 4096,
@@ -720,6 +722,11 @@ const ContextWrapCore: React.FC<{ children: React.ReactNode }> = ({ children }) 
                         typeof newSettings?.autoStart === 'boolean'
                             ? newSettings.autoStart
                             : (prevSettings?.autoStart ?? defaultAppSettingsData[group].autoStart),
+                    autoCheckVersion:
+                        typeof newSettings?.autoCheckVersion === 'boolean'
+                            ? newSettings.autoCheckVersion
+                            : (prevSettings?.autoCheckVersion ??
+                              defaultAppSettingsData[group].autoCheckVersion),
                 };
 
                 if (process.env.NODE_ENV === 'development') {

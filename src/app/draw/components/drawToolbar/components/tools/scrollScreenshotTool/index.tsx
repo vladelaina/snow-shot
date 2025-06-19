@@ -36,6 +36,7 @@ import { AntdContext } from '@/components/globalLayoutExtra';
 import { DrawState } from '@/app/fullScreenDraw/components/drawCore/extra';
 import { DrawStatePublisher } from '@/app/fullScreenDraw/components/drawCore/extra';
 import { MessageType } from 'antd/es/message/interface';
+import { getCurrentWindow } from '@tauri-apps/api/window';
 
 const THUMBNAIL_WIDTH = 128;
 
@@ -297,6 +298,13 @@ export const ScrollScreenshot: React.FC<{
     );
 
     const pendingScrollThroughRef = useRef<boolean>(false);
+
+    const enableeCursorEventsDebounce = useMemo(() => {
+        return debounce(() => {
+            getCurrentWindow().setIgnoreCursorEvents(false);
+        }, 128 + 64);
+    }, []);
+
     const onWheel = useCallback<WheelEventHandler<HTMLDivElement>>(
         (event) => {
             if (!enableScrollThroughRef.current) {
@@ -317,6 +325,8 @@ export const ScrollScreenshot: React.FC<{
             scrollThrough(event.deltaY > 0 ? 1 : -1).finally(() => {
                 pendingScrollThroughRef.current = false;
             });
+            // 加一个冗余操作，防止鼠标事件被忽略
+            enableeCursorEventsDebounce();
 
             if (loadingRef.current) {
                 return;
@@ -324,7 +334,7 @@ export const ScrollScreenshot: React.FC<{
 
             captuerDebounce(event.deltaY > 0 ? ScrollImageList.Bottom : ScrollImageList.Top);
         },
-        [captuerDebounce, loadingRef, scrollDirectionRef],
+        [captuerDebounce, enableeCursorEventsDebounce, loadingRef, scrollDirectionRef],
     );
 
     const enableIgnoreCursorEventsRef = useRef(false);

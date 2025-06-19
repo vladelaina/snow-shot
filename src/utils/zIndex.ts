@@ -54,4 +54,9 @@ export const zIndexs = {
     /** 全屏截图绘制图层 */
     FullScreenDraw_LayoutMenu: 1,
     // FullscreenDraw 全屏截图窗口 END
+
+    // VideoRecord 视频录制窗口 BEGIN
+    /** 视频录制工具栏 */
+    VideoRecord_Toolbar: 101,
+    // VideoRecord 视频录制窗口 END
 };

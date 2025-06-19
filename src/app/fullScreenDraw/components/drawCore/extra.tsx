@@ -162,6 +162,8 @@ export enum DrawState {
     LaserPointer = 112,
     // 鼠标穿透
     MouseThrough = 113,
+    // 视频录制
+    VideoRecord = 114,
 }
 
 export const DrawStatePublisher = createPublisher<DrawState>(DrawState.Idle);

@@ -4,6 +4,8 @@ import { fetch } from '@tauri-apps/plugin-http';
 import { isPermissionGranted, requestPermission } from '@tauri-apps/plugin-notification';
 import { useIntl } from 'react-intl';
 import { sendNewVersionNotification } from '@/commands/core';
+import { useStateSubscriber } from '@/hooks/useStateSubscriber';
+import { AppSettingsGroup, AppSettingsPublisher } from '@/app/contextWrap';
 
 const WEBSITE_URL = 'https://snowshot.top/';
 
@@ -20,6 +22,7 @@ export const getLatestVersion = async () => {
 export const CheckVersion: React.FC = () => {
     const intl = useIntl();
     const intervalRef = useRef<NodeJS.Timeout | null>(null);
+    const [getAppSettings] = useStateSubscriber(AppSettingsPublisher, undefined);
 
     const checkVersion = useCallback(async () => {
         try {
@@ -61,6 +64,10 @@ export const CheckVersion: React.FC = () => {
     }, [intl]);
 
     useEffect(() => {
+        if (!getAppSettings()[AppSettingsGroup.SystemCommon].autoCheckVersion) {
+            return;
+        }
+
         checkVersion();
 
         intervalRef.current = setInterval(checkVersion, 1000 * 60 * 60);
@@ -71,7 +78,7 @@ export const CheckVersion: React.FC = () => {
                 intervalRef.current = null;
             }
         };
-    }, [checkVersion]);
+    }, [checkVersion, getAppSettings]);
 
     return <></>;
 };

@@ -5,3 +5,4 @@
 /lib/onnxruntime.lib
 /lib/*
 /captuers
+/ffmpeg/*

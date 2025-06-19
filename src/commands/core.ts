@@ -74,3 +74,28 @@ export const sendNewVersionNotification = async (title: string, body: string) =>
     });
     return result;
 };
+
+export const createVideoRecordWindow = async (
+    monitorX: number,
+    monitorY: number,
+    monitorWidth: number,
+    monitorHeight: number,
+    monitorScaleFactor: number,
+    selectRectMinX: number,
+    selectRectMinY: number,
+    selectRectMaxX: number,
+    selectRectMaxY: number,
+) => {
+    const result = await invoke<void>('create_video_record_window', {
+        monitorX,
+        monitorY,
+        monitorWidth,
+        monitorHeight,
+        monitorScaleFactor,
+        selectRectMinX,
+        selectRectMinY,
+        selectRectMaxX,
+        selectRectMaxY,
+    });
+    return result;
+};

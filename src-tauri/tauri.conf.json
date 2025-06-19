@@ -57,7 +57,8 @@
             "icons/icon.ico"
         ],
         "resources": {
-            "models/": "models/"
+            "models/": "models/",
+            "ffmpeg/": "ffmpeg/"
         }
     }
 }

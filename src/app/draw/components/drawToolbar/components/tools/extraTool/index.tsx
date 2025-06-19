@@ -3,12 +3,15 @@ import { SubTools } from '../../subTools';
 
 import { useIntl } from 'react-intl';
 import { ScanOutlined } from '@ant-design/icons';
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useContext } from 'react';
 import { DrawStatePublisher } from '@/app/fullScreenDraw/components/drawCore/extra';
 import { useStateSubscriber } from '@/hooks/useStateSubscriber';
 import { DrawState } from '@/app/fullScreenDraw/components/drawCore/extra';
 import { ScanQrcodeTool } from './components/scanQrcode';
 import { getButtonTypeByState } from '../../../extra';
+import { VideoRecordIcon } from '@/components/icons';
+import { createVideoRecordWindow } from '@/commands/core';
+import { DrawContext } from '@/app/draw/types';
 
 export enum ExtraToolList {
     ScanQrcode = 0,
@@ -18,6 +21,8 @@ export const ExtraTool: React.FC<{
     finishCapture: () => void;
 }> = ({ finishCapture }) => {
     const intl = useIntl();
+
+    const { monitorInfoRef, selectLayerActionRef } = useContext(DrawContext);
 
     const [activeTool, setActiveTool] = useState<ExtraToolList | undefined>(undefined);
     const [enabled, setEnabled] = useState(false);
@@ -53,6 +58,43 @@ export const ExtraTool: React.FC<{
                         key="scanQrcode"
                         onClick={() => {
                             setDrawState(DrawState.ScanQrcode);
+                        }}
+                    />,
+                    <Button
+                        icon={<VideoRecordIcon />}
+                        title={intl.formatMessage({ id: 'draw.extraTool.videoRecord' })}
+                        type={getButtonTypeByState(activeTool === ExtraToolList.ScanQrcode)}
+                        key="videoRecord"
+                        onClick={() => {
+                            const monitorInfo = monitorInfoRef.current;
+                            const selectRect = selectLayerActionRef.current?.getSelectRect();
+                            if (!monitorInfo || !selectRect) {
+                                return;
+                            }
+
+                            let rectWidth = selectRect.max_x - selectRect.min_x;
+                            let rectHeight = selectRect.max_y - selectRect.min_y;
+
+                            if (rectWidth % 2 === 1) {
+                                rectWidth--;
+                            }
+                            if (rectHeight % 2 === 1) {
+                                rectHeight--;
+                            }
+
+                            createVideoRecordWindow(
+                                monitorInfo.monitor_x,
+                                monitorInfo.monitor_y,
+                                monitorInfo.monitor_width,
+                                monitorInfo.monitor_height,
+                                monitorInfo.monitor_scale_factor,
+                                selectRect.min_x,
+                                selectRect.min_y,
+                                selectRect.min_x + rectWidth,
+                                selectRect.min_y + rectHeight,
+                            );
+
+                            finishCapture();
                         }}
                     />,
                 ]}
