@@ -188,16 +188,20 @@ export const ScrollScreenshot: React.FC<{
     const lastCaptureMissHideRef = useRef<MessageType | undefined>(undefined);
 
     const showCaptureMissMessage = useMemo(() => {
-        return throttle(() => {
-            if (lastCaptureMissHideRef.current) {
-                try {
-                    lastCaptureMissHideRef.current();
-                } catch {}
-            }
-            lastCaptureMissHideRef.current = message.warning(
-                intl.formatMessage({ id: 'draw.scrollScreenshot.captureMiss' }),
-            );
-        }, 3000);
+        return throttle(
+            () => {
+                if (lastCaptureMissHideRef.current) {
+                    try {
+                        lastCaptureMissHideRef.current();
+                    } catch {}
+                }
+                lastCaptureMissHideRef.current = message.warning(
+                    intl.formatMessage({ id: 'draw.scrollScreenshot.captureMiss' }),
+                );
+            },
+            3000,
+            { edges: ['leading'] },
+        );
     }, [intl, message]);
 
     const captureImage = useCallback(

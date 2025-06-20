@@ -58,5 +58,7 @@ export const zIndexs = {
     // VideoRecord 视频录制窗口 BEGIN
     /** 视频录制工具栏 */
     VideoRecord_Toolbar: 101,
+    /** 视频录制工具栏拖动区域 */
+    VideoRecord_ToolbarDragRegion: 999,
     // VideoRecord 视频录制窗口 END
 };

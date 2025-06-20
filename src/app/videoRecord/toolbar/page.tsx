@@ -203,12 +203,15 @@ export default function VideoRecordToolbar() {
     }, [updateDurationFormat, stopDurationTimer]);
 
     return (
-        <div className="video-record-toolbar-container" data-tauri-drag-region>
+        <div className="video-record-toolbar-container">
+            <div data-tauri-drag-region className="toolbar-drag-region before" />
+            <div data-tauri-drag-region className="toolbar-drag-region after" />
+
             <Spin spinning={settingLoading}>
                 <div className="video-record-toolbar" ref={toolbarRef}>
                     <Flex align="center" gap={token.paddingXS}>
-                        <div data-tauri-drag-region className="drag-button" title={dragTitle}>
-                            <HolderOutlined data-tauri-drag-region />
+                        <div className="drag-button" title={dragTitle}>
+                            <HolderOutlined />
                         </div>
 
                         {videoRecordState === VideoRecordState.Idle && (
@@ -428,8 +431,8 @@ export default function VideoRecordToolbar() {
                             key="close"
                         />
 
-                        <div data-tauri-drag-region className="drag-button" title={dragTitle}>
-                            <HolderOutlined data-tauri-drag-region />
+                        <div className="drag-button" title={dragTitle}>
+                            <HolderOutlined />
                         </div>
                     </Flex>
                 </div>
@@ -441,6 +444,29 @@ export default function VideoRecordToolbar() {
                     z-index: ${zIndexs.VideoRecord_Toolbar};
                     padding: 3px;
                     user-select: none;
+                }
+
+                .toolbar-drag-region {
+                    position: absolute;
+                    top: 0;
+                    width: calc(${token.paddingSM + 3}px + 1em + ${token.paddingXS}px);
+                    opacity: 0;
+                    height: 100%;
+                    background-color: red;
+                    z-index: ${zIndexs.VideoRecord_ToolbarDragRegion};
+                    cursor: grab;
+                }
+
+                .toolbar-drag-region.before {
+                    left: 0;
+                }
+
+                .toolbar-drag-region.after {
+                    right: 0;
+                }
+
+                .toolbar-drag-region:active {
+                    cursor: grabbing;
                 }
 
                 .video-record-toolbar {
