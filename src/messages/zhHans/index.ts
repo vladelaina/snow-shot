@@ -6,6 +6,7 @@ import { tools } from './tools';
 import { common } from './common';
 import { about } from './about';
 import { fullScreenDraw } from './fullScreenDraw';
+import { videoRecord } from './videoRecord';
 
 export const zhHans = {
     ...menu,
@@ -16,4 +17,5 @@ export const zhHans = {
     ...common,
     ...fullScreenDraw,
     ...about,
+    ...videoRecord,
 };

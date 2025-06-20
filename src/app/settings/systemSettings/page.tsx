@@ -134,19 +134,38 @@ export default function SystemSettings() {
                     submitter={false}
                     layout="horizontal"
                 >
-                    <ProForm.Item
-                        label={
-                            <IconLabel
+                    <Row gutter={token.margin}>
+                        <Col span={12}>
+                            <ProForm.Item
                                 label={
-                                    <FormattedMessage id="settings.systemSettings.commonSettings.autoStart" />
+                                    <IconLabel
+                                        label={
+                                            <FormattedMessage id="settings.systemSettings.commonSettings.autoStart" />
+                                        }
+                                    />
                                 }
-                            />
-                        }
-                        name="autoStart"
-                        valuePropName="checked"
-                    >
-                        <Switch />
-                    </ProForm.Item>
+                                name="autoStart"
+                                valuePropName="checked"
+                            >
+                                <Switch />
+                            </ProForm.Item>
+                        </Col>
+                        <Col span={12}>
+                            <ProForm.Item
+                                label={
+                                    <IconLabel
+                                        label={
+                                            <FormattedMessage id="settings.systemSettings.commonSettings.autoCheckVersion" />
+                                        }
+                                    />
+                                }
+                                name="autoCheckVersion"
+                                valuePropName="checked"
+                            >
+                                <Switch />
+                            </ProForm.Item>
+                        </Col>
+                    </Row>
                 </ProForm>
             </Spin>
 

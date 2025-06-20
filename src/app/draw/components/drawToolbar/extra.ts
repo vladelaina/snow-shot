@@ -1,9 +1,14 @@
 import { DrawState } from '@/app/fullScreenDraw/components/drawCore/extra';
+import { GlobalToken } from 'antd';
 import { BaseButtonProps } from 'antd/es/button/button';
 import React from 'react';
 
 export const getButtonTypeByState = (active: boolean): BaseButtonProps['type'] => {
     return active ? 'primary' : 'text';
+};
+
+export const getButtonIconColorByState = (active: boolean, token: GlobalToken) => {
+    return active ? token.colorSuccess : token.colorTextDisabled;
 };
 
 export type DrawToolbarContextType = {

@@ -17,6 +17,10 @@ export default function MouseThroughPage() {
     const [enable, setEnable] = useState(false);
 
     useEffect(() => {
+        const urlParams = new URLSearchParams(window.location.search);
+        const monitor_x = parseInt(urlParams.get('monitor_x') ?? '0');
+        const monitor_y = parseInt(urlParams.get('monitor_y') ?? '0');
+
         const appWindow = getCurrentWindow();
         const scaleFactor = window.devicePixelRatio;
         const physicalWidth = PAGE_WIDTH * scaleFactor;
@@ -27,7 +31,7 @@ export default function MouseThroughPage() {
         const centerX = (screenWidth - physicalWidth) / 2;
 
         appWindow.setSize(new PhysicalSize(physicalWidth, physicalHeight));
-        appWindow.setPosition(new PhysicalPosition(centerX, 0));
+        appWindow.setPosition(new PhysicalPosition(monitor_x + centerX, monitor_y));
     }, []);
 
     useEffect(() => {

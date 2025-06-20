@@ -246,7 +246,7 @@ pub async fn get_mouse_position() -> Result<(i32, i32), ()> {
 
 #[command]
 pub async fn create_draw_window(app: tauri::AppHandle) {
-    tauri::WebviewWindowBuilder::new(
+    let window = tauri::WebviewWindowBuilder::new(
         &app,
         format!(
             "draw-{}",
@@ -271,8 +271,12 @@ pub async fn create_draw_window(app: tauri::AppHandle) {
     .minimizable(false)
     .resizable(false)
     .inner_size(0.0, 0.0)
+    .focused(false)
+    .visible(false)
     .build()
     .unwrap();
+
+    window.hide().unwrap();
 }
 
 #[command]

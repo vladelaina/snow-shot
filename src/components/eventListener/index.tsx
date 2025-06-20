@@ -67,18 +67,36 @@ const EventListenerCore: React.FC<{ children: React.ReactNode }> = ({ children }
     const { reloadAppSettings } = useContext(AppSettingsActionContext);
 
     const inited = useRef(false);
-    const { isDrawPage, isFullScreenDraw, isFullScreenDrawSwitchMouseThrough } = useMemo(() => {
+    const {
+        isDrawPage,
+        isFullScreenDraw,
+        isFullScreenDrawSwitchMouseThrough,
+        isVideoRecordPage,
+        isVideoRecordToolbarPage,
+    } = useMemo(() => {
         let isDrawPage = false;
         let isFullScreenDraw = false;
         let isFullScreenDrawSwitchMouseThrough = false;
+        let isVideoRecordPage = false;
+        let isVideoRecordToolbarPage = false;
         if (pathname === '/draw') {
             isDrawPage = true;
         } else if (pathname === '/fullScreenDraw') {
             isFullScreenDraw = true;
         } else if (pathname === '/fullScreenDraw/switchMouseThrough') {
             isFullScreenDrawSwitchMouseThrough = true;
+        } else if (pathname === '/videoRecord') {
+            isVideoRecordPage = true;
+        } else if (pathname === '/videoRecord/toolbar') {
+            isVideoRecordToolbarPage = true;
         }
-        return { isDrawPage, isFullScreenDraw, isFullScreenDrawSwitchMouseThrough };
+        return {
+            isDrawPage,
+            isFullScreenDraw,
+            isFullScreenDrawSwitchMouseThrough,
+            isVideoRecordPage,
+            isVideoRecordToolbarPage,
+        };
     }, [pathname]);
     useEffect(() => {
         if (inited.current) {
@@ -153,6 +171,24 @@ const EventListenerCore: React.FC<{ children: React.ReactNode }> = ({ children }
                     callback: async () => {},
                 });
             }
+
+            if (isVideoRecordPage || isVideoRecordToolbarPage) {
+                defaultListener.push({
+                    event: 'reload-video-record',
+                    callback: async () => {},
+                });
+            }
+
+            if (isVideoRecordPage) {
+                defaultListener.push({
+                    event: 'close-video-record-window',
+                    callback: async () => {},
+                });
+                defaultListener.push({
+                    event: 'change-video-record-state',
+                    callback: async () => {},
+                });
+            }
         }
 
         defaultListener
@@ -196,7 +232,15 @@ const EventListenerCore: React.FC<{ children: React.ReactNode }> = ({ children }
             clear();
             window.removeEventListener('beforeunload', clear);
         };
-    }, [mainWindow, isDrawPage, reloadAppSettings, isFullScreenDraw, isFullScreenDrawSwitchMouseThrough]);
+    }, [
+        mainWindow,
+        isDrawPage,
+        reloadAppSettings,
+        isFullScreenDraw,
+        isFullScreenDrawSwitchMouseThrough,
+        isVideoRecordPage,
+        isVideoRecordToolbarPage,
+    ]);
 
     const eventListenerContextValue = useMemo(() => {
         return { addListener, removeListener };

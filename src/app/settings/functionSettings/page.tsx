@@ -15,7 +15,7 @@ import {
     Typography,
 } from 'antd';
 import { AppSettingsActionContext, AppSettingsData, AppSettingsGroup } from '../../contextWrap';
-import { useCallback, useContext, useState } from 'react';
+import { useCallback, useContext, useEffect, useState } from 'react';
 import { useAppSettingsLoad } from '@/hooks/useAppSettingsLoad';
 import { FormattedMessage, useIntl } from 'react-intl';
 import { ContentWrap } from '@/components/contentWrap';
@@ -39,6 +39,8 @@ import { generateImageFileName, ImageFormat } from '@/utils/file';
 import { TranslationApiType } from './extra';
 import { TestChat } from './components/testChat';
 import { DrawState } from '@/app/fullScreenDraw/components/drawCore/extra';
+import { videoRecordGetMicrophoneDeviceNames } from '@/commands/videoRecord';
+import { getVideoRecordSaveDirectory } from '@/app/videoRecord/extra';
 
 export default function SystemSettings() {
     const intl = useIntl();
@@ -53,6 +55,7 @@ export default function SystemSettings() {
         Form.useForm<AppSettingsData[AppSettingsGroup.FunctionFullScreenDraw]>();
     const [fixedContentForm] =
         Form.useForm<AppSettingsData[AppSettingsGroup.FunctionFixedContent]>();
+    const [videoRecordForm] = Form.useForm<AppSettingsData[AppSettingsGroup.FunctionVideoRecord]>();
 
     const [appSettingsLoading, setAppSettingsLoading] = useState(true);
     useAppSettingsLoad(
@@ -111,6 +114,21 @@ export default function SystemSettings() {
                         settings[AppSettingsGroup.FunctionFullScreenDraw],
                     );
                 }
+
+                if (
+                    preSettings === undefined ||
+                    preSettings[AppSettingsGroup.FunctionVideoRecord] !==
+                        settings[AppSettingsGroup.FunctionVideoRecord]
+                ) {
+                    const videoRecordSettings = settings[AppSettingsGroup.FunctionVideoRecord];
+                    videoRecordForm.setFieldsValue(settings[AppSettingsGroup.FunctionVideoRecord]);
+                    if (!videoRecordSettings.saveDirectory) {
+                        getVideoRecordSaveDirectory(settings).then((saveDirectory) => {
+                            videoRecordSettings.saveDirectory = saveDirectory;
+                            videoRecordForm.setFieldsValue(videoRecordSettings);
+                        });
+                    }
+                }
             },
             [
                 translationForm,
@@ -119,10 +137,36 @@ export default function SystemSettings() {
                 outputForm,
                 fixedContentForm,
                 fullScreenDrawForm,
+                videoRecordForm,
             ],
         ),
         true,
     );
+
+    const [microphoneDeviceNameOptions, setMicrophoneDeviceNameOptions] = useState<
+        { label: string; value: string }[]
+    >([]);
+    useEffect(() => {
+        videoRecordGetMicrophoneDeviceNames().then((microphoneDeviceNames) => {
+            const options: { label: string; value: string }[] = [
+                {
+                    label: intl.formatMessage({
+                        id: 'settings.functionSettings.videoRecordSettings.microphoneDeviceName.default',
+                    }),
+                    value: '',
+                },
+            ];
+
+            for (const microphoneDeviceName of microphoneDeviceNames) {
+                options.push({
+                    label: microphoneDeviceName,
+                    value: microphoneDeviceName,
+                });
+            }
+
+            setMicrophoneDeviceNameOptions(options);
+        });
+    }, [intl]);
 
     return (
         <ContentWrap>
@@ -820,6 +864,211 @@ export default function SystemSettings() {
             <Divider />
 
             <GroupTitle
+                id="videoRecordSettings"
+                extra={
+                    <ResetSettingsButton
+                        title={
+                            <FormattedMessage id="settings.functionSettings.videoRecordSettings" />
+                        }
+                        appSettingsGroup={AppSettingsGroup.FunctionVideoRecord}
+                    />
+                }
+            >
+                <FormattedMessage id="settings.functionSettings.videoRecordSettings" />
+            </GroupTitle>
+
+            <Spin spinning={appSettingsLoading}>
+                <ProForm
+                    form={videoRecordForm}
+                    onValuesChange={(_, values) => {
+                        updateAppSettings(
+                            AppSettingsGroup.FunctionVideoRecord,
+                            values,
+                            true,
+                            true,
+                            false,
+                            true,
+                            false,
+                        );
+                    }}
+                    submitter={false}
+                    layout="horizontal"
+                >
+                    <Row gutter={token.padding}>
+                        <Col span={12}>
+                            <ProFormSelect
+                                name="frameRate"
+                                layout="horizontal"
+                                label={
+                                    <FormattedMessage id="settings.functionSettings.videoRecordSettings.frameRate" />
+                                }
+                                options={[
+                                    {
+                                        label: '10',
+                                        value: 10,
+                                    },
+                                    {
+                                        label: '15',
+                                        value: 15,
+                                    },
+                                    {
+                                        label: '24',
+                                        value: 24,
+                                    },
+                                    {
+                                        label: '30',
+                                        value: 30,
+                                    },
+                                    {
+                                        label: '60',
+                                        value: 60,
+                                    },
+                                    {
+                                        label: '120',
+                                        value: 120,
+                                    },
+                                    {
+                                        label: '83',
+                                        value: 83,
+                                    },
+                                    {
+                                        label: '42',
+                                        value: 42,
+                                    },
+                                ]}
+                            />
+                        </Col>
+                    </Row>
+                    <Row gutter={token.padding}>
+                        <Col span={12}>
+                            <ProFormSelect
+                                name="microphoneDeviceName"
+                                layout="horizontal"
+                                label={
+                                    <FormattedMessage id="settings.functionSettings.videoRecordSettings.microphoneDeviceName" />
+                                }
+                                options={microphoneDeviceNameOptions}
+                            />
+                        </Col>
+                    </Row>
+                    <Row gutter={token.padding}>
+                        <Col span={12}>
+                            <ProFormSelect
+                                name="encoder"
+                                layout="horizontal"
+                                label={
+                                    <IconLabel
+                                        label={
+                                            <FormattedMessage id="settings.functionSettings.videoRecordSettings.encoder" />
+                                        }
+                                        tooltipTitle={
+                                            <FormattedMessage id="settings.functionSettings.videoRecordSettings.encoder.tip" />
+                                        }
+                                    />
+                                }
+                                options={[
+                                    {
+                                        label: 'Libx264 (CPU)',
+                                        value: 'libx264',
+                                    },
+                                    {
+                                        label: 'Libx265 (CPU)',
+                                        value: 'libx265',
+                                    },
+                                    {
+                                        label: 'H264_AMF (AMD)',
+                                        value: 'h264_amf',
+                                    },
+                                    {
+                                        label: 'H264_NVENC (NVIDIA)',
+                                        value: 'h264_nvenc',
+                                    },
+                                ]}
+                            />
+                        </Col>
+
+                        <Col span={12}>
+                            <ProFormSelect
+                                name="encoderPreset"
+                                layout="horizontal"
+                                label={
+                                    <IconLabel
+                                        label={
+                                            <FormattedMessage id="settings.functionSettings.videoRecordSettings.encoderPreset" />
+                                        }
+                                        tooltipTitle={
+                                            <FormattedMessage id="settings.functionSettings.videoRecordSettings.encoderPreset.tip" />
+                                        }
+                                    />
+                                }
+                                options={[
+                                    {
+                                        label: intl.formatMessage({
+                                            id: 'settings.functionSettings.videoRecordSettings.encoderPreset.ultrafast',
+                                        }),
+                                        value: 'ultrafast',
+                                    },
+                                    {
+                                        label: intl.formatMessage({
+                                            id: 'settings.functionSettings.videoRecordSettings.encoderPreset.veryfast',
+                                        }),
+                                        value: 'veryfast',
+                                    },
+                                    {
+                                        label: intl.formatMessage({
+                                            id: 'settings.functionSettings.videoRecordSettings.encoderPreset.medium',
+                                        }),
+                                        value: 'medium',
+                                    },
+                                    {
+                                        label: intl.formatMessage({
+                                            id: 'settings.functionSettings.videoRecordSettings.encoderPreset.slower',
+                                        }),
+                                        value: 'slower',
+                                    },
+                                    {
+                                        label: intl.formatMessage({
+                                            id: 'settings.functionSettings.videoRecordSettings.encoderPreset.placebo',
+                                        }),
+                                        value: 'placebo',
+                                    },
+                                ]}
+                            />
+                        </Col>
+
+                        <Col span={12}>
+                            <ProFormSwitch
+                                name="hwaccel"
+                                layout="horizontal"
+                                label={
+                                    <FormattedMessage id="settings.functionSettings.videoRecordSettings.hwaccel" />
+                                }
+                            />
+                        </Col>
+                    </Row>
+                    <Row gutter={token.padding}>
+                        <Col span={24}>
+                            <ProForm.Item
+                                name="saveDirectory"
+                                label={
+                                    <IconLabel
+                                        label={
+                                            <FormattedMessage id="settings.functionSettings.videoRecordSettings.saveDirectory" />
+                                        }
+                                    />
+                                }
+                                required={false}
+                            >
+                                <DirectoryInput />
+                            </ProForm.Item>
+                        </Col>
+                    </Row>
+                </ProForm>
+            </Spin>
+
+            <Divider />
+
+            <GroupTitle
                 id="outputSettings"
                 extra={
                     <ResetSettingsButton
@@ -935,6 +1184,38 @@ export default function SystemSettings() {
                                             readonly
                                             label={
                                                 <FormattedMessage id="settings.functionSettings.outputSettings.fastSaveFileNameFormatPreview" />
+                                            }
+                                            fieldProps={{
+                                                value: text,
+                                            }}
+                                        />
+                                    </Col>
+                                );
+                            }}
+                        </ProFormDependency>
+
+                        <Col span={24}>
+                            <ProFormText
+                                name="videoRecordFileNameFormat"
+                                layout="horizontal"
+                                label={
+                                    <FormattedMessage id="settings.functionSettings.outputSettings.videoRecordFileNameFormat" />
+                                }
+                            />
+                        </Col>
+
+                        <ProFormDependency<{ videoRecordFileNameFormat: string }>
+                            name={['videoRecordFileNameFormat']}
+                        >
+                            {({ videoRecordFileNameFormat }) => {
+                                const text = generateImageFileName(videoRecordFileNameFormat);
+                                return (
+                                    <Col span={24}>
+                                        <ProFormText
+                                            layout="horizontal"
+                                            readonly
+                                            label={
+                                                <FormattedMessage id="settings.functionSettings.outputSettings.videoRecordFileNameFormatPreview" />
                                             }
                                             fieldProps={{
                                                 value: text,

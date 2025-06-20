@@ -4,6 +4,8 @@ import { fetch } from '@tauri-apps/plugin-http';
 import { isPermissionGranted, requestPermission } from '@tauri-apps/plugin-notification';
 import { useIntl } from 'react-intl';
 import { sendNewVersionNotification } from '@/commands/core';
+import { AppSettingsData, AppSettingsGroup } from '@/app/contextWrap';
+import { useAppSettingsLoad } from '@/hooks/useAppSettingsLoad';
 
 const WEBSITE_URL = 'https://snowshot.top/';
 
@@ -60,18 +62,28 @@ export const CheckVersion: React.FC = () => {
         }
     }, [intl]);
 
+    useAppSettingsLoad(
+        useCallback(
+            (appSettings: AppSettingsData) => {
+                if (appSettings[AppSettingsGroup.SystemCommon].autoCheckVersion) {
+                    checkVersion();
+
+                    intervalRef.current = setInterval(checkVersion, 1000 * 60 * 60);
+                }
+            },
+            [checkVersion],
+        ),
+        true,
+    );
+
     useEffect(() => {
-        checkVersion();
-
-        intervalRef.current = setInterval(checkVersion, 1000 * 60 * 60);
-
         return () => {
             if (intervalRef.current) {
                 clearInterval(intervalRef.current);
                 intervalRef.current = null;
             }
         };
-    }, [checkVersion]);
+    }, []);
 
     return <></>;
 };

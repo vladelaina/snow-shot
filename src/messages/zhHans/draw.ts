@@ -94,6 +94,7 @@ export const draw = {
     'draw.ocrDetect.translate.error3': '按行解析异常',
     'draw.switchColorFormat': '切换颜色格式',
     'draw.extraTool.scanQrcode': '扫描二维码',
+    'draw.extraTool.videoRecord': '视频录制',
     'draw.extraTool.scanQrcode.error': '未识别到有效二维码',
     'draw.scrollScreenshot.tip': '如果无法滚动窗口，请双击截图区域以聚焦窗口',
     'draw.selectText': '选取文本/拖拽窗口',
