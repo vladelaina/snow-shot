@@ -25,9 +25,31 @@ impl VideoFormat {
     }
 }
 
+// 录制参数结构体，用于在暂停后恢复录制时重用参数
+#[derive(Clone)]
+struct RecordingParams {
+    min_x: i32,
+    min_y: i32,
+    max_x: i32,
+    max_y: i32,
+    output_file: String,
+    format: VideoFormat,
+    frame_rate: u32,
+    enable_microphone: bool,
+    enable_system_audio: bool,
+    microphone_device_name: String,
+    hwaccel: bool,
+    encoder: String,
+    encoder_preset: String,
+}
+
 pub struct VideoRecordService {
     pub state: VideoRecordState,
     pub child: Option<FfmpegChild>,
+    // 片段管理相关字段
+    segments: Vec<String>,                     // 存储所有片段文件路径
+    segment_counter: u32,                      // 片段计数器
+    recording_params: Option<RecordingParams>, // 录制参数，用于恢复录制
 }
 
 impl VideoRecordService {
@@ -35,6 +57,9 @@ impl VideoRecordService {
         Self {
             state: VideoRecordState::Idle,
             child: None,
+            segments: Vec::new(),
+            segment_counter: 0,
+            recording_params: None,
         }
     }
 
@@ -65,9 +90,37 @@ impl VideoRecordService {
             ));
         }
 
+        // 保存录制参数
+        self.recording_params = Some(RecordingParams {
+            min_x,
+            min_y,
+            max_x,
+            max_y,
+            output_file: output_file.clone(),
+            format,
+            frame_rate,
+            enable_microphone,
+            enable_system_audio,
+            microphone_device_name,
+            hwaccel,
+            encoder,
+            encoder_preset,
+        });
+
+        // 重置片段相关状态
+        self.segments.clear();
+        self.segment_counter = 0;
+
+        // 开始第一个片段的录制
+        self.start_segment()
+    }
+
+    fn start_segment(&mut self) -> Result<()> {
+        let params = self.recording_params.as_ref().unwrap();
+
         // 计算录制区域的宽度和高度
-        let mut width = max_x - min_x;
-        let mut height = max_y - min_y;
+        let mut width = params.max_x - params.min_x;
+        let mut height = params.max_y - params.min_y;
 
         if width <= 0 || height <= 0 {
             return Err(std::io::Error::new(
@@ -85,14 +138,18 @@ impl VideoRecordService {
         }
 
         println!(
-            "Recording area: {}x{} at ({}, {})",
-            width, height, min_x, min_y
+            "Recording segment {} area: {}x{} at ({}, {})",
+            self.segment_counter + 1,
+            width,
+            height,
+            params.min_x,
+            params.min_y
         );
 
         let mut command = self.get_ffmpeg_command();
 
         // 硬件加速选项必须在输入选项之前
-        if hwaccel {
+        if params.hwaccel {
             command.arg("-hwaccel").arg("auto");
         }
 
@@ -101,12 +158,12 @@ impl VideoRecordService {
             .arg("-f")
             .arg("gdigrab")
             .arg("-framerate")
-            .arg(frame_rate.to_string())
+            .arg(params.frame_rate.to_string())
             // 设置偏移量
             .arg("-offset_x")
-            .arg(min_x.to_string())
+            .arg(params.min_x.to_string())
             .arg("-offset_y")
-            .arg(min_y.to_string())
+            .arg(params.min_y.to_string())
             // 设置录制区域大小
             .arg("-video_size")
             .arg(format!("{}x{}", width, height))
@@ -118,7 +175,7 @@ impl VideoRecordService {
         let mut audio_inputs: Vec<String> = Vec::new();
 
         // 添加系统音频输入
-        if enable_system_audio {
+        if params.enable_system_audio {
             // command
             //     .arg("-f")
             //     .arg("dshow")
@@ -128,14 +185,14 @@ impl VideoRecordService {
         }
 
         // 添加麦克风音频输入
-        if enable_microphone {
+        if params.enable_microphone {
             let device_names = self.get_microphone_device_names();
 
             if device_names.len() > 0 {
                 command.arg("-f").arg("dshow").arg("-i").arg(format!(
                     "audio={}",
-                    if device_names.contains(&microphone_device_name) {
-                        microphone_device_name
+                    if device_names.contains(&params.microphone_device_name) {
+                        params.microphone_device_name.clone()
                     } else {
                         device_names[0].clone()
                     }
@@ -144,18 +201,55 @@ impl VideoRecordService {
             }
         }
 
+        // 生成当前片段的文件名
+        let segment_filename = format!(
+            "{}_segment_{:03}.{}",
+            params.output_file,
+            self.segment_counter,
+            params.format.extension()
+        );
+
         // 根据格式设置不同的参数
-        match format {
+        match params.format {
             VideoFormat::Mp4 => {
-                command
-                    .arg("-c:v")
-                    .arg(encoder)
-                    .arg("-preset")
-                    .arg(encoder_preset)
-                    .arg("-crf")
-                    .arg("23")
-                    .arg("-pix_fmt")
-                    .arg("yuv420p"); // 添加像素格式，确保兼容性
+                command.arg("-c:v").arg(&params.encoder);
+
+                // 根据编码器类型设置预设值
+                if params.encoder.contains("amf") {
+                    // AMD AMF编码器只支持特定的预设值
+                    let amf_preset = match params.encoder_preset.as_str() {
+                        "ultrafast" | "superfast" | "veryfast" | "faster" | "fast" => "speed",
+                        "medium" | "slow" => "balanced",
+                        "slower" | "veryslow" | "placebo" => "quality",
+                        // 如果已经是AMF支持的预设值，直接使用
+                        "speed" | "balanced" | "quality" => &params.encoder_preset,
+                        _ => "balanced", // 默认使用balanced
+                    };
+                    command.arg("-preset").arg(amf_preset);
+                } else if params.encoder.contains("nvenc") {
+                    // NVIDIA NVENC编码器支持的预设值
+                    let nvenc_preset = match params.encoder_preset.as_str() {
+                        "ultrafast" => "p1",              // 最快
+                        "superfast" | "veryfast" => "p2", // 更快
+                        "faster" | "fast" => "p3",        // 快
+                        "medium" => "p4",                 // 中等（默认）
+                        "slow" => "p5",                   // 慢
+                        "slower" => "p6",                 // 更慢
+                        "veryslow" | "placebo" => "p7",   // 最慢
+                        // 如果已经是NVENC支持的预设值，直接使用
+                        "p1" | "p2" | "p3" | "p4" | "p5" | "p6" | "p7" | "hq" | "hp" | "ll"
+                        | "llhq" | "llhp" | "default" | "bd" | "lossless" | "losslesshp" => {
+                            &params.encoder_preset
+                        }
+                        _ => "p4", // 默认使用p4（中等）
+                    };
+                    command.arg("-preset").arg(nvenc_preset);
+                } else {
+                    // 其他编码器（如x264）使用原始预设值
+                    command.arg("-preset").arg(&params.encoder_preset);
+                }
+
+                command.arg("-crf").arg("23").arg("-pix_fmt").arg("yuv420p"); // 添加像素格式，确保兼容性
 
                 // 音频编码设置
                 if !audio_inputs.is_empty() {
@@ -197,19 +291,21 @@ impl VideoRecordService {
         command.arg("-y");
 
         // 输出文件
-        command.arg(format!("{}.{}", output_file, format.extension()));
+        command.arg(&segment_filename);
 
-        println!("FFmpeg command args: {:?}", command);
+        println!("FFmpeg segment command args: {:?}", command);
 
         // 启动ffmpeg进程
         match command.spawn() {
             Ok(mut child) => {
                 for event in child.iter().unwrap() {
-                    if format == VideoFormat::Mp4 {
+                    if params.format == VideoFormat::Mp4 {
                         match event {
                             FfmpegEvent::Progress(_) => {
                                 self.child = Some(child);
                                 self.state = VideoRecordState::Recording;
+                                self.segments.push(segment_filename);
+                                self.segment_counter += 1;
                                 return Ok(());
                             }
                             _ => {}
@@ -219,7 +315,7 @@ impl VideoRecordService {
 
                 Err(std::io::Error::new(
                     std::io::ErrorKind::Other,
-                    "Failed to start recording",
+                    "Failed to start recording segment",
                 ))
             }
             Err(e) => {
@@ -227,7 +323,7 @@ impl VideoRecordService {
                 println!("FFmpeg start error: {}", e);
                 Err(std::io::Error::new(
                     std::io::ErrorKind::Other,
-                    format!("Failed to start recording: {}", e),
+                    format!("Failed to start recording segment: {}", e),
                 ))
             }
         }
@@ -302,19 +398,116 @@ impl VideoRecordService {
         device_names
     }
 
+    pub fn kill(&mut self) -> Result<()> {
+        if let Some(mut child) = self.child.take() {
+            let _ = child.kill();
+        }
+
+        self.cleanup();
+        Ok(())
+    }
+
     pub fn stop(&mut self) -> Result<()> {
         if self.state != VideoRecordState::Recording && self.state != VideoRecordState::Paused {
             return Ok(());
         }
 
-        println!("[FFmpeg] Stopping");
+        println!("[FFmpeg] Stopping and merging segments");
+
+        // 停止当前录制
         if let Some(mut child) = self.child.take() {
             let _ = child.quit();
             let _ = child.wait();
         }
 
-        self.state = VideoRecordState::Idle;
+        // 如果只有一个片段，直接重命名
+        if self.segments.len() == 1 {
+            let params = self.recording_params.as_ref().unwrap();
+            let final_filename = format!("{}.{}", params.output_file, params.format.extension());
+
+            if let Err(e) = std::fs::rename(&self.segments[0], &final_filename) {
+                println!("Failed to rename single segment: {}", e);
+                return Err(std::io::Error::new(
+                    std::io::ErrorKind::Other,
+                    format!("Failed to rename segment: {}", e),
+                ));
+            }
+        } else if self.segments.len() > 1 {
+            // 多个片段需要合并
+            self.merge_segments()?;
+        }
+
+        self.cleanup();
         Ok(())
+    }
+
+    fn merge_segments(&mut self) -> Result<()> {
+        let params = self.recording_params.as_ref().unwrap();
+        let final_filename = format!("{}.{}", params.output_file, params.format.extension());
+
+        // 创建临时的文件列表
+        let list_filename = format!("{}_segments.txt", params.output_file);
+        let mut list_content = String::new();
+
+        for segment in &self.segments {
+            list_content.push_str(&format!("file '{}'\n", segment));
+        }
+
+        if let Err(e) = std::fs::write(&list_filename, list_content) {
+            return Err(std::io::Error::new(
+                std::io::ErrorKind::Other,
+                format!("Failed to create segment list: {}", e),
+            ));
+        }
+
+        // 使用ffmpeg合并片段
+        let mut command = self.get_ffmpeg_command();
+        command
+            .arg("-f")
+            .arg("concat")
+            .arg("-safe")
+            .arg("0")
+            .arg("-i")
+            .arg(&list_filename)
+            .arg("-c")
+            .arg("copy")
+            .arg("-y")
+            .arg(&final_filename);
+
+        println!("Merging segments with command: {:?}", command);
+
+        match command.spawn() {
+            Ok(mut child) => {
+                let _ = child.wait();
+
+                // 删除临时文件列表
+                let _ = std::fs::remove_file(&list_filename);
+
+                // 删除所有片段文件
+                for segment in &self.segments {
+                    if let Err(e) = std::fs::remove_file(segment) {
+                        println!("Warning: Failed to delete segment file {}: {}", segment, e);
+                    }
+                }
+
+                println!("Segments merged successfully");
+                Ok(())
+            }
+            Err(e) => {
+                println!("Failed to merge segments: {}", e);
+                Err(std::io::Error::new(
+                    std::io::ErrorKind::Other,
+                    format!("Failed to merge segments: {}", e),
+                ))
+            }
+        }
+    }
+
+    fn cleanup(&mut self) {
+        self.state = VideoRecordState::Idle;
+        self.segments.clear();
+        self.segment_counter = 0;
+        self.recording_params = None;
     }
 
     pub fn pause(&mut self) -> Result<()> {
@@ -325,8 +518,12 @@ impl VideoRecordService {
             ));
         }
 
-        if let Some(ref mut child) = self.child {
-            child.send_stdin_command(b" ").unwrap();
+        println!("[FFmpeg] Pausing recording - stopping current segment");
+
+        // 停止当前片段的录制
+        if let Some(mut child) = self.child.take() {
+            let _ = child.quit();
+            let _ = child.wait();
         }
 
         self.state = VideoRecordState::Paused;
@@ -341,11 +538,9 @@ impl VideoRecordService {
             ));
         }
 
-        if let Some(ref mut child) = self.child {
-            child.send_stdin_command(b"\n").unwrap();
-        }
+        println!("[FFmpeg] Resuming recording - starting new segment");
 
-        self.state = VideoRecordState::Recording;
-        Ok(())
+        // 开始新片段的录制
+        self.start_segment()
     }
 }

@@ -174,7 +174,18 @@ const EventListenerCore: React.FC<{ children: React.ReactNode }> = ({ children }
 
             if (isVideoRecordPage || isVideoRecordToolbarPage) {
                 defaultListener.push({
-                    event: 'video-record-reload',
+                    event: 'reload-video-record',
+                    callback: async () => {},
+                });
+            }
+
+            if (isVideoRecordPage) {
+                defaultListener.push({
+                    event: 'close-video-record-window',
+                    callback: async () => {},
+                });
+                defaultListener.push({
+                    event: 'change-video-record-state',
                     callback: async () => {},
                 });
             }

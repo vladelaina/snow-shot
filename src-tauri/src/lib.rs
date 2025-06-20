@@ -34,7 +34,7 @@ pub fn run() {
     let ui_elements = Mutex::new(UIElements::new());
     let auto_start_hide_window = Mutex::new(false);
 
-    let mut app_builder = tauri::Builder::default();
+    let mut app_builder = tauri::Builder::default().plugin(tauri_plugin_os::init());
 
     #[cfg(desktop)]
     {
@@ -127,6 +127,8 @@ pub fn run() {
             video_record::video_record_stop,
             video_record::video_record_pause,
             video_record::video_record_resume,
+            video_record::video_record_kill,
+            video_record::video_record_get_microphone_device_names,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

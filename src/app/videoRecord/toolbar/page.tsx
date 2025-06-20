@@ -1,12 +1,7 @@
 'use client';
 
-import {
-    HolderOutlined,
-    PauseOutlined,
-    PlayCircleFilled,
-    PlayCircleOutlined,
-} from '@ant-design/icons';
-import { Button, Flex, theme } from 'antd';
+import { CloseOutlined, HolderOutlined, PauseOutlined } from '@ant-design/icons';
+import { Button, Flex, Spin, theme } from 'antd';
 import { useIntl } from 'react-intl';
 import { useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { zIndexs } from '@/utils/zIndex';
@@ -20,18 +15,33 @@ import { getButtonIconColorByState } from '@/app/draw/components/drawToolbar/ext
 import { getCurrentWindow, PhysicalPosition, PhysicalSize } from '@tauri-apps/api/window';
 import { MonitorInfo } from '@/commands/core';
 import { ElementRect } from '@/commands';
-import { getVideoRecordParams, VideoRecordState } from '../extra';
+import { getVideoRecordParams, getVideoRecordSaveDirectory, VideoRecordState } from '../extra';
 import {
     VideoFormat,
+    videoRecordKill,
     videoRecordPause,
     videoRecordResume,
     videoRecordStart,
     videoRecordStop,
 } from '@/commands/videoRecord';
-import { VideoRecordWindowInfo } from '@/functions/videoRecord';
+import {
+    changeVideoRecordState,
+    closeVideoRecordWindow,
+    VideoRecordWindowInfo,
+} from '@/functions/videoRecord';
 import { EventListenerContext } from '@/components/eventListener';
 import dayjs from 'dayjs';
 import duration from 'dayjs/plugin/duration';
+import { useStateSubscriber } from '@/hooks/useStateSubscriber';
+import {
+    AppSettingsActionContext,
+    AppSettingsData,
+    AppSettingsGroup,
+    AppSettingsPublisher,
+} from '@/app/contextWrap';
+import { generateImageFileName } from '@/utils/file';
+import { useAppSettingsLoad } from '@/hooks/useAppSettingsLoad';
+import { join as joinPath } from '@tauri-apps/api/path';
 
 dayjs.extend(duration);
 
@@ -78,7 +88,7 @@ export default function VideoRecordToolbar() {
 
         init(monitorInfo, selectRect);
 
-        const listenerId = addListener('video-record-reload', (params) => {
+        const listenerId = addListener('reload-video-record', (params) => {
             const windowInfo = (params as { payload: VideoRecordWindowInfo }).payload;
 
             init(
@@ -100,7 +110,7 @@ export default function VideoRecordToolbar() {
             );
         });
 
-        videoRecordStop();
+        videoRecordKill();
 
         const stopVideoRecord = () => {
             videoRecordStop();
@@ -132,6 +142,20 @@ export default function VideoRecordToolbar() {
             .format('HH:mm:ss');
     }, []);
 
+    const stopDurationTimer = useCallback(() => {
+        if (durationTimer.current) {
+            clearInterval(durationTimer.current);
+            durationTimer.current = null;
+        }
+    }, []);
+
+    const startDurationTimer = useCallback(() => {
+        durationTimer.current = setInterval(() => {
+            durationRef.current += 0.1;
+            updateDurationFormat();
+        }, 100);
+    }, [updateDurationFormat]);
+
     useEffect(() => {
         updateDurationFormat();
 
@@ -142,167 +166,228 @@ export default function VideoRecordToolbar() {
         };
     }, [updateDurationFormat]);
 
-    const [recordLoading, setRecordLoading] = useState(false);
+    useEffect(() => {
+        changeVideoRecordState(videoRecordState);
+    }, [videoRecordState]);
+
+    const [startRecordLoading, setStartRecordLoading] = useState(false);
+    const [pauseRecordLoading, setPauseRecordLoading] = useState(false);
+    const [resumeRecordLoading, setResumeRecordLoading] = useState(false);
+    const [stopRecordLoading, setStopRecordLoading] = useState(false);
+    const [settingLoading, setSettingLoading] = useState(true);
+
+    const [getAppSettings] = useStateSubscriber(AppSettingsPublisher, undefined);
+    const { updateAppSettings } = useContext(AppSettingsActionContext);
+    useAppSettingsLoad(
+        useCallback((appSettings: AppSettingsData) => {
+            setEnableMicrophone(appSettings[AppSettingsGroup.Cache].enableMicrophone);
+            setSettingLoading(false);
+        }, []),
+        true,
+    );
+
+    const stopRecord = useCallback(async () => {
+        setStopRecordLoading(true);
+        try {
+            await videoRecordStop();
+
+            setVideoRecordState(VideoRecordState.Idle);
+
+            stopDurationTimer();
+
+            durationRef.current = 0;
+            updateDurationFormat();
+        } catch {}
+
+        setStopRecordLoading(false);
+    }, [updateDurationFormat, stopDurationTimer]);
 
     return (
         <div className="video-record-toolbar-container" data-tauri-drag-region>
-            <div className="video-record-toolbar" ref={toolbarRef}>
-                <Flex align="center" gap={token.paddingXS}>
-                    <div data-tauri-drag-region className="drag-button" title={dragTitle}>
-                        <HolderOutlined data-tauri-drag-region />
-                    </div>
+            <Spin spinning={settingLoading}>
+                <div className="video-record-toolbar" ref={toolbarRef}>
+                    <Flex align="center" gap={token.paddingXS}>
+                        <div data-tauri-drag-region className="drag-button" title={dragTitle}>
+                            <HolderOutlined data-tauri-drag-region />
+                        </div>
 
-                    {videoRecordState === VideoRecordState.Idle && (
-                        <Button
-                            loading={recordLoading}
-                            disabled={videoRecordState !== VideoRecordState.Idle}
-                            onClick={() => {
-                                setRecordLoading(true);
-                                videoRecordStart(
-                                    selectRectRef.current?.min_x ?? 0,
-                                    selectRectRef.current?.min_y ?? 0,
-                                    selectRectRef.current?.max_x ?? 0,
-                                    selectRectRef.current?.max_y ?? 0,
-                                    'C:/Users/Magic/Videos/Snow Shot Videos/test3',
-                                    VideoFormat.Mp4,
-                                    30,
-                                    enableMicrophone,
-                                    false,
-                                    '',
-                                    true,
-                                    'libx264',
-                                    'ultrafast',
-                                )
-                                    .then(() => {
-                                        setVideoRecordState(VideoRecordState.Recording);
+                        {videoRecordState === VideoRecordState.Idle && (
+                            <Button
+                                loading={startRecordLoading}
+                                disabled={videoRecordState !== VideoRecordState.Idle}
+                                onClick={async () => {
+                                    setStartRecordLoading(true);
 
-                                        if (durationTimer.current) {
-                                            clearInterval(durationTimer.current);
-                                            durationTimer.current = null;
-                                        }
+                                    const appSettings = getAppSettings();
 
-                                        durationRef.current = 0;
-                                        updateDurationFormat();
+                                    videoRecordStart(
+                                        selectRectRef.current?.min_x ?? 0,
+                                        selectRectRef.current?.min_y ?? 0,
+                                        selectRectRef.current?.max_x ?? 0,
+                                        selectRectRef.current?.max_y ?? 0,
+                                        await joinPath(
+                                            await getVideoRecordSaveDirectory(appSettings),
+                                            generateImageFileName(
+                                                appSettings[AppSettingsGroup.FunctionOutput]
+                                                    .videoRecordFileNameFormat,
+                                            ),
+                                        ),
+                                        VideoFormat.Mp4,
+                                        appSettings[AppSettingsGroup.FunctionVideoRecord].frameRate,
+                                        enableMicrophone,
+                                        false,
+                                        appSettings[AppSettingsGroup.FunctionVideoRecord]
+                                            .microphoneDeviceName,
+                                        appSettings[AppSettingsGroup.FunctionVideoRecord].hwaccel,
+                                        appSettings[AppSettingsGroup.FunctionVideoRecord].encoder,
+                                        appSettings[AppSettingsGroup.FunctionVideoRecord]
+                                            .encoderPreset,
+                                    )
+                                        .then(() => {
+                                            setVideoRecordState(VideoRecordState.Recording);
 
-                                        durationTimer.current = setInterval(() => {
-                                            durationRef.current++;
+                                            stopDurationTimer();
+
+                                            durationRef.current = 0;
                                             updateDurationFormat();
-                                        }, 1000);
-                                    })
-                                    .finally(() => {
-                                        setRecordLoading(false);
-                                    });
-                            }}
-                            icon={
-                                <StartRecordIcon
-                                    style={{
-                                        color: token.colorError,
-                                        position: 'relative',
-                                    }}
-                                />
-                            }
-                            title={intl.formatMessage({ id: 'videoRecord.startRecord' })}
-                            type={'text'}
-                            key="start-record"
-                        />
-                    )}
 
-                    {(videoRecordState === VideoRecordState.Recording ||
-                        videoRecordState === VideoRecordState.Paused) && (
-                        <Button
-                            onClick={() => {
-                                videoRecordStop().then(() => {
-                                    setVideoRecordState(VideoRecordState.Idle);
-
-                                    if (durationTimer.current) {
-                                        clearInterval(durationTimer.current);
-                                        durationTimer.current = null;
-                                    }
-
-                                    durationRef.current = 0;
-                                    updateDurationFormat();
-                                });
-                            }}
-                            icon={
-                                <StopRecordIcon
-                                    style={{
-                                        color: token.colorError,
-                                        position: 'relative',
-                                    }}
-                                />
-                            }
-                            title={intl.formatMessage({ id: 'videoRecord.stopRecord' })}
-                            type={'text'}
-                            key="stop-record"
-                        />
-                    )}
-
-                    {videoRecordState !== VideoRecordState.Paused && (
-                        <Button
-                            disabled={videoRecordState !== VideoRecordState.Recording}
-                            onClick={() => {
-                                videoRecordPause().then(() => {
-                                    setVideoRecordState(VideoRecordState.Paused);
-                                });
-                            }}
-                            icon={
-                                <PauseOutlined
-                                    style={{
-                                        color:
-                                            videoRecordState !== VideoRecordState.Recording
-                                                ? token.colorTextDisabled
-                                                : token.colorWarning,
-                                        position: 'relative',
-                                    }}
-                                />
-                            }
-                            title={intl.formatMessage({ id: 'videoRecord.pauseRecord' })}
-                            type={'text'}
-                            key="pause-record"
-                        />
-                    )}
-
-                    {videoRecordState === VideoRecordState.Paused && (
-                        <Button
-                            disabled={videoRecordState !== VideoRecordState.Paused}
-                            onClick={() => {
-                                videoRecordResume().then(() => {
-                                    setVideoRecordState(VideoRecordState.Recording);
-                                });
-                            }}
-                            icon={
-                                <ResumeRecordIcon
-                                    style={{
-                                        color: token.colorSuccess,
-                                        position: 'relative',
-                                    }}
-                                />
-                            }
-                            title={intl.formatMessage({ id: 'videoRecord.resumeRecord' })}
-                            type={'text'}
-                            key="resume-record"
-                        />
-                    )}
-
-                    <div className="video-record-toolbar-time" ref={durationFormatRef} />
-
-                    <Button
-                        onClick={() => {
-                            setEnableMicrophone((prev) => !prev);
-                        }}
-                        icon={
-                            <MicrophoneIcon
-                                style={{
-                                    color: getButtonIconColorByState(enableMicrophone, token),
+                                            startDurationTimer();
+                                        })
+                                        .finally(() => {
+                                            setStartRecordLoading(false);
+                                        });
                                 }}
+                                icon={
+                                    <StartRecordIcon
+                                        style={{
+                                            color: token.colorPrimary,
+                                            position: 'relative',
+                                        }}
+                                    />
+                                }
+                                title={intl.formatMessage({ id: 'videoRecord.startRecord' })}
+                                type={'text'}
+                                key="start-record"
                             />
-                        }
-                        title={intl.formatMessage({ id: 'videoRecord.microphone' })}
-                        type={'text'}
-                        key="microphone"
-                    />
+                        )}
 
-                    {/* <Button
+                        {(videoRecordState === VideoRecordState.Recording ||
+                            videoRecordState === VideoRecordState.Paused) && (
+                            <Button
+                                loading={stopRecordLoading}
+                                onClick={() => {
+                                    stopRecord();
+                                }}
+                                icon={
+                                    <StopRecordIcon
+                                        style={{
+                                            color: token.colorError,
+                                            position: 'relative',
+                                        }}
+                                    />
+                                }
+                                title={intl.formatMessage({ id: 'videoRecord.stopRecord' })}
+                                type={'text'}
+                                key="stop-record"
+                            />
+                        )}
+
+                        {videoRecordState !== VideoRecordState.Paused && (
+                            <Button
+                                loading={pauseRecordLoading}
+                                disabled={videoRecordState !== VideoRecordState.Recording}
+                                onClick={() => {
+                                    setPauseRecordLoading(true);
+                                    videoRecordPause()
+                                        .then(() => {
+                                            setVideoRecordState(VideoRecordState.Paused);
+
+                                            stopDurationTimer();
+                                        })
+                                        .finally(() => {
+                                            setPauseRecordLoading(false);
+                                        });
+                                }}
+                                icon={
+                                    <PauseOutlined
+                                        style={{
+                                            color:
+                                                videoRecordState !== VideoRecordState.Recording
+                                                    ? token.colorTextDisabled
+                                                    : token.colorWarning,
+                                            position: 'relative',
+                                        }}
+                                    />
+                                }
+                                title={intl.formatMessage({ id: 'videoRecord.pauseRecord' })}
+                                type={'text'}
+                                key="pause-record"
+                            />
+                        )}
+
+                        {videoRecordState === VideoRecordState.Paused && (
+                            <Button
+                                loading={resumeRecordLoading}
+                                disabled={videoRecordState !== VideoRecordState.Paused}
+                                onClick={() => {
+                                    setResumeRecordLoading(true);
+                                    videoRecordResume()
+                                        .then(() => {
+                                            setVideoRecordState(VideoRecordState.Recording);
+
+                                            startDurationTimer();
+                                        })
+                                        .finally(() => {
+                                            setResumeRecordLoading(false);
+                                        });
+                                }}
+                                icon={
+                                    <ResumeRecordIcon
+                                        style={{
+                                            color: token.colorPrimary,
+                                            position: 'relative',
+                                        }}
+                                    />
+                                }
+                                title={intl.formatMessage({ id: 'videoRecord.resumeRecord' })}
+                                type={'text'}
+                                key="resume-record"
+                            />
+                        )}
+
+                        <div className="video-record-toolbar-time" ref={durationFormatRef} />
+
+                        <Button
+                            onClick={() => {
+                                setEnableMicrophone((prev) => {
+                                    const value = !prev;
+
+                                    updateAppSettings(
+                                        AppSettingsGroup.Cache,
+                                        { enableMicrophone: value },
+                                        true,
+                                        true,
+                                        false,
+                                        true,
+                                        true,
+                                    );
+
+                                    return value;
+                                });
+                            }}
+                            icon={
+                                <MicrophoneIcon
+                                    style={{
+                                        color: getButtonIconColorByState(enableMicrophone, token),
+                                    }}
+                                />
+                            }
+                            title={intl.formatMessage({ id: 'videoRecord.microphone' })}
+                            type={'text'}
+                            key="microphone"
+                        />
+
+                        {/* <Button
                         onClick={() => {
                             setEnableSystemAudio((prev) => !prev);
                         }}
@@ -318,11 +403,36 @@ export default function VideoRecordToolbar() {
                         key="system-audio"
                     /> */}
 
-                    <div data-tauri-drag-region className="drag-button" title={dragTitle}>
-                        <HolderOutlined data-tauri-drag-region />
-                    </div>
-                </Flex>
-            </div>
+                        <div className="video-record-toolbar-splitter" />
+
+                        <Button
+                            onClick={() => {
+                                stopRecord().then(() => {
+                                    getCurrentWindow().close();
+                                    closeVideoRecordWindow();
+                                });
+                            }}
+                            icon={
+                                <CloseOutlined
+                                    style={{
+                                        color: token.colorError,
+                                        fontSize: '0.83em',
+                                        position: 'relative',
+                                        bottom: '0.1em',
+                                    }}
+                                />
+                            }
+                            title={intl.formatMessage({ id: 'videoRecord.close' })}
+                            type={'text'}
+                            key="close"
+                        />
+
+                        <div data-tauri-drag-region className="drag-button" title={dragTitle}>
+                            <HolderOutlined data-tauri-drag-region />
+                        </div>
+                    </Flex>
+                </div>
+            </Spin>
 
             <style jsx>{`
                 .video-record-toolbar-container {
@@ -363,6 +473,13 @@ export default function VideoRecordToolbar() {
 
                 .video-record-toolbar :global(.ant-btn) :global(.ant-btn-icon) {
                     font-size: 24px;
+                }
+
+                .video-record-toolbar-splitter {
+                    width: 1px;
+                    height: 0.83em;
+                    background-color: ${token.colorBorder};
+                    margin: 0 ${token.marginXXS}px;
                 }
             `}</style>
         </div>

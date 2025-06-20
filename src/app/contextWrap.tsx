@@ -59,6 +59,7 @@ export enum AppSettingsGroup {
     FunctionFullScreenDraw = 'functionFullScreenDraw',
     FunctionOutput = 'functionOutput',
     FunctionFixedContent = 'functionFixedContent',
+    FunctionVideoRecord = 'functionVideoRecord',
 }
 
 export enum AppSettingsLanguage {
@@ -108,6 +109,7 @@ export type AppSettingsData = {
         colorPickerColorFormatIndex: number;
         prevImageFormat: ImageFormat;
         prevSelectRect: ElementRect;
+        enableMicrophone: boolean;
     };
     [AppSettingsGroup.CacheV2]: {
         disableArrowPicker: boolean;
@@ -166,6 +168,8 @@ export type AppSettingsData = {
         autoSaveFileNameFormat: string;
         /** 快速保存文件名格式 */
         fastSaveFileNameFormat: string;
+        /** 视频录制文件名格式 */
+        videoRecordFileNameFormat: string;
     };
     [AppSettingsGroup.FunctionFixedContent]: {
         /** 以鼠标为中心缩放 */
@@ -174,6 +178,20 @@ export type AppSettingsData = {
     [AppSettingsGroup.FunctionFullScreenDraw]: {
         /** 默认工具 */
         defaultTool: DrawState;
+    };
+    [AppSettingsGroup.FunctionVideoRecord]: {
+        /** 视频录制保存路径 */
+        saveDirectory: string;
+        /** 帧率 */
+        frameRate: number;
+        /** 麦克风设备 */
+        microphoneDeviceName: string;
+        /** 硬件加速 */
+        hwaccel: boolean;
+        /** 编码器 */
+        encoder: string;
+        /** 编码器预设 */
+        encoderPreset: string;
     };
     [AppSettingsGroup.SystemScrollScreenshot]: {
         minSide: number;
@@ -217,6 +235,7 @@ export const defaultAppSettingsData: AppSettingsData = {
             max_x: 0,
             max_y: 0,
         },
+        enableMicrophone: false,
     },
     [AppSettingsGroup.CacheV2]: {
         disableArrowPicker: true,
@@ -271,9 +290,18 @@ export const defaultAppSettingsData: AppSettingsData = {
         manualSaveFileNameFormat: `SnowShot_{YYYY-MM-DD_HH-mm-ss}`,
         autoSaveFileNameFormat: `SnowShot_{YYYY-MM-DD_HH-mm-ss}`,
         fastSaveFileNameFormat: `SnowShot_{YYYY-MM-DD_HH-mm-ss}`,
+        videoRecordFileNameFormat: `SnowShot_Video_{YYYY-MM-DD_HH-mm-ss}`,
     },
     [AppSettingsGroup.FunctionFullScreenDraw]: {
         defaultTool: DrawState.Select,
+    },
+    [AppSettingsGroup.FunctionVideoRecord]: {
+        saveDirectory: '',
+        frameRate: 30,
+        microphoneDeviceName: '',
+        hwaccel: true,
+        encoder: 'libx264',
+        encoderPreset: 'ultrafast',
     },
 };
 
@@ -508,6 +536,10 @@ const ContextWrapCore: React.FC<{ children: React.ReactNode }> = ({ children }) 
                             ? newSettings.prevImageFormat
                             : (prevSettings?.prevImageFormat ?? ImageFormat.PNG),
                     prevSelectRect,
+                    enableMicrophone:
+                        typeof newSettings?.enableMicrophone === 'boolean'
+                            ? newSettings.enableMicrophone
+                            : (prevSettings?.enableMicrophone ?? false),
                 };
             } else if (group === AppSettingsGroup.CacheV2) {
                 newSettings = newSettings as AppSettingsData[typeof group];
@@ -893,6 +925,10 @@ const ContextWrapCore: React.FC<{ children: React.ReactNode }> = ({ children }) 
                         typeof newSettings?.fastSaveFileNameFormat === 'string'
                             ? newSettings.fastSaveFileNameFormat
                             : (prevSettings?.fastSaveFileNameFormat ?? ''),
+                    videoRecordFileNameFormat:
+                        typeof newSettings?.videoRecordFileNameFormat === 'string'
+                            ? newSettings.videoRecordFileNameFormat
+                            : (prevSettings?.videoRecordFileNameFormat ?? ''),
                 };
             } else if (group === AppSettingsGroup.FunctionFullScreenDraw) {
                 newSettings = newSettings as AppSettingsData[typeof group];
@@ -948,6 +984,39 @@ const ContextWrapCore: React.FC<{ children: React.ReactNode }> = ({ children }) 
                         typeof newSettings?.iconPath === 'string'
                             ? newSettings.iconPath
                             : (prevSettings?.iconPath ?? ''),
+                };
+            } else if (group === AppSettingsGroup.FunctionVideoRecord) {
+                newSettings = newSettings as AppSettingsData[typeof group];
+                const prevSettings = appSettingsRef.current[group] as
+                    | AppSettingsData[typeof group]
+                    | undefined;
+
+                settings = {
+                    saveDirectory:
+                        typeof newSettings?.saveDirectory === 'string'
+                            ? newSettings.saveDirectory
+                            : (prevSettings?.saveDirectory ?? ''),
+                    frameRate:
+                        typeof newSettings?.frameRate === 'number'
+                            ? Math.min(Math.max(newSettings.frameRate, 1), 120)
+                            : (prevSettings?.frameRate ?? defaultAppSettingsData[group].frameRate),
+                    microphoneDeviceName:
+                        typeof newSettings?.microphoneDeviceName === 'string'
+                            ? newSettings.microphoneDeviceName
+                            : (prevSettings?.microphoneDeviceName ?? ''),
+                    hwaccel:
+                        typeof newSettings?.hwaccel === 'boolean'
+                            ? newSettings.hwaccel
+                            : (prevSettings?.hwaccel ?? defaultAppSettingsData[group].hwaccel),
+                    encoder:
+                        typeof newSettings?.encoder === 'string'
+                            ? newSettings.encoder
+                            : (prevSettings?.encoder ?? defaultAppSettingsData[group].encoder),
+                    encoderPreset:
+                        typeof newSettings?.encoderPreset === 'string'
+                            ? newSettings.encoderPreset
+                            : (prevSettings?.encoderPreset ??
+                              defaultAppSettingsData[group].encoderPreset),
                 };
             } else if (group === AppSettingsGroup.FunctionFixedContent) {
                 newSettings = newSettings as AppSettingsData[typeof group];

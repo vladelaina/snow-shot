@@ -5,4 +5,5 @@ export const videoRecord = {
     'videoRecord.resumeRecord': '继续录制',
     'videoRecord.microphone': '麦克风',
     'videoRecord.systemAudio': '系统音频',
+    'videoRecord.close': '关闭',
 };

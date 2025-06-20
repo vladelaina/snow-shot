@@ -8,7 +8,7 @@ export const getButtonTypeByState = (active: boolean): BaseButtonProps['type'] =
 };
 
 export const getButtonIconColorByState = (active: boolean, token: GlobalToken) => {
-    return active ? token.colorPrimary : token.colorTextDisabled;
+    return active ? token.colorSuccess : token.colorTextDisabled;
 };
 
 export type DrawToolbarContextType = {

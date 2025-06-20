@@ -311,7 +311,7 @@ pub async fn create_video_record_window(
     if let Some(window) = window {
         window
             .emit(
-                "video-record-reload",
+                "reload-video-record",
                 VideoRecordWindowInfo {
                     monitor_x,
                     monitor_y,

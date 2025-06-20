@@ -52,3 +52,13 @@ export const videoRecordResume = async () => {
     const result = await invoke('video_record_resume');
     return result;
 };
+
+export const videoRecordKill = async () => {
+    const result = await invoke('video_record_kill');
+    return result;
+};
+
+export const videoRecordGetMicrophoneDeviceNames = async () => {
+    const result = await invoke<string[]>('video_record_get_microphone_device_names');
+    return result;
+};

@@ -101,7 +101,7 @@ export default function VideoRecordPage() {
         const { monitorInfo, selectRect } = getVideoRecordParams();
         init(monitorInfo, selectRect);
 
-        const listenerId = addListener('video-record-reload', (params) => {
+        const listenerId = addListener('reload-video-record', (params) => {
             const windowInfo = (params as { payload: VideoRecordWindowInfo }).payload;
 
             init(
@@ -123,8 +123,22 @@ export default function VideoRecordPage() {
             );
         });
 
+        const closeVideoRecordWindowListenerId = addListener('close-video-record-window', () => {
+            getCurrentWindow().close();
+        });
+
+        const changeVideoRecordStateListenerId = addListener(
+            'change-video-record-state',
+            (params) => {
+                const state = (params as { payload: VideoRecordState }).payload;
+                setVideoRecordState(state);
+            },
+        );
+
         return () => {
             removeListener(listenerId);
+            removeListener(closeVideoRecordWindowListenerId);
+            removeListener(changeVideoRecordStateListenerId);
         };
     }, [addListener, init, removeListener]);
 
