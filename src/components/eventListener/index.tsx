@@ -238,6 +238,8 @@ const EventListenerCore: React.FC<{ children: React.ReactNode }> = ({ children }
         reloadAppSettings,
         isFullScreenDraw,
         isFullScreenDrawSwitchMouseThrough,
+        isVideoRecordPage,
+        isVideoRecordToolbarPage,
     ]);
 
     const eventListenerContextValue = useMemo(() => {

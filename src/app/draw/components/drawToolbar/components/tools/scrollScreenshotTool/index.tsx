@@ -186,6 +186,20 @@ export const ScrollScreenshot: React.FC<{
     );
 
     const lastCaptureMissHideRef = useRef<MessageType | undefined>(undefined);
+
+    const showCaptureMissMessage = useMemo(() => {
+        return throttle(() => {
+            if (lastCaptureMissHideRef.current) {
+                try {
+                    lastCaptureMissHideRef.current();
+                } catch {}
+            }
+            lastCaptureMissHideRef.current = message.warning(
+                intl.formatMessage({ id: 'draw.scrollScreenshot.captureMiss' }),
+            );
+        }, 3000);
+    }, [intl, message]);
+
     const captureImage = useCallback(
         async (scrollImageList: ScrollImageList) => {
             setDrawEvent({
@@ -219,27 +233,21 @@ export const ScrollScreenshot: React.FC<{
             if (captureResult.edge_position === 0 && captureResult.thumbnail_buffer === undefined) {
                 return;
             } else if (captureResult.edge_position === undefined) {
-                if (lastCaptureMissHideRef.current) {
-                    try {
-                        lastCaptureMissHideRef.current();
-                    } catch {}
-                }
-                lastCaptureMissHideRef.current = message.warning(
-                    intl.formatMessage({ id: 'draw.scrollScreenshot.captureMiss' }),
-                );
+                showCaptureMissMessage();
                 return;
             }
 
             updateImageUrlList(captureResult);
         },
         [
-            monitorInfoRef,
-            intl,
-            message,
-            selectLayerActionRef,
             setDrawEvent,
             setLoading,
+            selectLayerActionRef,
             updateImageUrlList,
+            monitorInfoRef,
+            message,
+            intl,
+            showCaptureMissMessage,
         ],
     );
     const captuerDebounce = useMemo(() => {

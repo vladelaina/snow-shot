@@ -408,8 +408,9 @@ export default function VideoRecordToolbar() {
                         <Button
                             onClick={() => {
                                 stopRecord().then(() => {
-                                    getCurrentWindow().close();
-                                    closeVideoRecordWindow();
+                                    closeVideoRecordWindow().then(() => {
+                                        getCurrentWindow().close();
+                                    });
                                 });
                             }}
                             icon={
