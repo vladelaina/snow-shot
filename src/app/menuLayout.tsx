@@ -470,9 +470,21 @@ const MenuLayoutCore: React.FC<{ children: React.ReactNode }> = ({ children }) =
                                 }),
                             },
                             {
-                                key: 'functionSettings',
+                                key: 'chatSettings',
                                 label: intl.formatMessage({
                                     id: 'settings.functionSettings.chatSettings',
+                                }),
+                            },
+                            {
+                                key: 'fullScreenDrawSettings',
+                                label: intl.formatMessage({
+                                    id: 'settings.functionSettings.fullScreenDrawSettings',
+                                }),
+                            },
+                            {
+                                key: 'videoRecordSettings',
+                                label: intl.formatMessage({
+                                    id: 'settings.functionSettings.videoRecordSettings',
                                 }),
                             },
                             {

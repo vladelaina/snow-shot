@@ -601,7 +601,7 @@ export default function SystemSettings() {
             <Divider />
 
             <GroupTitle
-                id="functionSettings"
+                id="chatSettings"
                 extra={
                     <ResetSettingsButton
                         title={<FormattedMessage id="settings.functionSettings.chatSettings" />}
