@@ -4,12 +4,12 @@ use std::{
     env,
     path::PathBuf,
     sync::Mutex,
-    thread::sleep,
-    time::{Duration, SystemTime, UNIX_EPOCH},
+    time::{SystemTime, UNIX_EPOCH},
 };
 use tauri::{Emitter, ipc::Response};
 use tauri::{Manager, command};
 use tauri_plugin_clipboard;
+use tokio::time::Duration;
 
 use crate::{
     os::{self, free_drag::set_window_proc},
@@ -74,17 +74,18 @@ pub async fn scroll_through(
         return Ok(());
     }
 
-    sleep(Duration::from_millis(1));
+    tokio::time::sleep(Duration::from_millis(1)).await;
 
-    if let Ok(mut enigo) = enigo.lock() {
-        enigo.scroll(length, Axis::Vertical).unwrap();
-
-        // 让用户的鼠标也能触发滚轮事件
-        sleep(Duration::from_millis(128));
-        match window.set_ignore_cursor_events(false) {
-            Ok(_) => (),
-            Err(_) => (),
+    {
+        if let Ok(mut enigo) = enigo.lock() {
+            enigo.scroll(length, Axis::Vertical).unwrap();
         }
+    }
+
+    tokio::time::sleep(Duration::from_millis(128)).await;
+    match window.set_ignore_cursor_events(false) {
+        Ok(_) => (),
+        Err(_) => (),
     }
 
     Ok(())
@@ -98,7 +99,7 @@ pub async fn click_through(window: tauri::Window) -> Result<(), ()> {
         return Ok(());
     }
 
-    sleep(Duration::from_millis(128));
+    tokio::time::sleep(Duration::from_millis(128)).await;
     match window.set_ignore_cursor_events(false) {
         Ok(_) => (),
         Err(_) => (),
