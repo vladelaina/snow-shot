@@ -112,15 +112,15 @@ export default function VideoRecordToolbar() {
 
         videoRecordKill();
 
-        const stopVideoRecord = () => {
-            videoRecordStop();
+        const killVideoRecord = () => {
+            videoRecordKill();
         };
 
-        window.addEventListener('beforeunload', stopVideoRecord);
+        window.addEventListener('beforeunload', killVideoRecord);
 
         return () => {
-            videoRecordStop();
-            window.removeEventListener('beforeunload', stopVideoRecord);
+            videoRecordKill();
+            window.removeEventListener('beforeunload', killVideoRecord);
             removeListener(listenerId);
         };
     }, [addListener, init, removeListener]);
