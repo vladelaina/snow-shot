@@ -255,7 +255,7 @@ export const ScrollScreenshot: React.FC<{
         ],
     );
     const captuerDebounce = useMemo(() => {
-        return throttle(captureImage, 83, { edges: ['trailing'] });
+        return throttle(captureImage, 100, { edges: ['trailing'] });
     }, [captureImage]);
 
     const [showTip, setShowTip] = useState(false);
