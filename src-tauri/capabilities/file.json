@@ -89,6 +89,12 @@
                 },
                 {
                     "path": "$APPCONFIG/configs"
+                },
+                {
+                    "path": "**"
+                },
+                {
+                    "path": "*"
                 }
             ]
         }
