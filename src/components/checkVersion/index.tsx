@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { getVersion } from '@tauri-apps/api/app';
 import { fetch } from '@tauri-apps/plugin-http';
 import { isPermissionGranted, requestPermission } from '@tauri-apps/plugin-notification';
@@ -23,6 +23,14 @@ export const CheckVersion: React.FC = () => {
     const intl = useIntl();
     const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
+    const clearIntervalRef = useCallback(() => {
+        if (intervalRef.current) {
+            clearInterval(intervalRef.current);
+            intervalRef.current = null;
+        }
+    }, []);
+
+    const hasSendRef = useRef(false);
     const checkVersion = useCallback(async () => {
         try {
             const currentVersion = await getVersion();
@@ -30,6 +38,10 @@ export const CheckVersion: React.FC = () => {
             const latestVersion = await getLatestVersion();
 
             if (currentVersion === latestVersion) {
+                return;
+            }
+
+            if (hasSendRef.current) {
                 return;
             }
 
@@ -55,35 +67,50 @@ export const CheckVersion: React.FC = () => {
                             currentVersion,
                         },
                     ),
-                );
+                ).then(() => {
+                    hasSendRef.current = true;
+                    clearIntervalRef();
+                });
             }
         } catch (error) {
             console.error('Failed to check version:', error);
         }
-    }, [intl]);
+    }, [clearIntervalRef, intl]);
 
+    const [autoCheckVersion, setAutoCheckVersion] = useState<boolean | undefined>(undefined);
     useAppSettingsLoad(
-        useCallback(
-            (appSettings: AppSettingsData) => {
-                if (appSettings[AppSettingsGroup.SystemCommon].autoCheckVersion) {
-                    checkVersion();
-
-                    intervalRef.current = setInterval(checkVersion, 1000 * 60 * 60);
-                }
-            },
-            [checkVersion],
-        ),
+        useCallback((appSettings: AppSettingsData) => {
+            setAutoCheckVersion(appSettings[AppSettingsGroup.SystemCommon].autoCheckVersion);
+        }, []),
         true,
     );
 
+    const hasCheckedVersionRef = useRef(false);
     useEffect(() => {
+        if (autoCheckVersion === undefined) {
+            return;
+        }
+
+        if (autoCheckVersion) {
+            if (!hasCheckedVersionRef.current) {
+                checkVersion();
+                hasCheckedVersionRef.current = true;
+            }
+
+            clearIntervalRef();
+
+            intervalRef.current = setInterval(checkVersion, 1000 * 60 * 60);
+        } else {
+            clearIntervalRef();
+        }
+
         return () => {
             if (intervalRef.current) {
                 clearInterval(intervalRef.current);
                 intervalRef.current = null;
             }
         };
-    }, []);
+    }, [autoCheckVersion, checkVersion, clearIntervalRef]);
 
     return <></>;
 };

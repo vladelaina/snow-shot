@@ -1,11 +1,12 @@
 'use client';
 
-import { CloseOutlined, HolderOutlined, PauseOutlined } from '@ant-design/icons';
+import { CloseOutlined, CopyOutlined, HolderOutlined, PauseOutlined } from '@ant-design/icons';
 import { Button, Flex, Spin, theme } from 'antd';
 import { useIntl } from 'react-intl';
 import { useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { zIndexs } from '@/utils/zIndex';
 import {
+    FolderIcon,
     MicrophoneIcon,
     ResumeRecordIcon,
     StartRecordIcon,
@@ -42,6 +43,9 @@ import {
 import { generateImageFileName } from '@/utils/file';
 import { useAppSettingsLoad } from '@/hooks/useAppSettingsLoad';
 import { join as joinPath } from '@tauri-apps/api/path';
+import clipboard from 'tauri-plugin-clipboard-api';
+import { openPath } from '@tauri-apps/plugin-opener';
+import { createDir } from '@/commands/file';
 
 dayjs.extend(duration);
 
@@ -175,6 +179,7 @@ export default function VideoRecordToolbar() {
     const [resumeRecordLoading, setResumeRecordLoading] = useState(false);
     const [stopRecordLoading, setStopRecordLoading] = useState(false);
     const [settingLoading, setSettingLoading] = useState(true);
+    const [openFolderLoading, setOpenFolderLoading] = useState(false);
 
     const [getAppSettings] = useStateSubscriber(AppSettingsPublisher, undefined);
     const { updateAppSettings } = useContext(AppSettingsActionContext);
@@ -186,10 +191,12 @@ export default function VideoRecordToolbar() {
         true,
     );
 
-    const stopRecord = useCallback(async () => {
+    const stopRecord = useCallback(async (): Promise<string | null | undefined> => {
         setStopRecordLoading(true);
+
+        let outputFile: string | null | undefined = undefined;
         try {
-            await videoRecordStop();
+            outputFile = await videoRecordStop();
 
             setVideoRecordState(VideoRecordState.Idle);
 
@@ -200,7 +207,13 @@ export default function VideoRecordToolbar() {
         } catch {}
 
         setStopRecordLoading(false);
+
+        return outputFile;
     }, [updateDurationFormat, stopDurationTimer]);
+
+    const enableStopRecord =
+        videoRecordState === VideoRecordState.Recording ||
+        videoRecordState === VideoRecordState.Paused;
 
     return (
         <div className="video-record-toolbar-container">
@@ -274,8 +287,7 @@ export default function VideoRecordToolbar() {
                             />
                         )}
 
-                        {(videoRecordState === VideoRecordState.Recording ||
-                            videoRecordState === VideoRecordState.Paused) && (
+                        {enableStopRecord && (
                             <Button
                                 loading={stopRecordLoading}
                                 onClick={() => {
@@ -285,7 +297,6 @@ export default function VideoRecordToolbar() {
                                     <StopRecordIcon
                                         style={{
                                             color: token.colorError,
-                                            position: 'relative',
                                         }}
                                     />
                                 }
@@ -315,10 +326,9 @@ export default function VideoRecordToolbar() {
                                     <PauseOutlined
                                         style={{
                                             color:
-                                                videoRecordState !== VideoRecordState.Recording
-                                                    ? token.colorTextDisabled
-                                                    : token.colorWarning,
-                                            position: 'relative',
+                                                videoRecordState === VideoRecordState.Recording
+                                                    ? token.colorWarning
+                                                    : undefined,
                                         }}
                                     />
                                 }
@@ -348,7 +358,6 @@ export default function VideoRecordToolbar() {
                                     <ResumeRecordIcon
                                         style={{
                                             color: token.colorPrimary,
-                                            position: 'relative',
                                         }}
                                     />
                                 }
@@ -409,6 +418,26 @@ export default function VideoRecordToolbar() {
                         <div className="video-record-toolbar-splitter" />
 
                         <Button
+                            loading={openFolderLoading}
+                            onClick={async () => {
+                                setOpenFolderLoading(true);
+                                try {
+                                    const saveDirectory =
+                                        await getVideoRecordSaveDirectory(getAppSettings());
+                                    await createDir(saveDirectory);
+                                    await openPath(saveDirectory);
+                                } catch (error) {
+                                    console.error(error);
+                                }
+                                setOpenFolderLoading(false);
+                            }}
+                            icon={<FolderIcon style={{}} />}
+                            title={intl.formatMessage({ id: 'videoRecord.openFolder' })}
+                            type={'text'}
+                            key="open-folder"
+                        />
+
+                        <Button
                             onClick={() => {
                                 stopRecord().then(() => {
                                     closeVideoRecordWindow().then(() => {
@@ -421,14 +450,34 @@ export default function VideoRecordToolbar() {
                                     style={{
                                         color: token.colorError,
                                         fontSize: '0.83em',
-                                        position: 'relative',
-                                        bottom: '0.1em',
                                     }}
                                 />
                             }
                             title={intl.formatMessage({ id: 'videoRecord.close' })}
                             type={'text'}
                             key="close"
+                        />
+
+                        <Button
+                            onClick={() => {
+                                stopRecord().then((outputFile) => {
+                                    if (outputFile) {
+                                        clipboard.writeFiles([outputFile]);
+                                    }
+                                });
+                            }}
+                            icon={
+                                <CopyOutlined
+                                    style={{
+                                        fontSize: '0.88em',
+                                        color: enableStopRecord ? token.colorPrimary : undefined,
+                                    }}
+                                />
+                            }
+                            disabled={!enableStopRecord}
+                            title={intl.formatMessage({ id: 'videoRecord.copy' })}
+                            type={'text'}
+                            key="copy"
                         />
 
                         <div className="drag-button" title={dragTitle}>
@@ -500,6 +549,8 @@ export default function VideoRecordToolbar() {
 
                 .video-record-toolbar :global(.ant-btn) :global(.ant-btn-icon) {
                     font-size: 24px;
+                    display: flex;
+                    align-items: center;
                 }
 
                 .video-record-toolbar-splitter {

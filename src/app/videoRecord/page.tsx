@@ -10,6 +10,7 @@ import { VideoRecordWindowInfo } from '@/functions/videoRecord';
 
 const PENDING_STROKE_COLOR = '#4096ff';
 const RECORDING_STROKE_COLOR = '#f5222d';
+const PAUSED_STROKE_COLOR = '#faad14';
 
 export default function VideoRecordPage() {
     const selectCanvasRef = useRef<HTMLCanvasElement>(null);
@@ -38,6 +39,8 @@ export default function VideoRecordPage() {
             let strokeColor = PENDING_STROKE_COLOR;
             if (videoRecordState === VideoRecordState.Recording) {
                 strokeColor = RECORDING_STROKE_COLOR;
+            } else if (videoRecordState === VideoRecordState.Paused) {
+                strokeColor = PAUSED_STROKE_COLOR;
             }
 
             ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -130,7 +133,8 @@ export default function VideoRecordPage() {
         const changeVideoRecordStateListenerId = addListener(
             'change-video-record-state',
             (params) => {
-                const state = (params as { payload: VideoRecordState }).payload;
+                const { state } = (params as { payload: { state: VideoRecordState } }).payload;
+
                 setVideoRecordState(state);
             },
         );

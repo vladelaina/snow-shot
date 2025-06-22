@@ -255,7 +255,7 @@ export const ScrollScreenshot: React.FC<{
         ],
     );
     const captuerDebounce = useMemo(() => {
-        return throttle(captureImage, 32, { edges: ['trailing'] });
+        return throttle(captureImage, 100, { edges: ['trailing'] });
     }, [captureImage]);
 
     const [showTip, setShowTip] = useState(false);
@@ -314,7 +314,8 @@ export const ScrollScreenshot: React.FC<{
     const enableeCursorEventsDebounce = useMemo(() => {
         return debounce(
             () => {
-                getCurrentWindow().setIgnoreCursorEvents(false);
+                const appWindow = getCurrentWindow();
+                appWindow.setIgnoreCursorEvents(false);
             },
             128 + 128 + 16,
         );

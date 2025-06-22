@@ -220,6 +220,7 @@ dependencies = [
  "tauri-plugin-single-instance",
  "tauri-plugin-store",
  "thiserror 2.0.12",
+ "tokio",
  "uiautomation",
  "windows 0.61.3",
  "xcap",

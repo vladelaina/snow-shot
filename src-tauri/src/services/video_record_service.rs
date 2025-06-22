@@ -434,9 +434,14 @@ impl VideoRecordService {
         Ok(())
     }
 
-    pub fn stop(&mut self) -> Result<()> {
+    fn get_final_filename(&self) -> String {
+        let params = self.recording_params.as_ref().unwrap();
+        format!("{}.{}", params.output_file, params.format.extension())
+    }
+
+    pub fn stop(&mut self) -> Result<Option<String>> {
         if self.state != VideoRecordState::Recording && self.state != VideoRecordState::Paused {
-            return Ok(());
+            return Ok(None);
         }
 
         println!("[FFmpeg] Stopping and merging segments");
@@ -448,10 +453,8 @@ impl VideoRecordService {
         }
 
         // 如果只有一个片段，直接重命名
+        let final_filename = self.get_final_filename();
         if self.segments.len() == 1 {
-            let params = self.recording_params.as_ref().unwrap();
-            let final_filename = format!("{}.{}", params.output_file, params.format.extension());
-
             if let Err(e) = std::fs::rename(&self.segments[0], &final_filename) {
                 println!("Failed to rename single segment: {}", e);
                 return Err(std::io::Error::new(
@@ -461,16 +464,15 @@ impl VideoRecordService {
             }
         } else if self.segments.len() > 1 {
             // 多个片段需要合并
-            self.merge_segments()?;
+            self.merge_segments(final_filename.clone())?;
         }
 
         self.cleanup();
-        Ok(())
+        Ok(Some(final_filename))
     }
 
-    fn merge_segments(&mut self) -> Result<()> {
+    fn merge_segments(&mut self, final_filename: String) -> Result<()> {
         let params = self.recording_params.as_ref().unwrap();
-        let final_filename = format!("{}.{}", params.output_file, params.format.extension());
 
         // 创建临时的文件列表
         let list_filename = format!("{}_segments.txt", params.output_file);
