@@ -23,6 +23,14 @@ export const CheckVersion: React.FC = () => {
     const intl = useIntl();
     const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
+    const clearIntervalRef = useCallback(() => {
+        if (intervalRef.current) {
+            clearInterval(intervalRef.current);
+            intervalRef.current = null;
+        }
+    }, []);
+
+    const hasSendRef = useRef(false);
     const checkVersion = useCallback(async () => {
         try {
             const currentVersion = await getVersion();
@@ -30,6 +38,10 @@ export const CheckVersion: React.FC = () => {
             const latestVersion = await getLatestVersion();
 
             if (currentVersion === latestVersion) {
+                return;
+            }
+
+            if (hasSendRef.current) {
                 return;
             }
 
@@ -55,12 +67,15 @@ export const CheckVersion: React.FC = () => {
                             currentVersion,
                         },
                     ),
-                );
+                ).then(() => {
+                    hasSendRef.current = true;
+                    clearIntervalRef();
+                });
             }
         } catch (error) {
             console.error('Failed to check version:', error);
         }
-    }, [intl]);
+    }, [clearIntervalRef, intl]);
 
     const [autoCheckVersion, setAutoCheckVersion] = useState<boolean | undefined>(undefined);
     useAppSettingsLoad(
@@ -82,17 +97,11 @@ export const CheckVersion: React.FC = () => {
                 hasCheckedVersionRef.current = true;
             }
 
-            if (intervalRef.current) {
-                clearInterval(intervalRef.current);
-                intervalRef.current = null;
-            }
+            clearIntervalRef();
 
             intervalRef.current = setInterval(checkVersion, 1000 * 60 * 60);
         } else {
-            if (intervalRef.current) {
-                clearInterval(intervalRef.current);
-                intervalRef.current = null;
-            }
+            clearIntervalRef();
         }
 
         return () => {
@@ -101,7 +110,7 @@ export const CheckVersion: React.FC = () => {
                 intervalRef.current = null;
             }
         };
-    }, [autoCheckVersion, checkVersion]);
+    }, [autoCheckVersion, checkVersion, clearIntervalRef]);
 
     return <></>;
 };
