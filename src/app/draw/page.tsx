@@ -71,6 +71,7 @@ import {
     HistoryContext,
     withCanvasHistory,
 } from '../fullScreenDraw/components/drawCore/components/historyContext';
+import { covertOcrResultToText } from '../fixedContent/components/ocrResult';
 
 const DrawCacheLayer = dynamic(
     async () => (await import('./components/drawCacheLayer')).DrawCacheLayer,
@@ -573,7 +574,12 @@ const DrawPageCore: React.FC = () => {
 
         const selected = window.getSelection();
 
-        if (
+        if (getDrawState() === DrawState.OcrDetect) {
+            const ocrResult = ocrBlocksActionRef.current?.getOcrResultAction()?.getOcrResult();
+            navigator.clipboard.writeText(ocrResult ? covertOcrResultToText(ocrResult) : '');
+            finishCapture();
+            return;
+        } else if (
             (getDrawState() === DrawState.OcrDetect || getDrawState() === DrawState.ScanQrcode) &&
             selected &&
             selected.toString()
@@ -581,26 +587,26 @@ const DrawPageCore: React.FC = () => {
             navigator.clipboard.writeText(selected.toString());
             finishCapture();
             return;
-        }
+        } else {
+            if (
+                !selectLayerActionRef.current ||
+                !drawLayerActionRef.current ||
+                !drawCacheLayerActionRef.current
+            ) {
+                return;
+            }
 
-        if (
-            !selectLayerActionRef.current ||
-            !drawLayerActionRef.current ||
-            !drawCacheLayerActionRef.current
-        ) {
-            return;
+            await copyToClipboard(
+                selectLayerActionRef.current,
+                drawLayerActionRef.current,
+                drawCacheLayerActionRef.current,
+                enableAutoSave
+                    ? undefined
+                    : async () => {
+                          finishCapture();
+                      },
+            );
         }
-
-        await copyToClipboard(
-            selectLayerActionRef.current,
-            drawLayerActionRef.current,
-            drawCacheLayerActionRef.current,
-            enableAutoSave
-                ? undefined
-                : async () => {
-                      finishCapture();
-                  },
-        );
 
         if (enableAutoSave) {
             await saveToFile(
@@ -779,7 +785,7 @@ const DrawPageCore: React.FC = () => {
                     <>
                         <ExtraTool finishCapture={finishCapture} />
 
-                        <OcrBlocks actionRef={ocrBlocksActionRef} />
+                        <OcrBlocks actionRef={ocrBlocksActionRef} finishCapture={finishCapture} />
 
                         <div className={styles.drawLayerWrap} ref={drawLayerWrapRef}>
                             <DrawLayer actionRef={drawLayerActionRef} />

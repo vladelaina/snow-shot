@@ -95,6 +95,12 @@ export const settings = {
         '选定截图区域后，绘制的元素在超出选区范围时显示的透明度',
     'settings.functionSettings.screenshotSettings.autoOcrAfterFixed': '固定屏幕后自动 OCR',
     'settings.functionSettings.screenshotSettings.shortcutCanleTip': '快捷键取消截图提示',
+    'settings.functionSettings.screenshotSettings.ocrAfterAction': 'OCR 后自动执行',
+    'settings.functionSettings.screenshotSettings.ocrAfterAction.none': '无操作',
+    'settings.functionSettings.screenshotSettings.ocrAfterAction.copyText': '复制文本',
+    'settings.functionSettings.screenshotSettings.ocrAfterAction.copyTextAndCloseWindow':
+        '复制文本并关闭窗口',
+    'settings.functionSettings.screenshotSettings.ocrCopyText': 'OCR 复制时复制文本',
     'settings.functionSettings.screenshotSettings.autoSaveFileMode': '保存文件增强',
     'settings.functionSettings.screenshotSettings.autoSaveFileMode.saveMode': '保存方式',
     'settings.functionSettings.screenshotSettings.autoSaveFileMode.autoSave': '复制后自动保存',

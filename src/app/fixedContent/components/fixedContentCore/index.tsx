@@ -38,7 +38,7 @@ export type FixedContentInitTextParams = {
 };
 
 export type FixedContentInitImageParams = {
-    imageBlob: Blob;
+    imageContent: Blob | string;
 };
 
 export type FixedContentActionType = {
@@ -232,11 +232,16 @@ export const FixedContentCore: React.FC<{
 
     const imageRef = useRef<HTMLImageElement>(null);
     const imageOcrSignRef = useRef<boolean>(false);
-    const initImage = useCallback((imageBlob: Blob) => {
+    const initImage = useCallback((imageContent: Blob | string) => {
         setFixedContentType(FixedContentType.Image);
 
-        setImageUrl(URL.createObjectURL(imageBlob));
-        imageBlobRef.current = imageBlob;
+        if (typeof imageContent === 'string') {
+            setImageUrl(imageContent);
+        } else {
+            setImageUrl(URL.createObjectURL(imageContent));
+            imageBlobRef.current = imageContent;
+        }
+
         imageOcrSignRef.current = false;
     }, []);
 
@@ -320,8 +325,8 @@ export const FixedContentCore: React.FC<{
                     initText(params.textContent);
                 } else if ('canvas' in params) {
                     initDraw(params);
-                } else if ('imageBlob' in params) {
-                    initImage(params.imageBlob);
+                } else if ('imageContent' in params) {
+                    initImage(params.imageContent);
                 }
             },
         }),

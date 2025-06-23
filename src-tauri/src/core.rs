@@ -78,15 +78,17 @@ pub async fn scroll_through(
 
     {
         if let Ok(mut enigo) = enigo.lock() {
-            enigo.scroll(length, Axis::Vertical).unwrap();
+            match enigo.scroll(length, Axis::Vertical) {
+                Ok(_) => (),
+                Err(e) => {
+                    log::error!("[scroll_through] scroll error: {}", e);
+                }
+            }
         }
     }
 
     tokio::time::sleep(Duration::from_millis(128)).await;
-    match window.set_ignore_cursor_events(false) {
-        Ok(_) => (),
-        Err(_) => (),
-    }
+    let _ = window.set_ignore_cursor_events(false);
 
     Ok(())
 }

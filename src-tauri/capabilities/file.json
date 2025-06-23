@@ -79,6 +79,17 @@
             ]
         },
         {
+            "identifier": "fs:read-all",
+            "allow": [
+                {
+                    "path": "**"
+                },
+                {
+                    "path": "*"
+                }
+            ]
+        },
+        {
             "identifier": "opener:allow-open-path",
             "allow": [
                 {

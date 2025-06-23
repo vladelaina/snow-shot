@@ -90,8 +90,6 @@ pub struct UIElements {
     element_cache: RTree<2, i32, ElementLevel>,
     element_level_map: HashMap<ElementLevel, (UIElement, Token)>,
     element_rect_tree: Arena<uiautomation::types::Rect>,
-    init_window: Option<UIElement>,
-    init_window_runtime_id: Option<Vec<i32>>,
     monitor_rect: ElementRect,
 }
 
@@ -104,8 +102,6 @@ impl UIElements {
             automation: None,
             automation_walker: None,
             root_element: None,
-            init_window: None,
-            init_window_runtime_id: None,
             element_rect_tree: Arena::new(),
             element_cache: RTree::new(),
             element_level_map: HashMap::new(),
@@ -118,7 +114,7 @@ impl UIElements {
         }
     }
 
-    pub fn init(&mut self, hwnd: Option<HWND>) -> Result<(), AutomationError> {
+    pub fn init(&mut self) -> Result<(), AutomationError> {
         if self.automation.is_some() && self.automation_walker.is_some() {
             return Ok(());
         }
@@ -127,13 +123,6 @@ impl UIElements {
         let automation_walker = automation.get_raw_view_walker()?;
         let root_element = automation.get_root_element()?;
 
-        if let Some(hwnd) = hwnd {
-            let init_window = automation.element_from_handle(Handle::from(hwnd))?;
-            let init_window_runtime_id = init_window.get_runtime_id()?;
-
-            self.init_window = Some(init_window);
-            self.init_window_runtime_id = Some(init_window_runtime_id);
-        }
         self.automation = Some(automation);
         self.automation_walker = Some(automation_walker);
         self.root_element = Some(root_element);
@@ -222,13 +211,15 @@ impl UIElements {
                 };
             }
 
-            if let Some(init_window_runtime_id) = self.init_window_runtime_id.as_ref() {
-                if current_child.get_runtime_id()?.eq(init_window_runtime_id) {
-                    current_child = match automation_walker.get_next_sibling(&current_child) {
-                        Ok(sibling) => sibling,
-                        Err(_) => return Ok(()),
-                    };
-                }
+            if current_child
+                .get_name()
+                .unwrap_or_default()
+                .eq("Snow Shot - Draw")
+            {
+                current_child = match automation_walker.get_next_sibling(&current_child) {
+                    Ok(sibling) => sibling,
+                    Err(_) => return Ok(()),
+                };
             }
 
             current_level.window_index = 0;
@@ -242,20 +233,12 @@ impl UIElements {
                 parent_tree_token,
             );
             while let Ok(sibling) = automation_walker.get_next_sibling(&current_child) {
-                if sibling
-                    .get_name()
-                    .unwrap_or_default()
-                    .eq("Shell Handwriting Canvas")
+                let sibling_name = sibling.get_name().unwrap_or_default();
+                if sibling_name.eq("Shell Handwriting Canvas")
+                    || sibling_name.eq("Snow Shot - Draw")
                 {
                     current_child = sibling;
                     continue;
-                }
-
-                if let Some(init_window_runtime_id) = self.init_window_runtime_id.as_ref() {
-                    if sibling.get_runtime_id()?.eq(init_window_runtime_id) {
-                        current_child = sibling;
-                        continue;
-                    }
                 }
 
                 current_level.window_index += 1;

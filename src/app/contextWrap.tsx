@@ -38,6 +38,7 @@ import { ColorPickerShowMode } from './draw/components/colorPicker';
 import { ImageFormat } from '@/utils/file';
 import { appConfigDir, join as joinPath } from '@tauri-apps/api/path';
 import { DrawState } from './fullScreenDraw/components/drawCore/extra';
+import { OcrDetectAfterAction } from './fixedContent/components/ocrResult';
 
 export enum AppSettingsGroup {
     Common = 'common',
@@ -160,6 +161,10 @@ export type AppSettingsData = {
         saveFileDirectory: string;
         /** 保存文件格式 */
         saveFileFormat: ImageFormat;
+        /** OCR 后自动执行 */
+        ocrAfterAction: OcrDetectAfterAction;
+        /** OCR 复制时复制文本 */
+        ocrCopyText: boolean;
     };
     [AppSettingsGroup.FunctionOutput]: {
         /** 手动保存文件名格式 */
@@ -275,6 +280,8 @@ export const defaultAppSettingsData: AppSettingsData = {
         fastSave: false,
         saveFileDirectory: '',
         saveFileFormat: ImageFormat.PNG,
+        ocrAfterAction: OcrDetectAfterAction.None,
+        ocrCopyText: false,
     },
     [AppSettingsGroup.SystemScrollScreenshot]: {
         imageFeatureThreshold: 32,
@@ -905,6 +912,14 @@ const ContextWrapCore: React.FC<{ children: React.ReactNode }> = ({ children }) 
                         typeof newSettings?.saveFileFormat === 'string'
                             ? newSettings.saveFileFormat
                             : (prevSettings?.saveFileFormat ?? ImageFormat.PNG),
+                    ocrAfterAction:
+                        typeof newSettings?.ocrAfterAction === 'string'
+                            ? (newSettings.ocrAfterAction as OcrDetectAfterAction)
+                            : (prevSettings?.ocrAfterAction ?? OcrDetectAfterAction.None),
+                    ocrCopyText:
+                        typeof newSettings?.ocrCopyText === 'boolean'
+                            ? newSettings.ocrCopyText
+                            : (prevSettings?.ocrCopyText ?? false),
                 };
             } else if (group === AppSettingsGroup.FunctionOutput) {
                 newSettings = newSettings as AppSettingsData[typeof group];

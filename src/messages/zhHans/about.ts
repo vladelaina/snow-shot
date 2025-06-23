@@ -1,6 +1,6 @@
 export const about = {
     'about.title': 'Snow Shot',
-    'about.subtitle': '以简洁优雅作为理念设计的工具软件 ❄️',
+    'about.subtitle': '简单优雅的工具软件 ❄️',
     'about.version': '版本',
     'about.author': '作者: mg-chao',
     'about.license.title': '📄 开源协议',

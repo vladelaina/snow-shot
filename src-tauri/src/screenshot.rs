@@ -69,10 +69,7 @@ pub async fn init_ui_elements(
         Err(_) => return Err(()),
     };
 
-    match ui_elements.init(match window.hwnd() {
-        Ok(hwnd) => Some(hwnd),
-        Err(_) => None,
-    }) {
+    match ui_elements.init() {
         Ok(_) => Ok(()),
         Err(_) => Err(()),
     }

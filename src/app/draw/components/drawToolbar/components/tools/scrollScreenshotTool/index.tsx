@@ -337,12 +337,16 @@ export const ScrollScreenshot: React.FC<{
 
             setShowTip(false);
 
-            pendingScrollThroughRef.current = true;
-            scrollThrough(event.deltaY > 0 ? 1 : -1).finally(() => {
-                pendingScrollThroughRef.current = false;
-            });
             // 加一个冗余操作，防止鼠标事件被忽略
             enableeCursorEventsDebounce();
+            pendingScrollThroughRef.current = true;
+            scrollThrough(event.deltaY > 0 ? 1 : -1)
+                .catch(() => {
+                    // 忽略报错
+                })
+                .finally(() => {
+                    pendingScrollThroughRef.current = false;
+                });
 
             if (loadingRef.current) {
                 return;

@@ -41,6 +41,7 @@ import { TestChat } from './components/testChat';
 import { DrawState } from '@/app/fullScreenDraw/components/drawCore/extra';
 import { videoRecordGetMicrophoneDeviceNames } from '@/commands/videoRecord';
 import { getVideoRecordSaveDirectory } from '@/app/videoRecord/extra';
+import { OcrDetectAfterAction } from '@/app/fixedContent/components/ocrResult';
 
 export default function SystemSettings() {
     const intl = useIntl();
@@ -234,6 +235,49 @@ export default function SystemSettings() {
                             />
                         </Col>
                     </Row>
+
+                    <Row gutter={token.padding}>
+                        <Col span={12}>
+                            <ProFormSelect
+                                name="ocrAfterAction"
+                                layout="horizontal"
+                                label={
+                                    <FormattedMessage id="settings.functionSettings.screenshotSettings.ocrAfterAction" />
+                                }
+                                options={[
+                                    {
+                                        label: (
+                                            <FormattedMessage id="settings.functionSettings.screenshotSettings.ocrAfterAction.none" />
+                                        ),
+                                        value: OcrDetectAfterAction.None,
+                                    },
+                                    {
+                                        label: (
+                                            <FormattedMessage id="settings.functionSettings.screenshotSettings.ocrAfterAction.copyText" />
+                                        ),
+                                        value: OcrDetectAfterAction.CopyText,
+                                    },
+                                    {
+                                        label: (
+                                            <FormattedMessage id="settings.functionSettings.screenshotSettings.ocrAfterAction.copyTextAndCloseWindow" />
+                                        ),
+                                        value: OcrDetectAfterAction.CopyTextAndCloseWindow,
+                                    },
+                                ]}
+                            />
+                        </Col>
+
+                        <Col span={12}>
+                            <ProFormSwitch
+                                name="ocrCopyText"
+                                layout="horizontal"
+                                label={
+                                    <FormattedMessage id="settings.functionSettings.screenshotSettings.ocrCopyText" />
+                                }
+                            />
+                        </Col>
+                    </Row>
+
                     <Row gutter={token.padding}>
                         <Col span={24}>
                             <ProFormSwitch
