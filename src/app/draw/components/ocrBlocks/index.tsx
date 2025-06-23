@@ -19,11 +19,13 @@ export type OcrBlocksActionType = {
         canvas: HTMLCanvasElement,
     ) => Promise<void>;
     setEnable: (enable: boolean | ((enable: boolean) => boolean)) => void;
+    getOcrResultAction: () => OcrResultActionType | undefined;
 };
 
 export const OcrBlocks: React.FC<{
     actionRef: React.RefObject<OcrBlocksActionType | undefined>;
-}> = ({ actionRef }) => {
+    finishCapture: () => void;
+}> = ({ actionRef, finishCapture }) => {
     const intl = useIntl();
 
     const ocrResultActionRef = useRef<OcrResultActionType>(undefined);
@@ -53,6 +55,9 @@ export const OcrBlocks: React.FC<{
             },
             setEnable: (enable: boolean | ((enable: boolean) => boolean)) => {
                 ocrResultActionRef.current?.setEnable(enable);
+            },
+            getOcrResultAction: () => {
+                return ocrResultActionRef.current;
             },
         }),
         [],
@@ -110,6 +115,7 @@ export const OcrBlocks: React.FC<{
                 zIndex={zIndexs.Draw_OcrResult}
                 actionRef={ocrResultActionRef}
                 onOcrDetect={onOcrDetect}
+                finishCapture={finishCapture}
             />
         </>
     );

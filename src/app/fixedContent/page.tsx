@@ -8,6 +8,7 @@ import { getCurrentWindow, PhysicalPosition, PhysicalSize } from '@tauri-apps/ap
 import { setDrawWindowStyle } from '@/commands/screenshot';
 import { getCurrentMonitorInfo, readImageFromClipboard } from '@/commands/core';
 import { scrollScreenshotClear, scrollScreenshotGetImageData } from '@/commands/scrollScreenshot';
+import { convertFileSrc } from '@tauri-apps/api/core';
 
 export default function FixedContentPage() {
     const fixedContentActionRef = useRef<FixedContentActionType>(undefined);
@@ -20,14 +21,14 @@ export default function FixedContentPage() {
             const imageBlob = await scrollScreenshotGetImageData();
             scrollScreenshotClear();
             if (imageBlob) {
-                fixedContentActionRef.current?.init({ imageBlob });
+                fixedContentActionRef.current?.init({ imageContent: imageBlob });
                 return;
             }
         } else {
             try {
                 const imageBlob = await readImageFromClipboard();
                 if (imageBlob) {
-                    fixedContentActionRef.current?.init({ imageBlob });
+                    fixedContentActionRef.current?.init({ imageContent: imageBlob });
                     return;
                 }
             } catch {}
@@ -44,6 +45,31 @@ export default function FixedContentPage() {
                 const textContent = await clipboard.readText();
                 if (textContent) {
                     fixedContentActionRef.current?.init({ textContent });
+                    return;
+                }
+            } catch {}
+
+            try {
+                const fileUris = await clipboard.readFilesURIs();
+                let imageFileUri: string | undefined = undefined;
+                for (const fileUri of fileUris) {
+                    if (
+                        fileUri.endsWith('.png') ||
+                        fileUri.endsWith('.jpg') ||
+                        fileUri.endsWith('.jpeg') ||
+                        fileUri.endsWith('.webp') ||
+                        fileUri.endsWith('.avif') ||
+                        fileUri.endsWith('.gif')
+                    ) {
+                        imageFileUri = fileUri;
+                        break;
+                    }
+                }
+
+                if (imageFileUri) {
+                    fixedContentActionRef.current?.init({
+                        imageContent: convertFileSrc(imageFileUri),
+                    });
                     return;
                 }
             } catch {}
