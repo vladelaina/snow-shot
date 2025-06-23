@@ -124,6 +124,9 @@ export const fixedToScreen = async (
     createDrawWindow();
 
     layerContainerElement.style.opacity = '0';
+
+    const setTitlePromise = appWindow.setTitle('Snow Shot - Fixed Content');
+
     await appWindow.hide();
     const hidePromise = new Promise((resolve) => {
         setTimeout(resolve, 17 * 3);
@@ -134,6 +137,8 @@ export const fixedToScreen = async (
     if (!imageCanvas) {
         return;
     }
+
+    await setTitlePromise;
 
     await Promise.all([
         fixedContentAction.init({ canvas: imageCanvas, monitorInfo }).then(async () => {
