@@ -52,8 +52,9 @@ impl ElementLevel {
 
     pub fn next_level(&mut self) {
         self.element_level += 1;
+        let current_element_index = self.element_index;
         self.element_index = 0;
-        self.parent_index = 0;
+        self.parent_index = current_element_index;
     }
 
     pub fn next_element(&mut self) {
@@ -91,6 +92,8 @@ pub struct UIElements {
     element_level_map: HashMap<ElementLevel, (UIElement, Token)>,
     element_rect_tree: Arena<uiautomation::types::Rect>,
     monitor_rect: ElementRect,
+    element_children_next_sibling_cache: HashMap<ElementLevel, Option<(UIElement, ElementLevel)>>,
+    window_rect_map: HashMap<i32, uiautomation::types::Rect>,
 }
 
 unsafe impl Send for UIElements {}
@@ -111,6 +114,8 @@ impl UIElements {
                 max_x: 0,
                 max_y: 0,
             },
+            element_children_next_sibling_cache: HashMap::new(),
+            window_rect_map: HashMap::new(),
         }
     }
 
@@ -120,7 +125,7 @@ impl UIElements {
         }
 
         let automation = UIAutomation::new()?;
-        let automation_walker = automation.get_raw_view_walker()?;
+        let automation_walker = automation.get_control_view_walker()?;
         let root_element = automation.get_root_element()?;
 
         self.automation = Some(automation);
@@ -137,10 +142,7 @@ impl UIElements {
         )
     }
 
-    pub fn clip_rect(
-        rect: uiautomation::types::Rect,
-        parent_rect: uiautomation::types::Rect,
-    ) -> uiautomation::types::Rect {
+    fn normalize_rect(rect: uiautomation::types::Rect) -> uiautomation::types::Rect {
         // 当前矩形的数据不可信，做个纠正
         let mut rect_left = rect.get_left();
         let mut rect_top = rect.get_top();
@@ -155,11 +157,41 @@ impl UIElements {
             mem::swap(&mut rect_top, &mut rect_bottom);
         }
 
+        uiautomation::types::Rect::new(rect_left, rect_top, rect_right, rect_bottom)
+    }
+
+    fn beyond_rect(
+        rect: uiautomation::types::Rect,
+        parent_rect: uiautomation::types::Rect,
+    ) -> bool {
+        if rect.get_left() < parent_rect.get_left() {
+            return true;
+        }
+
+        if rect.get_right() > parent_rect.get_right() {
+            return true;
+        }
+
+        if rect.get_top() < parent_rect.get_top() {
+            return true;
+        }
+
+        if rect.get_bottom() > parent_rect.get_bottom() {
+            return true;
+        }
+
+        false
+    }
+
+    pub fn clip_rect(
+        rect: uiautomation::types::Rect,
+        parent_rect: uiautomation::types::Rect,
+    ) -> uiautomation::types::Rect {
         uiautomation::types::Rect::new(
-            rect_left.max(parent_rect.get_left()),
-            rect_top.max(parent_rect.get_top()),
-            rect_right.min(parent_rect.get_right()),
-            rect_bottom.min(parent_rect.get_bottom()),
+            rect.get_left().max(parent_rect.get_left()),
+            rect.get_top().max(parent_rect.get_top()),
+            rect.get_right().min(parent_rect.get_right()),
+            rect.get_bottom().min(parent_rect.get_bottom()),
         )
     }
 
@@ -169,12 +201,13 @@ impl UIElements {
     pub fn init_cache(&mut self, monitor_rect: ElementRect) -> Result<(), AutomationError> {
         self.monitor_rect = monitor_rect;
 
-        let automation_walker = self.automation_walker.clone().unwrap();
         let root_element = self.root_element.clone().unwrap();
 
         self.element_cache = RTree::new();
-        self.element_level_map = HashMap::new();
+        self.element_level_map.clear();
         self.element_rect_tree = Arena::new();
+        self.element_children_next_sibling_cache.clear();
+        self.window_rect_map.clear();
 
         // 桌面的窗口索引应该是最高，因为其优先级最低
         let mut current_level = ElementLevel::min();
@@ -186,75 +219,69 @@ impl UIElements {
         );
 
         let root_tree_token = self.element_rect_tree.new_node(root_element_rect);
-        let (parent_rtree_rect, parent_tree_token) = self.insert_element_cache(
+        let (_, parent_tree_token) = self.insert_element_cache(
             root_element.clone(),
             root_element_rect,
             current_level,
-            uiautomation::types::Rect::new(
-                self.monitor_rect.min_x - self.monitor_rect.min_x,
-                self.monitor_rect.min_y - self.monitor_rect.min_y,
-                self.monitor_rect.max_x - self.monitor_rect.min_x,
-                self.monitor_rect.max_y - self.monitor_rect.min_y,
-            ),
             root_tree_token,
         );
 
-        if let Ok(mut current_child) = automation_walker.get_first_child(&root_element) {
-            if current_child
-                .get_name()
-                .unwrap_or_default()
-                .eq("Shell Handwriting Canvas")
+        let automation = self.automation.as_ref().unwrap();
+        let children_list = root_element
+            .find_all(
+                uiautomation::types::TreeScope::Children,
+                &automation
+                    .create_property_condition(
+                        uiautomation::types::UIProperty::IsOffscreen,
+                        uiautomation::variants::Variant::from(false),
+                        None,
+                    )
+                    .and(
+                        automation.create_not_condition(
+                            automation
+                                .create_property_condition(
+                                    uiautomation::types::UIProperty::WindowWindowVisualState,
+                                    uiautomation::variants::Variant::from(2), // 2 表示窗口最小化 Minimized https://learn.microsoft.com/en-us/dotnet/api/system.windows.automation.windowvisualstate?view=windowsdesktop-9.0
+                                    None,
+                                )
+                                .unwrap(),
+                        ),
+                    )
+                    .unwrap(),
+            )
+            .unwrap_or_default();
+
+        // 窗口层级
+        current_level.window_index = 0;
+        current_level.next_level();
+
+        for current_child in children_list {
+            let current_child_name = current_child.get_name().unwrap_or_default();
+
+            if current_child_name.eq("Shell Handwriting Canvas")
+                || current_child_name.eq("Snow Shot - Draw")
             {
-                current_child = match automation_walker.get_next_sibling(&current_child) {
-                    Ok(sibling) => sibling,
-                    Err(_) => return Ok(()),
-                };
+                continue;
             }
 
-            if current_child
-                .get_name()
-                .unwrap_or_default()
-                .eq("Snow Shot - Draw")
-            {
-                current_child = match automation_walker.get_next_sibling(&current_child) {
-                    Ok(sibling) => sibling,
-                    Err(_) => return Ok(()),
-                };
-            }
+            // println!("current_child_name: {:?}", current_child_name);
 
-            current_level.window_index = 0;
+            current_level.window_index += 1;
             current_level.next_element();
 
+            let current_child_rect = current_child.get_bounding_rectangle()?;
             self.insert_element_cache(
                 current_child.clone(),
-                current_child.get_bounding_rectangle()?,
+                current_child_rect,
                 current_level,
-                parent_rtree_rect,
                 parent_tree_token,
             );
-            while let Ok(sibling) = automation_walker.get_next_sibling(&current_child) {
-                let sibling_name = sibling.get_name().unwrap_or_default();
-                if sibling_name.eq("Shell Handwriting Canvas")
-                    || sibling_name.eq("Snow Shot - Draw")
-                {
-                    current_child = sibling;
-                    continue;
-                }
 
-                current_level.window_index += 1;
-                current_level.next_element();
-
-                self.insert_element_cache(
-                    sibling.clone(),
-                    sibling.get_bounding_rectangle()?,
-                    current_level,
-                    parent_rtree_rect,
-                    parent_tree_token,
-                );
-
-                current_child = sibling;
-            }
+            self.window_rect_map
+                .insert(current_level.window_index, current_child_rect);
         }
+
+        // println!("\n\n\n");
 
         Ok(())
     }
@@ -285,7 +312,6 @@ impl UIElements {
         element: UIElement,
         element_rect: uiautomation::types::Rect,
         element_level: ElementLevel,
-        parent_element_rect: uiautomation::types::Rect,
         parent_tree_token: Token,
     ) -> (uiautomation::types::Rect, Token) {
         let element_rect = uiautomation::types::Rect::new(
@@ -295,7 +321,16 @@ impl UIElements {
             element_rect.get_bottom() - self.monitor_rect.min_y,
         );
 
-        let element_rect = Self::clip_rect(element_rect, parent_element_rect);
+        let mut element_rect = Self::normalize_rect(element_rect);
+        let window_rect = self
+            .window_rect_map
+            .get(&element_level.window_index)
+            .unwrap_or(&element_rect)
+            .clone();
+        if Self::beyond_rect(element_rect, window_rect) {
+            element_rect = Self::clip_rect(element_rect, window_rect);
+        }
+
         self.element_cache.insert(
             Self::convert_element_rect_to_rtree_rect(element_rect),
             element_level,
@@ -353,7 +388,7 @@ impl UIElements {
         mouse_y: i32,
     ) -> Result<Vec<ElementRect>, AutomationError> {
         let automation_walker = self.automation_walker.clone().unwrap();
-        let (parent_element, mut current_level, mut parent_rect, mut parent_tree_token) = match self
+        let (parent_element, mut parent_level, parent_rect, mut parent_tree_token) = match self
             .get_element_from_cache(
                 mouse_x - self.monitor_rect.min_x,
                 mouse_y - self.monitor_rect.min_y,
@@ -369,21 +404,70 @@ impl UIElements {
         };
 
         // 父元素必然命中了 mouse position，所以直接取第一个元素
-        let mut queue = VecDeque::with_capacity(128);
-        match automation_walker.get_first_child(&parent_element) {
-            Ok(element) => {
-                queue.push_back(element);
-                current_level.next_level();
+        let mut current_level = ElementLevel::min();
+
+        let mut queue = Option::<UIElement>::None;
+
+        // let mut cache_level = Option::<ElementLevel>::None;
+        match self.element_children_next_sibling_cache.get(&parent_level) {
+            Some(element) => match element {
+                Some((element, level)) => {
+                    queue = Some(element.clone());
+                    current_level = level.clone();
+                }
+                None => {}
+            },
+            None => {
+                // 这里主动获取下，这时写入了缓存，但没有符合上一次的筛选条件
+                let first_child = automation_walker.get_first_child(&parent_element);
+                match first_child {
+                    Ok(element) => {
+                        queue = Some(element.clone());
+                        current_level = parent_level.clone();
+                        current_level.next_level();
+
+                        self.element_children_next_sibling_cache
+                            .insert(parent_level, Some((element, current_level)));
+
+                        // cache_level = Some(parent_level.clone());
+                        // cache_level.as_mut().unwrap().next_level();
+
+                        // self.element_children_next_sibling_cache
+                        //     .insert(parent_level, Some((element, cache_level.as_ref().unwrap().clone())));
+                    }
+                    Err(_) => {
+                        self.element_children_next_sibling_cache
+                            .insert(parent_level, None);
+                    }
+                }
             }
-            Err(_) => {}
         };
+
+        // let mut first_child_level = Option::<ElementLevel>::None;
+        // let first_child = automation_walker.get_first_child(&self.element_level_map.get(&parent_level).unwrap().0);
+        // match first_child {
+        //     Ok(element) => {
+        //         queue = Some(element.clone());
+        //         current_level = parent_level.clone();
+        //         current_level.next_level();
+
+        //         // first_child_level = Some(current_level.clone());
+        //     }
+        //     Err(_) => {}
+        // }
+
+        // if cache_level != first_child_level {
+        //     println!("cache_level: {:?} first_child_level: {:?} parent_level: {:?}", cache_level, first_child_level, parent_level);
+        // }
 
         let mut current_element_rect = parent_rect;
         let mut current_element_token = parent_tree_token;
         let mut result_token = current_element_token;
         let mut result_rect = current_element_rect;
 
-        while let Some(current_element) = queue.pop_front() {
+        while let Some(current_element) = queue.take() {
+            queue = None;
+
             current_element_rect = match current_element.get_bounding_rectangle() {
                 Ok(rect) => rect,
                 Err(_) => continue,
@@ -403,7 +487,6 @@ impl UIElements {
                     current_element.clone(),
                     current_element_rect,
                     current_level,
-                    parent_rect,
                     parent_tree_token,
                 );
 
@@ -417,20 +500,36 @@ impl UIElements {
 
                     let first_child = automation_walker.get_first_child(&current_element);
                     if let Ok(child) = first_child {
-                        queue.push_back(child);
-                        current_level.next_level();
-                        parent_rect = current_element_rect;
+                        queue = Some(child.clone());
                         parent_tree_token = current_element_token;
+                        parent_level = current_level;
+
+                        current_level.next_level();
+
+                        self.element_children_next_sibling_cache
+                            .insert(parent_level, Some((child, current_level)));
 
                         continue;
+                    } else {
+                        self.element_children_next_sibling_cache
+                            .insert(current_level, None);
                     }
                 }
             }
 
             let next_sibling = automation_walker.get_next_sibling(&current_element);
-            if let Ok(sibling) = next_sibling {
-                queue.push_back(sibling);
-                current_level.next_element();
+            match next_sibling {
+                Ok(sibling) => {
+                    queue = Some(sibling.clone());
+                    current_level.next_element();
+
+                    self.element_children_next_sibling_cache
+                        .insert(parent_level, Some((sibling, current_level)));
+                }
+                Err(_) => {
+                    self.element_children_next_sibling_cache
+                        .insert(parent_level, None);
+                }
             }
         }
 

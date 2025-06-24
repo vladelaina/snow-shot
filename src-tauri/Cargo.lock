@@ -2839,7 +2839,7 @@ dependencies = [
  "js-sys",
  "log",
  "wasm-bindgen",
- "windows-core 0.61.2",
+ "windows-core 0.56.0",
 ]
 
 [[package]]
@@ -7085,11 +7085,10 @@ dependencies = [
 
 [[package]]
 name = "uiautomation"
-version = "0.18.4"
+version = "0.21.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5ffddb3702498a7969469312ec8ba1573523cc71c78e837b9148b708aaf666c4"
+checksum = "50a3bd653cae8d26b9948b9e3e7b5055df886e7c9602da0621e6a63c03676870"
 dependencies = [
- "arboard",
  "chrono",
  "uiautomation_derive",
  "windows 0.61.3",
@@ -7098,9 +7097,9 @@ dependencies = [
 
 [[package]]
 name = "uiautomation_derive"
-version = "0.5.3"
+version = "0.7.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1ebb901a46e0ab28127f0649198ec8e97a3fe5b19d430d40f35333bf0d10a762"
+checksum = "8627a9271edfae28e8c84ecb5742f497a4da495134e539c83d92513bda0f1e25"
 dependencies = [
  "proc-macro2",
  "quote",

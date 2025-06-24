@@ -702,6 +702,7 @@ const DrawToolbarCore: React.FC<DrawToolbarProps> = ({
                     color: ${token.colorText};
                     box-shadow: 0 0 3px 0px ${token.colorPrimaryHover};
                     transition: opacity ${token.motionDurationMid} ${token.motionEaseInOut};
+                    z-index: ${zIndexs.Draw_Toolbar};
                 }
 
                 .draw-subtoolbar {
