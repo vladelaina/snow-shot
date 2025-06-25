@@ -13,6 +13,8 @@ use uiautomation::UIAutomation;
 use uiautomation::UIElement;
 use uiautomation::UITreeWalker;
 use uiautomation::types::Point;
+use windows::Win32::Foundation::HWND;
+use windows::Win32::UI::WindowsAndMessaging::GetClassNameW;
 use xcap::Window;
 
 use super::ElementRect;
@@ -243,12 +245,14 @@ impl UIElements {
         let windows = Window::all().unwrap_or_default();
 
         let automation = self.automation.as_ref().unwrap();
-        let mut children_list: Vec<UIElement> = Vec::with_capacity(windows.len());
+        let mut children_list: Vec<(UIElement, bool)> = Vec::with_capacity(windows.len());
 
         for window in windows {
             if window.is_minimized().unwrap_or(true) {
                 continue;
             }
+
+            let mut disable_focus = false;
 
             if let Ok(title) = window.title() {
                 if title.eq("Shell Handwriting Canvas") || title.eq("Snow Shot - Draw") {
@@ -263,7 +267,17 @@ impl UIElements {
                     if let Ok(element) = automation
                         .element_from_handle(uiautomation::types::Handle::from(hwnd as isize))
                     {
-                        children_list.push(element);
+                        let mut class_name = [0u16; 256];
+                        let class_name_len = unsafe { GetClassNameW(HWND(hwnd), &mut class_name) };
+
+                        // 任务栏能正常获取元素，禁用焦点选择防止闪烁
+                        if String::from_utf16_lossy(&class_name[..class_name_len as usize])
+                            .eq("Shell_TrayWnd")
+                        {
+                            disable_focus = true;
+                        }
+
+                        children_list.push((element, disable_focus));
                     }
                 }
                 Err(_) => {}
@@ -289,7 +303,7 @@ impl UIElements {
         current_level.window_index = 0;
         current_level.next_level();
 
-        for current_child in children_list {
+        for (current_child, disable_focus) in children_list {
             current_level.window_index += 1;
             current_level.next_element();
 
@@ -303,6 +317,11 @@ impl UIElements {
 
             self.window_rect_map
                 .insert(current_level.window_index, current_child_rect);
+
+            if disable_focus {
+                self.window_focus_count_map
+                    .insert(current_level.window_index, 999);
+            }
         }
 
         Ok(())
