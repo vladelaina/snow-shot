@@ -275,7 +275,7 @@ const DrawPageCore: React.FC = () => {
                 process.env.NODE_ENV === 'development' &&
                 getScreenshotType() !== ScreenshotType.TopWindow
             ) {
-                await appWindow.setAlwaysOnTop(false);
+                // await appWindow.setAlwaysOnTop(false);
             }
 
             setDrawWindowStyle();

@@ -6,6 +6,7 @@ import { useIntl } from 'react-intl';
 import { sendNewVersionNotification } from '@/commands/core';
 import { AppSettingsData, AppSettingsGroup } from '@/app/contextWrap';
 import { useAppSettingsLoad } from '@/hooks/useAppSettingsLoad';
+import { compare } from 'compare-versions';
 
 const WEBSITE_URL = 'https://snowshot.top/';
 
@@ -37,7 +38,11 @@ export const CheckVersion: React.FC = () => {
 
             const latestVersion = await getLatestVersion();
 
-            if (currentVersion === latestVersion) {
+            if (!latestVersion) {
+                return;
+            }
+
+            if (compare(currentVersion, latestVersion, '>=')) {
                 return;
             }
 

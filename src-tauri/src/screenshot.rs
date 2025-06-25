@@ -60,12 +60,9 @@ pub async fn capture_current_monitor(encoder: String) -> Response {
 }
 
 #[command]
-pub async fn init_ui_elements(
-    ui_elements: tauri::State<'_, Mutex<UIElements>>,
-    window: tauri::Window,
-) -> Result<(), ()> {
+pub async fn init_ui_elements(ui_elements: tauri::State<'_, Mutex<UIElements>>) -> Result<(), ()> {
     let mut ui_elements = match ui_elements.lock() {
-        Ok(ui_elements) => ui_elements,
+        Ok(guard) => guard,
         Err(_) => return Err(()),
     };
 
@@ -79,11 +76,8 @@ pub async fn init_ui_elements(
 pub async fn init_ui_elements_cache(
     ui_elements: tauri::State<'_, Mutex<UIElements>>,
 ) -> Result<(), ()> {
-    // 获取当前鼠标的位置
-    let (mouse_x, mouse_y) = get_device_mouse_position();
-
     let mut ui_elements = match ui_elements.lock() {
-        Ok(ui_elements) => ui_elements,
+        Ok(guard) => guard,
         Err(_) => return Err(()),
     };
 
@@ -101,12 +95,6 @@ pub async fn init_ui_elements_cache(
         max_x: monitor_x + monitor_width,
         max_y: monitor_y + monitor_height,
     }) {
-        Ok(_) => (),
-        Err(_) => return Err(()),
-    }
-
-    // 用当前鼠标位置初始化下
-    match ui_elements.get_element_from_point_walker(mouse_x, mouse_y) {
         Ok(_) => (),
         Err(_) => return Err(()),
     }
@@ -221,7 +209,11 @@ pub async fn get_element_from_position(
     mouse_x: i32,
     mouse_y: i32,
 ) -> Result<Vec<ElementRect>, ()> {
-    let mut ui_elements = ui_elements.lock().unwrap();
+    let mut ui_elements = match ui_elements.lock() {
+        Ok(guard) => guard,
+        Err(_) => return Err(()),
+    };
+
     let element_rect_list = match ui_elements.get_element_from_point_walker(mouse_x, mouse_y) {
         Ok(element_rect) => element_rect,
         Err(_) => {

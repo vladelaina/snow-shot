@@ -347,8 +347,8 @@ const SelectLayerCore: React.FC<SelectLayerProps> = ({ actionRef }) => {
         (isEnable: boolean) => {
             if (isEnable) {
                 // 如果有缓存，则把遮罩去除
-                if (opacityImageDataRef.current) {
-                    updateSelectRect(getSelectRect()!, monitorInfoRef.current!);
+                if (opacityImageDataRef.current && monitorInfoRef.current) {
+                    updateSelectRect(getSelectRect()!, monitorInfoRef.current);
                 }
 
                 return;
@@ -400,13 +400,13 @@ const SelectLayerCore: React.FC<SelectLayerProps> = ({ actionRef }) => {
                 }
             }
 
-            if (!imageData) {
+            if (!imageData || !monitorInfoRef.current) {
                 return;
             }
 
             updateSelectRect(
                 getSelectRect()!,
-                monitorInfoRef.current!,
+                monitorInfoRef.current,
                 imageData
                     ? {
                           imageData,
@@ -477,7 +477,9 @@ const SelectLayerCore: React.FC<SelectLayerProps> = ({ actionRef }) => {
     const setSelectRect = useCallback(
         (rect: ElementRect, ignoreAnimation: boolean = false, forceUpdate: boolean = false) => {
             if (forceUpdate) {
-                updateSelectRect(rect, monitorInfoRef.current!);
+                if (monitorInfoRef.current) {
+                    updateSelectRect(rect, monitorInfoRef.current);
+                }
             } else {
                 drawSelectRectAnimationRef.current?.update(
                     rect,
