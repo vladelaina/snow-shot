@@ -484,16 +484,18 @@ impl UIElements {
                 .or_insert(0);
 
             // 像浏览器可能首次获取会失败，这里多试几次
-            if *focus_count < 6 {
+            let mut try_count = 0;
+            while *focus_count < 3 * 4 && try_count < 3 {
                 if element.try_focus() {
                     // 交给前端节流处理，避免焦点快速切换
                     let _ = app_window.emit("ui-automation-try-focus", ());
 
-                    sleep(Duration::from_millis(8));
+                    sleep(Duration::from_millis(32));
                     first_child = automation_walker.get_first_child(element);
                 }
 
                 *focus_count += 1;
+                try_count += 1;
             }
         }
 
