@@ -43,8 +43,10 @@ export const getWindowElements = async () => {
     return result;
 };
 
-export const initUiElementsCache = async () => {
-    const result = await invoke<void>('init_ui_elements_cache');
+export const initUiElementsCache = async (tryGetElementByFocus: boolean) => {
+    const result = await invoke<void>('init_ui_elements_cache', {
+        tryGetElementByFocus,
+    });
     return result;
 };
 

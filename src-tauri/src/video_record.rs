@@ -1,4 +1,4 @@
-use std::sync::Mutex;
+use tokio::sync::Mutex;
 
 use tauri::command;
 
@@ -9,7 +9,7 @@ pub async fn video_record_init(
     app: tauri::AppHandle,
     video_service: tauri::State<'_, Mutex<crate::services::VideoRecordService>>,
 ) -> Result<(), String> {
-    let mut service = video_service.lock().unwrap();
+    let mut service = video_service.lock().await;
     service.init(&app);
     Ok(())
 }
@@ -37,7 +37,7 @@ pub async fn video_record_start(
         min_x, min_y, max_x, max_y, output_file
     );
 
-    let mut service = video_service.lock().unwrap();
+    let mut service = video_service.lock().await;
 
     match service.start(
         min_x,
@@ -72,7 +72,7 @@ pub async fn video_record_stop(
 ) -> Result<Option<String>, String> {
     println!("Stopping video recording...");
 
-    let mut service = video_service.lock().unwrap();
+    let mut service = video_service.lock().await;
 
     match service.stop() {
         Ok(final_filename) => {
@@ -91,7 +91,7 @@ pub async fn video_record_stop(
 pub async fn video_record_pause(
     video_service: tauri::State<'_, Mutex<crate::services::VideoRecordService>>,
 ) -> Result<(), String> {
-    let mut service = video_service.lock().unwrap();
+    let mut service = video_service.lock().await;
 
     match service.pause() {
         Ok(_) => Ok(()),
@@ -104,7 +104,7 @@ pub async fn video_record_pause(
 pub async fn video_record_resume(
     video_service: tauri::State<'_, Mutex<crate::services::VideoRecordService>>,
 ) -> Result<(), String> {
-    let mut service = video_service.lock().unwrap();
+    let mut service = video_service.lock().await;
 
     match service.resume() {
         Ok(_) => Ok(()),
@@ -116,7 +116,7 @@ pub async fn video_record_resume(
 pub async fn video_record_get_microphone_device_names(
     video_service: tauri::State<'_, Mutex<crate::services::VideoRecordService>>,
 ) -> Result<Vec<String>, String> {
-    let service = video_service.lock().unwrap();
+    let service = video_service.lock().await;
     Ok(service.get_microphone_device_names())
 }
 
@@ -124,7 +124,7 @@ pub async fn video_record_get_microphone_device_names(
 pub async fn video_record_kill(
     video_service: tauri::State<'_, Mutex<crate::services::VideoRecordService>>,
 ) -> Result<(), String> {
-    let mut service = video_service.lock().unwrap();
+    let mut service = video_service.lock().await;
     match service.kill() {
         Ok(_) => Ok(()),
         Err(e) => Err(format!("Kill recording failed: {}", e)),

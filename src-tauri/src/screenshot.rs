@@ -2,10 +2,10 @@ use device_query::{DeviceQuery, DeviceState, MouseState};
 use image::codecs::png::{CompressionType, FilterType, PngEncoder};
 use image::codecs::webp::WebPEncoder;
 use serde::Serialize;
-use std::sync::Mutex;
 use std::time::{SystemTime, UNIX_EPOCH};
 use tauri::command;
 use tauri::ipc::Response;
+use tokio::sync::Mutex;
 use xcap::{Monitor, Window};
 
 use crate::os;
@@ -60,14 +60,8 @@ pub async fn capture_current_monitor(encoder: String) -> Response {
 }
 
 #[command]
-pub async fn init_ui_elements(
-    ui_elements: tauri::State<'_, Mutex<UIElements>>,
-    window: tauri::Window,
-) -> Result<(), ()> {
-    let mut ui_elements = match ui_elements.lock() {
-        Ok(ui_elements) => ui_elements,
-        Err(_) => return Err(()),
-    };
+pub async fn init_ui_elements(ui_elements: tauri::State<'_, Mutex<UIElements>>) -> Result<(), ()> {
+    let mut ui_elements = ui_elements.lock().await;
 
     match ui_elements.init() {
         Ok(_) => Ok(()),
@@ -78,14 +72,9 @@ pub async fn init_ui_elements(
 #[command]
 pub async fn init_ui_elements_cache(
     ui_elements: tauri::State<'_, Mutex<UIElements>>,
+    try_get_element_by_focus: bool,
 ) -> Result<(), ()> {
-    // 获取当前鼠标的位置
-    let (mouse_x, mouse_y) = get_device_mouse_position();
-
-    let mut ui_elements = match ui_elements.lock() {
-        Ok(ui_elements) => ui_elements,
-        Err(_) => return Err(()),
-    };
+    let mut ui_elements = ui_elements.lock().await;
 
     // 多显示器时会获取错误
     // 临时用显示器坐标做个转换，后面兼容跨屏截图时取消
@@ -95,18 +84,15 @@ pub async fn init_ui_elements_cache(
     let monitor_width = monitor.width().unwrap_or(0) as i32;
     let monitor_height = monitor.height().unwrap_or(0) as i32;
 
-    match ui_elements.init_cache(ElementRect {
-        min_x: monitor_x,
-        min_y: monitor_y,
-        max_x: monitor_x + monitor_width,
-        max_y: monitor_y + monitor_height,
-    }) {
-        Ok(_) => (),
-        Err(_) => return Err(()),
-    }
-
-    // 用当前鼠标位置初始化下
-    match ui_elements.get_element_from_point_walker(mouse_x, mouse_y) {
+    match ui_elements.init_cache(
+        ElementRect {
+            min_x: monitor_x,
+            min_y: monitor_y,
+            max_x: monitor_x + monitor_width,
+            max_y: monitor_y + monitor_height,
+        },
+        try_get_element_by_focus,
+    ) {
         Ok(_) => (),
         Err(_) => return Err(()),
     }
@@ -218,16 +204,19 @@ pub async fn switch_always_on_top(window_id: u32) -> bool {
 #[command]
 pub async fn get_element_from_position(
     ui_elements: tauri::State<'_, Mutex<UIElements>>,
+    window: tauri::Window,
     mouse_x: i32,
     mouse_y: i32,
 ) -> Result<Vec<ElementRect>, ()> {
-    let mut ui_elements = ui_elements.lock().unwrap();
-    let element_rect_list = match ui_elements.get_element_from_point_walker(mouse_x, mouse_y) {
-        Ok(element_rect) => element_rect,
-        Err(_) => {
-            return Err(());
-        }
-    };
+    let mut ui_elements = ui_elements.lock().await;
+
+    let element_rect_list =
+        match ui_elements.get_element_from_point_walker(mouse_x, mouse_y, &window) {
+            Ok(element_rect) => element_rect,
+            Err(_) => {
+                return Err(());
+            }
+        };
 
     Ok(element_rect_list)
 }

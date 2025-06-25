@@ -1,18 +1,21 @@
 use std::cmp::Ordering;
 use std::collections::HashMap;
-use std::collections::VecDeque;
 use std::mem;
 
 use crate::app_error::AutomationError;
 use atree::Arena;
 use atree::Token;
 use rtree_rs::{RTree, Rect};
+use std::thread::sleep;
+use std::time::Duration;
+use tauri::Emitter;
 use uiautomation::UIAutomation;
 use uiautomation::UIElement;
 use uiautomation::UITreeWalker;
-use uiautomation::types::Handle;
 use uiautomation::types::Point;
 use windows::Win32::Foundation::HWND;
+use windows::Win32::UI::WindowsAndMessaging::GetClassNameW;
+use xcap::Window;
 
 use super::ElementRect;
 
@@ -94,6 +97,8 @@ pub struct UIElements {
     monitor_rect: ElementRect,
     element_children_next_sibling_cache: HashMap<ElementLevel, Option<(UIElement, ElementLevel)>>,
     window_rect_map: HashMap<i32, uiautomation::types::Rect>,
+    window_focus_count_map: HashMap<i32, i32>,
+    try_get_element_by_focus: bool,
 }
 
 unsafe impl Send for UIElements {}
@@ -116,6 +121,8 @@ impl UIElements {
             },
             element_children_next_sibling_cache: HashMap::new(),
             window_rect_map: HashMap::new(),
+            window_focus_count_map: HashMap::new(),
+            try_get_element_by_focus: false,
         }
     }
 
@@ -125,7 +132,7 @@ impl UIElements {
         }
 
         let automation = UIAutomation::new()?;
-        let automation_walker = automation.get_control_view_walker()?;
+        let automation_walker = automation.get_content_view_walker()?;
         let root_element = automation.get_root_element()?;
 
         self.automation = Some(automation);
@@ -198,7 +205,12 @@ impl UIElements {
     /**
      * 初始化窗口元素缓存
      */
-    pub fn init_cache(&mut self, monitor_rect: ElementRect) -> Result<(), AutomationError> {
+    pub fn init_cache(
+        &mut self,
+        monitor_rect: ElementRect,
+        try_get_element_by_focus: bool,
+    ) -> Result<(), AutomationError> {
+        self.try_get_element_by_focus = try_get_element_by_focus;
         self.monitor_rect = monitor_rect;
 
         let root_element = self.root_element.clone().unwrap();
@@ -208,6 +220,9 @@ impl UIElements {
         self.element_rect_tree = Arena::new();
         self.element_children_next_sibling_cache.clear();
         self.window_rect_map.clear();
+        self.window_focus_count_map.clear();
+
+        self.try_get_element_by_focus = try_get_element_by_focus;
 
         // 桌面的窗口索引应该是最高，因为其优先级最低
         let mut current_level = ElementLevel::min();
@@ -226,46 +241,69 @@ impl UIElements {
             root_tree_token,
         );
 
+        // 遍历所有窗口
+        let windows = Window::all().unwrap_or_default();
+
         let automation = self.automation.as_ref().unwrap();
-        let children_list = root_element
-            .find_all(
-                uiautomation::types::TreeScope::Children,
-                &automation
-                    .create_property_condition(
-                        uiautomation::types::UIProperty::IsOffscreen,
-                        uiautomation::variants::Variant::from(false),
-                        None,
-                    )
-                    .and(
-                        automation.create_not_condition(
-                            automation
-                                .create_property_condition(
-                                    uiautomation::types::UIProperty::WindowWindowVisualState,
-                                    uiautomation::variants::Variant::from(2), // 2 表示窗口最小化 Minimized https://learn.microsoft.com/en-us/dotnet/api/system.windows.automation.windowvisualstate?view=windowsdesktop-9.0
-                                    None,
-                                )
-                                .unwrap(),
-                        ),
-                    )
-                    .unwrap(),
-            )
-            .unwrap_or_default();
+        let mut children_list: Vec<(UIElement, bool)> = Vec::with_capacity(windows.len());
+
+        for window in windows {
+            if window.is_minimized().unwrap_or(true) {
+                continue;
+            }
+
+            let mut disable_focus = false;
+
+            if let Ok(title) = window.title() {
+                if title.eq("Shell Handwriting Canvas") || title.eq("Snow Shot - Draw") {
+                    continue;
+                }
+            }
+
+            let window_hwnd = window.hwnd();
+
+            match window_hwnd {
+                Ok(hwnd) => {
+                    if let Ok(element) = automation
+                        .element_from_handle(uiautomation::types::Handle::from(hwnd as isize))
+                    {
+                        let mut class_name = [0u16; 256];
+                        let class_name_len = unsafe { GetClassNameW(HWND(hwnd), &mut class_name) };
+
+                        // 任务栏能正常获取元素，禁用焦点选择防止闪烁
+                        if String::from_utf16_lossy(&class_name[..class_name_len as usize])
+                            .eq("Shell_TrayWnd")
+                        {
+                            disable_focus = true;
+                        }
+
+                        children_list.push((element, disable_focus));
+                    }
+                }
+                Err(_) => {}
+            }
+        }
+
+        // 最后获取桌面的 hwnd
+        // unsafe {
+        //     let program_manager_hwnd = FindWindowW(
+        //         windows::core::w!("Progman"),
+        //         windows::core::w!("Program Manager"),
+        //     );
+        //     if let Ok(hwnd) = program_manager_hwnd {
+        //         if let Ok(element) = automation
+        //             .element_from_handle(uiautomation::types::Handle::from(hwnd.0 as isize))
+        //         {
+        //             children_list.push(element);
+        //         }
+        //     }
+        // }
 
         // 窗口层级
         current_level.window_index = 0;
         current_level.next_level();
 
-        for current_child in children_list {
-            let current_child_name = current_child.get_name().unwrap_or_default();
-
-            if current_child_name.eq("Shell Handwriting Canvas")
-                || current_child_name.eq("Snow Shot - Draw")
-            {
-                continue;
-            }
-
-            // println!("current_child_name: {:?}", current_child_name);
-
+        for (current_child, disable_focus) in children_list {
             current_level.window_index += 1;
             current_level.next_element();
 
@@ -279,9 +317,12 @@ impl UIElements {
 
             self.window_rect_map
                 .insert(current_level.window_index, current_child_rect);
-        }
 
-        // println!("\n\n\n");
+            if disable_focus {
+                self.window_focus_count_map
+                    .insert(current_level.window_index, 999);
+            }
+        }
 
         Ok(())
     }
@@ -379,6 +420,38 @@ impl UIElements {
         }
     }
 
+    fn get_first_child(
+        &mut self,
+        element: &UIElement,
+        level: &ElementLevel,
+        app_window: &tauri::Window,
+    ) -> Result<UIElement, uiautomation::Error> {
+        let automation_walker = self.automation_walker.as_mut().unwrap();
+
+        let mut first_child = automation_walker.get_first_child(element);
+        if first_child.is_err() && self.try_get_element_by_focus {
+            let focus_count = self
+                .window_focus_count_map
+                .entry(level.window_index)
+                .or_insert(0);
+
+            // 像浏览器可能首次获取会失败，这里多试几次
+            if *focus_count < 3 {
+                if element.try_focus() {
+                    // 交给前端节流处理，避免焦点快速切换
+                    let _ = app_window.emit("ui-automation-try-focus", ());
+
+                    sleep(Duration::from_millis(8));
+                    first_child = automation_walker.get_first_child(element);
+                }
+
+                *focus_count += 1;
+            }
+        }
+
+        first_child
+    }
+
     /**
      * 获取所有可选区域
      */
@@ -386,6 +459,7 @@ impl UIElements {
         &mut self,
         mouse_x: i32,
         mouse_y: i32,
+        app_window: &tauri::Window,
     ) -> Result<Vec<ElementRect>, AutomationError> {
         let automation_walker = self.automation_walker.clone().unwrap();
         let (parent_element, mut parent_level, parent_rect, mut parent_tree_token) = match self
@@ -419,7 +493,7 @@ impl UIElements {
             },
             None => {
                 // 这里主动获取下，这时写入了缓存，但没有符合上一次的筛选条件
-                let first_child = automation_walker.get_first_child(&parent_element);
+                let first_child = self.get_first_child(&parent_element, &parent_level, app_window);
                 match first_child {
                     Ok(element) => {
                         queue = Some(element.clone());
@@ -498,7 +572,8 @@ impl UIElements {
                     result_token = current_element_token;
                     result_rect = current_element_rect;
 
-                    let first_child = automation_walker.get_first_child(&current_element);
+                    let first_child =
+                        self.get_first_child(&current_element, &current_level, app_window);
                     if let Ok(child) = first_child {
                         queue = Some(child.clone());
                         parent_tree_token = current_element_token;

@@ -27,7 +27,7 @@ tauri = { version = "^2.3", features = [ "protocol-asset",
 ] }
 tauri-plugin-log = "^2"
 tauri-plugin-fs = "^2"
-xcap = { git = "https://github.com/mg-chao/xcap", branch = "master" }
+xcap = { git = "https://github.com/mg-chao/xcap", branch = "custom/master" }
 device_query = "^3"
 log = "^0.4"
 image = { version = "^0.25", features = ["png", "webp"] }

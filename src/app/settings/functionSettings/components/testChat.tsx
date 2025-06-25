@@ -6,11 +6,15 @@ import OpenAI from 'openai';
 import { FormattedMessage } from 'react-intl';
 import { TestChatIcon } from '@/components/icons';
 import { appFetch } from '@/services/tools';
+import { useStateSubscriber } from '@/hooks/useStateSubscriber';
+import { AppSettingsGroup, AppSettingsPublisher } from '@/app/contextWrap';
 
 export const TestChat: React.FC<{ config: ChatApiConfig }> = ({ config }) => {
     const { token } = theme.useToken();
     const [result, setResult] = useState('');
     const [loading, setLoading] = useState(false);
+
+    const [getAppSettings] = useStateSubscriber(AppSettingsPublisher, undefined);
 
     const handleTest = useCallback(async () => {
         setLoading(true);
@@ -28,7 +32,7 @@ export const TestChat: React.FC<{ config: ChatApiConfig }> = ({ config }) => {
                 messages: [{ role: 'user', content: 'Say "Hello, world!"' }],
                 stream: true,
                 max_completion_tokens: 4096,
-                temperature: 1,
+                temperature: getAppSettings()[AppSettingsGroup.SystemChat].temperature,
             });
 
             for await (const event of stream_response) {
@@ -41,7 +45,7 @@ export const TestChat: React.FC<{ config: ChatApiConfig }> = ({ config }) => {
         }
 
         setLoading(false);
-    }, [config]);
+    }, [config.api_key, config.api_model, config.api_uri, getAppSettings]);
 
     return (
         <ModalForm

@@ -1,7 +1,8 @@
 use num_cpus;
 use paddle_ocr_rs::ocr_lite::OcrLite;
-use std::{io::Cursor, sync::Mutex};
+use std::io::Cursor;
 use tauri::{Manager, command, path::BaseDirectory};
+use tokio::sync::Mutex;
 
 pub struct OcrLiteWrap {
     pub ocr_instance: Option<OcrLite>,
@@ -12,10 +13,7 @@ pub async fn ocr_init(
     app: tauri::AppHandle,
     ocr_instance: tauri::State<'_, Mutex<OcrLiteWrap>>,
 ) -> Result<(), ()> {
-    let mut ocr_wrap_instance = match ocr_instance.lock() {
-        Ok(ocr_instance) => ocr_instance,
-        Err(_) => return Err(()),
-    };
+    let mut ocr_wrap_instance = ocr_instance.lock().await;
 
     let resource_path = match app.path().resolve("models", BaseDirectory::Resource) {
         Ok(resource_path) => resource_path,
@@ -53,10 +51,7 @@ pub async fn ocr_detect(
     ocr_instance: tauri::State<'_, Mutex<OcrLiteWrap>>,
     request: tauri::ipc::Request<'_>,
 ) -> Result<String, ()> {
-    let mut ocr_wrap_instance = match ocr_instance.lock() {
-        Ok(ocr_instance) => ocr_instance,
-        Err(_) => return Err(()),
-    };
+    let mut ocr_wrap_instance = ocr_instance.lock().await;
 
     let ocr_instance = match &mut ocr_wrap_instance.ocr_instance {
         Some(ocr_lite_instance) => ocr_lite_instance,
@@ -102,10 +97,7 @@ pub async fn ocr_detect(
 
 #[command]
 pub async fn ocr_release(ocr_instance: tauri::State<'_, Mutex<OcrLiteWrap>>) -> Result<(), ()> {
-    let mut ocr_instance = match ocr_instance.lock() {
-        Ok(ocr_instance) => ocr_instance,
-        Err(_) => return Err(()),
-    };
+    let mut ocr_instance = ocr_instance.lock().await;
 
     ocr_instance.ocr_instance.take();
 
