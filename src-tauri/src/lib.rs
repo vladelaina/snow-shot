@@ -9,7 +9,7 @@ mod scroll_screenshot;
 mod services;
 mod video_record;
 
-use std::sync::Mutex;
+use tokio::sync::Mutex;
 
 use enigo::{Enigo, Settings};
 use ocr::OcrLiteWrap;

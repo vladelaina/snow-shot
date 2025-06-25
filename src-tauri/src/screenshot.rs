@@ -2,7 +2,7 @@ use device_query::{DeviceQuery, DeviceState, MouseState};
 use image::codecs::png::{CompressionType, FilterType, PngEncoder};
 use image::codecs::webp::WebPEncoder;
 use serde::Serialize;
-use std::sync::Mutex;
+use tokio::sync::Mutex;
 use std::time::{SystemTime, UNIX_EPOCH};
 use tauri::command;
 use tauri::ipc::Response;
@@ -61,10 +61,7 @@ pub async fn capture_current_monitor(encoder: String) -> Response {
 
 #[command]
 pub async fn init_ui_elements(ui_elements: tauri::State<'_, Mutex<UIElements>>) -> Result<(), ()> {
-    let mut ui_elements = match ui_elements.lock() {
-        Ok(guard) => guard,
-        Err(_) => return Err(()),
-    };
+    let mut ui_elements = ui_elements.lock().await;
 
     match ui_elements.init() {
         Ok(_) => Ok(()),
@@ -76,10 +73,7 @@ pub async fn init_ui_elements(ui_elements: tauri::State<'_, Mutex<UIElements>>) 
 pub async fn init_ui_elements_cache(
     ui_elements: tauri::State<'_, Mutex<UIElements>>,
 ) -> Result<(), ()> {
-    let mut ui_elements = match ui_elements.lock() {
-        Ok(guard) => guard,
-        Err(_) => return Err(()),
-    };
+    let mut ui_elements = ui_elements.lock().await;
 
     // 多显示器时会获取错误
     // 临时用显示器坐标做个转换，后面兼容跨屏截图时取消
@@ -209,10 +203,7 @@ pub async fn get_element_from_position(
     mouse_x: i32,
     mouse_y: i32,
 ) -> Result<Vec<ElementRect>, ()> {
-    let mut ui_elements = match ui_elements.lock() {
-        Ok(guard) => guard,
-        Err(_) => return Err(()),
-    };
+    let mut ui_elements = ui_elements.lock().await;
 
     let element_rect_list = match ui_elements.get_element_from_point_walker(mouse_x, mouse_y) {
         Ok(element_rect) => element_rect,

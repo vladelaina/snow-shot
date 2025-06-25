@@ -3,10 +3,10 @@ use image::codecs::png::{self, CompressionType, PngEncoder};
 use image::imageops::FilterType;
 use serde::Serialize;
 use std::fs;
-use std::sync::Mutex;
 use tauri::ipc::Response;
 use tauri::{command, image::Image};
 use tauri_plugin_clipboard_manager::ClipboardExt;
+use tokio::sync::Mutex;
 use xcap::Monitor;
 use zune_core::bit_depth::BitDepth;
 use zune_core::colorspace::ColorSpace;
@@ -28,10 +28,7 @@ pub async fn scroll_screenshot_init(
     descriptor_patch_size: usize,
     min_size_delta: i32,
 ) -> Result<(), ()> {
-    let mut scroll_screenshot_service = match scroll_screenshot_service.lock() {
-        Ok(service) => service,
-        Err(_) => return Err(()),
-    };
+    let mut scroll_screenshot_service = scroll_screenshot_service.lock().await;
 
     scroll_screenshot_service.init(
         direction,
@@ -60,10 +57,7 @@ pub async fn scroll_screenshot_capture(
     max_y: u32,
     thumbnail_size: u32,
 ) -> Result<Response, ()> {
-    let mut scroll_screenshot_service = match scroll_screenshot_service.lock() {
-        Ok(service) => service,
-        Err(_) => return Err(()),
-    };
+    let mut scroll_screenshot_service = scroll_screenshot_service.lock().await;
 
     let monitor = Monitor::from_point(monitor_x, monitor_y).unwrap();
 
@@ -140,10 +134,7 @@ pub struct ScrollScreenshotCaptureSize {
 pub async fn scroll_screenshot_get_size(
     scroll_screenshot_service: tauri::State<'_, Mutex<ScrollScreenshotService>>,
 ) -> Result<ScrollScreenshotCaptureSize, ()> {
-    let scroll_screenshot_service = match scroll_screenshot_service.lock() {
-        Ok(service) => service,
-        Err(_) => return Err(()),
-    };
+    let scroll_screenshot_service = scroll_screenshot_service.lock().await;
 
     Ok(ScrollScreenshotCaptureSize {
         top_image_size: scroll_screenshot_service.top_image_size,
@@ -156,10 +147,7 @@ pub async fn scroll_screenshot_save_to_file(
     scroll_screenshot_service: tauri::State<'_, Mutex<ScrollScreenshotService>>,
     file_path: String,
 ) -> Result<(), ()> {
-    let mut scroll_screenshot_service = match scroll_screenshot_service.lock() {
-        Ok(service) => service,
-        Err(_) => return Err(()),
-    };
+    let mut scroll_screenshot_service = scroll_screenshot_service.lock().await;
 
     let image = scroll_screenshot_service.export();
     let image = match image {
@@ -199,10 +187,7 @@ pub async fn scroll_screenshot_save_to_clipboard(
     app: tauri::AppHandle,
     scroll_screenshot_service: tauri::State<'_, Mutex<ScrollScreenshotService>>,
 ) -> Result<(), ()> {
-    let mut scroll_screenshot_service = match scroll_screenshot_service.lock() {
-        Ok(service) => service,
-        Err(_) => return Err(()),
-    };
+    let mut scroll_screenshot_service = scroll_screenshot_service.lock().await;
 
     let image = scroll_screenshot_service.export();
     match image {
@@ -226,10 +211,7 @@ pub async fn scroll_screenshot_save_to_clipboard(
 pub async fn scroll_screenshot_clear(
     scroll_screenshot_service: tauri::State<'_, Mutex<ScrollScreenshotService>>,
 ) -> Result<(), ()> {
-    let mut scroll_screenshot_service = match scroll_screenshot_service.lock() {
-        Ok(service) => service,
-        Err(_) => return Err(()),
-    };
+    let mut scroll_screenshot_service = scroll_screenshot_service.lock().await;
 
     scroll_screenshot_service.clear();
 
@@ -240,10 +222,7 @@ pub async fn scroll_screenshot_clear(
 pub async fn scroll_screenshot_get_image_data(
     scroll_screenshot_service: tauri::State<'_, Mutex<ScrollScreenshotService>>,
 ) -> Result<Response, ()> {
-    let mut scroll_screenshot_service = match scroll_screenshot_service.lock() {
-        Ok(service) => service,
-        Err(_) => return Err(()),
-    };
+    let mut scroll_screenshot_service = scroll_screenshot_service.lock().await;
 
     let image = scroll_screenshot_service.export();
     let image_data = match image {

@@ -3,13 +3,12 @@ use serde::Serialize;
 use std::{
     env,
     path::PathBuf,
-    sync::Mutex,
     time::{SystemTime, UNIX_EPOCH},
 };
 use tauri::{Emitter, ipc::Response};
 use tauri::{Manager, command};
 use tauri_plugin_clipboard;
-use tokio::time::Duration;
+use tokio::{sync::Mutex, time::Duration};
 
 use crate::{
     os::{self, free_drag::set_window_proc},
@@ -38,10 +37,7 @@ pub async fn auto_start_hide_window(
     window: tauri::Window,
     auto_start_hide_window: tauri::State<'_, Mutex<bool>>,
 ) -> Result<(), ()> {
-    let mut auto_start_hide_window = match auto_start_hide_window.lock() {
-        Ok(auto_start_hide_window) => auto_start_hide_window,
-        Err(_) => return Err(()),
-    };
+    let mut auto_start_hide_window = auto_start_hide_window.lock().await;
 
     if *auto_start_hide_window == false && env::args().any(|arg| arg == "--auto_start") {
         window.hide().unwrap();
@@ -77,12 +73,11 @@ pub async fn scroll_through(
     tokio::time::sleep(Duration::from_millis(1)).await;
 
     {
-        if let Ok(mut enigo) = enigo.lock() {
-            match enigo.scroll(length, Axis::Vertical) {
-                Ok(_) => (),
-                Err(e) => {
-                    log::error!("[scroll_through] scroll error: {}", e);
-                }
+        let mut enigo = enigo.lock().await;
+        match enigo.scroll(length, Axis::Vertical) {
+            Ok(_) => (),
+            Err(e) => {
+                log::error!("[scroll_through] scroll error: {}", e);
             }
         }
     }

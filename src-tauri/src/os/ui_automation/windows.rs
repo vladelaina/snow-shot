@@ -6,8 +6,8 @@ use crate::app_error::AutomationError;
 use atree::Arena;
 use atree::Token;
 use rtree_rs::{RTree, Rect};
-use std::time::Duration;
 use std::thread::sleep;
+use std::time::Duration;
 use uiautomation::UIAutomation;
 use uiautomation::UIElement;
 use uiautomation::UITreeWalker;
@@ -415,9 +415,13 @@ impl UIElements {
 
             // 像浏览器可能首次获取会失败，这里多试几次
             if *focus_count < 8 {
-                let _ = element.set_focus();
-                sleep(Duration::from_millis(1));
-                first_child = automation_walker.get_first_child(element);
+                match element.set_focus() {
+                    Ok(_) => {
+                        sleep(Duration::from_millis(16));
+                        first_child = automation_walker.get_first_child(element);
+                    }
+                    Err(_) => {}
+                }
 
                 *focus_count += 1;
             }
