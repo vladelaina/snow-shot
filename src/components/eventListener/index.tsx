@@ -156,6 +156,10 @@ const EventListenerCore: React.FC<{ children: React.ReactNode }> = ({ children }
                     event: 'release-draw-page',
                     callback: async () => {},
                 });
+                defaultListener.push({
+                    event: 'ui-automation-try-focus',
+                    callback: async () => {},
+                });
             }
 
             if (isFullScreenDraw || isFullScreenDrawSwitchMouseThrough) {

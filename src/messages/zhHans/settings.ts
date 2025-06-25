@@ -196,4 +196,8 @@ export const settings = {
     'settings.systemSettings.dataFilePath.open.failed': '打开配置目录失败，请手动复制目录打开',
     'settings.functionSettings.chatSettings.testChat': '测试 API 配置',
     'settings.functionSettings.chatSettings.testPrompt': '测试提示词: "Say "Hello, world!""',
+    'settings.systemSettings.screenshotSettings': '截图',
+    'settings.systemSettings.screenshotSettings.tryGetElementByFocus': '选取窗口元素增强',
+    'settings.systemSettings.screenshotSettings.tryGetElementByFocus.tip':
+        '启用后将为尝试选取的窗口元素提供焦点，以修复诸如浏览器等程序在无焦点时无法选取窗口元素的问题。当窗口堆叠排列的情况复杂时，底部窗口获取焦点后将遮挡顶部窗口，如影响使用请禁用该功能',
 };

@@ -179,7 +179,9 @@ const SelectLayerCore: React.FC<SelectLayerProps> = ({ actionRef }) => {
         const windowElements = await getWindowElements();
 
         const rectList: ElementRect[] = [];
-        const initUiElementsCachePromise = initUiElementsCache();
+        const initUiElementsCachePromise = initUiElementsCache(
+            getAppSettings()[AppSettingsGroup.SystemScreenshot].tryGetElementByFocus,
+        );
         const map = new Map<number, number>();
 
         const rTree = new Flatbush(windowElements.length);
@@ -198,7 +200,7 @@ const SelectLayerCore: React.FC<SelectLayerProps> = ({ actionRef }) => {
 
         await initUiElementsCachePromise;
         selectWindowElementLoadingRef.current = false;
-    }, []);
+    }, [getAppSettings]);
 
     /**
      * 通过鼠标坐标获取候选框

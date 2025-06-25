@@ -8,6 +8,7 @@ use atree::Token;
 use rtree_rs::{RTree, Rect};
 use std::thread::sleep;
 use std::time::Duration;
+use tauri::Emitter;
 use uiautomation::UIAutomation;
 use uiautomation::UIElement;
 use uiautomation::UITreeWalker;
@@ -95,6 +96,7 @@ pub struct UIElements {
     element_children_next_sibling_cache: HashMap<ElementLevel, Option<(UIElement, ElementLevel)>>,
     window_rect_map: HashMap<i32, uiautomation::types::Rect>,
     window_focus_count_map: HashMap<i32, i32>,
+    try_get_element_by_focus: bool,
 }
 
 unsafe impl Send for UIElements {}
@@ -118,6 +120,7 @@ impl UIElements {
             element_children_next_sibling_cache: HashMap::new(),
             window_rect_map: HashMap::new(),
             window_focus_count_map: HashMap::new(),
+            try_get_element_by_focus: false,
         }
     }
 
@@ -200,7 +203,12 @@ impl UIElements {
     /**
      * 初始化窗口元素缓存
      */
-    pub fn init_cache(&mut self, monitor_rect: ElementRect) -> Result<(), AutomationError> {
+    pub fn init_cache(
+        &mut self,
+        monitor_rect: ElementRect,
+        try_get_element_by_focus: bool,
+    ) -> Result<(), AutomationError> {
+        self.try_get_element_by_focus = try_get_element_by_focus;
         self.monitor_rect = monitor_rect;
 
         let root_element = self.root_element.clone().unwrap();
@@ -211,6 +219,8 @@ impl UIElements {
         self.element_children_next_sibling_cache.clear();
         self.window_rect_map.clear();
         self.window_focus_count_map.clear();
+
+        self.try_get_element_by_focus = try_get_element_by_focus;
 
         // 桌面的窗口索引应该是最高，因为其优先级最低
         let mut current_level = ElementLevel::min();
@@ -280,14 +290,6 @@ impl UIElements {
         current_level.next_level();
 
         for current_child in children_list {
-            let current_child_name = current_child.get_name().unwrap_or_default();
-
-            if current_child_name.eq("Shell Handwriting Canvas")
-                || current_child_name.eq("Snow Shot - Draw")
-            {
-                continue;
-            }
-
             current_level.window_index += 1;
             current_level.next_element();
 
@@ -403,24 +405,25 @@ impl UIElements {
         &mut self,
         element: &UIElement,
         level: &ElementLevel,
+        app_window: &tauri::Window,
     ) -> Result<UIElement, uiautomation::Error> {
         let automation_walker = self.automation_walker.as_mut().unwrap();
 
         let mut first_child = automation_walker.get_first_child(element);
-        if first_child.is_err() {
+        if first_child.is_err() && self.try_get_element_by_focus {
             let focus_count = self
                 .window_focus_count_map
                 .entry(level.window_index)
                 .or_insert(0);
 
             // 像浏览器可能首次获取会失败，这里多试几次
-            if *focus_count < 8 {
-                match element.set_focus() {
-                    Ok(_) => {
-                        sleep(Duration::from_millis(8));
-                        first_child = automation_walker.get_first_child(element);
-                    }
-                    Err(_) => {}
+            if *focus_count < 3 {
+                if element.try_focus() {
+                    // 交给前端节流处理，避免焦点快速切换
+                    let _ = app_window.emit("ui-automation-try-focus", ());
+
+                    sleep(Duration::from_millis(8));
+                    first_child = automation_walker.get_first_child(element);
                 }
 
                 *focus_count += 1;
@@ -437,6 +440,7 @@ impl UIElements {
         &mut self,
         mouse_x: i32,
         mouse_y: i32,
+        app_window: &tauri::Window,
     ) -> Result<Vec<ElementRect>, AutomationError> {
         let automation_walker = self.automation_walker.clone().unwrap();
         let (parent_element, mut parent_level, parent_rect, mut parent_tree_token) = match self
@@ -470,7 +474,7 @@ impl UIElements {
             },
             None => {
                 // 这里主动获取下，这时写入了缓存，但没有符合上一次的筛选条件
-                let first_child = self.get_first_child(&parent_element, &parent_level);
+                let first_child = self.get_first_child(&parent_element, &parent_level, app_window);
                 match first_child {
                     Ok(element) => {
                         queue = Some(element.clone());
@@ -549,7 +553,8 @@ impl UIElements {
                     result_token = current_element_token;
                     result_rect = current_element_rect;
 
-                    let first_child = self.get_first_child(&current_element, &current_level);
+                    let first_child =
+                        self.get_first_child(&current_element, &current_level, app_window);
                     if let Ok(child) = first_child {
                         queue = Some(child.clone());
                         parent_tree_token = current_element_token;

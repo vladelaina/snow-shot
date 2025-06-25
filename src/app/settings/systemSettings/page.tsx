@@ -27,7 +27,7 @@ import { FormattedMessage } from 'react-intl';
 import { ContentWrap } from '@/components/contentWrap';
 import { IconLabel } from '@/components/iconLable';
 import { ResetSettingsButton } from '@/components/resetSettingsButton';
-import ProForm, { ProFormSlider } from '@ant-design/pro-form';
+import ProForm, { ProFormSlider, ProFormSwitch } from '@ant-design/pro-form';
 import { openPath } from '@tauri-apps/plugin-opener';
 import { AntdContext } from '@/components/globalLayoutExtra';
 import { clearAllAppStore } from '@/utils/appStore';
@@ -44,6 +44,7 @@ export default function SystemSettings() {
         Form.useForm<AppSettingsData[AppSettingsGroup.SystemScrollScreenshot]>();
     const [chatForm] = Form.useForm<AppSettingsData[AppSettingsGroup.SystemChat]>();
     const [networkForm] = Form.useForm<AppSettingsData[AppSettingsGroup.SystemNetwork]>();
+    const [screenshotForm] = Form.useForm<AppSettingsData[AppSettingsGroup.SystemScreenshot]>();
 
     const [appSettingsLoading, setAppSettingsLoading] = useState(true);
     useAppSettingsLoad(
@@ -91,8 +92,16 @@ export default function SystemSettings() {
                         settings[AppSettingsGroup.SystemScrollScreenshot],
                     );
                 }
+
+                if (
+                    preSettings === undefined ||
+                    preSettings[AppSettingsGroup.SystemScreenshot] !==
+                        settings[AppSettingsGroup.SystemScreenshot]
+                ) {
+                    screenshotForm.setFieldsValue(settings[AppSettingsGroup.SystemScreenshot]);
+                }
             },
-            [commonForm, chatForm, networkForm, scrollScreenshotForm],
+            [commonForm, chatForm, networkForm, scrollScreenshotForm, screenshotForm],
         ),
         true,
     );
@@ -166,6 +175,54 @@ export default function SystemSettings() {
                             </ProForm.Item>
                         </Col>
                     </Row>
+                </ProForm>
+            </Spin>
+
+            <Divider />
+
+            <GroupTitle
+                id="screenshotSettings"
+                extra={
+                    <ResetSettingsButton
+                        title={<FormattedMessage id="settings.systemSettings.screenshotSettings" />}
+                        appSettingsGroup={AppSettingsGroup.SystemScreenshot}
+                    />
+                }
+            >
+                <FormattedMessage id="settings.systemSettings.screenshotSettings" />
+            </GroupTitle>
+
+            <Spin spinning={appSettingsLoading}>
+                <ProForm
+                    form={screenshotForm}
+                    onValuesChange={(_, values) => {
+                        updateAppSettings(
+                            AppSettingsGroup.SystemScreenshot,
+                            values,
+                            true,
+                            true,
+                            true,
+                            true,
+                            false,
+                        );
+                    }}
+                    submitter={false}
+                    layout="horizontal"
+                >
+                    <ProFormSwitch
+                        label={
+                            <IconLabel
+                                label={
+                                    <FormattedMessage id="settings.systemSettings.screenshotSettings.tryGetElementByFocus" />
+                                }
+                                tooltipTitle={
+                                    <FormattedMessage id="settings.systemSettings.screenshotSettings.tryGetElementByFocus.tip" />
+                                }
+                            />
+                        }
+                        name="tryGetElementByFocus"
+                        valuePropName="checked"
+                    />
                 </ProForm>
             </Spin>
 

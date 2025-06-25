@@ -53,6 +53,7 @@ export enum AppSettingsGroup {
     SystemCommon = 'systemCommon',
     SystemChat = 'systemChat',
     SystemNetwork = 'systemNetwork',
+    SystemScreenshot = 'systemScreenshot',
     SystemScrollScreenshot = 'systemScrollScreenshot_20250523',
     FunctionChat = 'functionChat',
     FunctionTranslation = 'functionTranslation',
@@ -198,6 +199,9 @@ export type AppSettingsData = {
         /** 编码器预设 */
         encoderPreset: string;
     };
+    [AppSettingsGroup.SystemScreenshot]: {
+        tryGetElementByFocus: boolean;
+    };
     [AppSettingsGroup.SystemScrollScreenshot]: {
         minSide: number;
         maxSide: number;
@@ -309,6 +313,9 @@ export const defaultAppSettingsData: AppSettingsData = {
         hwaccel: true,
         encoder: 'libx264',
         encoderPreset: 'ultrafast',
+    },
+    [AppSettingsGroup.SystemScreenshot]: {
+        tryGetElementByFocus: true,
     },
 };
 
@@ -1044,6 +1051,18 @@ const ContextWrapCore: React.FC<{ children: React.ReactNode }> = ({ children }) 
                         typeof newSettings?.zoomWithMouse === 'boolean'
                             ? newSettings.zoomWithMouse
                             : (prevSettings?.zoomWithMouse ?? false),
+                };
+            } else if (group === AppSettingsGroup.SystemScreenshot) {
+                newSettings = newSettings as AppSettingsData[typeof group];
+                const prevSettings = appSettingsRef.current[group] as
+                    | AppSettingsData[typeof group]
+                    | undefined;
+
+                settings = {
+                    tryGetElementByFocus:
+                        typeof newSettings?.tryGetElementByFocus === 'boolean'
+                            ? newSettings.tryGetElementByFocus
+                            : (prevSettings?.tryGetElementByFocus ?? true),
                 };
             } else {
                 return defaultAppSettingsData[group];
