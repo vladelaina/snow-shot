@@ -27,11 +27,12 @@ import { FormattedMessage } from 'react-intl';
 import { ContentWrap } from '@/components/contentWrap';
 import { IconLabel } from '@/components/iconLable';
 import { ResetSettingsButton } from '@/components/resetSettingsButton';
-import ProForm, { ProFormSlider, ProFormSwitch } from '@ant-design/pro-form';
+import ProForm, { ProFormSelect, ProFormSlider } from '@ant-design/pro-form';
 import { openPath } from '@tauri-apps/plugin-opener';
 import { AntdContext } from '@/components/globalLayoutExtra';
 import { clearAllAppStore } from '@/utils/appStore';
 import { relaunch } from '@tauri-apps/plugin-process';
+import { TryGetElementByFocus } from '@/commands';
 
 export default function SystemSettings() {
     const { token } = theme.useToken();
@@ -209,20 +210,55 @@ export default function SystemSettings() {
                     submitter={false}
                     layout="horizontal"
                 >
-                    <ProFormSwitch
-                        label={
-                            <IconLabel
+                    <Row gutter={token.margin}>
+                        <Col span={12}>
+                            <ProFormSelect
                                 label={
-                                    <FormattedMessage id="settings.systemSettings.screenshotSettings.tryGetElementByFocus" />
+                                    <IconLabel
+                                        label={
+                                            <FormattedMessage id="settings.systemSettings.screenshotSettings.tryGetElementByFocus" />
+                                        }
+                                        tooltipTitle={
+                                            <FormattedMessage
+                                                id="settings.systemSettings.screenshotSettings.tryGetElementByFocus.tip"
+                                                values={{
+                                                    whiteList:
+                                                        'Mozilla Firefox、Microsoft Edge、Google Chrome、Snow Show',
+                                                }}
+                                            />
+                                        }
+                                    />
                                 }
-                                tooltipTitle={
-                                    <FormattedMessage id="settings.systemSettings.screenshotSettings.tryGetElementByFocus.tip" />
-                                }
+                                name="tryGetElementByFocus"
+                                options={[
+                                    {
+                                        label: (
+                                            <FormattedMessage id="settings.systemSettings.screenshotSettings.tryGetElementByFocus.never" />
+                                        ),
+                                        value: TryGetElementByFocus.Never,
+                                    },
+                                    {
+                                        label: (
+                                            <FormattedMessage id="settings.systemSettings.screenshotSettings.tryGetElementByFocus.firefox" />
+                                        ),
+                                        value: TryGetElementByFocus.Firefox,
+                                    },
+                                    {
+                                        label: (
+                                            <FormattedMessage id="settings.systemSettings.screenshotSettings.tryGetElementByFocus.whiteList" />
+                                        ),
+                                        value: TryGetElementByFocus.WhiteList,
+                                    },
+                                    {
+                                        label: (
+                                            <FormattedMessage id="settings.systemSettings.screenshotSettings.tryGetElementByFocus.always" />
+                                        ),
+                                        value: TryGetElementByFocus.Always,
+                                    },
+                                ]}
                             />
-                        }
-                        name="tryGetElementByFocus"
-                        valuePropName="checked"
-                    />
+                        </Col>
+                    </Row>
                 </ProForm>
             </Spin>
 

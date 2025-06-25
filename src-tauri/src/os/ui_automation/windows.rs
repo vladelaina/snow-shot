@@ -6,6 +6,8 @@ use crate::app_error::AutomationError;
 use atree::Arena;
 use atree::Token;
 use rtree_rs::{RTree, Rect};
+use serde::Deserialize;
+use serde::Serialize;
 use std::thread::sleep;
 use std::time::Duration;
 use tauri::Emitter;
@@ -41,6 +43,18 @@ pub struct ElementLevel {
      * 窗口索引
      */
     pub window_index: i32,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Copy, PartialOrd, Serialize, Deserialize)]
+pub enum TryGetElementByFocus {
+    /// 从不
+    Never,
+    /// 仅针对 Firefox 浏览器
+    Firefox,
+    /// 尝试在白名单中获取焦点
+    WhiteList,
+    /// 总是尝试获取焦点
+    Always,
 }
 
 impl ElementLevel {
@@ -98,7 +112,7 @@ pub struct UIElements {
     element_children_next_sibling_cache: HashMap<ElementLevel, Option<(UIElement, ElementLevel)>>,
     window_rect_map: HashMap<i32, uiautomation::types::Rect>,
     window_focus_count_map: HashMap<i32, i32>,
-    try_get_element_by_focus: bool,
+    try_get_element_by_focus: TryGetElementByFocus,
 }
 
 unsafe impl Send for UIElements {}
@@ -122,7 +136,7 @@ impl UIElements {
             element_children_next_sibling_cache: HashMap::new(),
             window_rect_map: HashMap::new(),
             window_focus_count_map: HashMap::new(),
-            try_get_element_by_focus: false,
+            try_get_element_by_focus: TryGetElementByFocus::Always,
         }
     }
 
@@ -208,7 +222,7 @@ impl UIElements {
     pub fn init_cache(
         &mut self,
         monitor_rect: ElementRect,
-        try_get_element_by_focus: bool,
+        try_get_element_by_focus: TryGetElementByFocus,
     ) -> Result<(), AutomationError> {
         self.try_get_element_by_focus = try_get_element_by_focus;
         self.monitor_rect = monitor_rect;
@@ -254,11 +268,16 @@ impl UIElements {
 
             let mut disable_focus = false;
 
-            if let Ok(title) = window.title() {
-                if title.eq("Shell Handwriting Canvas") || title.eq("Snow Shot - Draw") {
-                    continue;
+            let window_title = match window.title() {
+                Ok(title) => {
+                    if title.eq("Shell Handwriting Canvas") || title.eq("Snow Shot - Draw") {
+                        continue;
+                    }
+
+                    title
                 }
-            }
+                Err(_) => continue,
+            };
 
             let window_hwnd = window.hwnd();
 
@@ -267,14 +286,43 @@ impl UIElements {
                     if let Ok(element) = automation
                         .element_from_handle(uiautomation::types::Handle::from(hwnd as isize))
                     {
-                        let mut class_name = [0u16; 256];
-                        let class_name_len = unsafe { GetClassNameW(HWND(hwnd), &mut class_name) };
+                        match self.try_get_element_by_focus {
+                            TryGetElementByFocus::Never => {
+                                disable_focus = true;
+                            }
+                            TryGetElementByFocus::Firefox => {
+                                if window_title.ends_with("Mozilla Firefox") {
+                                    disable_focus = false;
+                                } else {
+                                    disable_focus = true;
+                                }
+                            }
+                            TryGetElementByFocus::WhiteList => {
+                                if window_title.ends_with("Mozilla Firefox")
+                                    || window_title.ends_with("Microsoft​ Edge")
+                                    || window_title.ends_with("Microsoft Edge")
+                                    || window_title.ends_with("Google Chrome")
+                                    || window_title.starts_with("Snow Shot")
+                                {
+                                    disable_focus = false;
+                                } else {
+                                    disable_focus = true;
+                                }
+                            }
+                            TryGetElementByFocus::Always => {
+                                disable_focus = false;
 
-                        // 任务栏能正常获取元素，禁用焦点选择防止闪烁
-                        if String::from_utf16_lossy(&class_name[..class_name_len as usize])
-                            .eq("Shell_TrayWnd")
-                        {
-                            disable_focus = true;
+                                let mut class_name = [0u16; 256];
+                                let class_name_len =
+                                    unsafe { GetClassNameW(HWND(hwnd), &mut class_name) };
+
+                                // 任务栏能正常获取元素，禁用焦点选择防止闪烁
+                                if String::from_utf16_lossy(&class_name[..class_name_len as usize])
+                                    .eq("Shell_TrayWnd")
+                                {
+                                    disable_focus = true;
+                                }
+                            }
                         }
 
                         children_list.push((element, disable_focus));
@@ -429,14 +477,14 @@ impl UIElements {
         let automation_walker = self.automation_walker.as_mut().unwrap();
 
         let mut first_child = automation_walker.get_first_child(element);
-        if first_child.is_err() && self.try_get_element_by_focus {
+        if first_child.is_err() && self.try_get_element_by_focus != TryGetElementByFocus::Never {
             let focus_count = self
                 .window_focus_count_map
                 .entry(level.window_index)
                 .or_insert(0);
 
             // 像浏览器可能首次获取会失败，这里多试几次
-            if *focus_count < 3 {
+            if *focus_count < 6 {
                 if element.try_focus() {
                     // 交给前端节流处理，避免焦点快速切换
                     let _ = app_window.emit("ui-automation-try-focus", ());

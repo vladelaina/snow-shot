@@ -16,7 +16,7 @@ import zhTW from 'antd/es/locale/zh_TW';
 import enUS from 'antd/es/locale/en_US';
 import { IntlProvider } from 'react-intl';
 import { messages } from '@/messages/map';
-import { ElementRect, ImageBuffer } from '@/commands';
+import { ElementRect, ImageBuffer, TryGetElementByFocus } from '@/commands';
 import { emit } from '@tauri-apps/api/event';
 import { getCurrentWindow, Window as AppWindow } from '@tauri-apps/api/window';
 import { AppFunction, AppFunctionConfig, defaultAppFunctionConfigs } from './extra';
@@ -200,7 +200,7 @@ export type AppSettingsData = {
         encoderPreset: string;
     };
     [AppSettingsGroup.SystemScreenshot]: {
-        tryGetElementByFocus: boolean;
+        tryGetElementByFocus: TryGetElementByFocus;
     };
     [AppSettingsGroup.SystemScrollScreenshot]: {
         minSide: number;
@@ -315,7 +315,7 @@ export const defaultAppSettingsData: AppSettingsData = {
         encoderPreset: 'ultrafast',
     },
     [AppSettingsGroup.SystemScreenshot]: {
-        tryGetElementByFocus: true,
+        tryGetElementByFocus: TryGetElementByFocus.Never,
     },
 };
 
@@ -1060,9 +1060,10 @@ const ContextWrapCore: React.FC<{ children: React.ReactNode }> = ({ children }) 
 
                 settings = {
                     tryGetElementByFocus:
-                        typeof newSettings?.tryGetElementByFocus === 'boolean'
-                            ? newSettings.tryGetElementByFocus
-                            : (prevSettings?.tryGetElementByFocus ?? true),
+                        typeof newSettings?.tryGetElementByFocus === 'string'
+                            ? (newSettings.tryGetElementByFocus as TryGetElementByFocus)
+                            : (prevSettings?.tryGetElementByFocus ??
+                              defaultAppSettingsData[group].tryGetElementByFocus),
                 };
             } else {
                 return defaultAppSettingsData[group];

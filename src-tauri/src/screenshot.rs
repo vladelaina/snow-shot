@@ -10,6 +10,7 @@ use xcap::{Monitor, Window};
 
 use crate::os;
 use crate::os::ElementRect;
+use crate::os::ui_automation::TryGetElementByFocus;
 use crate::os::ui_automation::UIElements;
 
 pub fn get_device_mouse_position() -> (i32, i32) {
@@ -72,7 +73,7 @@ pub async fn init_ui_elements(ui_elements: tauri::State<'_, Mutex<UIElements>>) 
 #[command]
 pub async fn init_ui_elements_cache(
     ui_elements: tauri::State<'_, Mutex<UIElements>>,
-    try_get_element_by_focus: bool,
+    try_get_element_by_focus: TryGetElementByFocus,
 ) -> Result<(), ()> {
     let mut ui_elements = ui_elements.lock().await;
 
