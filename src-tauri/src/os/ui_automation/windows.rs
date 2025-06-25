@@ -417,7 +417,7 @@ impl UIElements {
             if *focus_count < 8 {
                 match element.set_focus() {
                     Ok(_) => {
-                        sleep(Duration::from_millis(16));
+                        sleep(Duration::from_millis(8));
                         first_child = automation_walker.get_first_child(element);
                     }
                     Err(_) => {}
