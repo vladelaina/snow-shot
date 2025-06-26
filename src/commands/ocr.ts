@@ -27,8 +27,12 @@ export const ocrDetect = async (
     return JSON.parse(result) as OcrDetectResult;
 };
 
-export const ocrInit = async (): Promise<void> => {
-    await invoke<void>('ocr_init');
+export enum OcrModel {
+    PaddleOcr = 'PaddleOcr',
+}
+
+export const ocrInit = async (model: OcrModel): Promise<void> => {
+    await invoke<void>('ocr_init', { model });
 };
 
 export const ocrRelease = async (): Promise<void> => {

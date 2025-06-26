@@ -39,6 +39,7 @@ import { ImageFormat } from '@/utils/file';
 import { appConfigDir, join as joinPath } from '@tauri-apps/api/path';
 import { DrawState } from './fullScreenDraw/components/drawCore/extra';
 import { OcrDetectAfterAction } from './fixedContent/components/ocrResult';
+import { OcrModel } from '@/commands/ocr';
 
 export enum AppSettingsGroup {
     Common = 'common',
@@ -53,8 +54,8 @@ export enum AppSettingsGroup {
     SystemCommon = 'systemCommon',
     SystemChat = 'systemChat',
     SystemNetwork = 'systemNetwork',
-    SystemScreenshot = 'systemScreenshot',
-    SystemScrollScreenshot = 'systemScrollScreenshot_20250523',
+    SystemScreenshot = 'systemScreenshot_20250626',
+    SystemScrollScreenshot = 'systemScrollScreenshot_20250626',
     FunctionChat = 'functionChat',
     FunctionTranslation = 'functionTranslation',
     FunctionScreenshot = 'functionScreenshot',
@@ -201,6 +202,7 @@ export type AppSettingsData = {
     };
     [AppSettingsGroup.SystemScreenshot]: {
         tryGetElementByFocus: TryGetElementByFocus;
+        ocrModel: OcrModel;
     };
     [AppSettingsGroup.SystemScrollScreenshot]: {
         minSide: number;
@@ -288,9 +290,9 @@ export const defaultAppSettingsData: AppSettingsData = {
         ocrCopyText: false,
     },
     [AppSettingsGroup.SystemScrollScreenshot]: {
-        imageFeatureThreshold: 32,
-        minSide: 128,
-        maxSide: 128,
+        imageFeatureThreshold: 100,
+        minSide: 83,
+        maxSide: 83,
         sampleRate: 1,
         imageFeatureDescriptionLength: 32,
     },
@@ -315,7 +317,8 @@ export const defaultAppSettingsData: AppSettingsData = {
         encoderPreset: 'ultrafast',
     },
     [AppSettingsGroup.SystemScreenshot]: {
-        tryGetElementByFocus: TryGetElementByFocus.Never,
+        tryGetElementByFocus: TryGetElementByFocus.WhiteList,
+        ocrModel: OcrModel.PaddleOcr,
     },
 };
 
@@ -978,11 +981,11 @@ const ContextWrapCore: React.FC<{ children: React.ReactNode }> = ({ children }) 
                               defaultAppSettingsData[group].imageFeatureThreshold),
                     minSide:
                         typeof newSettings?.minSide === 'number'
-                            ? Math.min(Math.max(newSettings.minSide, 0), 4096)
+                            ? Math.min(Math.max(newSettings.minSide, 0), 1024)
                             : (prevSettings?.minSide ?? defaultAppSettingsData[group].minSide),
                     maxSide:
                         typeof newSettings?.maxSide === 'number'
-                            ? Math.min(Math.max(newSettings.maxSide, 64), 4096)
+                            ? Math.min(Math.max(newSettings.maxSide, 64), 1024)
                             : (prevSettings?.maxSide ?? defaultAppSettingsData[group].maxSide),
                     sampleRate:
                         typeof newSettings?.sampleRate === 'number'
@@ -1064,6 +1067,10 @@ const ContextWrapCore: React.FC<{ children: React.ReactNode }> = ({ children }) 
                             ? (newSettings.tryGetElementByFocus as TryGetElementByFocus)
                             : (prevSettings?.tryGetElementByFocus ??
                               defaultAppSettingsData[group].tryGetElementByFocus),
+                    ocrModel:
+                        typeof newSettings?.ocrModel === 'string'
+                            ? (newSettings.ocrModel as OcrModel)
+                            : (prevSettings?.ocrModel ?? defaultAppSettingsData[group].ocrModel),
                 };
             } else {
                 return defaultAppSettingsData[group];

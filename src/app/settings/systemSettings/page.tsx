@@ -33,6 +33,7 @@ import { AntdContext } from '@/components/globalLayoutExtra';
 import { clearAllAppStore } from '@/utils/appStore';
 import { relaunch } from '@tauri-apps/plugin-process';
 import { TryGetElementByFocus } from '@/commands';
+import { OcrModel } from '@/commands/ocr';
 
 export default function SystemSettings() {
     const { token } = theme.useToken();
@@ -223,7 +224,7 @@ export default function SystemSettings() {
                                                 id="settings.systemSettings.screenshotSettings.tryGetElementByFocus.tip"
                                                 values={{
                                                     whiteList:
-                                                        'Mozilla Firefox、Microsoft Edge、Google Chrome、Snow Show',
+                                                        'Mozilla Firefox、Microsoft Edge、Google Chrome、Snow Shot',
                                                 }}
                                             />
                                         }
@@ -254,6 +255,29 @@ export default function SystemSettings() {
                                             <FormattedMessage id="settings.systemSettings.screenshotSettings.tryGetElementByFocus.always" />
                                         ),
                                         value: TryGetElementByFocus.Always,
+                                    },
+                                ]}
+                            />
+                        </Col>
+                    </Row>
+
+                    <Row gutter={token.margin}>
+                        <Col span={12}>
+                            <ProFormSelect
+                                label={
+                                    <IconLabel
+                                        label={
+                                            <FormattedMessage id="settings.systemSettings.screenshotSettings.ocrModel" />
+                                        }
+                                    />
+                                }
+                                name="ocrModel"
+                                options={[
+                                    {
+                                        label: (
+                                            <FormattedMessage id="settings.systemSettings.screenshotSettings.ocrModel.paddleOcr" />
+                                        ),
+                                        value: OcrModel.PaddleOcr,
                                     },
                                 ]}
                             />
@@ -456,11 +480,11 @@ export default function SystemSettings() {
                                 }
                                 name="maxSide"
                                 min={64}
-                                max={4096}
+                                max={1024}
                                 step={1}
                                 marks={{
                                     64: '64',
-                                    4096: '4096',
+                                    1024: '1024',
                                 }}
                             />
                         </Col>
