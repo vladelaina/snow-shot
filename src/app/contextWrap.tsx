@@ -298,7 +298,7 @@ export const defaultAppSettingsData: AppSettingsData = {
         lockDrawTool: true,
     },
     [AppSettingsGroup.SystemScrollScreenshot]: {
-        tryRollback: false,
+        tryRollback: true,
         imageFeatureThreshold: 24,
         minSide: 128,
         maxSide: 128,
