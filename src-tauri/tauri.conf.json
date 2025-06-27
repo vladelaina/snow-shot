@@ -1,7 +1,7 @@
 {
     "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
     "productName": "Snow Shot",
-    "version": "0.1.3-beta-20250627",
+    "version": "0.1.3-beta-20250628",
     "identifier": "com.chao.snowshot",
     "build": {
         "frontendDist": "../out",
