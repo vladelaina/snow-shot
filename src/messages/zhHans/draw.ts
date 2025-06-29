@@ -76,7 +76,7 @@ export const draw = {
     'draw.maintainAspectRatioPicker': '保持宽高比例',
     'draw.rotateWithDiscreteAnglePicker': '固定角度旋转',
     'draw.autoAlignPicker': '自动对齐',
-    'draw.selectPrevRectTool': '选择之前选定的区域',
+    'draw.selectPrevRectTool': '选择上一次选定的区域',
     'draw.laserPointerTool': '激光笔',
     'draw.mouseThroughTool': '鼠标穿透',
     'draw.ocrLoading': 'OCR 识别中',

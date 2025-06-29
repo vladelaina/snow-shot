@@ -89,6 +89,7 @@ const StatusBar: React.FC = () => {
             autoAlignPicker: { hotKey: autoAlignPickerHotKey },
             switchColorFormat: { hotKey: switchColorFormatHotKey },
             serialNumberDisableArrow: { hotKey: serialNumberDisableArrowHotKey },
+            selectPrevRectTool: { hotKey: selectPrevRectToolHotKey },
         } = getAppSettings()[AppSettingsGroup.DrawToolbarKeyEvent];
 
         const items: DescriptionsItemType[] = [
@@ -128,6 +129,11 @@ const StatusBar: React.FC = () => {
                     key: 'changeSelectLevel',
                     label: <FormattedMessage id="draw.changeSelectLevel" />,
                     children: <KeyLabel icon={<MouseIcon />} messageId="draw.mouseWheel" />,
+                },
+                {
+                    key: 'selectPrevRectTool',
+                    label: <FormattedMessage id="draw.selectPrevRectTool" />,
+                    children: <KeyLabel hotKey={selectPrevRectToolHotKey} />,
                 },
                 {
                     key: 'colorPickerCopy',
@@ -269,7 +275,6 @@ const StatusBar: React.FC = () => {
                     pointer-events: none;
                     display: inline-block;
                     z-index: ${zIndexs.Draw_StatusBar};
-                    min-width: 383px;
                     box-sizing: border-box;
                     user-select: none;
                 }
