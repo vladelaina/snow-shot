@@ -1,6 +1,7 @@
 export const home = {
     'home.commonFunction': '常用功能',
     'home.screenshotFunction': '截图功能',
+    'home.screenshotFunction.screenshotFocusedWindow': '截图当前具有焦点的窗口',
     'home.translationFunction': '翻译功能',
     'home.chatFunction': 'AI 对话功能',
     'home.otherFunction': '其它功能',

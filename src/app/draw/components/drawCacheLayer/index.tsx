@@ -60,6 +60,10 @@ const DrawCacheLayerCore: React.FC<{
                 });
                 drawCoreActionRef.current?.updateScene({
                     elements: [],
+                    appState: {
+                        // 清除在编辑中的元素
+                        newElement: undefined,
+                    },
                     captureUpdate: 'IMMEDIATELY',
                 });
                 drawCoreActionRef.current?.getExcalidrawAPI()?.history.clear();

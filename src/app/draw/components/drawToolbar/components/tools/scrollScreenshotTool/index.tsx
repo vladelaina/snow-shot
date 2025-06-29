@@ -221,7 +221,7 @@ export const ScrollScreenshot: React.FC<{
 
         try {
             captureResult = await scrollScreenshotHandleImage(
-                THUMBNAIL_WIDTH * monitorInfoRef.current!.monitor_scale_factor,
+                Math.round(THUMBNAIL_WIDTH * monitorInfoRef.current!.monitor_scale_factor),
             );
         } catch (error) {
             console.error(error);
@@ -397,28 +397,26 @@ export const ScrollScreenshot: React.FC<{
                 return;
             }
 
-            if (pendingScrollThroughRef.current) {
-                return;
-            }
-
-            if (scrollDirectionRef.current === ScrollDirection.Horizontal && !event.shiftKey) {
-                return;
-            }
-
-            setShowTip(false);
-
-            // 加一个冗余操作，防止鼠标事件被忽略
-            enableeCursorEventsDebounce();
-            pendingScrollThroughRef.current = true;
-            scrollThrough(event.deltaY > 0 ? 1 : -1)
-                .catch(() => {
-                    // 忽略报错
-                })
-                .finally(() => {
-                    pendingScrollThroughRef.current = false;
-                });
-
             captureImage(event.deltaY > 0 ? ScrollImageList.Bottom : ScrollImageList.Top);
+
+            if (!pendingScrollThroughRef.current) {
+                if (scrollDirectionRef.current === ScrollDirection.Horizontal && !event.shiftKey) {
+                    return;
+                }
+
+                setShowTip(false);
+
+                // 加一个冗余操作，防止鼠标事件被忽略
+                enableeCursorEventsDebounce();
+                pendingScrollThroughRef.current = true;
+                scrollThrough(event.deltaY > 0 ? 1 : -1)
+                    .catch(() => {
+                        // 忽略报错
+                    })
+                    .finally(() => {
+                        pendingScrollThroughRef.current = false;
+                    });
+            }
         },
         [captureImage, enableeCursorEventsDebounce, scrollDirectionRef],
     );

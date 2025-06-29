@@ -35,12 +35,16 @@ import {
     TRANSLATION_DOMAIN_ENV_VARIABLE,
 } from '@/app/tools/translation/extra';
 import { DirectoryInput } from '@/components/directoryInput';
-import { generateImageFileName, ImageFormat } from '@/utils/file';
+import {
+    generateImageFileName,
+    getImageSaveDirectory,
+    getVideoRecordSaveDirectory,
+    ImageFormat,
+} from '@/utils/file';
 import { TranslationApiType } from './extra';
 import { TestChat } from './components/testChat';
 import { DrawState } from '@/app/fullScreenDraw/components/drawCore/extra';
 import { videoRecordGetMicrophoneDeviceNames } from '@/commands/videoRecord';
-import { getVideoRecordSaveDirectory } from '@/app/videoRecord/extra';
 import { OcrDetectAfterAction } from '@/app/fixedContent/components/ocrResult';
 
 export default function SystemSettings() {
@@ -86,6 +90,14 @@ export default function SystemSettings() {
                         settings[AppSettingsGroup.FunctionScreenshot]
                 ) {
                     screenshotForm.setFieldsValue(settings[AppSettingsGroup.FunctionScreenshot]);
+
+                    const screenshotSettings = settings[AppSettingsGroup.FunctionScreenshot];
+                    if (!screenshotSettings.saveFileDirectory) {
+                        getImageSaveDirectory(settings).then((saveDirectory) => {
+                            screenshotSettings.saveFileDirectory = saveDirectory;
+                            screenshotForm.setFieldsValue(screenshotSettings);
+                        });
+                    }
                 }
 
                 if (
@@ -1240,6 +1252,38 @@ export default function SystemSettings() {
                                             readonly
                                             label={
                                                 <FormattedMessage id="settings.functionSettings.outputSettings.fastSaveFileNameFormatPreview" />
+                                            }
+                                            fieldProps={{
+                                                value: text,
+                                            }}
+                                        />
+                                    </Col>
+                                );
+                            }}
+                        </ProFormDependency>
+
+                        <Col span={24}>
+                            <ProFormText
+                                name="focusedWindowFileNameFormat"
+                                layout="horizontal"
+                                label={
+                                    <FormattedMessage id="settings.functionSettings.outputSettings.focusedWindowFileNameFormat" />
+                                }
+                            />
+                        </Col>
+
+                        <ProFormDependency<{ focusedWindowFileNameFormat: string }>
+                            name={['focusedWindowFileNameFormat']}
+                        >
+                            {({ focusedWindowFileNameFormat }) => {
+                                const text = generateImageFileName(focusedWindowFileNameFormat);
+                                return (
+                                    <Col span={24}>
+                                        <ProFormText
+                                            layout="horizontal"
+                                            readonly
+                                            label={
+                                                <FormattedMessage id="settings.functionSettings.outputSettings.focusedWindowFileNameFormatPreview" />
                                             }
                                             fieldProps={{
                                                 value: text,

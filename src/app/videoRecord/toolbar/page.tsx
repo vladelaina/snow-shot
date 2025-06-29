@@ -16,7 +16,7 @@ import { getButtonIconColorByState } from '@/app/draw/components/drawToolbar/ext
 import { getCurrentWindow, PhysicalPosition, PhysicalSize } from '@tauri-apps/api/window';
 import { MonitorInfo } from '@/commands/core';
 import { ElementRect } from '@/commands';
-import { getVideoRecordParams, getVideoRecordSaveDirectory, VideoRecordState } from '../extra';
+import { getVideoRecordParams, VideoRecordState } from '../extra';
 import {
     VideoFormat,
     videoRecordKill,
@@ -40,7 +40,7 @@ import {
     AppSettingsGroup,
     AppSettingsPublisher,
 } from '@/app/contextWrap';
-import { generateImageFileName } from '@/utils/file';
+import { generateImageFileName, getVideoRecordSaveDirectory } from '@/utils/file';
 import { useAppSettingsLoad } from '@/hooks/useAppSettingsLoad';
 import { join as joinPath } from '@tauri-apps/api/path';
 import clipboard from 'tauri-plugin-clipboard-api';

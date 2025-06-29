@@ -179,6 +179,8 @@ export type AppSettingsData = {
         autoSaveFileNameFormat: string;
         /** 快速保存文件名格式 */
         fastSaveFileNameFormat: string;
+        /** 截图当前具有焦点的窗口文件名格式 */
+        focusedWindowFileNameFormat: string;
         /** 视频录制文件名格式 */
         videoRecordFileNameFormat: string;
     };
@@ -312,6 +314,7 @@ export const defaultAppSettingsData: AppSettingsData = {
         manualSaveFileNameFormat: `SnowShot_{YYYY-MM-DD_HH-mm-ss}`,
         autoSaveFileNameFormat: `SnowShot_{YYYY-MM-DD_HH-mm-ss}`,
         fastSaveFileNameFormat: `SnowShot_{YYYY-MM-DD_HH-mm-ss}`,
+        focusedWindowFileNameFormat: `SnowShot_{YYYY-MM-DD_HH-mm-ss}`,
         videoRecordFileNameFormat: `SnowShot_Video_{YYYY-MM-DD_HH-mm-ss}`,
     },
     [AppSettingsGroup.FunctionFullScreenDraw]: {
@@ -959,19 +962,28 @@ const ContextWrapCore: React.FC<{ children: React.ReactNode }> = ({ children }) 
                     manualSaveFileNameFormat:
                         typeof newSettings?.manualSaveFileNameFormat === 'string'
                             ? newSettings.manualSaveFileNameFormat
-                            : (prevSettings?.manualSaveFileNameFormat ?? ''),
+                            : (prevSettings?.manualSaveFileNameFormat ??
+                              defaultAppSettingsData[group].manualSaveFileNameFormat),
                     autoSaveFileNameFormat:
                         typeof newSettings?.autoSaveFileNameFormat === 'string'
                             ? newSettings.autoSaveFileNameFormat
-                            : (prevSettings?.autoSaveFileNameFormat ?? ''),
+                            : (prevSettings?.autoSaveFileNameFormat ??
+                              defaultAppSettingsData[group].autoSaveFileNameFormat),
                     fastSaveFileNameFormat:
                         typeof newSettings?.fastSaveFileNameFormat === 'string'
                             ? newSettings.fastSaveFileNameFormat
-                            : (prevSettings?.fastSaveFileNameFormat ?? ''),
+                            : (prevSettings?.fastSaveFileNameFormat ??
+                              defaultAppSettingsData[group].fastSaveFileNameFormat),
+                    focusedWindowFileNameFormat:
+                        typeof newSettings?.focusedWindowFileNameFormat === 'string'
+                            ? newSettings.focusedWindowFileNameFormat
+                            : (prevSettings?.focusedWindowFileNameFormat ??
+                              defaultAppSettingsData[group].focusedWindowFileNameFormat),
                     videoRecordFileNameFormat:
                         typeof newSettings?.videoRecordFileNameFormat === 'string'
                             ? newSettings.videoRecordFileNameFormat
-                            : (prevSettings?.videoRecordFileNameFormat ?? ''),
+                            : (prevSettings?.videoRecordFileNameFormat ??
+                              defaultAppSettingsData[group].videoRecordFileNameFormat),
                 };
             } else if (group === AppSettingsGroup.FunctionFullScreenDraw) {
                 newSettings = newSettings as AppSettingsData[typeof group];

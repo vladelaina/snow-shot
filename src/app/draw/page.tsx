@@ -761,9 +761,51 @@ const DrawPageCore: React.FC = () => {
         };
     }, [getCaptureStep, getDrawState, onCopyToClipboard]);
 
+    const latestExcalidrawNewElementRef = useRef<
+        | {
+              id: string;
+              created: number;
+          }
+        | undefined
+    >(undefined);
+    const unsetLatestExcalidrawNewElement = useMemo(() => {
+        return debounce(() => {
+            latestExcalidrawNewElementRef.current = undefined;
+        }, 512);
+    }, []);
+    const onDoubleClickFirstClick = useCallback(() => {
+        // 判断 excalidraw 是否在绘制中
+        const newElement = drawCacheLayerActionRef.current
+            ?.getExcalidrawAPI()
+            ?.getAppState().newElement;
+
+        if (newElement && 'updated' in newElement) {
+            let created = newElement.updated;
+            if (
+                latestExcalidrawNewElementRef.current &&
+                latestExcalidrawNewElementRef.current.id === newElement.id
+            ) {
+                created = latestExcalidrawNewElementRef.current.created;
+            }
+
+            latestExcalidrawNewElementRef.current = {
+                id: newElement.id,
+                created: created,
+            };
+        } else {
+            unsetLatestExcalidrawNewElement();
+        }
+    }, [unsetLatestExcalidrawNewElement]);
     const onDoubleClick = useCallback<React.MouseEventHandler<HTMLDivElement>>(
         (e) => {
-            if (e.button === 0) {
+            if (
+                e.button === 0 &&
+                // 如果存在创建时间大于512ms的在编辑中的元素，则认为是对箭头的双击
+                !(
+                    latestExcalidrawNewElementRef.current &&
+                    latestExcalidrawNewElementRef.current.created < Date.now() - 512
+                )
+            ) {
                 onCopyToClipboard();
             }
         },
@@ -783,6 +825,7 @@ const DrawPageCore: React.FC = () => {
                 className={styles.layerContainer}
                 ref={layerContainerRef}
                 onDoubleClick={onDoubleClick}
+                onClick={onDoubleClickFirstClick}
             >
                 <FixedContentCore
                     actionRef={fixedContentActionRef}

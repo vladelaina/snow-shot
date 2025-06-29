@@ -5,6 +5,8 @@ export enum AppFunction {
     Screenshot = 'screenshot',
     ScreenshotFixed = 'screenshotFixed',
     ScreenshotOcr = 'screenshotOcr',
+    /** 截图当前具有焦点的窗口 */
+    ScreenshotFocusedWindow = 'screenshotFocusedWindow',
     Chat = 'chat',
     ChatSelectText = 'chatSelectText',
     Translation = 'translation',
@@ -45,6 +47,10 @@ export const defaultAppFunctionConfigs: Record<AppFunction, AppFunctionConfig> =
         group: AppFunctionGroup.Screenshot,
     },
     [AppFunction.ScreenshotOcr]: {
+        shortcutKey: '',
+        group: AppFunctionGroup.Screenshot,
+    },
+    [AppFunction.ScreenshotFocusedWindow]: {
         shortcutKey: '',
         group: AppFunctionGroup.Screenshot,
     },

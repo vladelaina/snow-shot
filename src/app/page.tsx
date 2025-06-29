@@ -8,6 +8,7 @@ import {
     ChatIcon,
     ClipboardIcon,
     FixedIcon,
+    FocusedWindowIcon,
     FullScreenDrawIcon,
     OcrDetectIcon,
     ScreenshotIcon,
@@ -16,7 +17,11 @@ import {
     TranslationIcon,
 } from '@/components/icons';
 import { FunctionButton } from '@/components/functionButton';
-import { executeScreenshot, ScreenshotType } from '@/functions/screenshot';
+import {
+    executeScreenshot,
+    executeScreenshotFocusedWindow,
+    ScreenshotType,
+} from '@/functions/screenshot';
 import {
     isRegistered,
     register,
@@ -55,12 +60,15 @@ import {
 } from '@/functions/tools';
 import { TrayIconStatePublisher } from './trayIcon';
 import { createFixedContentWindow, createFullScreenDrawWindow } from '@/commands/core';
+import { IconLabel } from '@/components/iconLable';
 
 export default function Home() {
     const { token } = theme.useToken();
 
     const disableShortcutKeyRef = useRef(false);
     const [getTrayIconState] = useStateSubscriber(TrayIconStatePublisher, undefined);
+
+    const [getAppSettings] = useStateSubscriber(AppSettingsPublisher, undefined);
 
     const {
         configs: defaultAppFunctionComponentConfigs,
@@ -98,6 +106,19 @@ export default function Home() {
                         );
                         buttonIcon = <OcrDetectIcon />;
                         buttonOnClick = () => executeScreenshot(ScreenshotType.OcrDetect);
+                        break;
+                    case AppFunction.ScreenshotFocusedWindow:
+                        buttonTitle = (
+                            <IconLabel
+                                label={
+                                    <FormattedMessage id="home.screenshotFunction.screenshotFocusedWindow" />
+                                }
+                            />
+                        );
+                        buttonIcon = <FocusedWindowIcon />;
+                        buttonOnClick = async () => {
+                            executeScreenshotFocusedWindow(getAppSettings());
+                        };
                         break;
                     case AppFunction.TranslationSelectText:
                         buttonTitle = <FormattedMessage id="home.translationSelectText" />;

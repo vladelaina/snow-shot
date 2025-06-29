@@ -13,7 +13,11 @@ import { useStateSubscriber } from '@/hooks/useStateSubscriber';
 import { AppSettingsData, AppSettingsGroup, AppSettingsPublisher } from './contextWrap';
 import { isEqual } from 'es-toolkit';
 import { AppFunction, AppFunctionConfig } from './extra';
-import { executeScreenshot, ScreenshotType } from '@/functions/screenshot';
+import {
+    executeScreenshot,
+    executeScreenshotFocusedWindow,
+    ScreenshotType,
+} from '@/functions/screenshot';
 import { useStateRef } from '@/hooks/useStateRef';
 import {
     executeChat,
@@ -53,7 +57,7 @@ const TrayIconLoaderComponent = () => {
         Record<AppFunction, AppFunctionConfig> | undefined
     >(undefined);
     const [iconPath, setIconPath] = useState('');
-    useStateSubscriber(
+    const [getAppSettings] = useStateSubscriber(
         AppSettingsPublisher,
         useCallback(
             (settings: AppSettingsData, previous: AppSettingsData) => {
@@ -154,6 +158,18 @@ const TrayIconLoaderComponent = () => {
                                 : shortcutKeys[AppFunction.ScreenshotOcr].shortcutKey,
                             action: async () => {
                                 executeScreenshot(ScreenshotType.OcrDetect);
+                            },
+                        },
+                        {
+                            id: `${appWindow.label}-screenshot-focused-window`,
+                            text: intl.formatMessage({
+                                id: 'home.screenshotFunction.screenshotFocusedWindow',
+                            }),
+                            accelerator: disableShortcut
+                                ? undefined
+                                : shortcutKeys[AppFunction.ScreenshotFocusedWindow].shortcutKey,
+                            action: async () => {
+                                executeScreenshotFocusedWindow(getAppSettings());
                             },
                         },
                         {

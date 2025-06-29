@@ -1,8 +1,9 @@
 import dayjs from 'dayjs';
 import * as dialog from '@tauri-apps/plugin-dialog';
 import { AppSettingsData, AppSettingsGroup } from '@/app/contextWrap';
-import { join as joinPath } from '@tauri-apps/api/path';
+import { homeDir, join as joinPath } from '@tauri-apps/api/path';
 import { createDir } from '@/commands/file';
+import { platform } from '@tauri-apps/plugin-os';
 
 const parseTemplate = (template: string): string => {
     const regex = /\{([^}]+)\}/g;
@@ -80,9 +81,26 @@ export const getImageFormat = (filePath: string) => {
     return imageFormat;
 };
 
+export const getImageSaveDirectory = async (appSettings: AppSettingsData) => {
+    let savePath = appSettings[AppSettingsGroup.FunctionScreenshot].saveFileDirectory;
+
+    if (!savePath) {
+        const currentPlatform = platform();
+        if (currentPlatform === 'windows') {
+            savePath = await joinPath(await homeDir(), 'Pictures', 'Snow Shot');
+        } else if (currentPlatform === 'macos') {
+            savePath = await joinPath(await homeDir(), 'Pictures', 'Snow Shot');
+        } else if (currentPlatform === 'linux') {
+            savePath = await joinPath(await homeDir(), 'Pictures', 'Snow Shot');
+        }
+    }
+
+    return savePath;
+};
+
 export const getImagePathFromSettings = async (
     appSettings: AppSettingsData | undefined,
-    method: 'auto' | 'fast',
+    method: 'auto' | 'fast' | 'focused-window',
 ): Promise<ImagePath | undefined> => {
     if (!appSettings) {
         return undefined;
@@ -103,13 +121,17 @@ export const getImagePathFromSettings = async (
         case 'fast':
             fileName = generateImageFileName(outputSettings.fastSaveFileNameFormat);
             break;
+        case 'focused-window':
+            fileName = generateImageFileName(outputSettings.focusedWindowFileNameFormat);
+            break;
     }
 
-    await createDir(screenshotSettings.saveFileDirectory);
+    const saveDirectory = await getImageSaveDirectory(appSettings);
+    await createDir(saveDirectory);
 
     return {
         filePath: joinImagePath(
-            await joinPath(screenshotSettings.saveFileDirectory, fileName),
+            await joinPath(saveDirectory, fileName),
             screenshotSettings.saveFileFormat,
         ),
         imageFormat: screenshotSettings.saveFileFormat,
@@ -193,4 +215,21 @@ export const showImageDialog = async (
         filePath,
         imageFormat: getImageFormat(filePath),
     };
+};
+
+export const getVideoRecordSaveDirectory = async (appSettings: AppSettingsData) => {
+    let savePath = appSettings[AppSettingsGroup.FunctionVideoRecord].saveDirectory;
+
+    if (!savePath) {
+        const currentPlatform = platform();
+        if (currentPlatform === 'windows') {
+            savePath = await joinPath(await homeDir(), 'Videos', 'Snow Shot');
+        } else if (currentPlatform === 'macos') {
+            savePath = await joinPath(await homeDir(), 'Movies', 'Snow Shot');
+        } else if (currentPlatform === 'linux') {
+            savePath = await joinPath(await homeDir(), 'Videos', 'Snow Shot');
+        }
+    }
+
+    return savePath;
 };

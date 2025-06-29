@@ -119,6 +119,10 @@ export const settings = {
     'settings.functionSettings.outputSettings.autoSaveFileNameFormatPreview': '自动保存文件名预览',
     'settings.functionSettings.outputSettings.fastSaveFileNameFormat': '快速保存文件名格式',
     'settings.functionSettings.outputSettings.fastSaveFileNameFormatPreview': '快速保存文件名预览',
+    'settings.functionSettings.outputSettings.focusedWindowFileNameFormat':
+        '截图当前具有焦点的窗口文件名格式',
+    'settings.functionSettings.outputSettings.focusedWindowFileNameFormatPreview':
+        '截图当前具有焦点的窗口文件名预览',
     'settings.functionSettings.outputSettings.videoRecordFileNameFormat': '视频录制文件名格式',
     'settings.functionSettings.outputSettings.videoRecordFileNameFormatPreview':
         '视频录制文件名预览',

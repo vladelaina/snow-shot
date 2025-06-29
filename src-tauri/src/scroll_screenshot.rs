@@ -2,17 +2,14 @@ use image::codecs::jpeg::JpegEncoder;
 use image::codecs::png::{self, CompressionType, PngEncoder};
 use image::imageops::FilterType;
 use serde::Serialize;
-use std::fs;
+use std::path::PathBuf;
 use tauri::ipc::Response;
 use tauri::{command, image::Image};
 use tauri_plugin_clipboard_manager::ClipboardExt;
 use tokio::sync::Mutex;
 use xcap::Monitor;
-use zune_core::bit_depth::BitDepth;
-use zune_core::colorspace::ColorSpace;
-use zune_core::options::EncoderOptions;
-use zune_jpegxl::JxlSimpleEncoder;
 
+use crate::os::utils::save_image_to_file;
 use crate::services::{
     ScrollDirection, ScrollImageList, ScrollScreenshotImageService, ScrollScreenshotService,
 };
@@ -170,38 +167,20 @@ pub async fn scroll_screenshot_get_size(
 pub async fn scroll_screenshot_save_to_file(
     scroll_screenshot_service: tauri::State<'_, Mutex<ScrollScreenshotService>>,
     file_path: String,
-) -> Result<(), ()> {
+) -> Result<(), String> {
     let mut scroll_screenshot_service = scroll_screenshot_service.lock().await;
 
     let image = scroll_screenshot_service.export();
     let image = match image {
         Some(image) => image,
-        None => return Err(()),
+        None => {
+            return Err(format!(
+                "[scroll_screenshot_save_to_file] Failed to export image"
+            ));
+        }
     };
 
-    if file_path.ends_with(".jxl") {
-        let image_data = image.to_rgb8();
-        let encoder = JxlSimpleEncoder::new(
-            image_data.as_raw(),
-            EncoderOptions::new(
-                image.width() as usize,
-                image.height() as usize,
-                ColorSpace::RGB,
-                BitDepth::Eight,
-            ),
-        );
-        let encoder_result = match encoder.encode() {
-            Ok(encoder_result) => encoder_result,
-            Err(_) => return Err(()),
-        };
-
-        return match fs::write(file_path, encoder_result) {
-            Ok(_) => Ok(()),
-            Err(_) => Err(()),
-        };
-    } else {
-        image.save(file_path).unwrap();
-    }
+    save_image_to_file(&image, PathBuf::from(file_path))?;
 
     Ok(())
 }

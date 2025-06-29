@@ -1,17 +1,20 @@
-use device_query::{DeviceQuery, DeviceState, MouseState};
-use image::codecs::png::{CompressionType, FilterType, PngEncoder};
-use image::codecs::webp::WebPEncoder;
-use serde::Serialize;
-use std::time::{SystemTime, UNIX_EPOCH};
-use tauri::command;
-use tauri::ipc::Response;
-use tokio::sync::Mutex;
-use xcap::{Monitor, Window};
-
 use crate::os;
 use crate::os::ElementRect;
 use crate::os::ui_automation::TryGetElementByFocus;
 use crate::os::ui_automation::UIElements;
+use device_query::{DeviceQuery, DeviceState, MouseState};
+use image::EncodableLayout;
+use image::codecs::png::{CompressionType, FilterType, PngEncoder};
+use image::codecs::webp::WebPEncoder;
+use serde::Serialize;
+use std::path::PathBuf;
+use std::time::{SystemTime, UNIX_EPOCH};
+use tauri::command;
+use tauri::ipc::Response;
+use tauri_plugin_clipboard_manager::ClipboardExt;
+use tokio::sync::Mutex;
+use windows::Win32::UI::WindowsAndMessaging::GetForegroundWindow;
+use xcap::{Monitor, Window};
 
 pub fn get_device_mouse_position() -> (i32, i32) {
     let device_state = DeviceState::new();
@@ -32,7 +35,13 @@ pub async fn capture_current_monitor(encoder: String) -> Response {
     // 获取当前鼠标的位置
     let (_, _, monitor) = get_target_monitor();
 
-    let image_buffer = monitor.capture_image().unwrap();
+    let image_buffer = match monitor.capture_image() {
+        Ok(image) => image,
+        Err(_) => {
+            log::error!("Failed to capture current monitor");
+            return Response::new(Vec::new());
+        }
+    };
 
     // 前端处理渲染图片的方式有两种
     // 1. 接受 RGBA 数据通过 canvas 转为 base64 后显示
@@ -58,6 +67,57 @@ pub async fn capture_current_monitor(encoder: String) -> Response {
     }
 
     return Response::new(buf);
+}
+
+#[command]
+pub async fn capture_focused_window(
+    app: tauri::AppHandle,
+    file_path: Option<String>,
+) -> Result<(), String> {
+    let hwnd = unsafe { GetForegroundWindow() };
+    let focused_window = xcap::Window::new(xcap::ImplWindow::new(hwnd));
+
+    let image = match focused_window.capture_image() {
+        Ok(image) => image,
+        Err(_) => {
+            log::warn!("[capture_focused_window] Failed to capture focused window");
+            // 改成捕获当前显示器
+
+            let (_, _, monitor) = get_target_monitor();
+
+            match monitor.capture_image() {
+                Ok(image) => image,
+                Err(_) => {
+                    return Err(String::from(
+                        "[capture_focused_window] Failed to capture image",
+                    ));
+                }
+            }
+        }
+    };
+
+    // 写入到剪贴板
+    match app.clipboard().write_image(&tauri::image::Image::new(
+        image.as_bytes(),
+        image.width(),
+        image.height(),
+    )) {
+        Ok(_) => (),
+        Err(_) => {
+            return Err(String::from(
+                "[capture_focused_window] Failed to write image to clipboard",
+            ));
+        }
+    }
+
+    if let Some(file_path) = file_path {
+        os::utils::save_image_to_file(
+            &image::DynamicImage::ImageRgba8(image),
+            PathBuf::from(file_path),
+        )?;
+    }
+
+    Ok(())
 }
 
 #[command]
