@@ -179,18 +179,7 @@ const SelectLayerCore: React.FC<SelectLayerProps> = ({ actionRef }) => {
     useStateSubscriber(CaptureStepPublisher, updateEnableSelect);
 
     const getSelectRect = useCallback(() => {
-        const rect = drawSelectRectAnimationRef.current?.getTargetObject();
-
-        if (!rect) {
-            return undefined;
-        }
-
-        return {
-            min_x: rect.min_x,
-            min_y: rect.min_y,
-            max_x: rect.max_x,
-            max_y: rect.max_y,
-        };
+        return drawSelectRectAnimationRef.current?.getTargetObject();
     }, []);
 
     /**
@@ -501,7 +490,6 @@ const SelectLayerCore: React.FC<SelectLayerProps> = ({ actionRef }) => {
 
     const setSelectRect = useCallback(
         (rect: ElementRect, ignoreAnimation: boolean = false, forceUpdate: boolean = false) => {
-            console.log(rect);
             if (forceUpdate) {
                 if (monitorInfoRef.current) {
                     updateSelectRect(rect, monitorInfoRef.current);
