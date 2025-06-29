@@ -94,6 +94,7 @@ pub fn run() {
         .manage(scroll_screenshot_image_service)
         .invoke_handler(tauri::generate_handler![
             screenshot::capture_current_monitor,
+            screenshot::capture_focused_window,
             screenshot::get_window_elements,
             screenshot::init_ui_elements,
             screenshot::get_element_from_position,

@@ -3925,7 +3925,7 @@ version = "0.7.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "af1844ef2428cc3e1cb900be36181049ef3d3193c63e43026cfe202983b27a56"
 dependencies = [
- "proc-macro-crate 3.3.0",
+ "proc-macro-crate 1.3.1",
  "proc-macro2",
  "quote",
  "syn 2.0.103",
@@ -8463,7 +8463,7 @@ dependencies = [
 [[package]]
 name = "xcap"
 version = "0.6.1"
-source = "git+https://github.com/mg-chao/xcap?branch=custom%2Fmaster#776bc97e68b1a5a9bf5eb03b7886a434b835a90c"
+source = "git+https://github.com/mg-chao/xcap?branch=custom%2Fmaster#c15f9d03559318ca5f55ebdcbc647309e5da3fbb"
 dependencies = [
  "dispatch2 0.3.0",
  "image",

@@ -1164,3 +1164,24 @@ export const FolderSVG = () => (
 );
 
 export const FolderIcon = (props: IconComponentProps) => <Icon component={FolderSVG} {...props} />;
+
+export const FocusedWindowSVG = () => (
+    <svg
+        viewBox="0 0 1024 1024"
+        version="1.1"
+        xmlns="http://www.w3.org/2000/svg"
+        width="1em"
+        height="1em"
+        fill="currentColor"
+    >
+        <path
+            d="M972.8 51.2H51.2a51.2 51.2 0 0 0-51.2 51.2v819.2a51.2 51.2 0 0 0 51.2 51.2h921.6a51.2 51.2 0 0 0 51.2-51.2V102.4a51.2 51.2 0 0 0-51.2-51.2z m-51.2 102.4v204.8H102.4V153.6zM102.4 870.4V460.8h819.2v409.6z"
+            p-id="8813"
+        ></path>
+        <path d="M153.6 204.8h102.4v102.4H153.6zM307.2 204.8h102.4v102.4H307.2z" p-id="8814"></path>
+    </svg>
+);
+
+export const FocusedWindowIcon = (props: IconComponentProps) => (
+    <Icon component={FocusedWindowSVG} {...props} />
+);

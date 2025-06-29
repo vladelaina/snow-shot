@@ -1,8 +1,3 @@
-import { AppSettingsData, AppSettingsGroup } from '../contextWrap';
-import { homeDir } from '@tauri-apps/api/path';
-import { platform } from '@tauri-apps/plugin-os';
-import { join as joinPath } from '@tauri-apps/api/path';
-
 export enum VideoRecordState {
     Idle,
     Recording,
@@ -33,21 +28,4 @@ export const getVideoRecordParams = () => {
         monitorInfo,
         selectRect,
     };
-};
-
-export const getVideoRecordSaveDirectory = async (appSettings: AppSettingsData) => {
-    let savePath = appSettings[AppSettingsGroup.FunctionVideoRecord].saveDirectory;
-
-    if (!savePath) {
-        const currentPlatform = platform();
-        if (currentPlatform === 'windows') {
-            savePath = await joinPath(await homeDir(), 'Videos', 'Snow Shot Videos');
-        } else if (currentPlatform === 'macos') {
-            savePath = await joinPath(await homeDir(), 'Movies', 'Snow Shot Videos');
-        } else if (currentPlatform === 'linux') {
-            savePath = await joinPath(await homeDir(), 'Videos', 'Snow Shot Videos');
-        }
-    }
-
-    return savePath;
 };

@@ -768,6 +768,11 @@ const DrawPageCore: React.FC = () => {
           }
         | undefined
     >(undefined);
+    const unsetLatestExcalidrawNewElement = useMemo(() => {
+        return debounce(() => {
+            latestExcalidrawNewElementRef.current = undefined;
+        }, 512);
+    }, []);
     const onDoubleClickFirstClick = useCallback(() => {
         // 判断 excalidraw 是否在绘制中
         const newElement = drawCacheLayerActionRef.current
@@ -788,9 +793,9 @@ const DrawPageCore: React.FC = () => {
                 created: created,
             };
         } else {
-            latestExcalidrawNewElementRef.current = undefined;
+            unsetLatestExcalidrawNewElement();
         }
-    }, []);
+    }, [unsetLatestExcalidrawNewElement]);
     const onDoubleClick = useCallback<React.MouseEventHandler<HTMLDivElement>>(
         (e) => {
             if (

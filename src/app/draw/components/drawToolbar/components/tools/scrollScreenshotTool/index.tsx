@@ -221,7 +221,7 @@ export const ScrollScreenshot: React.FC<{
 
         try {
             captureResult = await scrollScreenshotHandleImage(
-                THUMBNAIL_WIDTH * monitorInfoRef.current!.monitor_scale_factor,
+                Math.round(THUMBNAIL_WIDTH * monitorInfoRef.current!.monitor_scale_factor),
             );
         } catch (error) {
             console.error(error);
