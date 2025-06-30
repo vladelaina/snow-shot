@@ -23,6 +23,7 @@ import { enableFreeDrag, MonitorInfo } from '@/commands/core';
 import { getCurrentWebview, Webview } from '@tauri-apps/api/webview';
 import { setDrawWindowStyle } from '@/commands/screenshot';
 import html2canvas from 'html2canvas';
+import { openUrl } from '@tauri-apps/plugin-opener';
 
 export type FixedContentInitDrawParams = {
     monitorInfo: MonitorInfo;
@@ -166,6 +167,25 @@ export const FixedContentCore: React.FC<{
                                 type: 'wheel',
                                 deltaY: e.deltaY,
                             }, '*');
+                        });
+
+                        // 拦截 a 标签的跳转操作
+                        document.addEventListener('click', (e) => {
+                            const target = e.target;
+                            
+                            // 检查点击的是否是 a 标签或其子元素
+                            const linkElement = target.closest ? target.closest('a') : null;
+                            
+                            if (linkElement && linkElement.href) {
+                                e.preventDefault(); // 阻止默认跳转行为
+                                
+                                window.parent.postMessage({
+                                    type: 'linkClick',
+                                    href: linkElement.href,
+                                    text: linkElement.textContent || linkElement.innerText || '',
+                                    target: linkElement.target || '_self'
+                                }, '*');
+                            }
                         });
                     </script>
                     ${htmlContent.slice(6, -7)}
@@ -728,7 +748,7 @@ export const FixedContentCore: React.FC<{
 
     useEffect(() => {
         const handleMessage = (event: MessageEvent) => {
-            const { type, x, y, deltaY, width, height, clientWidth } = event.data;
+            const { type, x, y, deltaY, width, height, clientWidth, href } = event.data;
 
             if ((type === 'bodySize' || type === 'resize') && htmlContentContainerRef.current) {
                 if (clientWidth === 200 && type !== 'resize') {
@@ -759,6 +779,8 @@ export const FixedContentCore: React.FC<{
                 handleContextMenu(syntheticEvent);
             } else if (type === 'wheel') {
                 onWheel({ deltaY: deltaY });
+            } else if (type === 'linkClick') {
+                openUrl(href);
             }
         };
 
