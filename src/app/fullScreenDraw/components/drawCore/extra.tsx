@@ -22,7 +22,6 @@ export type DrawCoreActionType = {
     getAppState: () => AppState | undefined;
     getDrawCacheLayerElement: () => HTMLDivElement | null;
     getExcalidrawAPI: () => ExcalidrawImperativeAPI | undefined;
-    handleWheel: (ev: WheelEvent | React.WheelEvent<HTMLDivElement>) => void;
 };
 
 export type ExcalidrawKeyEvent = {
@@ -69,6 +68,14 @@ export type ExcalidrawEventOnPointerDownParams = {
     };
 };
 
+export type ExcalidrawEventOnPointerUpParams = {
+    event: 'onPointerUp';
+    params: {
+        activeTool: AppState['activeTool'];
+        pointerDownState: PointerDownState;
+    };
+};
+
 /**
  * 开始新一次绘制时发送
  */
@@ -80,6 +87,7 @@ export type ExcalidrawEventOnDrawParams = {
 export type ExcalidrawEventParams =
     | ExcalidrawEventOnChangeParams
     | ExcalidrawEventOnPointerDownParams
+    | ExcalidrawEventOnPointerUpParams
     | ExcalidrawEventOnDrawParams;
 
 export const ExcalidrawEventPublisher = createPublisher<ExcalidrawEventParams | undefined>(

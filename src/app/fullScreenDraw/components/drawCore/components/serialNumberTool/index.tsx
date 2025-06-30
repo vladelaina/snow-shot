@@ -16,7 +16,6 @@ import { HotkeysScope } from '@/components/globalLayoutExtra';
 import { useHotkeysApp } from '@/hooks/useHotkeysApp';
 import { useStateRef } from '@/hooks/useStateRef';
 import { useStateSubscriber } from '@/hooks/useStateSubscriber';
-import { zIndexs } from '@/utils/zIndex';
 import {
     BoundElement,
     ExcalidrawElement,
@@ -24,14 +23,7 @@ import {
 } from '@mg-chao/excalidraw/element/types';
 import { AppState } from '@mg-chao/excalidraw/types';
 import Color from 'color';
-import React, {
-    useCallback,
-    useContext,
-    useEffect,
-    useRef,
-    useState,
-    WheelEventHandler,
-} from 'react';
+import React, { useCallback, useContext, useEffect, useRef, useState } from 'react';
 
 const generateSerialNumber = (
     position: { x: number; y: number },
@@ -190,12 +182,10 @@ const generateSerialNumber = (
 };
 
 export const SerialNumberTool: React.FC = () => {
-    const { getLimitRect, getDevicePixelRatio, getAction, getMousePosition } =
-        useContext(DrawCoreContext);
+    const { getAction, getMousePosition } = useContext(DrawCoreContext);
 
     const arrowElementIdsRef = useRef<Set<string>>(new Set());
     const [enable, setEnable, enableRef] = useStateRef(false);
-    const [maskStyle, setMaskStyle] = useState<React.CSSProperties>({});
 
     const [disableArrowHotKey, setDisableArrowHotKey] = useState('');
     const [disableArrow, setDisableArrow, disableArrowRef] = useStateRef(false);
@@ -227,19 +217,8 @@ export const SerialNumberTool: React.FC = () => {
             (drawState: DrawState) => {
                 const isEnable = drawState === DrawState.SerialNumber;
                 setEnable(isEnable);
-
-                const selectRect = getLimitRect();
-                const monitorScaleFactor = getDevicePixelRatio();
-                if (isEnable && selectRect && monitorScaleFactor) {
-                    setMaskStyle({
-                        left: selectRect.min_x / monitorScaleFactor,
-                        top: selectRect.min_y / monitorScaleFactor,
-                        width: (selectRect.max_x - selectRect.min_x) / monitorScaleFactor,
-                        height: (selectRect.max_y - selectRect.min_y) / monitorScaleFactor,
-                    });
-                }
             },
-            [getDevicePixelRatio, getLimitRect, setEnable],
+            [setEnable],
         ),
     );
     useStateSubscriber(
@@ -272,6 +251,25 @@ export const SerialNumberTool: React.FC = () => {
             return;
         }
 
+        setTimeout(() => {
+            // 如果存在在编辑中的 ellipse 元素，则直接删除
+            const newElement = getAction()?.getAppState()?.newElement;
+            if (newElement && newElement.type === 'ellipse') {
+                getAction()
+                    ?.getExcalidrawAPI()
+                    ?.updateScene({
+                        elements: getAction()
+                            ?.getExcalidrawAPI()
+                            ?.getSceneElements()
+                            .filter((item) => item.id !== newElement.id),
+                        appState: {
+                            newElement: undefined,
+                        },
+                        captureUpdate: 'NEVER',
+                    });
+            }
+        }, 0);
+
         const sceneElements = getAction()?.getExcalidrawAPI()?.getSceneElements();
         if (!sceneElements) {
             return;
@@ -284,10 +282,14 @@ export const SerialNumberTool: React.FC = () => {
             }
         });
 
+        // 将屏幕坐标转换为画布坐标
+        const canvasX = mousePosition.mouseX / appState.zoom.value - appState.scrollX;
+        const canvasY = mousePosition.mouseY / appState.zoom.value - appState.scrollY;
+
         const serialNumberElement = generateSerialNumber(
             {
-                x: mousePosition.mouseX,
-                y: mousePosition.mouseY,
+                x: canvasX,
+                y: canvasY,
             },
             currentNumber,
             appState,
@@ -385,11 +387,13 @@ export const SerialNumberTool: React.FC = () => {
 
                 if (params?.event === 'onPointerDown') {
                     onMouseDown();
+                } else if (params?.event === 'onPointerUp') {
+                    onMouseUp();
                 } else if (params?.event === 'onDraw') {
                     latestSerialNumberElementListRef.current = [];
                 }
             },
-            [enableRef, onMouseDown],
+            [enableRef, onMouseDown, onMouseUp],
         ),
     );
 
@@ -416,8 +420,6 @@ export const SerialNumberTool: React.FC = () => {
         },
     );
 
-    const enableMask = disableArrow && enable;
-
     const updateActiveTool = useCallback(() => {
         if (!enableRef.current) {
             return;
@@ -441,31 +443,5 @@ export const SerialNumberTool: React.FC = () => {
         updateActiveTool();
     }, [updateActiveTool, enable, disableArrow]);
 
-    const onMaskWheel = useCallback<WheelEventHandler<HTMLDivElement>>(
-        (ev) => {
-            getAction()?.handleWheel(ev);
-        },
-        [getAction],
-    );
-
-    return (
-        <div
-            className="serial-number-tool-mask"
-            style={{ ...maskStyle, display: enableMask ? 'block' : 'none' }}
-            onMouseDown={onMouseDown}
-            onMouseUp={onMouseUp}
-            onWheel={onMaskWheel}
-        >
-            <style jsx>{`
-                .serial-number-tool-mask {
-                    position: fixed;
-                    top: 0;
-                    left: 0;
-                    z-index: ${zIndexs.Draw_SerialNumberToolMask};
-                    pointer-events: auto;
-                    cursor: crosshair;
-                }
-            `}</style>
-        </div>
-    );
+    return <></>;
 };
