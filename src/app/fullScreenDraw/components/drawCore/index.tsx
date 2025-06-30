@@ -35,6 +35,7 @@ import { ExcalidrawAppStateStore } from '@/utils/appStore';
 import { debounce } from 'es-toolkit';
 import { useHistory } from './components/historyContext';
 import { SerialNumberTool } from '@/app/fullScreenDraw/components/drawCore/components/serialNumberTool';
+import { ExcalidrawElement } from '@mg-chao/excalidraw/element/types';
 
 const strokeWidthList = [1, 2, 4];
 const fontSizeList = [16, 20, 28, 36];
@@ -210,25 +211,47 @@ const DrawCoreComponent: React.FC<{
 
             const isIncrease = event.deltaY < 0;
 
-            if (getDrawState() === DrawState.Blur) {
-                const currentBlur = appState.currentItemBlur;
+            // 判断是否有选中单个元素
+            // 只对单个元素的情况进行处理
+            const sceneElements = excalidrawAPIRef.current?.getSceneElements() ?? [];
+            let selectedElement: ExcalidrawElement | undefined = undefined;
+            const selectedElementIds = appState.selectedElementIds;
+            if (Object.keys(selectedElementIds).length === 1) {
+                selectedElement = sceneElements.find((item) => selectedElementIds[item.id]);
+            }
+
+            let changeTargetProp:
+                | {
+                      blur: number;
+                  }
+                | {
+                      fontSize: number;
+                  }
+                | {
+                      strokeWidth: number;
+                  };
+            if (getDrawState() === DrawState.Blur || selectedElement?.type === 'blur') {
+                const currentBlur =
+                    selectedElement && 'blur' in selectedElement
+                        ? selectedElement.blur
+                        : appState.currentItemBlur;
                 const targetBlur = Math.max(
                     Math.min(currentBlur + (isIncrease ? 1 : -1) * 10, 100),
                     0,
                 );
 
-                excalidrawAPIRef.current?.updateScene({
-                    appState: {
-                        ...appState,
-                        currentItemBlur: targetBlur,
-                    },
-                });
-                return;
+                changeTargetProp = {
+                    blur: targetBlur,
+                };
             } else if (
                 getDrawState() === DrawState.Text ||
-                getDrawState() === DrawState.SerialNumber
+                getDrawState() === DrawState.SerialNumber ||
+                selectedElement?.type === 'text'
             ) {
-                const currentFontSize = appState.currentItemFontSize;
+                const currentFontSize =
+                    selectedElement && 'fontSize' in selectedElement
+                        ? selectedElement.fontSize
+                        : appState.currentItemFontSize;
 
                 const targetFontSize = getNextValueInList(
                     currentFontSize,
@@ -236,31 +259,77 @@ const DrawCoreComponent: React.FC<{
                     isIncrease,
                 );
 
-                setExcalidrawEventCallback({
-                    event: ExcalidrawEventCallbackType.ChangeFontSize,
-                    params: {
-                        fontSize: targetFontSize,
-                    },
-                });
-                setExcalidrawEventCallback(undefined);
-
-                return;
+                changeTargetProp = {
+                    fontSize: targetFontSize,
+                };
             } else {
-                const currentStrokeWidth = appState.currentItemStrokeWidth;
+                const currentStrokeWidth =
+                    selectedElement && 'strokeWidth' in selectedElement
+                        ? selectedElement.strokeWidth
+                        : appState.currentItemStrokeWidth;
                 const targetStrokeWidth = getNextValueInList(
                     currentStrokeWidth,
                     strokeWidthList,
                     isIncrease,
                 );
 
-                excalidrawAPIRef.current?.updateScene({
-                    appState: {
-                        ...appState,
-                        currentItemStrokeWidth: targetStrokeWidth,
+                changeTargetProp = {
+                    strokeWidth: targetStrokeWidth,
+                };
+            }
+
+            if ('fontSize' in changeTargetProp) {
+                setExcalidrawEventCallback({
+                    event: ExcalidrawEventCallbackType.ChangeFontSize,
+                    params: {
+                        fontSize: changeTargetProp.fontSize,
                     },
                 });
+                setExcalidrawEventCallback(undefined);
+            } else if ('strokeWidth' in changeTargetProp) {
+                if (selectedElement) {
+                    excalidrawAPIRef.current?.updateScene({
+                        elements: sceneElements.map((item): ExcalidrawElement => {
+                            if (item.id === selectedElement.id) {
+                                return {
+                                    ...item,
+                                    strokeWidth: changeTargetProp.strokeWidth,
+                                };
+                            }
 
-                return;
+                            return item;
+                        }),
+                    });
+                } else {
+                    excalidrawAPIRef.current?.updateScene({
+                        appState: {
+                            ...appState,
+                            currentItemStrokeWidth: changeTargetProp.strokeWidth,
+                        },
+                    });
+                }
+            } else if ('blur' in changeTargetProp) {
+                if (selectedElement) {
+                    excalidrawAPIRef.current?.updateScene({
+                        elements: sceneElements.map((item) => {
+                            if (item.id === selectedElement.id) {
+                                return {
+                                    ...item,
+                                    blur: changeTargetProp.blur,
+                                };
+                            }
+
+                            return item;
+                        }),
+                    });
+                } else {
+                    excalidrawAPIRef.current?.updateScene({
+                        appState: {
+                            ...appState,
+                            currentItemBlur: changeTargetProp.blur,
+                        },
+                    });
+                }
             }
         },
         [getDrawState, setExcalidrawEventCallback],
