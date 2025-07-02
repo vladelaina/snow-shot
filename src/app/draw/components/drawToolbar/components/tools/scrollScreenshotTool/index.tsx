@@ -209,11 +209,6 @@ export const ScrollScreenshot: React.FC<{
      * @returns 是否需要继续处理
      */
     const handleCaptureImage = useCallback(async (): Promise<boolean> => {
-        setDrawEvent({
-            event: DrawEvent.ScrollScreenshot,
-            params: undefined,
-        });
-        setDrawEvent(undefined);
         setLoading(true);
         let captureResult: ScrollScreenshotCaptureResult;
 
@@ -248,15 +243,7 @@ export const ScrollScreenshot: React.FC<{
         updateImageUrlList(captureResult);
 
         return needContinue;
-    }, [
-        setDrawEvent,
-        setLoading,
-        updateImageUrlList,
-        monitorInfoRef,
-        message,
-        intl,
-        showCaptureMissMessage,
-    ]);
+    }, [setLoading, updateImageUrlList, monitorInfoRef, message, intl, showCaptureMissMessage]);
 
     const pendingCaptureImageListRef = useRef<boolean>(false);
     const handleCaptureImageList = useCallback(async () => {
@@ -291,28 +278,32 @@ export const ScrollScreenshot: React.FC<{
                 return;
             }
 
+            setDrawEvent({
+                event: DrawEvent.ScrollScreenshot,
+                params: undefined,
+            });
+            setDrawEvent(undefined);
+
+            // 等待 1 帧，确保取色器、工具栏隐藏
+            await new Promise((resolve) => setTimeout(resolve, 17));
+
             pendingCaptureRef.current = true;
 
-            await Promise.all([
-                Promise.all([
-                    new Promise((resolve) => setTimeout(resolve)),
-                    scrollScreenshotCapture(
-                        scrollImageList,
-                        monitorInfoRef.current!.monitor_x,
-                        monitorInfoRef.current!.monitor_y,
-                        rect.min_x,
-                        rect.min_y,
-                        rect.max_x,
-                        rect.max_y,
-                    ),
-                ]),
-            ]);
+            await scrollScreenshotCapture(
+                scrollImageList,
+                monitorInfoRef.current!.monitor_x,
+                monitorInfoRef.current!.monitor_y,
+                rect.min_x,
+                rect.min_y,
+                rect.max_x,
+                rect.max_y,
+            );
 
             pendingCaptureRef.current = false;
 
             handleCaptureImageListDebounce();
         },
-        [monitorInfoRef, selectLayerActionRef, handleCaptureImageListDebounce],
+        [selectLayerActionRef, setDrawEvent, monitorInfoRef, handleCaptureImageListDebounce],
     );
 
     const captureImageDebounce = useMemo(() => {
@@ -381,7 +372,7 @@ export const ScrollScreenshot: React.FC<{
 
     const pendingScrollThroughRef = useRef<boolean>(false);
 
-    const enableeCursorEventsDebounce = useMemo(() => {
+    const enableCursorEventsDebounce = useMemo(() => {
         return debounce(
             () => {
                 const appWindow = getCurrentWindow();
@@ -407,7 +398,7 @@ export const ScrollScreenshot: React.FC<{
                 setShowTip(false);
 
                 // 加一个冗余操作，防止鼠标事件被忽略
-                enableeCursorEventsDebounce();
+                enableCursorEventsDebounce();
                 pendingScrollThroughRef.current = true;
                 scrollThrough(event.deltaY > 0 ? 1 : -1)
                     .catch(() => {
@@ -418,7 +409,7 @@ export const ScrollScreenshot: React.FC<{
                     });
             }
         },
-        [captureImage, enableeCursorEventsDebounce, scrollDirectionRef],
+        [captureImage, enableCursorEventsDebounce, scrollDirectionRef],
     );
 
     const enableIgnoreCursorEventsRef = useRef(false);
@@ -458,10 +449,7 @@ export const ScrollScreenshot: React.FC<{
                     return;
                 }
 
-                // 延迟 1 帧，确保取色器隐藏
-                requestAnimationFrame(() => {
-                    startCapture();
-                });
+                startCapture();
             },
             [setPositionRect, startCapture],
         ),
