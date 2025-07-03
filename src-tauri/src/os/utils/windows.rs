@@ -1,6 +1,4 @@
 use std::ffi::c_void;
-use std::fs;
-use std::path::PathBuf;
 
 use windows::Win32::Foundation::HWND;
 use windows::Win32::UI::WindowsAndMessaging::GetForegroundWindow;

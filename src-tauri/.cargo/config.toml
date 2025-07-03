@@ -3,8 +3,5 @@ rustflags = ["-Ctarget-feature=+crt-static"]
 [target.i686-pc-windows-msvc]
 rustflags = ["-Ctarget-feature=+crt-static"]
 
-[build]
-rustflags = ["-Z", "threads=16", "-Clink-args=-fuse-ld=lld"]
-
 [env]
 ORT_LIB_LOCATION = "./lib"

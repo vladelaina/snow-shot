@@ -4,11 +4,11 @@ use std::collections::HashSet;
 use std::mem;
 
 use crate::app_error::AutomationError;
+use crate::os::ElementLevel;
+use crate::os::TryGetElementByFocus;
 use atree::Arena;
 use atree::Token;
 use rtree_rs::{RTree, Rect};
-use serde::Deserialize;
-use serde::Serialize;
 use std::thread::sleep;
 use std::time::Duration;
 use tauri::Emitter;
