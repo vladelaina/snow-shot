@@ -2,12 +2,7 @@ import { Descriptions, theme } from 'antd';
 import { CaptureStep, DrawContext } from '../../types';
 import Color from 'color';
 import { FormattedMessage } from 'react-intl';
-import {
-    AppSettingsData,
-    AppSettingsGroup,
-    AppSettingsLoadingPublisher,
-    AppSettingsPublisher,
-} from '@/app/contextWrap';
+import { AppSettingsGroup, AppSettingsPublisher } from '@/app/contextWrap';
 import { useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { KeyboardIcon, MouseIcon } from '@/components/icons';
 import { DescriptionsItemType } from 'antd/es/descriptions';
@@ -24,6 +19,7 @@ import { useCallbackRender } from '@/hooks/useCallbackRender';
 import { debounce } from 'es-toolkit';
 import { ScreenshotType } from '@/functions/screenshot';
 import { DrawState, DrawStatePublisher } from '@/app/fullScreenDraw/components/drawCore/extra';
+import { useAppSettingsLoad } from '@/hooks/useAppSettingsLoad';
 
 const KeyLabel: React.FC<{
     messageId?: string;
@@ -43,23 +39,16 @@ const StatusBar: React.FC = () => {
     const { token } = theme.useToken();
 
     const [darkMode, setDarkMode] = useState(false);
-    const [getAppSettingsLoading] = useStateSubscriber(AppSettingsLoadingPublisher, undefined);
-
     const [hotKeyTipOpacity, setHotKeyTipOpacity] = useState(100);
-    const [getAppSettings] = useStateSubscriber(
-        AppSettingsPublisher,
-        useCallback(
-            (settings: AppSettingsData) => {
-                if (getAppSettingsLoading()) {
-                    return;
-                }
-
-                setDarkMode(settings[AppSettingsGroup.Common].darkMode);
-                setHotKeyTipOpacity(settings[AppSettingsGroup.Screenshot].hotKeyTipOpacity);
-            },
-            [getAppSettingsLoading],
-        ),
+    useAppSettingsLoad(
+        useCallback((settings) => {
+            setDarkMode(settings[AppSettingsGroup.Common].darkMode);
+            setHotKeyTipOpacity(settings[AppSettingsGroup.Screenshot].hotKeyTipOpacity);
+        }, []),
+        true,
     );
+
+    const [getAppSettings] = useStateSubscriber(AppSettingsPublisher, undefined);
 
     const statusBarRef = useRef<HTMLDivElement>(null);
     const { selectLayerActionRef, monitorInfoRef } = useContext(DrawContext);
