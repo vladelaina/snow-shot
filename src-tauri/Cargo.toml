@@ -30,7 +30,8 @@ tauri-plugin-log = "^2"
 tauri-plugin-fs = "^2"
 # xcap = { git = "https://github.com/mg-chao/xcap", branch = "custom/master" }
 xcap = { git = "https://github.com/mg-chao/xcap", branch = "20250702_ubuntu" }
-device_query = "4.0.0"
+# device_query = "4.0.0"
+device_query = { git = "https://github.com/mg-chao/device_query", branch = "20250703_fix_index_out" }
 log = "^0.4"
 image = { version = "^0.25", features = ["png", "webp"] }
 thiserror = "2.0.12"

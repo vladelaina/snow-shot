@@ -19,7 +19,7 @@ import { OcrResult, OcrResultActionType } from '../ocrResult';
 import clipboard from 'tauri-plugin-clipboard-api';
 import { KeyEventKey, KeyEventValue } from '@/core/hotKeys';
 import { useHotkeys } from 'react-hotkeys-hook';
-import { enableFreeDrag, MonitorInfo } from '@/commands/core';
+import { MonitorInfo, startFreeDrag } from '@/commands/core';
 import { getCurrentWebview, Webview } from '@tauri-apps/api/webview';
 import { setDrawWindowStyle } from '@/commands/screenshot';
 import html2canvas from 'html2canvas';
@@ -334,11 +334,6 @@ export const FixedContentCore: React.FC<{
         actionRef,
         () => ({
             init: async (params) => {
-                setTimeout(() => {
-                    setDrawWindowStyle();
-                    enableFreeDrag();
-                }, 512);
-
                 if ('htmlContent' in params) {
                     initHtml(params.htmlContent);
                 } else if ('textContent' in params) {
@@ -882,7 +877,15 @@ export const FixedContentCore: React.FC<{
                 </div>
             )}
 
-            <div className="fixed-image-container-inner" onWheel={onWheel} data-tauri-drag-region>
+            <div
+                className="fixed-image-container-inner"
+                onWheel={onWheel}
+                onMouseDown={(event) => {
+                    if (event.button === 0) {
+                        startFreeDrag();
+                    }
+                }}
+            >
                 <Button
                     className="fixed-image-close-button"
                     icon={<CloseOutlined />}
@@ -906,7 +909,6 @@ export const FixedContentCore: React.FC<{
 
                 <div
                     className="scale-info"
-                    data-tauri-drag-region
                     style={{
                         position: 'absolute',
                         bottom: 0,

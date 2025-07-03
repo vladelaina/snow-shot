@@ -13,6 +13,7 @@ use tokio::{sync::Mutex, time::Duration};
 use crate::{
     os::{self, free_drag::set_window_proc},
     screenshot::get_target_monitor,
+    services::FreeDragWindowService,
 };
 
 #[command]
@@ -403,4 +404,16 @@ pub async fn create_video_record_window(
     .resizable(false)
     .build()
     .unwrap();
+}
+
+#[command]
+pub async fn start_free_drag(
+    window: tauri::Window,
+    free_drag_window_service: tauri::State<'_, Mutex<FreeDragWindowService>>,
+) -> Result<(), String> {
+    let mut free_drag_window_service = free_drag_window_service.lock().await;
+
+    free_drag_window_service.start_drag(window)?;
+
+    Ok(())
 }

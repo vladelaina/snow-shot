@@ -227,6 +227,18 @@ const DrawToolbarCore: React.FC<DrawToolbarProps> = ({
                 toolLocked = enableLockDrawToolRef.current;
             }
 
+            if (next === DrawState.Select || next === DrawState.Idle) {
+                // 取消正在编辑中的元素
+                drawCacheLayerActionRef.current?.updateScene({
+                    appState: {
+                        newElement: undefined,
+                        editingLinearElement: undefined,
+                        editingTextElement: undefined,
+                    },
+                    captureUpdate: 'NEVER',
+                });
+            }
+
             switch (next) {
                 case DrawState.Idle:
                     drawCacheLayerActionRef.current?.setEnable(false);
@@ -239,6 +251,7 @@ const DrawToolbarCore: React.FC<DrawToolbarProps> = ({
                     drawCacheLayerActionRef.current?.setActiveTool({
                         type: 'selection',
                     });
+
                     break;
                 case DrawState.Rect:
                     drawCacheLayerActionRef.current?.setEnable(true);
@@ -664,7 +677,15 @@ const DrawToolbarCore: React.FC<DrawToolbarProps> = ({
                             {/* 固定到屏幕 */}
                             <ToolButton
                                 componentKey={KeyEventKey.FixedTool}
-                                icon={<FixedIcon style={{ fontSize: '1.1em' }} />}
+                                icon={
+                                    <FixedIcon
+                                        style={{
+                                            fontSize: '1.1em',
+                                            position: 'relative',
+                                            bottom: '0.02em',
+                                        }}
+                                    />
+                                }
                                 drawState={DrawState.Fixed}
                                 onClick={() => {
                                     onFixed();
@@ -815,6 +836,8 @@ const DrawToolbarCore: React.FC<DrawToolbarProps> = ({
 
                 .draw-toolbar-container :global(.ant-btn) :global(.ant-btn-icon) {
                     font-size: 24px;
+                    display: flex;
+                    align-items: center;
                 }
 
                 .draw-toolbar-container :global(.ant-btn-icon) {

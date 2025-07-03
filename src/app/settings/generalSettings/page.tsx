@@ -257,6 +257,26 @@ export default function GeneralSettings() {
                         </Col>
 
                         <Col span={12}>
+                            <ProFormSlider
+                                label={
+                                    <IconLabel
+                                        label={
+                                            <FormattedMessage id="settings.functionSettings.screenshotSettings.hotKeyTipOpacity" />
+                                        }
+                                    />
+                                }
+                                name="hotKeyTipOpacity"
+                                min={0}
+                                max={100}
+                                step={1}
+                                marks={{
+                                    0: '0%',
+                                    100: '100%',
+                                }}
+                            />
+                        </Col>
+
+                        <Col span={12}>
                             <ProForm.Item
                                 name="fullScreenAuxiliaryLineColor"
                                 label={
