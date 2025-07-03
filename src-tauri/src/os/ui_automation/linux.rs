@@ -1,19 +1,38 @@
-use crate::app_error::AutomationError;
-use crate::ui_automation::UIAutomationBase;
+use crate::os::ElementRect;
+use crate::os::TryGetElementByFocus;
 
-pub struct LinuxUIAutomation;
-pub struct LinuxUIElement;
+pub struct UIElements {}
 
-impl UIAutomationBase for LinuxUIAutomation {
-    fn new() -> Self {
-        Self
+impl UIElements {
+    pub fn new() -> Self {
+        Self {}
     }
 
-    fn get_element_info_from_point(
-        &self,
-        _: i32,
-        _: i32,
-    ) -> Result<Option<crate::ui_automation::ElementInfo>, AutomationError> {
-        Ok(None)
+    pub fn init(&mut self) -> Result<(), ()> {
+        log::warn!("[os::ui_automation::linux::init] not implemented");
+        Ok(())
+    }
+
+    pub fn init_cache(
+        &mut self,
+        monitor_rect: ElementRect,
+        try_get_element_by_focus: TryGetElementByFocus,
+    ) -> Result<(), ()> {
+        log::warn!("[os::ui_automation::linux::init_cache] not implemented");
+        Ok(())
+    }
+
+    pub fn recovery_window_z_order(&self) {
+        log::warn!("[os::ui_automation::linux::recovery_window_z_order] not implemented");
+    }
+
+    pub fn get_element_from_point_walker(
+        &mut self,
+        mouse_x: i32,
+        mouse_y: i32,
+        window: &tauri::Window,
+    ) -> Result<Vec<ElementRect>, ()> {
+        log::warn!("[os::ui_automation::linux::get_element_from_point_walker] not implemented");
+        Ok(vec![])
     }
 }

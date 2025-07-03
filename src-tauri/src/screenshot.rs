@@ -1,6 +1,7 @@
+use crate::app_utils::save_image_to_file;
 use crate::os;
 use crate::os::ElementRect;
-use crate::os::ui_automation::TryGetElementByFocus;
+use crate::os::TryGetElementByFocus;
 use crate::os::ui_automation::UIElements;
 use device_query::{DeviceQuery, DeviceState, MouseState};
 use image::EncodableLayout;
@@ -13,7 +14,6 @@ use tauri::command;
 use tauri::ipc::Response;
 use tauri_plugin_clipboard_manager::ClipboardExt;
 use tokio::sync::Mutex;
-use windows::Win32::UI::WindowsAndMessaging::GetForegroundWindow;
 use xcap::{Monitor, Window};
 
 pub fn get_device_mouse_position() -> (i32, i32) {
@@ -24,8 +24,22 @@ pub fn get_device_mouse_position() -> (i32, i32) {
 }
 
 pub fn get_target_monitor() -> (i32, i32, Monitor) {
-    let (mouse_x, mouse_y) = get_device_mouse_position();
-    let monitor = Monitor::from_point(mouse_x, mouse_y).unwrap();
+    let (mut mouse_x, mut mouse_y) = get_device_mouse_position();
+    let monitor = Monitor::from_point(mouse_x, mouse_y).unwrap_or_else(|_| {
+        // 在 Wayland 中，获取不到鼠标位置，选用第一个显示器作为位置
+
+        log::warn!("[get_target_monitor] No monitor found, using first monitor");
+
+        let monitor_list = xcap::Monitor::all().expect("[get_target_monitor] No monitor found");
+        let first_monitor = monitor_list
+            .first()
+            .expect("[get_target_monitor] No monitor found");
+
+        mouse_x = first_monitor.x().unwrap_or(0) + first_monitor.width().unwrap_or(0) as i32 / 2;
+        mouse_y = first_monitor.y().unwrap_or(0) + first_monitor.height().unwrap_or(0) as i32 / 2;
+
+        first_monitor.clone()
+    });
 
     (mouse_x, mouse_y, monitor)
 }
@@ -74,27 +88,47 @@ pub async fn capture_focused_window(
     app: tauri::AppHandle,
     file_path: Option<String>,
 ) -> Result<(), String> {
-    let hwnd = unsafe { GetForegroundWindow() };
-    let focused_window = xcap::Window::new(xcap::ImplWindow::new(hwnd));
+    let image;
 
-    let image = match focused_window.capture_image() {
-        Ok(image) => image,
-        Err(_) => {
-            log::warn!("[capture_focused_window] Failed to capture focused window");
-            // 改成捕获当前显示器
+    #[cfg(target_os = "windows")]
+    {
+        let hwnd = os::utils::get_focused_window();
 
-            let (_, _, monitor) = get_target_monitor();
+        let focused_window = xcap::Window::new(xcap::ImplWindow::new(hwnd));
 
-            match monitor.capture_image() {
-                Ok(image) => image,
-                Err(_) => {
-                    return Err(String::from(
-                        "[capture_focused_window] Failed to capture image",
-                    ));
+        image = match focused_window.capture_image() {
+            Ok(image) => image,
+            Err(_) => {
+                log::warn!("[capture_focused_window] Failed to capture focused window");
+                // 改成捕获当前显示器
+
+                let (_, _, monitor) = get_target_monitor();
+
+                match monitor.capture_image() {
+                    Ok(image) => image,
+                    Err(_) => {
+                        return Err(String::from(
+                            "[capture_focused_window] Failed to capture image",
+                        ));
+                    }
                 }
             }
-        }
-    };
+        };
+    }
+
+    #[cfg(target_os = "linux")]
+    {
+        let (_, _, monitor) = get_target_monitor();
+
+        image = match monitor.capture_image() {
+            Ok(image) => image,
+            Err(_) => {
+                return Err(String::from(
+                    "[capture_focused_window] Failed to capture image",
+                ));
+            }
+        };
+    }
 
     // 写入到剪贴板
     match app.clipboard().write_image(&tauri::image::Image::new(
@@ -111,7 +145,7 @@ pub async fn capture_focused_window(
     }
 
     if let Some(file_path) = file_path {
-        os::utils::save_image_to_file(
+        save_image_to_file(
             &image::DynamicImage::ImageRgba8(image),
             PathBuf::from(file_path),
         )?;
@@ -180,17 +214,12 @@ pub struct WindowElement {
 
 #[command]
 pub async fn get_window_elements() -> Result<Vec<WindowElement>, ()> {
-    // 获取当前鼠标的位置
-    let device_state = DeviceState::new();
-    let mouse: MouseState = device_state.get_mouse();
-    let (mouse_x, mouse_y) = mouse.coords;
+    let (_, _, monitor) = get_target_monitor();
 
-    let monitor = xcap::Monitor::from_point(mouse_x, mouse_y).unwrap();
     let monitor_min_x = monitor.x().unwrap_or(0);
     let monitor_min_y = monitor.y().unwrap_or(0);
     let monitor_max_x = monitor_min_x + monitor.width().unwrap_or(0) as i32;
     let monitor_max_y = monitor_min_y + monitor.height().unwrap_or(0) as i32;
-
     // 获取所有窗口，简单筛选下需要的窗口，然后获取窗口所有元素
     let windows = Window::all().unwrap_or_default();
 
@@ -246,11 +275,26 @@ pub async fn get_window_elements() -> Result<Vec<WindowElement>, ()> {
         });
     }
 
+    // 把显示器的窗口也推入到 rect_list 中
+    rect_list.push(WindowElement {
+        element_rect: ElementRect {
+            min_x: monitor_min_x,
+            min_y: monitor_min_y,
+            max_x: monitor_max_x,
+            max_y: monitor_max_y,
+        },
+        window_id: 0,
+    });
+
     Ok(rect_list)
 }
 
 #[command]
 pub async fn switch_always_on_top(window_id: u32) -> bool {
+    if window_id == 0 {
+        return false;
+    }
+
     let window_list = Window::all().unwrap_or_default();
     let window = window_list
         .iter()
@@ -261,14 +305,22 @@ pub async fn switch_always_on_top(window_id: u32) -> bool {
         None => return false,
     };
 
-    let window_hwnd = window.hwnd();
+    #[cfg(target_os = "windows")]
+    {
+        let window_hwnd = window.hwnd();
 
-    let window_hwnd = match window_hwnd {
-        Ok(hwnd) => hwnd,
-        Err(_) => return false,
-    };
+        let window_hwnd = match window_hwnd {
+            Ok(hwnd) => hwnd,
+            Err(_) => return false,
+        };
 
-    os::utils::switch_always_on_top(window_hwnd);
+        os::utils::switch_always_on_top(window_hwnd);
+    }
+
+    #[cfg(target_os = "linux")]
+    {
+        os::utils::switch_always_on_top();
+    }
 
     true
 }

@@ -263,11 +263,18 @@ pub async fn get_current_monitor_info() -> Result<MonitorInfo, ()> {
     Ok(monitor_info)
 }
 
+#[cfg(target_os = "windows")]
 #[command]
 pub async fn enable_free_drag(window: tauri::Window) {
     if let Ok(hwnd) = window.hwnd() {
         let _ = set_window_proc(hwnd);
     }
+}
+
+#[cfg(target_os = "linux")]
+#[command]
+pub async fn enable_free_drag() {
+    let _ = set_window_proc();
 }
 
 #[command]

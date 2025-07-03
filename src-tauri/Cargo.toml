@@ -28,24 +28,12 @@ tauri = { version = "^2.3", features = [
 ] }
 tauri-plugin-log = "^2"
 tauri-plugin-fs = "^2"
-xcap = { git = "https://github.com/mg-chao/xcap", branch = "custom/master" }
-device_query = "^3"
+# xcap = { git = "https://github.com/mg-chao/xcap", branch = "custom/master" }
+xcap = { git = "https://github.com/mg-chao/xcap", branch = "20250702_ubuntu" }
+device_query = "4.0.0"
 log = "^0.4"
 image = { version = "^0.25", features = ["png", "webp"] }
-windows = { version = "0.61.1", features = [
-    "Win32_Foundation",
-    "UI_UIAutomation",
-    "Win32_UI_WindowsAndMessaging",
-    "Win32_System_LibraryLoader",
-    "UI_Notifications",
-    "Data_Xml_Dom",
-    "Foundation",
-    "ApplicationModel_Core",
-    "Win32_System_Com",
-    "Win32_System_WinRT",
-] }
 thiserror = "2.0.12"
-uiautomation = "^0.21"
 rtree_rs = "^0.1.4"
 atree = "^0.5.2"
 tauri-plugin-dialog = "^2"
@@ -56,7 +44,7 @@ tauri-plugin-http = "2"
 get-selected-text = "0.1.6"
 tauri-plugin-store = "2"
 base64 = "0.22.1"
-enigo = "0.3.0"
+enigo = "0.5.0"
 hora = { version = "0.1.1" }
 imageproc = "0.25.0"
 rayon = "1.10.0"
@@ -74,6 +62,22 @@ ffmpeg-sidecar = "2.0.6"
 regex = "1.11.1"
 tauri-plugin-os = "2"
 tokio = { version = "1.45.1" }
+
+
+[target.'cfg(any(target_os = "windows"))'.dependencies]
+windows = { version = "0.61.1", features = [
+    "Win32_Foundation",
+    "UI_UIAutomation",
+    "Win32_UI_WindowsAndMessaging",
+    "Win32_System_LibraryLoader",
+    "UI_Notifications",
+    "Data_Xml_Dom",
+    "Foundation",
+    "ApplicationModel_Core",
+    "Win32_System_Com",
+    "Win32_System_WinRT",
+] }
+uiautomation = "^0.21"
 
 [target.'cfg(not(any(target_os = "android", target_os = "ios")))'.dependencies]
 tauri-plugin-autostart = "2"

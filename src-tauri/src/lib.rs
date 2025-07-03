@@ -4,6 +4,7 @@ mod core;
 mod file;
 mod ocr;
 mod os;
+mod app_utils;
 mod screenshot;
 mod scroll_screenshot;
 mod services;
@@ -13,11 +14,11 @@ use tokio::sync::Mutex;
 
 use enigo::{Enigo, Settings};
 use ocr::OcrLiteWrap;
-use os::free_drag::remove_window_proc;
 use os::ui_automation::UIElements;
 use paddle_ocr_rs::ocr_lite::OcrLite;
 use tauri::Manager;
 use tauri_plugin_log::{Target, TargetKind};
+use os::free_drag::remove_window_proc;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -80,8 +81,15 @@ pub fn run() {
         })
         .on_window_event(|window, event| {
             if let tauri::WindowEvent::CloseRequested { .. } = event {
-                if let Ok(hwnd) = window.hwnd() {
-                    let _ = remove_window_proc(hwnd);
+                #[cfg(target_os = "windows")]
+                {
+                    if let Ok(hwnd) = window.hwnd() {
+                        let _ = remove_window_proc(hwnd);
+                    }
+                }
+                #[cfg(target_os = "linux")]
+                {
+                    let _ = remove_window_proc();
                 }
             }
         })
