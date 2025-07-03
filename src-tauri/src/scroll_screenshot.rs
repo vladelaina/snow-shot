@@ -9,7 +9,7 @@ use tauri_plugin_clipboard_manager::ClipboardExt;
 use tokio::sync::Mutex;
 use xcap::Monitor;
 
-use crate::os::utils::save_image_to_file;
+use crate::app_utils::save_image_to_file;
 use crate::services::{
     ScrollDirection, ScrollImageList, ScrollScreenshotImageService, ScrollScreenshotService,
 };

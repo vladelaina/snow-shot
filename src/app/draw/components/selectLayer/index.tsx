@@ -188,7 +188,7 @@ const SelectLayerCore: React.FC<SelectLayerProps> = ({ actionRef }) => {
     const initSelectWindowElement = useCallback(async () => {
         selectWindowElementLoadingRef.current = true;
 
-        const windowElements = await getWindowElements();
+        const windowElementsPromise = getWindowElements();
 
         const rectList: ElementRect[] = [];
         const initUiElementsCachePromise = initUiElementsCache(
@@ -196,6 +196,7 @@ const SelectLayerCore: React.FC<SelectLayerProps> = ({ actionRef }) => {
         );
         const map = new Map<number, number>();
 
+        const windowElements = await windowElementsPromise;
         const rTree = new Flatbush(windowElements.length);
         windowElements.forEach((windowElement, index) => {
             const rect = windowElement.element_rect;
