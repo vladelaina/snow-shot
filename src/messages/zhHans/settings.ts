@@ -94,6 +94,7 @@ export const settings = {
         '超出选区范围的元素透明度',
     'settings.functionSettings.screenshotSettings.beyondSelectRectElementOpacity.tip':
         '选定截图区域后，绘制的元素在超出选区范围时显示的透明度',
+    'settings.functionSettings.screenshotSettings.hotKeyTipOpacity': '快捷键提示透明度',
     'settings.functionSettings.screenshotSettings.autoOcrAfterFixed': '固定屏幕后自动 OCR',
     'settings.functionSettings.screenshotSettings.shortcutCanleTip': '快捷键取消截图提示',
     'settings.functionSettings.screenshotSettings.lockDrawTool': '锁定绘制工具',

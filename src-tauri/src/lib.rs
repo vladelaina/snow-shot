@@ -37,6 +37,8 @@ pub fn run() {
     let scroll_screenshot_service = Mutex::new(services::ScrollScreenshotService::new());
     let scroll_screenshot_image_service = Mutex::new(services::ScrollScreenshotImageService::new());
 
+    let free_drag_window_service = Mutex::new(services::FreeDragWindowService::new());
+
     let mut app_builder = tauri::Builder::default().plugin(tauri_plugin_os::init());
 
     #[cfg(desktop)]
@@ -79,20 +81,21 @@ pub fn run() {
 
             Ok(())
         })
-        .on_window_event(|window, event| {
-            if let tauri::WindowEvent::CloseRequested { .. } = event {
-                #[cfg(target_os = "windows")]
-                {
-                    if let Ok(hwnd) = window.hwnd() {
-                        let _ = remove_window_proc(hwnd);
-                    }
-                }
-                #[cfg(target_os = "linux")]
-                {
-                    let _ = remove_window_proc();
-                }
-            }
-        })
+        // 已通过检测鼠标事件实现拖动窗口
+        // .on_window_event(|window, event| {
+        //     if let tauri::WindowEvent::CloseRequested { .. } = event {
+        //         #[cfg(target_os = "windows")]
+        //         {
+        //             if let Ok(hwnd) = window.hwnd() {
+        //                 let _ = remove_window_proc(hwnd);
+        //             }
+        //         }
+        //         #[cfg(target_os = "linux")]
+        //         {
+        //             let _ = remove_window_proc();
+        //         }
+        //     }
+        // })
         .manage(ui_elements)
         .manage(ocr_instance)
         .manage(auto_start_hide_window)
@@ -100,6 +103,7 @@ pub fn run() {
         .manage(scroll_screenshot_service)
         .manage(video_record_service)
         .manage(scroll_screenshot_image_service)
+        .manage(free_drag_window_service)
         .invoke_handler(tauri::generate_handler![
             screenshot::capture_current_monitor,
             screenshot::capture_focused_window,
@@ -114,6 +118,7 @@ pub fn run() {
             screenshot::recovery_window_z_order,
             core::exit_app,
             core::enable_free_drag,
+            core::start_free_drag,
             file::save_file,
             file::create_dir,
             ocr::ocr_detect,

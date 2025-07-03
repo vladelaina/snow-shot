@@ -44,6 +44,8 @@ const StatusBar: React.FC = () => {
 
     const [darkMode, setDarkMode] = useState(false);
     const [getAppSettingsLoading] = useStateSubscriber(AppSettingsLoadingPublisher, undefined);
+
+    const [hotKeyTipOpacity, setHotKeyTipOpacity] = useState(100);
     const [getAppSettings] = useStateSubscriber(
         AppSettingsPublisher,
         useCallback(
@@ -53,6 +55,7 @@ const StatusBar: React.FC = () => {
                 }
 
                 setDarkMode(settings[AppSettingsGroup.Common].darkMode);
+                setHotKeyTipOpacity(settings[AppSettingsGroup.Screenshot].hotKeyTipOpacity);
             },
             [getAppSettingsLoading],
         ),
@@ -257,7 +260,9 @@ const StatusBar: React.FC = () => {
         <div
             className="status-bar"
             ref={statusBarRef}
-            style={{ opacity: descriptionsItems.length === 0 || isHover ? 0 : 1 }}
+            style={{
+                opacity: descriptionsItems.length === 0 || isHover ? 0 : hotKeyTipOpacity / 100,
+            }}
         >
             <div className="status-bar-content">
                 <Descriptions column={1} items={descriptionsItems} />
