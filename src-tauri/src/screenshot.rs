@@ -130,6 +130,20 @@ pub async fn capture_focused_window(
         };
     }
 
+    #[cfg(target_os = "macos")]
+    {
+        let (_, _, monitor) = get_target_monitor();
+
+        image = match monitor.capture_image() {
+            Ok(image) => image,
+            Err(_) => {
+                return Err(String::from(
+                    "[capture_focused_window] Failed to capture image",
+                ));
+            }
+        };
+    }
+
     // 写入到剪贴板
     match app.clipboard().write_image(&tauri::image::Image::new(
         image.as_bytes(),
@@ -318,6 +332,7 @@ pub async fn switch_always_on_top(window_id: u32) -> bool {
     }
 
     #[cfg(target_os = "linux")]
+    #[cfg(target_os = "macos")]
     {
         os::utils::switch_always_on_top();
     }

@@ -278,6 +278,12 @@ pub async fn enable_free_drag() {
     let _ = set_window_proc();
 }
 
+#[cfg(target_os = "macos")]
+#[command]
+pub async fn enable_free_drag() {
+    let _ = set_window_proc();
+}
+
 #[command]
 pub async fn send_new_version_notification(title: String, body: String) {
     os::notification::send_new_version_notification(title, body);

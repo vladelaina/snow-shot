@@ -8382,7 +8382,7 @@ dependencies = [
 [[package]]
 name = "xcap"
 version = "0.6.1"
-source = "git+https://github.com/mg-chao/xcap?branch=20250702_ubuntu#a0a5cafd846c45482999f3574b3ed658c1dd0fbb"
+source = "git+https://github.com/mg-chao/xcap?branch=20250710_fix_macos#edb0eea438fbd99bc61e3d6c57c78ff6aa29dcd7"
 dependencies = [
  "dispatch2 0.3.0",
  "image",

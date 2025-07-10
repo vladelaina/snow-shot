@@ -4,12 +4,19 @@ pub mod free_drag;
 #[cfg(target_os = "linux")]
 #[path = "./free_drag/linux.rs"]
 pub mod free_drag;
+#[cfg(target_os = "macos")]
+#[path = "./free_drag/macos.rs"]
+pub mod free_drag;
 
 #[cfg(target_os = "windows")]
 #[path = "./notification/windows.rs"]
 pub mod notification;
 #[cfg(target_os = "linux")]
 #[path = "./notification/linux.rs"]
+pub mod notification;
+
+#[cfg(target_os = "macos")]
+#[path = "./notification/macos.rs"]
 pub mod notification;
 
 #[cfg(target_os = "windows")]
@@ -19,12 +26,20 @@ pub mod ui_automation;
 #[path = "./ui_automation/linux.rs"]
 pub mod ui_automation;
 
+#[cfg(target_os = "macos")]
+#[path = "./ui_automation/macos.rs"]
+pub mod ui_automation;
+
 #[cfg(target_os = "windows")]
 #[path = "./utils/windows.rs"]
 pub mod utils;
 
 #[cfg(target_os = "linux")]
 #[path = "./utils/linux.rs"]
+pub mod utils;
+
+#[cfg(target_os = "macos")]
+#[path = "./utils/macos.rs"]
 pub mod utils;
 
 // #[cfg(target_os = "linux")]
