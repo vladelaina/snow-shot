@@ -17,7 +17,7 @@ import {
     TranslationType,
     TranslationTypeOption,
 } from '@/services/tools/translation';
-import { SwapOutlined } from '@ant-design/icons';
+import { CloseOutlined, CopyOutlined, SwapOutlined } from '@ant-design/icons';
 import { Button, Col, Flex, Form, InputRef, Row, Select, SelectProps, Spin, theme } from 'antd';
 import TextArea from 'antd/es/input/TextArea';
 import { debounce } from 'es-toolkit';
@@ -658,6 +658,9 @@ const TranslatorCore: React.FC<{
         return true;
     }, [translationType]);
 
+    const hasSourceContent = !!sourceContent;
+    const hasTranslatedContent = !!translatedContent;
+
     return (
         <>
             {/* 用表单处理下样式，但不用表单处理数据验证 */}
@@ -864,7 +867,7 @@ const TranslatorCore: React.FC<{
                     </Flex>
                 </Flex>
                 <Row gutter={16} style={{ marginTop: token.marginXXS }}>
-                    <Col span={12}>
+                    <Col span={12} style={{ position: 'relative' }}>
                         <TextArea
                             ref={sourceContentRef}
                             rows={12}
@@ -878,6 +881,16 @@ const TranslatorCore: React.FC<{
                             value={sourceContent}
                             style={{ flex: 1 }}
                             onChange={(e) => setSourceContent(e.target.value)}
+                        />
+
+                        <Button
+                            className="tool-translator-container-clear-button"
+                            type="text"
+                            shape="circle"
+                            icon={<CloseOutlined />}
+                            onClick={() => {
+                                setSourceContent('');
+                            }}
                         />
                     </Col>
                     <Col span={12}>
@@ -899,6 +912,22 @@ const TranslatorCore: React.FC<{
                                     readOnly
                                     value={translatedContent}
                                 />
+
+                                <Flex
+                                    className="tool-translator-container-translate-button-container"
+                                    gap={token.marginXXS}
+                                    align="center"
+                                    justify="end"
+                                >
+                                    <Button
+                                        type="text"
+                                        shape="circle"
+                                        icon={<CopyOutlined />}
+                                        onClick={() => {
+                                            navigator.clipboard.writeText(translatedContent);
+                                        }}
+                                    />
+                                </Flex>
                             </div>
                         </Spin>
                     </Col>
@@ -913,6 +942,30 @@ const TranslatorCore: React.FC<{
                 :global(.tool-translator-container .ant-form-item-label label) {
                     font-size: 12px !important;
                     color: ${token.colorTextDescription} !important;
+                }
+
+                :global(.tool-translator-container .ant-input) {
+                    padding-right: ${32 + token.marginXXS * 2}px !important;
+                }
+
+                :global(.tool-translator-container-clear-button) {
+                    position: absolute !important;
+                    right: ${token.paddingXS + token.marginXXS}px;
+                    top: ${token.marginXXS}px;
+                    z-index: 1;
+                    pointer-events: ${hasSourceContent ? 'auto' : 'none'};
+                    opacity: ${hasSourceContent ? 1 : 0};
+                    transition: opacity ${token.motionDurationMid} ${token.motionEaseInOut};
+                }
+
+                :global(.tool-translator-container-translate-button-container) {
+                    position: absolute;
+                    bottom: ${token.marginXXS}px;
+                    right: ${token.marginXXS}px;
+                    z-index: 1;
+                    pointer-events: ${hasTranslatedContent ? 'auto' : 'none'};
+                    opacity: ${hasTranslatedContent ? 1 : 0};
+                    transition: opacity ${token.motionDurationMid} ${token.motionEaseInOut};
                 }
             `}</style>
         </>
