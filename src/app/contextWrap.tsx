@@ -1167,36 +1167,59 @@ const ContextWrapCore: React.FC<{ children: React.ReactNode }> = ({ children }) 
         );
 
         const settings: AppSettingsData = {} as AppSettingsData;
-        for (const group of groups as AppSettingsGroup[]) {
-            // 启动时验证下目录是否存在
-            let isDirExists = await exists('', {
+
+        // 启动时验证下目录是否存在
+        let isDirExists = await exists('', {
+            baseDir: BaseDirectory.AppConfig,
+        });
+        if (!isDirExists) {
+            await mkdir('', {
                 baseDir: BaseDirectory.AppConfig,
             });
-            if (!isDirExists) {
-                await mkdir('', {
-                    baseDir: BaseDirectory.AppConfig,
-                });
-            }
+        }
 
-            isDirExists = await exists(configDir, {
+        isDirExists = await exists(configDir, {
+            baseDir: BaseDirectory.AppConfig,
+        });
+        if (!isDirExists) {
+            await mkdir(configDir, {
                 baseDir: BaseDirectory.AppConfig,
             });
-            if (!isDirExists) {
-                await mkdir(configDir, {
-                    baseDir: BaseDirectory.AppConfig,
-                });
-            }
+        }
 
-            const isFileExists = await exists(getFileName(group), {
-                baseDir: BaseDirectory.AppConfig,
-            });
+        await Promise.all(
+            (groups as AppSettingsGroup[]).map(async (group) => {
+                let fileContent = '';
+                try {
+                    fileContent = await readTextFile(getFileName(group), {
+                        baseDir: BaseDirectory.AppConfig,
+                    });
+                } catch (error) {
+                    console.warn(
+                        `[reloadAppSettings] read file ${getFileName(group)} failed`,
+                        error,
+                    );
+                }
 
-            const saveToFile = appWindowRef.current?.label === 'main';
+                const saveToFile = appWindowRef.current?.label === 'main';
 
-            if (!isFileExists) {
+                if (!fileContent) {
+                    settings[group] = updateAppSettings(
+                        group,
+                        defaultAppSettingsData[group],
+                        false,
+                        saveToFile,
+                        false,
+                        true,
+                        true,
+                        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                    ) as any;
+                    return Promise.resolve();
+                }
+
                 settings[group] = updateAppSettings(
                     group,
-                    defaultAppSettingsData[group],
+                    fileContent,
                     false,
                     saveToFile,
                     false,
@@ -1204,24 +1227,8 @@ const ContextWrapCore: React.FC<{ children: React.ReactNode }> = ({ children }) 
                     true,
                     // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 ) as any;
-                continue;
-            }
-
-            const content = await readTextFile(getFileName(group), {
-                baseDir: BaseDirectory.AppConfig,
-            });
-
-            settings[group] = updateAppSettings(
-                group,
-                content,
-                false,
-                saveToFile,
-                false,
-                true,
-                true,
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            ) as any;
-        }
+            }),
+        );
 
         if (isEqual(appSettingsRef.current, settings)) {
             setAppSettings(settings);

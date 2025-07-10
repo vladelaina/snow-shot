@@ -259,6 +259,7 @@ export default function Home() {
                 AppFunction,
                 ShortcutKeyStatus
             >;
+
             await Promise.all(
                 appFunctionComponentConfigsKeys.map(async (key) => {
                     const config = defaultAppFunctionComponentConfigs[key as AppFunction];
