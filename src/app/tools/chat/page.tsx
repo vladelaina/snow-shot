@@ -61,6 +61,7 @@ import { ChatApiConfig } from '@/app/settings/functionSettings/extra';
 import path from 'path';
 import { ModelSelectLabel } from './components/modelSelectLabel';
 import { openUrl } from '@tauri-apps/plugin-opener';
+import { writeTextToClipboard } from '@/utils/clipboard';
 
 type BubbleDataType = AntdBubbleDataType & {
     flow_config?: ChatMessageFlowConfig;
@@ -881,7 +882,7 @@ const Chat = () => {
                                                     return;
                                                 }
 
-                                                navigator.clipboard.writeText(textContent);
+                                                writeTextToClipboard(textContent);
                                             }}
                                         />
                                     </div>

@@ -11,6 +11,7 @@ import OcrTool from '../drawToolbar/components/tools/ocrTool';
 import { OcrResult, OcrResultActionType } from '@/app/fixedContent/components/ocrResult';
 import { zIndexs } from '@/utils/zIndex';
 import { MonitorInfo } from '@/commands/core';
+import { writeTextToClipboard } from '@/utils/clipboard';
 
 export type OcrBlocksActionType = {
     init: (
@@ -73,7 +74,7 @@ export const OcrBlocks: React.FC<{
                     id: `${appWindow.label}-copySelectedText`,
                     text: intl.formatMessage({ id: 'draw.copySelectedText' }),
                     action: async () => {
-                        navigator.clipboard.writeText(window.getSelection()?.toString() || '');
+                        writeTextToClipboard(window.getSelection()?.toString() || '');
                     },
                 },
             ],

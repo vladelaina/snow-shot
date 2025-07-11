@@ -140,7 +140,7 @@ pub async fn create_fixed_content_window(app: tauri::AppHandle, scroll_screensho
     .transparent(false)
     .skip_taskbar(true)
     .resizable(false)
-    .inner_size(0.0, 0.0)
+    .inner_size(1.0, 1.0)
     .build()
     .unwrap();
 
@@ -221,7 +221,7 @@ pub async fn create_full_screen_draw_window(app: tauri::AppHandle) {
     .minimizable(false)
     .title("Snow Shot - Full Screen Draw - Switch Mouse Through")
     .position(monitor_x, monitor_y)
-    .inner_size(0.0, 0.0)
+    .inner_size(1.0, 1.0)
     .decorations(false)
     .shadow(false)
     .transparent(true)
@@ -402,7 +402,7 @@ pub async fn create_video_record_window(
     .minimizable(false)
     .title("Snow Shot - Video Record - Toolbar")
     .position(monitor_x, monitor_y)
-    .inner_size(0.0, 0.0)
+    .inner_size(1.0, 1.0)
     .decorations(false)
     .shadow(false)
     .transparent(true)

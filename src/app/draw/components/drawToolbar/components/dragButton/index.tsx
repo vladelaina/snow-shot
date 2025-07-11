@@ -17,7 +17,6 @@ import { ElementRect } from '@/commands';
 import { updateElementPosition } from './extra';
 import { useStateSubscriber } from '@/hooks/useStateSubscriber';
 import { DrawState, DrawStatePublisher } from '@/app/fullScreenDraw/components/drawCore/extra';
-import { CaptureEvent, CaptureEventParams, CaptureEventPublisher } from '@/app/draw/extra';
 
 export type DragButtonActionType = {
     setEnable: (enable: boolean) => void;
@@ -31,7 +30,8 @@ const DragButtonCore: React.FC<{
     const enableSubToolbarRef = useRef(false);
 
     const { selectLayerActionRef, monitorInfoRef } = useContext(DrawContext);
-    const { drawToolbarRef, setDragging, draggingRef } = useContext(DrawToolbarContext);
+    const { drawToolbarRef, setDragging, draggingRef, drawToolarContainerRef } =
+        useContext(DrawToolbarContext);
     const { token } = theme.useToken();
 
     // 保存 toolbar 位置
@@ -129,11 +129,18 @@ const DragButtonCore: React.FC<{
             enableRef.current = enable;
 
             if (enable) {
+                drawToolarContainerRef.current!.style.opacity = '1';
                 drawToolbarRef.current!.style.opacity = '1';
                 drawToolbarRef.current!.style.pointerEvents = 'auto';
 
+                // 重置偏移，避免工具栏定位受超出边界的逻辑影响
+                mouseOriginPositionRef.current = new MousePosition(0, 0);
+                mouseCurrentPositionRef.current = new MousePosition(0, 0);
+
                 updateDrawToolbarStyleRender();
             } else {
+                // drawToolbarRef 设置 opacity 会有过渡效果，这里直接把 container 设置为 0 避免过渡效果
+                drawToolarContainerRef.current!.style.opacity = '0';
                 drawToolbarRef.current!.style.opacity = '0';
                 drawToolbarRef.current!.style.pointerEvents = 'none';
                 toolbarCurrentRectRef.current = {
@@ -145,7 +152,7 @@ const DragButtonCore: React.FC<{
                 toolbarPreviousRectRef.current = undefined;
             }
         },
-        [drawToolbarRef, updateDrawToolbarStyleRender],
+        [drawToolarContainerRef, drawToolbarRef, updateDrawToolbarStyleRender],
     );
 
     const setEnable = useCallback(
@@ -168,15 +175,6 @@ const DragButtonCore: React.FC<{
         [updateDrawToolbarStyleRender],
     );
     useStateSubscriber(DrawStatePublisher, onDrawStateChange);
-    useStateSubscriber(
-        CaptureEventPublisher,
-        useCallback((event: CaptureEventParams | undefined) => {
-            if (event?.event === CaptureEvent.onExecuteScreenshot) {
-                mouseOriginPositionRef.current = new MousePosition(0, 0);
-                mouseCurrentPositionRef.current = new MousePosition(0, 0);
-            }
-        }, []),
-    );
 
     useImperativeHandle(actionRef, () => {
         return {

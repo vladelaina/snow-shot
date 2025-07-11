@@ -11,6 +11,7 @@ import { AntdContext } from '@/components/globalLayoutExtra';
 import { MonitorInfo } from '@/commands/core';
 import { useStateSubscriber } from '@/hooks/useStateSubscriber';
 import { AppSettingsGroup, AppSettingsPublisher } from '@/app/contextWrap';
+import { writeTextToClipboard } from '@/utils/clipboard';
 
 // 定义角度阈值常量（以度为单位）
 const ROTATION_THRESHOLD = 3; // 小于3度的旋转被视为误差，不进行旋转
@@ -254,9 +255,9 @@ export const OcrResult: React.FC<{
                     getAppSettings()[AppSettingsGroup.FunctionScreenshot].ocrAfterAction;
 
                 if (ocrAfterAction === OcrDetectAfterAction.CopyText) {
-                    navigator.clipboard.writeText(covertOcrResultToText(ocrResult));
+                    writeTextToClipboard(covertOcrResultToText(ocrResult));
                 } else if (ocrAfterAction === OcrDetectAfterAction.CopyTextAndCloseWindow) {
-                    navigator.clipboard.writeText(covertOcrResultToText(ocrResult));
+                    writeTextToClipboard(covertOcrResultToText(ocrResult));
                     finishCapture?.();
                 }
 
@@ -346,7 +347,7 @@ export const OcrResult: React.FC<{
                     id: `${appWindow.label}-copySelectedText`,
                     text: intl.formatMessage({ id: 'draw.copySelectedText' }),
                     action: async () => {
-                        navigator.clipboard.writeText(window.getSelection()?.toString() || '');
+                        writeTextToClipboard(window.getSelection()?.toString() || '');
                     },
                 },
             ],

@@ -36,6 +36,8 @@
                 "maximizable": false,
                 "minimizable": false,
                 "resizable": false,
+                "visible": false,
+                "focus": false,
                 "url": "/draw"
             }
         ],

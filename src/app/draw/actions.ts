@@ -9,6 +9,7 @@ import { OcrBlocksActionType } from './components/ocrBlocks';
 import { showImageDialog, ImageFormat, ImagePath } from '@/utils/file';
 import { MonitorInfo } from '@/commands/core';
 import { AppSettingsData } from '../contextWrap';
+import { writeImageToClipboard } from '@/utils/clipboard';
 
 export const getCanvas = async (
     selectRect: ElementRect,
@@ -120,50 +121,66 @@ export const fixedToScreen = async (
         return;
     }
 
+    // 创建一个固定的图片
+    const imageCanvasPromise = getCanvas(selectRect, drawLayerAction, drawCacheLayerAction);
+
     setCaptureStep(CaptureStep.Fixed);
     createDrawWindow();
 
     layerContainerElement.style.opacity = '0';
-
-    const setTitlePromise = appWindow.setTitle('Snow Shot - Fixed Content');
-
-    await appWindow.hide();
-    const hidePromise = new Promise((resolve) => {
-        setTimeout(resolve, 17 * 3);
+    // 等待窗口内容被隐藏，防止窗口闪烁
+    await new Promise((resolve) => {
+        setTimeout(resolve, 17);
     });
+    // 设置两次窗口位置，tauri 应该是根据窗口位置做了一些坐标转换处理，所以窗口位置得先设定好
+    // 窗口位置也提前设置好
+    await Promise.all([
+        appWindow.setPosition(
+            new PhysicalPosition(
+                selectRect.min_x + monitorInfo.monitor_x,
+                selectRect.min_y + monitorInfo.monitor_y,
+            ),
+        ),
+        appWindow.setSize(
+            new PhysicalSize(
+                selectRect.max_x - selectRect.min_x,
+                selectRect.max_y - selectRect.min_y,
+            ),
+        ),
+        appWindow.hide(),
+        appWindow.setTitle('Snow Shot - Fixed Content'),
+    ]);
 
-    // 创建一个固定的图片
-    const imageCanvas = await getCanvas(selectRect, drawLayerAction, drawCacheLayerAction);
+    const imageCanvas = await imageCanvasPromise;
+
     if (!imageCanvas) {
         return;
     }
 
-    await setTitlePromise;
-
     await Promise.all([
-        fixedContentAction.init({ canvas: imageCanvas, monitorInfo }).then(async () => {
-            await hidePromise;
-            await Promise.all([
-                appWindow.setPosition(
-                    new PhysicalPosition(
-                        selectRect.min_x + monitorInfo.monitor_x,
-                        selectRect.min_y + monitorInfo.monitor_y,
-                    ),
-                ),
-                appWindow.setSize(
-                    new PhysicalSize(
-                        selectRect.max_x - selectRect.min_x,
-                        selectRect.max_y - selectRect.min_y,
-                    ),
-                ),
-            ]);
-            await Promise.all([appWindow.show(), appWindow.setAlwaysOnTop(true)]);
-            await new Promise((resolve) => {
-                setTimeout(resolve, 17 * 2);
-            });
-            layerContainerElement.style.opacity = '1';
-        }),
+        appWindow.show(),
+        appWindow.setAlwaysOnTop(true),
+        fixedContentAction.init({ canvas: imageCanvas, monitorInfo }),
+        appWindow.setPosition(
+            new PhysicalPosition(
+                selectRect.min_x + monitorInfo.monitor_x,
+                selectRect.min_y + monitorInfo.monitor_y,
+            ),
+        ),
+        appWindow.setSize(
+            new PhysicalSize(
+                selectRect.max_x - selectRect.min_x,
+                selectRect.max_y - selectRect.min_y,
+            ),
+        ),
     ]);
+
+    // 等待两帧，让窗口内容显示出来
+    await new Promise((resolve) => {
+        setTimeout(resolve, 17 * 2);
+    });
+
+    layerContainerElement.style.opacity = '1';
 };
 
 export const copyToClipboard = async (
@@ -200,7 +217,7 @@ export const copyToClipboard = async (
         beforeCopy(imageData);
     }
 
-    await navigator.clipboard.write([new ClipboardItem({ 'image/png': imageData })]);
+    await writeImageToClipboard(imageData);
 };
 
 export const handleOcrDetect = async (

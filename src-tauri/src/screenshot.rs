@@ -395,9 +395,9 @@ pub async fn create_draw_window(app: tauri::AppHandle) {
     .maximizable(false)
     .minimizable(false)
     .resizable(false)
-    .inner_size(0.0, 0.0)
-    .focused(false)
+    .inner_size(1.0, 1.0)
     .visible(false)
+    .focused(false)
     .build()
     .unwrap();
 
