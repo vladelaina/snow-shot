@@ -72,6 +72,8 @@ import {
 } from '../fullScreenDraw/components/drawCore/components/historyContext';
 import { covertOcrResultToText } from '../fixedContent/components/ocrResult';
 import { writeTextToClipboard } from '@/utils/clipboard';
+import * as tauriOs from '@tauri-apps/plugin-os';
+import { compare } from 'compare-versions';
 
 const DrawCacheLayer = dynamic(
     async () => (await import('./components/drawCacheLayer')).DrawCacheLayer,
@@ -348,8 +350,18 @@ const DrawPageCore: React.FC = () => {
     const initMonitorInfoAndShowWindow = useCallback(async () => {
         const monitorInfo = await getCurrentMonitorInfo();
         monitorInfoRef.current = monitorInfo;
+
         await Promise.all([
-            showWindow(monitorInfo),
+            (async () => {
+                // 在 macOS 上，有概率截取到窗口内容，延迟显示窗口（12.3.0 以下）
+                if (tauriOs.platform() === 'macos' && compare(tauriOs.version(), '12.3.0', '<=')) {
+                    await new Promise((resolve) => {
+                        setTimeout(resolve, 16);
+                    });
+                }
+
+                await showWindow(monitorInfo);
+            })(),
             selectLayerActionRef.current?.onMonitorInfoReady(monitorInfo),
             drawLayerActionRef.current?.onMonitorInfoReady(monitorInfo),
         ]);
@@ -361,6 +373,8 @@ const DrawPageCore: React.FC = () => {
             capturingRef.current = true;
             drawToolbarActionRef.current?.setEnable(false);
 
+            const captureCurrentMonitorPromise = captureCurrentMonitor(ImageEncoder.WebP);
+
             setScreenshotType(excuteScreenshotType);
             const layerOnExecuteScreenshotPromise = Promise.all([
                 drawLayerActionRef.current?.onExecuteScreenshot(),
@@ -371,7 +385,7 @@ const DrawPageCore: React.FC = () => {
             });
 
             const initMonitorInfoPromise = initMonitorInfoAndShowWindow();
-            imageBufferRef.current = await captureCurrentMonitor(ImageEncoder.WebP);
+            imageBufferRef.current = await captureCurrentMonitorPromise;
             await initMonitorInfoPromise;
 
             // 防止用户提前退出报错

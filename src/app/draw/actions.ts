@@ -175,6 +175,9 @@ export const fixedToScreen = async (
         ),
     ]);
 
+    // 简单加个过渡效果
+    layerContainerElement.style.transition = 'opacity 0.3s ease-in-out';
+
     // 等待两帧，让窗口内容显示出来
     await new Promise((resolve) => {
         setTimeout(resolve, 17 * 2);

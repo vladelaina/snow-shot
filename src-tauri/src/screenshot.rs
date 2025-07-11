@@ -10,6 +10,7 @@ use image::codecs::webp::WebPEncoder;
 use serde::Serialize;
 use std::path::PathBuf;
 use std::time::{SystemTime, UNIX_EPOCH};
+use tauri::Manager;
 use tauri::command;
 use tauri::ipc::Response;
 use tauri_plugin_clipboard_manager::ClipboardExt;
@@ -21,6 +22,30 @@ pub fn get_device_mouse_position() -> (i32, i32) {
     let mouse: MouseState = device_state.get_mouse();
 
     mouse.coords
+}
+
+#[cfg(target_os = "macos")]
+fn bgra_to_rgb(bgra_data: &[u8]) -> Vec<u8> {
+    let pixel_count = bgra_data.len() / 4;
+    let mut rgb_data = Vec::with_capacity(pixel_count * 3);
+
+    unsafe {
+        rgb_data.set_len(pixel_count * 3);
+
+        let bgra_ptr = bgra_data.as_ptr();
+        let rgb_ptr: *mut u8 = rgb_data.as_mut_ptr();
+
+        for i in 0..pixel_count {
+            let bgra_base = i * 4;
+            let rgb_base = i * 3;
+
+            *rgb_ptr.add(rgb_base) = *bgra_ptr.add(bgra_base + 2); // R
+            *rgb_ptr.add(rgb_base + 1) = *bgra_ptr.add(bgra_base + 1); // G  
+            *rgb_ptr.add(rgb_base + 2) = *bgra_ptr.add(bgra_base); // B
+        }
+    }
+
+    rgb_data
 }
 
 pub fn get_target_monitor() -> (i32, i32, Monitor) {
@@ -44,17 +69,156 @@ pub fn get_target_monitor() -> (i32, i32, Monitor) {
     (mouse_x, mouse_y, monitor)
 }
 
+#[cfg(target_os = "macos")]
+pub fn get_window_id_from_ns_handle(ns_handle: *mut std::ffi::c_void) -> u32 {
+    use objc2::runtime::AnyObject;
+
+    unsafe {
+        let ns_window = ns_handle as *mut AnyObject;
+        let window_id: u32 = objc2::msg_send![ns_window, windowNumber];
+        window_id
+    }
+}
+
+fn capture_current_monitor_with_scap(
+    window: &tauri::Window,
+    monitor: &Monitor,
+) -> Option<image::DynamicImage> {
+    #[cfg(not(target_os = "macos"))]
+    {
+        return None;
+    }
+
+    // macOS 下用 scap 截取，scap 使用最新的 ScreenCaptureKit API 进行截取
+    // macOS 可能遇到旧平台，这时回退到 xcap 截取
+    // if !scap::is_supported() {
+    //     return None;
+    // }
+    // scap 的版本比较看着不是很可靠，用 tauri 提供的方案比较下
+    let os_version = tauri_plugin_os::version();
+    if os_version.cmp(&tauri_plugin_os::Version::from_string("12.3.0"))
+        != std::cmp::Ordering::Greater
+    {
+        return None;
+    }
+
+    if !scap::has_permission() {
+        log::warn!("[capture_current_monitor_with_scap] failed tohas_permission");
+        if !scap::request_permission() {
+            log::error!("[capture_current_monitor_with_scap] failed to request_permission");
+            return None;
+        }
+    }
+
+    let ns_handle = match window.ns_window() {
+        Ok(ns_handle) => ns_handle,
+        Err(_) => {
+            log::error!("[capture_current_monitor_with_scap] failed to get ns_window");
+            return None;
+        }
+    };
+
+    let monitor_id = match monitor.id() {
+        Ok(id) => id,
+        Err(e) => {
+            log::error!(
+                "[capture_current_monitor_with_scap] failed to get monitor id: {:?}",
+                e
+            );
+            return None;
+        }
+    };
+
+    let window_id = get_window_id_from_ns_handle(ns_handle);
+
+    let options = scap::capturer::Options {
+        fps: 1,
+        target: Some(scap::Target::Display(scap::Display {
+            id: monitor_id as u32,
+            title: "".to_string(), // 这里 title 不重要
+            raw_handle: core_graphics_helmer_fork::display::CGDisplay::new(monitor_id),
+        })),
+        show_cursor: false,
+        show_highlight: true,
+        excluded_targets: Some(vec![scap::Target::Window(scap::Window {
+            id: window_id,
+            title: "Snow Shot - Draw".to_string(),
+            raw_handle: window_id,
+        })]),
+        output_type: scap::frame::FrameType::BGRAFrame,
+        output_resolution: scap::capturer::Resolution::Captured,
+        crop_area: Some(scap::capturer::Area {
+            origin: scap::capturer::Point {
+                x: monitor.x().unwrap_or(0) as f64,
+                y: monitor.y().unwrap_or(0) as f64,
+            },
+            size: scap::capturer::Size {
+                width: monitor.width().unwrap_or(0) as f64,
+                height: monitor.height().unwrap_or(0) as f64,
+            },
+        }),
+        ..Default::default()
+    };
+
+    // Create Capturer
+    let capturer = scap::capturer::Capturer::build(options);
+    let mut capturer = match capturer {
+        Ok(capturer) => capturer,
+        Err(e) => {
+            log::error!(
+                "[capture_current_monitor_with_scap] failed to build capturer: {:?}",
+                e
+            );
+            return None;
+        }
+    };
+
+    capturer.start_capture();
+    let frame = match capturer.get_next_frame() {
+        Ok(frame) => match frame {
+            scap::frame::Frame::BGRA(frame) => frame,
+            _ => {
+                log::error!("[capture_current_monitor_with_scap] valid frame type");
+                return None;
+            }
+        },
+        Err(e) => {
+            log::error!(
+                "[capture_current_monitor_with_scap] failed to get_next_frame: {:?}",
+                e
+            );
+            return None;
+        }
+    };
+    capturer.stop_capture();
+
+    match image::RgbImage::from_raw(
+        frame.width as u32,
+        frame.height as u32,
+        bgra_to_rgb(&frame.data),
+    ) {
+        Some(rgb_image) => Some(image::DynamicImage::ImageRgb8(rgb_image)),
+        None => {
+            log::error!("[capture_current_monitor_with_scap] failed to create image");
+            return None;
+        }
+    }
+}
+
 #[command]
-pub async fn capture_current_monitor(encoder: String) -> Response {
+pub async fn capture_current_monitor(window: tauri::Window, encoder: String) -> Response {
     // 获取当前鼠标的位置
     let (_, _, monitor) = get_target_monitor();
 
-    let image_buffer = match monitor.capture_image() {
-        Ok(image) => image,
-        Err(_) => {
-            log::error!("Failed to capture current monitor");
-            return Response::new(Vec::new());
-        }
+    let image_buffer = match capture_current_monitor_with_scap(&window, &monitor) {
+        Some(image) => image,
+        None => match monitor.capture_image() {
+            Ok(image) => image::DynamicImage::ImageRgba8(image),
+            Err(_) => {
+                log::error!("Failed to capture current monitor");
+                return Response::new(Vec::new());
+            }
+        },
     };
 
     // 前端处理渲染图片的方式有两种
@@ -64,7 +228,7 @@ pub async fn capture_current_monitor(encoder: String) -> Response {
     // 前端也无需再转为 base64 显示
 
     // 编码为指定格式
-    let mut buf = Vec::with_capacity(image_buffer.len() / 8);
+    let mut buf = Vec::with_capacity(image_buffer.as_bytes().len() / 8);
 
     if encoder == "webp" {
         image_buffer
