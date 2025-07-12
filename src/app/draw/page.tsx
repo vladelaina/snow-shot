@@ -592,7 +592,10 @@ const DrawPageCore: React.FC = () => {
 
         const selected = window.getSelection();
 
-        if (getDrawState() === DrawState.OcrDetect) {
+        if (
+            getDrawState() === DrawState.OcrDetect &&
+            getAppSettings()[AppSettingsGroup.FunctionScreenshot].ocrCopyText
+        ) {
             const ocrResult = ocrBlocksActionRef.current?.getOcrResultAction()?.getOcrResult();
             writeTextToClipboard(ocrResult ? covertOcrResultToText(ocrResult) : '');
             finishCapture();

@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useRef } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { FixedContentCore, FixedContentActionType } from './components/fixedContentCore';
 import clipboard from 'tauri-plugin-clipboard-api';
 import { showWindow } from '@/utils/window';
@@ -9,11 +9,24 @@ import { setDrawWindowStyle } from '@/commands/screenshot';
 import { getCurrentMonitorInfo, readImageFromClipboard } from '@/commands/core';
 import { scrollScreenshotClear, scrollScreenshotGetImageData } from '@/commands/scrollScreenshot';
 import { convertFileSrc } from '@tauri-apps/api/core';
+import { AppSettingsFixedContentInitialPosition, AppSettingsGroup } from '../contextWrap';
+import { useAppSettingsLoad } from '@/hooks/useAppSettingsLoad';
 
 export default function FixedContentPage() {
     const fixedContentActionRef = useRef<FixedContentActionType>(undefined);
 
     const initedRef = useRef(false);
+
+    const [windowInitialPosition, setWindowInitialPosition] = useState<
+        undefined | AppSettingsFixedContentInitialPosition
+    >();
+    useAppSettingsLoad(
+        useCallback((settings) => {
+            setWindowInitialPosition(
+                settings[AppSettingsGroup.FunctionFixedContent].initialPosition,
+            );
+        }, []),
+    );
 
     const init = useCallback(async () => {
         const urlParams = new URLSearchParams(window.location.search);
@@ -88,10 +101,33 @@ export default function FixedContentPage() {
         init();
     }, [init]);
 
+    const [loadParams, setLoadParams] = useState<
+        | {
+              container:
+                  | { width: number; height: number }
+                  | null
+                  | HTMLImageElement
+                  | HTMLDivElement;
+          }
+        | undefined
+    >();
     const onHtmlTextImageLoad = useCallback(
         async (
             container: { width: number; height: number } | null | HTMLImageElement | HTMLDivElement,
         ) => {
+            setLoadParams({ container });
+        },
+        [],
+    );
+
+    useEffect(() => {
+        if (!loadParams || !windowInitialPosition) {
+            return;
+        }
+
+        const { container } = loadParams;
+
+        (async () => {
             const appWindow = getCurrentWindow();
 
             if (!container) {
@@ -119,16 +155,22 @@ export default function FixedContentPage() {
                 const windowWidth = Math.floor(width / scaleFactor);
                 const windowHeight = Math.floor(height / scaleFactor);
                 const monitorInfo = await monitorInfoPromise;
+
+                let targetX = monitorInfo.mouse_x;
+                let targetY = monitorInfo.mouse_y;
+                if (
+                    windowInitialPosition === AppSettingsFixedContentInitialPosition.MonitorCenter
+                ) {
+                    targetX = monitorInfo.monitor_x + monitorInfo.monitor_width / 2;
+                    targetY = monitorInfo.monitor_y + monitorInfo.monitor_height / 2;
+                }
+
                 await Promise.all([
                     appWindow.setSize(new PhysicalSize(windowWidth, windowHeight)),
                     appWindow.setPosition(
                         new PhysicalPosition(
-                            Math.round(
-                                monitorInfo.monitor_x + monitorInfo.mouse_x - windowWidth / 2,
-                            ),
-                            Math.round(
-                                monitorInfo.monitor_y + monitorInfo.mouse_y - windowHeight / 2,
-                            ),
+                            Math.round(targetX - windowWidth / 2),
+                            Math.round(targetY - windowHeight / 2),
                         ),
                     ),
                 ]);
@@ -137,9 +179,8 @@ export default function FixedContentPage() {
             } else {
                 await appWindow.close();
             }
-        },
-        [],
-    );
+        })();
+    }, [loadParams, windowInitialPosition]);
 
     return (
         <div>

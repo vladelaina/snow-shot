@@ -1,4 +1,4 @@
-import { PhysicalPosition, getCurrentWindow } from '@tauri-apps/api/window';
+import { getCurrentWindow } from '@tauri-apps/api/window';
 
 export const showWindow = async (ignoreFocus = false) => {
     const appWindow = getCurrentWindow();

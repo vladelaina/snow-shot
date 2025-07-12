@@ -17,13 +17,25 @@ export function useAppSettingsLoad(
 ) {
     const preSettingsRef = useRef<AppSettingsData | undefined>(undefined);
 
-    const invokeOnLoad = useMemo(
+    const hasLoadedRef = useRef(false);
+    const invokeOnLoadCore = useMemo(
         () =>
             debounce((settings: AppSettingsData) => {
                 onLoad(settings, preSettingsRef.current);
                 preSettingsRef.current = settings;
             }, 0),
         [onLoad],
+    );
+    const invokeOnLoad = useCallback(
+        (settings: AppSettingsData) => {
+            if (hasLoadedRef.current && !subscribe) {
+                return;
+            }
+
+            invokeOnLoadCore(settings);
+            hasLoadedRef.current = true;
+        },
+        [invokeOnLoadCore, subscribe],
     );
 
     const [getAppSettingsLoading] = useStateSubscriber(AppSettingsLoadingPublisher, undefined);
@@ -35,13 +47,9 @@ export function useAppSettingsLoad(
                     return;
                 }
 
-                if (!subscribe) {
-                    return;
-                }
-
                 invokeOnLoad(settings);
             },
-            [getAppSettingsLoading, invokeOnLoad, subscribe],
+            [getAppSettingsLoading, invokeOnLoad],
         ),
     );
 

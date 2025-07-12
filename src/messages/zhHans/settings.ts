@@ -178,6 +178,11 @@ export const settings = {
     'settings.functionSettings.fixedContentSettings': '固定到屏幕',
     'settings.functionSettings.fixedContentSettings.zoomWithMouse': '以鼠标为中心缩放',
     'settings.functionSettings.fixedContentSettings.autoOcr': '自动 OCR',
+    'settings.functionSettings.fixedContentSettings.initialPosition': '窗口初始位置',
+    'settings.functionSettings.fixedContentSettings.initialPosition.tip':
+        '截图的固定到屏幕不受影响',
+    'settings.functionSettings.fixedContentSettings.initialPosition.monitorCenter': '显示器居中',
+    'settings.functionSettings.fixedContentSettings.initialPosition.mousePosition': '鼠标位置',
     'settings.printScreen.tip':
         'Windows 下如无法唤起截图，请禁用系统的截图工具后再次尝试，如无响应可尝试重启',
     'settings.functionSettings.translationSettings.apiConfig': 'API 配置',
