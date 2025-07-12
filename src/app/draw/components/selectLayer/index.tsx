@@ -524,7 +524,7 @@ const SelectLayerCore: React.FC<SelectLayerProps> = ({ actionRef }) => {
         [getSelectRect, setSelectState, updateDragMode],
     );
     const onMouseMove = useCallback(
-        async (mousePosition: MousePosition, ignoreAnimation: boolean = false) => {
+        (mousePosition: MousePosition, ignoreAnimation: boolean = false) => {
             // 检测下鼠标移动的距离
             lastMouseMovePositionRef.current = mousePosition;
 
@@ -540,34 +540,42 @@ const SelectLayerCore: React.FC<SelectLayerProps> = ({ actionRef }) => {
                     }
                 }
 
-                const currentSelectRect = await autoSelect(mousePosition);
+                // 防止自动框选阻塞手动选择
+                (async () => {
+                    const currentSelectRect = await autoSelect(mousePosition);
 
-                // 注意做个纠正，防止超出显示器范围
-                currentSelectRect.min_x = Math.max(currentSelectRect.min_x, 0);
-                currentSelectRect.min_y = Math.max(currentSelectRect.min_y, 0);
-                currentSelectRect.max_x = Math.min(
-                    currentSelectRect.max_x,
-                    monitorInfoRef.current?.monitor_width ?? 0,
-                );
-                currentSelectRect.max_y = Math.min(
-                    currentSelectRect.max_y,
-                    monitorInfoRef.current?.monitor_height ?? 0,
-                );
+                    // 判断当前是否还是自动选择状态
+                    if (selectStateRef.current !== SelectState.Auto) {
+                        return;
+                    }
 
-                if (
-                    drawSelectRectAnimationRef.current?.isDone() &&
-                    currentSelectRect.min_x === getSelectRect()?.min_x &&
-                    currentSelectRect.min_y === getSelectRect()?.min_y &&
-                    currentSelectRect.max_x === getSelectRect()?.max_x &&
-                    currentSelectRect.max_y === getSelectRect()?.max_y
-                ) {
-                    setSelectRect(currentSelectRect, true, true);
-                } else {
-                    setSelectRect(
-                        currentSelectRect,
-                        ignoreAnimation || getScreenshotType() === ScreenshotType.TopWindow,
+                    // 注意做个纠正，防止超出显示器范围
+                    currentSelectRect.min_x = Math.max(currentSelectRect.min_x, 0);
+                    currentSelectRect.min_y = Math.max(currentSelectRect.min_y, 0);
+                    currentSelectRect.max_x = Math.min(
+                        currentSelectRect.max_x,
+                        monitorInfoRef.current?.monitor_width ?? 0,
                     );
-                }
+                    currentSelectRect.max_y = Math.min(
+                        currentSelectRect.max_y,
+                        monitorInfoRef.current?.monitor_height ?? 0,
+                    );
+
+                    if (
+                        drawSelectRectAnimationRef.current?.isDone() &&
+                        currentSelectRect.min_x === getSelectRect()?.min_x &&
+                        currentSelectRect.min_y === getSelectRect()?.min_y &&
+                        currentSelectRect.max_x === getSelectRect()?.max_x &&
+                        currentSelectRect.max_y === getSelectRect()?.max_y
+                    ) {
+                        setSelectRect(currentSelectRect, true, true);
+                    } else {
+                        setSelectRect(
+                            currentSelectRect,
+                            ignoreAnimation || getScreenshotType() === ScreenshotType.TopWindow,
+                        );
+                    }
+                })();
             } else if (selectStateRef.current === SelectState.Manual) {
                 if (!mouseDownPositionRef.current) {
                     return;

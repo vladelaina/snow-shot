@@ -89,118 +89,121 @@ fn capture_current_monitor_with_scap(
         return None;
     }
 
-    // macOS 下用 scap 截取，scap 使用最新的 ScreenCaptureKit API 进行截取
-    // macOS 可能遇到旧平台，这时回退到 xcap 截取
-    // if !scap::is_supported() {
-    //     return None;
-    // }
-    // scap 的版本比较看着不是很可靠，用 tauri 提供的方案比较下
-    let os_version = tauri_plugin_os::version();
-    if os_version.cmp(&tauri_plugin_os::Version::from_string("12.3.0"))
-        != std::cmp::Ordering::Greater
+    #[cfg(target_os = "macos")]
     {
-        return None;
-    }
-
-    if !scap::has_permission() {
-        log::warn!("[capture_current_monitor_with_scap] failed tohas_permission");
-        if !scap::request_permission() {
-            log::error!("[capture_current_monitor_with_scap] failed to request_permission");
+        // macOS 下用 scap 截取，scap 使用最新的 ScreenCaptureKit API 进行截取
+        // macOS 可能遇到旧平台，这时回退到 xcap 截取
+        // if !scap::is_supported() {
+        //     return None;
+        // }
+        // scap 的版本比较看着不是很可靠，用 tauri 提供的方案比较下
+        let os_version = tauri_plugin_os::version();
+        if os_version.cmp(&tauri_plugin_os::Version::from_string("12.3.0"))
+            != std::cmp::Ordering::Greater
+        {
             return None;
         }
-    }
 
-    let ns_handle = match window.ns_window() {
-        Ok(ns_handle) => ns_handle,
-        Err(_) => {
-            log::error!("[capture_current_monitor_with_scap] failed to get ns_window");
-            return None;
-        }
-    };
-
-    let monitor_id = match monitor.id() {
-        Ok(id) => id,
-        Err(e) => {
-            log::error!(
-                "[capture_current_monitor_with_scap] failed to get monitor id: {:?}",
-                e
-            );
-            return None;
-        }
-    };
-
-    let window_id = get_window_id_from_ns_handle(ns_handle);
-
-    let options = scap::capturer::Options {
-        fps: 1,
-        target: Some(scap::Target::Display(scap::Display {
-            id: monitor_id as u32,
-            title: "".to_string(), // 这里 title 不重要
-            raw_handle: core_graphics_helmer_fork::display::CGDisplay::new(monitor_id),
-        })),
-        show_cursor: false,
-        show_highlight: true,
-        excluded_targets: Some(vec![scap::Target::Window(scap::Window {
-            id: window_id,
-            title: "Snow Shot - Draw".to_string(),
-            raw_handle: window_id,
-        })]),
-        output_type: scap::frame::FrameType::BGRAFrame,
-        output_resolution: scap::capturer::Resolution::Captured,
-        crop_area: Some(scap::capturer::Area {
-            origin: scap::capturer::Point {
-                x: monitor.x().unwrap_or(0) as f64,
-                y: monitor.y().unwrap_or(0) as f64,
-            },
-            size: scap::capturer::Size {
-                width: monitor.width().unwrap_or(0) as f64,
-                height: monitor.height().unwrap_or(0) as f64,
-            },
-        }),
-        ..Default::default()
-    };
-
-    // Create Capturer
-    let capturer = scap::capturer::Capturer::build(options);
-    let mut capturer = match capturer {
-        Ok(capturer) => capturer,
-        Err(e) => {
-            log::error!(
-                "[capture_current_monitor_with_scap] failed to build capturer: {:?}",
-                e
-            );
-            return None;
-        }
-    };
-
-    capturer.start_capture();
-    let frame = match capturer.get_next_frame() {
-        Ok(frame) => match frame {
-            scap::frame::Frame::BGRA(frame) => frame,
-            _ => {
-                log::error!("[capture_current_monitor_with_scap] valid frame type");
+        if !scap::has_permission() {
+            log::warn!("[capture_current_monitor_with_scap] failed tohas_permission");
+            if !scap::request_permission() {
+                log::error!("[capture_current_monitor_with_scap] failed to request_permission");
                 return None;
             }
-        },
-        Err(e) => {
-            log::error!(
-                "[capture_current_monitor_with_scap] failed to get_next_frame: {:?}",
-                e
-            );
-            return None;
         }
-    };
-    capturer.stop_capture();
 
-    match image::RgbImage::from_raw(
-        frame.width as u32,
-        frame.height as u32,
-        bgra_to_rgb(&frame.data),
-    ) {
-        Some(rgb_image) => Some(image::DynamicImage::ImageRgb8(rgb_image)),
-        None => {
-            log::error!("[capture_current_monitor_with_scap] failed to create image");
-            return None;
+        let ns_handle = match window.ns_window() {
+            Ok(ns_handle) => ns_handle,
+            Err(_) => {
+                log::error!("[capture_current_monitor_with_scap] failed to get ns_window");
+                return None;
+            }
+        };
+
+        let monitor_id = match monitor.id() {
+            Ok(id) => id,
+            Err(e) => {
+                log::error!(
+                    "[capture_current_monitor_with_scap] failed to get monitor id: {:?}",
+                    e
+                );
+                return None;
+            }
+        };
+
+        let window_id = get_window_id_from_ns_handle(ns_handle);
+
+        let options = scap::capturer::Options {
+            fps: 1,
+            target: Some(scap::Target::Display(scap::Display {
+                id: monitor_id as u32,
+                title: "".to_string(), // 这里 title 不重要
+                raw_handle: core_graphics_helmer_fork::display::CGDisplay::new(monitor_id),
+            })),
+            show_cursor: false,
+            show_highlight: true,
+            excluded_targets: Some(vec![scap::Target::Window(scap::Window {
+                id: window_id,
+                title: "Snow Shot - Draw".to_string(),
+                raw_handle: window_id,
+            })]),
+            output_type: scap::frame::FrameType::BGRAFrame,
+            output_resolution: scap::capturer::Resolution::Captured,
+            crop_area: Some(scap::capturer::Area {
+                origin: scap::capturer::Point {
+                    x: monitor.x().unwrap_or(0) as f64,
+                    y: monitor.y().unwrap_or(0) as f64,
+                },
+                size: scap::capturer::Size {
+                    width: monitor.width().unwrap_or(0) as f64,
+                    height: monitor.height().unwrap_or(0) as f64,
+                },
+            }),
+            ..Default::default()
+        };
+
+        // Create Capturer
+        let capturer = scap::capturer::Capturer::build(options);
+        let mut capturer = match capturer {
+            Ok(capturer) => capturer,
+            Err(e) => {
+                log::error!(
+                    "[capture_current_monitor_with_scap] failed to build capturer: {:?}",
+                    e
+                );
+                return None;
+            }
+        };
+
+        capturer.start_capture();
+        let frame = match capturer.get_next_frame() {
+            Ok(frame) => match frame {
+                scap::frame::Frame::BGRA(frame) => frame,
+                _ => {
+                    log::error!("[capture_current_monitor_with_scap] valid frame type");
+                    return None;
+                }
+            },
+            Err(e) => {
+                log::error!(
+                    "[capture_current_monitor_with_scap] failed to get_next_frame: {:?}",
+                    e
+                );
+                return None;
+            }
+        };
+        capturer.stop_capture();
+
+        match image::RgbImage::from_raw(
+            frame.width as u32,
+            frame.height as u32,
+            bgra_to_rgb(&frame.data),
+        ) {
+            Some(rgb_image) => Some(image::DynamicImage::ImageRgb8(rgb_image)),
+            None => {
+                log::error!("[capture_current_monitor_with_scap] failed to create image");
+                return None;
+            }
         }
     }
 }
