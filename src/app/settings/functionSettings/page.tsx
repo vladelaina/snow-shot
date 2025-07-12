@@ -14,7 +14,12 @@ import {
     theme,
     Typography,
 } from 'antd';
-import { AppSettingsActionContext, AppSettingsData, AppSettingsGroup } from '../../contextWrap';
+import {
+    AppSettingsActionContext,
+    AppSettingsData,
+    AppSettingsFixedContentInitialPosition,
+    AppSettingsGroup,
+} from '../../contextWrap';
 import { useCallback, useContext, useEffect, useState } from 'react';
 import { useAppSettingsLoad } from '@/hooks/useAppSettingsLoad';
 import { FormattedMessage, useIntl } from 'react-intl';
@@ -442,6 +447,30 @@ export default function SystemSettings() {
                                 }
                                 name="autoOcr"
                                 layout="horizontal"
+                            />
+                        </Col>
+
+                        <Col span={12}>
+                            <ProFormSelect
+                                name="initialPosition"
+                                layout="horizontal"
+                                label={
+                                    <FormattedMessage id="settings.functionSettings.fixedContentSettings.initialPosition" />
+                                }
+                                options={[
+                                    {
+                                        label: (
+                                            <FormattedMessage id="settings.functionSettings.fixedContentSettings.initialPosition.monitorCenter" />
+                                        ),
+                                        value: AppSettingsFixedContentInitialPosition.MonitorCenter,
+                                    },
+                                    {
+                                        label: (
+                                            <FormattedMessage id="settings.functionSettings.fixedContentSettings.initialPosition.mousePosition" />
+                                        ),
+                                        value: AppSettingsFixedContentInitialPosition.MousePosition,
+                                    },
+                                ]}
                             />
                         </Col>
                     </Row>

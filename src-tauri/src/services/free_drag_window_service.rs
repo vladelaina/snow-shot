@@ -90,6 +90,7 @@ impl FreeDragWindowService {
                 let (mouse_x, mouse_y) = (position.0 as f64, position.1 as f64);
                 let (window_x, window_y) =
                     (mouse_x - relative_position.0, mouse_y - relative_position.1);
+
                 let _ = target_window.set_position(PhysicalPosition::new(window_x, window_y));
             }),
         ));

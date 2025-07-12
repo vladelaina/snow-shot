@@ -3,7 +3,7 @@ import { ElementRect, saveFile, getMousePosition } from '@/commands';
 import { useStateRef } from '@/hooks/useStateRef';
 import { useStateSubscriber } from '@/hooks/useStateSubscriber';
 import { LogicalPosition, PhysicalSize, PhysicalPosition } from '@tauri-apps/api/dpi';
-import { Menu } from '@tauri-apps/api/menu';
+import { Menu, MenuItemOptions } from '@tauri-apps/api/menu';
 import { getCurrentWindow, Window as AppWindow } from '@tauri-apps/api/window';
 import { Button, theme } from 'antd';
 import { useCallback, useEffect, useImperativeHandle, useRef, useState } from 'react';
@@ -24,6 +24,11 @@ import { getCurrentWebview, Webview } from '@tauri-apps/api/webview';
 import { setDrawWindowStyle } from '@/commands/screenshot';
 import html2canvas from 'html2canvas';
 import { openUrl } from '@tauri-apps/plugin-opener';
+import {
+    writeHtmlToClipboard,
+    writeImageToClipboard,
+    writeTextToClipboard,
+} from '@/utils/clipboard';
 
 export type FixedContentInitDrawParams = {
     monitorInfo: MonitorInfo;
@@ -339,7 +344,7 @@ export const FixedContentCore: React.FC<{
                 } else if ('textContent' in params) {
                     initText(params.textContent);
                 } else if ('canvas' in params) {
-                    initDraw(params);
+                    await initDraw(params);
                 } else if ('imageContent' in params) {
                     initImage(params.imageContent);
                 }
@@ -445,33 +450,22 @@ export const FixedContentCore: React.FC<{
                                 return;
                             }
 
-                            await navigator.clipboard.write([
-                                new ClipboardItem({
-                                    'image/png': blobRef.current,
-                                }),
-                            ]);
+                            await writeImageToClipboard(blobRef.current);
                         } else if (
                             fixedContentType === FixedContentType.Html &&
                             originHtmlContentRef.current
                         ) {
-                            await navigator.clipboard.write([
-                                new ClipboardItem({
-                                    'text/html': originHtmlContentRef.current,
-                                }),
-                            ]);
+                            await writeHtmlToClipboard(originHtmlContentRef.current);
                         } else if (
                             fixedContentType === FixedContentType.Text &&
                             textContentRef.current
                         ) {
-                            await navigator.clipboard.write([
-                                new ClipboardItem({
-                                    'text/plain': textContentRef.current,
-                                }),
-                            ]);
+                            await writeTextToClipboard(textContentRef.current);
                         } else if (
                             fixedContentType === FixedContentType.Image &&
                             imageBlobRef.current
                         ) {
+                            // 这里的图片类型不确定，浏览器不一定支持，所以通过本地 API 写入
                             const arrayBuffer = await imageBlobRef.current.arrayBuffer();
                             await clipboard.writeImageBinary(
                                 Array.from(new Uint8Array(arrayBuffer)),
@@ -600,7 +594,7 @@ export const FixedContentCore: React.FC<{
                         await closeWindowComplete();
                     },
                 },
-            ].filter((item) => item !== undefined),
+            ].filter((item) => item !== undefined) as MenuItemOptions[],
         });
         menuRef.current = menu;
     }, [intl, fixedContentType, hotkeys, textContentRef, getAppSettings, switchThumbnail]);

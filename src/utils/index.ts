@@ -1,5 +1,6 @@
 import { getCurrentWindow } from '@tauri-apps/api/window';
 import { Base64 } from 'js-base64';
+import { writeTextToClipboard } from './clipboard';
 
 export const encodeParamsValue = (value: string) => {
     return encodeURIComponent(Base64.encode(value));
@@ -12,10 +13,10 @@ export const decodeParamsValue = (value: string) => {
 export const copyText = (text: string) => {
     const selected = window.getSelection();
     if (selected && selected.toString()) {
-        window.navigator.clipboard.writeText(selected.toString());
+        writeTextToClipboard(selected.toString());
         selected.removeAllRanges();
     } else {
-        window.navigator.clipboard.writeText(text);
+        writeTextToClipboard(text);
     }
 };
 

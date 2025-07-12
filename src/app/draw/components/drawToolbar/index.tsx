@@ -383,11 +383,12 @@ const DrawToolbarCore: React.FC<DrawToolbarProps> = ({
 
     const drawToolbarContextValue = useMemo(() => {
         return {
+            drawToolarContainerRef,
             drawToolbarRef,
             draggingRef,
             setDragging,
         };
-    }, [drawToolbarRef, draggingRef, setDragging]);
+    }, [drawToolarContainerRef, drawToolbarRef, draggingRef, setDragging]);
 
     const canHandleScreenshotTypeRef = useRef(false);
     useStateSubscriber(
@@ -788,7 +789,7 @@ const DrawToolbarCore: React.FC<DrawToolbarProps> = ({
                     z-index: ${zIndexs.Draw_Toolbar};
                     top: 0;
                     left: 0;
-                    transition: opacity ${token.motionDurationFast} ${token.motionEaseInOut};
+                    opacity: 0;
                 }
 
                 .draw-toolbar-container:hover {

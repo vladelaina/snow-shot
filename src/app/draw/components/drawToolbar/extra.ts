@@ -12,12 +12,14 @@ export const getButtonIconColorByState = (active: boolean, token: GlobalToken) =
 };
 
 export type DrawToolbarContextType = {
+    drawToolarContainerRef: React.RefObject<HTMLDivElement | null>;
     drawToolbarRef: React.RefObject<HTMLDivElement | null>;
     draggingRef: React.RefObject<boolean>;
     setDragging: (dragging: boolean) => void;
 };
 
 export const DrawToolbarContext = React.createContext<DrawToolbarContextType>({
+    drawToolarContainerRef: { current: null },
     drawToolbarRef: { current: null },
     draggingRef: { current: false },
     setDragging: () => {},

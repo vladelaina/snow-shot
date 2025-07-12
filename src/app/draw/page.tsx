@@ -71,6 +71,9 @@ import {
     withCanvasHistory,
 } from '../fullScreenDraw/components/drawCore/components/historyContext';
 import { covertOcrResultToText } from '../fixedContent/components/ocrResult';
+import { writeTextToClipboard } from '@/utils/clipboard';
+import * as tauriOs from '@tauri-apps/plugin-os';
+import { compare } from 'compare-versions';
 
 const DrawCacheLayer = dynamic(
     async () => (await import('./components/drawCacheLayer')).DrawCacheLayer,
@@ -306,7 +309,6 @@ const DrawPageCore: React.FC = () => {
             drawPageStateRef.current = DrawPageState.WaitRelease;
             releasePage();
 
-            hideWindow();
             if (clearScrollScreenshot) {
                 scrollScreenshotClear();
             }
@@ -328,6 +330,11 @@ const DrawPageCore: React.FC = () => {
             drawToolbarActionRef.current?.setEnable(false);
             capturingRef.current = false;
             history.clear();
+
+            // 等待 1 帧，确保截图窗口内的元素均隐藏完成
+            setTimeout(() => {
+                hideWindow();
+            }, 17);
         },
         [
             hideWindow,
@@ -343,8 +350,18 @@ const DrawPageCore: React.FC = () => {
     const initMonitorInfoAndShowWindow = useCallback(async () => {
         const monitorInfo = await getCurrentMonitorInfo();
         monitorInfoRef.current = monitorInfo;
+
         await Promise.all([
-            showWindow(monitorInfo),
+            (async () => {
+                // 在 macOS 上，有概率截取到窗口内容，延迟显示窗口（12.3.0 以下）
+                if (tauriOs.platform() === 'macos' && compare(tauriOs.version(), '12.3.0', '<=')) {
+                    await new Promise((resolve) => {
+                        setTimeout(resolve, 16);
+                    });
+                }
+
+                await showWindow(monitorInfo);
+            })(),
             selectLayerActionRef.current?.onMonitorInfoReady(monitorInfo),
             drawLayerActionRef.current?.onMonitorInfoReady(monitorInfo),
         ]);
@@ -356,6 +373,8 @@ const DrawPageCore: React.FC = () => {
             capturingRef.current = true;
             drawToolbarActionRef.current?.setEnable(false);
 
+            const captureCurrentMonitorPromise = captureCurrentMonitor(ImageEncoder.WebP);
+
             setScreenshotType(excuteScreenshotType);
             const layerOnExecuteScreenshotPromise = Promise.all([
                 drawLayerActionRef.current?.onExecuteScreenshot(),
@@ -366,7 +385,7 @@ const DrawPageCore: React.FC = () => {
             });
 
             const initMonitorInfoPromise = initMonitorInfoAndShowWindow();
-            imageBufferRef.current = await captureCurrentMonitor(ImageEncoder.WebP);
+            imageBufferRef.current = await captureCurrentMonitorPromise;
             await initMonitorInfoPromise;
 
             // 防止用户提前退出报错
@@ -573,9 +592,12 @@ const DrawPageCore: React.FC = () => {
 
         const selected = window.getSelection();
 
-        if (getDrawState() === DrawState.OcrDetect) {
+        if (
+            getDrawState() === DrawState.OcrDetect &&
+            getAppSettings()[AppSettingsGroup.FunctionScreenshot].ocrCopyText
+        ) {
             const ocrResult = ocrBlocksActionRef.current?.getOcrResultAction()?.getOcrResult();
-            navigator.clipboard.writeText(ocrResult ? covertOcrResultToText(ocrResult) : '');
+            writeTextToClipboard(ocrResult ? covertOcrResultToText(ocrResult) : '');
             finishCapture();
             return;
         } else if (
@@ -583,7 +605,7 @@ const DrawPageCore: React.FC = () => {
             selected &&
             selected.toString()
         ) {
-            navigator.clipboard.writeText(selected.toString());
+            writeTextToClipboard(selected.toString());
             finishCapture();
             return;
         } else {

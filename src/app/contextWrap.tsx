@@ -77,6 +77,11 @@ export enum AppSettingsControlNode {
     Polyline = 'polyline',
 }
 
+export enum AppSettingsFixedContentInitialPosition {
+    MonitorCenter = 'monitorCenter',
+    MousePosition = 'mousePosition',
+}
+
 export type AppSettingsData = {
     [AppSettingsGroup.Common]: {
         darkMode: boolean;
@@ -192,6 +197,8 @@ export type AppSettingsData = {
         zoomWithMouse: boolean;
         /** 固定屏幕后自动 OCR */
         autoOcr: boolean;
+        /** 窗口初始位置 */
+        initialPosition: AppSettingsFixedContentInitialPosition;
     };
     [AppSettingsGroup.FunctionFullScreenDraw]: {
         /** 默认工具 */
@@ -317,6 +324,7 @@ export const defaultAppSettingsData: AppSettingsData = {
     [AppSettingsGroup.FunctionFixedContent]: {
         zoomWithMouse: true,
         autoOcr: true,
+        initialPosition: AppSettingsFixedContentInitialPosition.MousePosition,
     },
     [AppSettingsGroup.FunctionOutput]: {
         manualSaveFileNameFormat: `SnowShot_{YYYY-MM-DD_HH-mm-ss}`,
@@ -1110,6 +1118,11 @@ const ContextWrapCore: React.FC<{ children: React.ReactNode }> = ({ children }) 
                         typeof newSettings?.autoOcr === 'boolean'
                             ? newSettings.autoOcr
                             : (prevSettings?.autoOcr ?? defaultAppSettingsData[group].autoOcr),
+                    initialPosition:
+                        typeof newSettings?.initialPosition === 'string'
+                            ? (newSettings.initialPosition as AppSettingsFixedContentInitialPosition)
+                            : (prevSettings?.initialPosition ??
+                              defaultAppSettingsData[group].initialPosition),
                 };
             } else if (group === AppSettingsGroup.SystemScreenshot) {
                 newSettings = newSettings as AppSettingsData[typeof group];

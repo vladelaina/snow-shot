@@ -38,6 +38,7 @@ import Color from 'color';
 import { DrawToolbarStatePublisher } from '../drawToolbar';
 import { SelectState } from '../selectLayer/extra';
 import { DrawState, DrawStatePublisher } from '@/app/fullScreenDraw/components/drawCore/extra';
+import { writeTextToClipboard } from '@/utils/clipboard';
 
 const previewScale = 12;
 const previewPickerSize = 10 + 1;
@@ -556,7 +557,7 @@ const ColorPickerCore: React.FC<{
                         return;
                     }
 
-                    navigator.clipboard.writeText(
+                    writeTextToClipboard(
                         getFormatColor(
                             colorRef.current.red,
                             colorRef.current.green,

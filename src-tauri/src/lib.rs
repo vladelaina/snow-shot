@@ -18,7 +18,6 @@ use os::ui_automation::UIElements;
 use paddle_ocr_rs::ocr_lite::OcrLite;
 use tauri::Manager;
 use tauri_plugin_log::{Target, TargetKind};
-use os::free_drag::remove_window_proc;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {

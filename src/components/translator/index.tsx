@@ -44,6 +44,7 @@ import { defaultTranslationPrompt, getTranslationPrompt } from '@/app/tools/tran
 import { ModelSelectLabel } from '@/app/tools/chat/components/modelSelectLabel';
 import React from 'react';
 import { appFetch } from '@/services/tools';
+import { writeTextToClipboard } from '@/utils/clipboard';
 
 const SelectLabel: React.FC<{
     label: React.ReactNode;
@@ -924,7 +925,7 @@ const TranslatorCore: React.FC<{
                                         shape="circle"
                                         icon={<CopyOutlined />}
                                         onClick={() => {
-                                            navigator.clipboard.writeText(translatedContent);
+                                            writeTextToClipboard(translatedContent);
                                         }}
                                     />
                                 </Flex>
