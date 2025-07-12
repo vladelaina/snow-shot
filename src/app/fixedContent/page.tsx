@@ -156,8 +156,8 @@ export default function FixedContentPage() {
                 const windowHeight = Math.floor(height / scaleFactor);
                 const monitorInfo = await monitorInfoPromise;
 
-                let targetX = monitorInfo.mouse_x;
-                let targetY = monitorInfo.mouse_y;
+                let targetX = monitorInfo.monitor_x + monitorInfo.mouse_x;
+                let targetY = monitorInfo.monitor_y + monitorInfo.mouse_y;
                 if (
                     windowInitialPosition === AppSettingsFixedContentInitialPosition.MonitorCenter
                 ) {
