@@ -17,6 +17,8 @@ export const getCanvas = async (
     drawLayerAction: DrawLayerActionType,
     drawCacheLayerAction: DrawCacheLayerActionType,
 ): Promise<HTMLCanvasElement | undefined> => {
+    drawCacheLayerAction.finishDraw();
+
     // 获取图像数据
     const drawLayerImageData = await drawLayerAction.getImageData(selectRect);
     const drawCacheLayerCanvas = drawCacheLayerAction.getCanvas();
