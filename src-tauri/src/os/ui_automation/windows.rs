@@ -498,7 +498,7 @@ impl UIElements {
         };
 
         if try_get_first_child {
-            // UI Automation 每次获取的元素不一定是全的，这里重新获取下
+            // 没有命中缓存，说明是第一次获取
             let first_child = self.get_first_child(&parent_element, &parent_level, app_window);
             match first_child {
                 Ok(element) => {
