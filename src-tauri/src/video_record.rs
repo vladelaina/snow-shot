@@ -69,12 +69,13 @@ pub async fn video_record_start(
 #[command]
 pub async fn video_record_stop(
     video_service: tauri::State<'_, Mutex<crate::services::VideoRecordService>>,
+    convert_to_gif: bool,
 ) -> Result<Option<String>, String> {
     println!("Stopping video recording...");
 
     let mut service = video_service.lock().await;
 
-    match service.stop() {
+    match service.stop(convert_to_gif) {
         Ok(final_filename) => {
             println!("Video recording stopped successfully");
             Ok(final_filename)

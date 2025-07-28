@@ -63,4 +63,8 @@ export class MousePosition {
         this.mouseX += mousePosition.mouseX;
         this.mouseY += mousePosition.mouseY;
     };
+
+    public equals = (other: MousePosition) => {
+        return this.mouseX === other.mouseX && this.mouseY === other.mouseY;
+    };
 }

@@ -15,12 +15,11 @@ import { useCallbackRender } from '@/hooks/useCallbackRender';
 import { zIndexs } from '@/utils/zIndex';
 import Image from 'next/image';
 import { CloseOutlined } from '@ant-design/icons';
-import { OcrResult, OcrResultActionType } from '../ocrResult';
+import { AppOcrResult, OcrResult, OcrResultActionType } from '../ocrResult';
 import clipboard from 'tauri-plugin-clipboard-api';
 import { KeyEventKey, KeyEventValue } from '@/core/hotKeys';
 import { useHotkeys } from 'react-hotkeys-hook';
 import { MonitorInfo, startFreeDrag } from '@/commands/core';
-import { getCurrentWebview, Webview } from '@tauri-apps/api/webview';
 import { setDrawWindowStyle } from '@/commands/screenshot';
 import html2canvas from 'html2canvas';
 import { openUrl } from '@tauri-apps/plugin-opener';
@@ -29,10 +28,14 @@ import {
     writeImageToClipboard,
     writeTextToClipboard,
 } from '@/utils/clipboard';
+import { TweenAnimation } from '@/utils/tweenAnimation';
+import * as TWEEN from '@tweenjs/tween.js';
 
 export type FixedContentInitDrawParams = {
     monitorInfo: MonitorInfo;
     canvas: HTMLCanvasElement;
+    /** 已有的 OCR 结果 */
+    ocrResult: AppOcrResult | undefined;
 };
 
 export type FixedContentInitHtmlParams = {
@@ -88,10 +91,8 @@ export const FixedContentCore: React.FC<{
     );
 
     const appWindowRef = useRef<AppWindow | undefined>(undefined);
-    const appWebViewRef = useRef<Webview | undefined>(undefined);
     useEffect(() => {
         appWindowRef.current = getCurrentWindow();
-        appWebViewRef.current = getCurrentWebview();
     }, []);
 
     const [getAppSettings] = useStateSubscriber(AppSettingsPublisher, undefined);
@@ -110,6 +111,13 @@ export const FixedContentCore: React.FC<{
     const [canvasImageUrl, setCanvasImageUrl] = useState<string | undefined>(undefined);
     const [imageUrl, setImageUrl] = useState<string | undefined>(undefined);
     const imageBlobRef = useRef<Blob | undefined>(undefined);
+    const [scale, setScale, scaleRef] = useStateRef<{
+        x: number;
+        y: number;
+    }>({
+        x: 100,
+        y: 100,
+    });
 
     const [fixedContentType, setFixedContentType] = useState<FixedContentType | undefined>(
         undefined,
@@ -253,6 +261,7 @@ export const FixedContentCore: React.FC<{
         selectRect: ElementRect;
         canvas: HTMLCanvasElement;
         monitorInfo: MonitorInfo;
+        ocrResult: undefined;
     }>(undefined);
 
     const imageRef = useRef<HTMLImageElement>(null);
@@ -282,11 +291,15 @@ export const FixedContentCore: React.FC<{
                 max_x: canvas.width,
                 max_y: canvas.height,
             };
-            if (!getAppSettings()[AppSettingsGroup.FunctionFixedContent].autoOcr) {
+            if (
+                !getAppSettings()[AppSettingsGroup.FunctionFixedContent].autoOcr &&
+                !params.ocrResult
+            ) {
                 initOcrParams.current = {
                     selectRect: ocrRect,
                     monitorInfo,
                     canvas,
+                    ocrResult: params.ocrResult,
                 };
             }
 
@@ -329,6 +342,7 @@ export const FixedContentCore: React.FC<{
                     },
                     monitorInfo,
                     canvas,
+                    ocrResult: params.ocrResult,
                 });
             }
         },
@@ -380,24 +394,70 @@ export const FixedContentCore: React.FC<{
         | {
               size: PhysicalSize;
               position: PhysicalPosition;
+              scale: {
+                  x: number;
+                  y: number;
+              };
           }
         | undefined
     >(undefined);
+
+    const switchThumbnailAnimationRef = useRef<
+        | TweenAnimation<{
+              width: number;
+              height: number;
+              x: number;
+              y: number;
+          }>
+        | undefined
+    >(undefined); // 切换缩略图的动画
+
     const switchThumbnail = useCallback(async () => {
+        if (!switchThumbnailAnimationRef.current) {
+            switchThumbnailAnimationRef.current = new TweenAnimation<{
+                width: number;
+                height: number;
+                x: number;
+                y: number;
+            }>(
+                {
+                    width: 0,
+                    height: 0,
+                    x: 0,
+                    y: 0,
+                },
+                TWEEN.Easing.Quadratic.Out,
+                128,
+                ({ width, height, x, y }) => {
+                    const appWindow = appWindowRef.current;
+                    if (!appWindow) {
+                        return;
+                    }
+
+                    appWindow.setSize(new PhysicalSize(Math.round(width), Math.round(height)));
+                    appWindow.setPosition(new PhysicalPosition(Math.round(x), Math.round(y)));
+                },
+            );
+        }
+
         const appWindow = appWindowRef.current;
-        const appWebView = appWebViewRef.current;
-        if (!appWindow || !appWebView) {
+        if (!appWindow) {
             return;
         }
 
         setDrawWindowStyle();
 
         if (originWindowSizeAndPositionRef.current) {
-            await Promise.all([
-                appWindow.setSize(originWindowSizeAndPositionRef.current.size),
-                appWebView.setSize(originWindowSizeAndPositionRef.current.size),
-                appWindow.setPosition(originWindowSizeAndPositionRef.current.position),
-            ]);
+            switchThumbnailAnimationRef.current.update({
+                width: originWindowSizeAndPositionRef.current.size.width,
+                height: originWindowSizeAndPositionRef.current.size.height,
+                x: originWindowSizeAndPositionRef.current.position.x,
+                y: originWindowSizeAndPositionRef.current.position.y,
+            });
+            setScale({
+                x: originWindowSizeAndPositionRef.current.scale.x,
+                y: originWindowSizeAndPositionRef.current.scale.y,
+            });
             originWindowSizeAndPositionRef.current = undefined;
             setIsThumbnail(false);
         } else {
@@ -406,9 +466,23 @@ export const FixedContentCore: React.FC<{
                 appWindow.outerPosition(),
             ]);
 
+            switchThumbnailAnimationRef.current.update(
+                {
+                    width: windowSize.width,
+                    height: windowSize.height,
+                    x: windowPosition.x,
+                    y: windowPosition.y,
+                },
+                true,
+            );
+
             originWindowSizeAndPositionRef.current = {
                 size: windowSize,
                 position: windowPosition,
+                scale: {
+                    x: scaleRef.current.x,
+                    y: scaleRef.current.y,
+                },
             };
 
             const thumbnailSize = Math.floor(42 * window.devicePixelRatio);
@@ -421,15 +495,25 @@ export const FixedContentCore: React.FC<{
             const newY = Math.round(mouseY - thumbnailSize / 2);
 
             // 同时设置窗口大小和位置
-            await Promise.all([
-                appWindow.setSize(new PhysicalSize(thumbnailSize, thumbnailSize)),
-                appWindow.setPosition(new PhysicalPosition(newX, newY)),
-                appWebView.setSize(new PhysicalSize(thumbnailSize, thumbnailSize)),
-            ]);
+            switchThumbnailAnimationRef.current.update({
+                width: thumbnailSize,
+                height: thumbnailSize,
+                x: newX,
+                y: newY,
+            });
+
+            setScale({
+                x: Math.round(
+                    (thumbnailSize / (windowSize.width / (scaleRef.current.x / 100))) * 100,
+                ),
+                y: Math.round(
+                    (thumbnailSize / (windowSize.height / (scaleRef.current.y / 100))) * 100,
+                ),
+            });
 
             setIsThumbnail(true);
         }
-    }, []);
+    }, [scaleRef, setScale]);
 
     const menuRef = useRef<Menu>(undefined);
 
@@ -608,7 +692,6 @@ export const FixedContentCore: React.FC<{
         };
     }, [initMenu]);
 
-    const [scale, setScale, scaleRef] = useStateRef(100);
     const [showScaleInfo, setShowScaleInfo] = useState(false);
     const scaleTimerRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -628,8 +711,7 @@ export const FixedContentCore: React.FC<{
     const scaleWindow = useCallback(
         async (scaleDelta: number) => {
             const appWindow = appWindowRef.current;
-            const appWebView = appWebViewRef.current;
-            if (!appWindow || !appWebView) {
+            if (!appWindow) {
                 return;
             }
 
@@ -645,7 +727,7 @@ export const FixedContentCore: React.FC<{
             const zoomWithMouse =
                 getAppSettings()[AppSettingsGroup.FunctionFixedContent].zoomWithMouse;
 
-            let targetScale = scaleRef.current + scaleDelta;
+            let targetScale = scaleRef.current.x + scaleDelta;
 
             if (targetScale <= 20) {
                 targetScale = 20;
@@ -653,7 +735,7 @@ export const FixedContentCore: React.FC<{
                 targetScale = 500;
             }
 
-            if (targetScale === scaleRef.current) {
+            if (targetScale === scaleRef.current.x) {
                 return;
             }
 
@@ -683,26 +765,22 @@ export const FixedContentCore: React.FC<{
                     // 同时设置窗口大小和位置
                     await Promise.all([
                         appWindow.setSize(new PhysicalSize(newWidth, newHeight)),
-                        appWebView.setSize(new PhysicalSize(newWidth, newHeight)),
                         appWindow.setPosition(new PhysicalPosition(newX, newY)),
                     ]);
                 } catch (error) {
                     console.error('Error during mouse-centered scaling:', error);
                     // 如果出错，回退到普通缩放
-                    await Promise.all([
-                        appWindow.setSize(new PhysicalSize(newWidth, newHeight)),
-                        appWebView.setSize(new PhysicalSize(newWidth, newHeight)),
-                    ]);
+                    await Promise.all([appWindow.setSize(new PhysicalSize(newWidth, newHeight))]);
                 }
             } else {
                 // 普通缩放，只改变窗口大小
-                await Promise.all([
-                    appWindow.setSize(new PhysicalSize(newWidth, newHeight)),
-                    appWebView.setSize(new PhysicalSize(newWidth, newHeight)),
-                ]);
+                await Promise.all([appWindow.setSize(new PhysicalSize(newWidth, newHeight))]);
             }
 
-            setScale(targetScale);
+            setScale({
+                x: targetScale,
+                y: targetScale,
+            });
             ocrResultActionRef.current?.setScale(targetScale);
             showScaleInfoTemporary();
         },
@@ -792,6 +870,15 @@ export const FixedContentCore: React.FC<{
         enabled: !disabled,
     });
 
+    const onDoubleClick = useCallback(
+        (e: React.MouseEvent<HTMLDivElement>) => {
+            e.stopPropagation();
+            e.preventDefault();
+            switchThumbnail();
+        },
+        [switchThumbnail],
+    );
+
     return (
         <div
             className="fixed-image-container"
@@ -801,9 +888,10 @@ export const FixedContentCore: React.FC<{
                 zIndex: zIndexs.Draw_FixedImage,
                 pointerEvents:
                     canvasImageUrl || htmlBlobUrl || textContent || imageUrl ? 'auto' : 'none',
+                opacity: isThumbnail ? 0.72 : 1,
             }}
             onContextMenu={handleContextMenu}
-            onDoubleClick={switchThumbnail}
+            onDoubleClick={onDoubleClick}
         >
             <OcrResult
                 actionRef={ocrResultActionRef}
@@ -823,7 +911,7 @@ export const FixedContentCore: React.FC<{
                     }}
                     style={{
                         transformOrigin: 'top left',
-                        transform: `scale(${scale / 100})`,
+                        transform: `scale(${scale.x / 100}, ${scale.y / 100})`,
                         userSelect: 'none',
                     }}
                 />
@@ -851,7 +939,7 @@ export const FixedContentCore: React.FC<{
                     }}
                     style={{
                         transformOrigin: 'top left',
-                        transform: `scale(${scale / 100 / window.devicePixelRatio})`,
+                        transform: `scale(${scale.x / 100 / window.devicePixelRatio}, ${scale.y / 100 / window.devicePixelRatio})`,
                         userSelect: 'none',
                     }}
                 />
@@ -917,7 +1005,7 @@ export const FixedContentCore: React.FC<{
                         transition: `opacity ${token.motionDurationFast} ${token.motionEaseInOut}`,
                     }}
                 >
-                    {scale}%
+                    {scale.x}%
                 </div>
             </div>
 
@@ -960,7 +1048,7 @@ export const FixedContentCore: React.FC<{
                 .fixed-html-content,
                 .fixed-text-content {
                     transform-origin: top left;
-                    transform: scale(${scale / 100});
+                    transform: scale(${scale.x / 100}, ${scale.y / 100});
                     z-index: ${enableSelectText ? 1 : 'unset'};
                     position: absolute;
                     top: 0;

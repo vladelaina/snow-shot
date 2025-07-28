@@ -15,4 +15,5 @@ export type DrawCacheLayerActionType = {
     getAppState: () => AppState | undefined;
     getDrawCacheLayerElement: () => HTMLDivElement | null | undefined;
     getExcalidrawAPI: () => ExcalidrawImperativeAPI | undefined;
+    finishDraw: () => void;
 };

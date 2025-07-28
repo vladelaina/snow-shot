@@ -439,7 +439,7 @@ impl VideoRecordService {
         format!("{}.{}", params.output_file, params.format.extension())
     }
 
-    pub fn stop(&mut self) -> Result<Option<String>> {
+    pub fn stop(&mut self, convert_to_gif: bool) -> Result<Option<String>> {
         if self.state != VideoRecordState::Recording && self.state != VideoRecordState::Paused {
             return Ok(None);
         }
@@ -453,7 +453,7 @@ impl VideoRecordService {
         }
 
         // 如果只有一个片段，直接重命名
-        let final_filename = self.get_final_filename();
+        let mut final_filename = self.get_final_filename();
         if self.segments.len() == 1 {
             if let Err(e) = std::fs::rename(&self.segments[0], &final_filename) {
                 println!("Failed to rename single segment: {}", e);
@@ -465,6 +465,11 @@ impl VideoRecordService {
         } else if self.segments.len() > 1 {
             // 多个片段需要合并
             self.merge_segments(final_filename.clone())?;
+        }
+
+        // 如果需要转换为GIF格式
+        if convert_to_gif && self.recording_params.as_ref().unwrap().format == VideoFormat::Mp4 {
+            final_filename = self.convert_to_gif(&final_filename)?;
         }
 
         self.cleanup();
@@ -527,6 +532,75 @@ impl VideoRecordService {
                 Err(std::io::Error::new(
                     std::io::ErrorKind::Other,
                     format!("Failed to merge segments: {}", e),
+                ))
+            }
+        }
+    }
+
+    fn convert_to_gif(&self, mp4_filename: &str) -> Result<String> {
+        let params = self.recording_params.as_ref().unwrap();
+
+        // 生成GIF文件名
+        let gif_filename = format!("{}.gif", params.output_file);
+
+        println!(
+            "[FFmpeg] Converting MP4 to GIF: {} -> {}",
+            mp4_filename, gif_filename
+        );
+
+        // 确保输出文件的目录存在
+        if let Some(parent_dir) = std::path::Path::new(&gif_filename).parent() {
+            if let Err(e) = std::fs::create_dir_all(parent_dir) {
+                return Err(std::io::Error::new(
+                    std::io::ErrorKind::Other,
+                    format!("Failed to create output directory: {}", e),
+                ));
+            }
+        }
+
+        // 构建FFmpeg命令进行MP4到GIF的转换
+        let mut command = self.get_ffmpeg_command();
+        command
+            .arg("-i")
+            .arg(mp4_filename)
+            .arg("-vf")
+            .arg("fps=12,scale=480:-1:flags=lanczos,split[s0][s1];[s0]palettegen[p];[s1][p]paletteuse")
+            .arg("-loop")
+            .arg("0")
+            .arg("-y")
+            .arg(&gif_filename);
+
+        println!("FFmpeg GIF conversion command: {:?}", command);
+
+        match command.spawn() {
+            Ok(mut child) => {
+                let _ = child.wait();
+
+                // 检查GIF文件是否成功生成
+                if std::path::Path::new(&gif_filename).exists() {
+                    println!("GIF conversion completed successfully: {}", gif_filename);
+
+                    // 删除原始MP4文件
+                    if let Err(e) = std::fs::remove_file(mp4_filename) {
+                        println!(
+                            "Warning: Failed to delete original MP4 file {}: {}",
+                            mp4_filename, e
+                        );
+                    }
+
+                    Ok(gif_filename)
+                } else {
+                    Err(std::io::Error::new(
+                        std::io::ErrorKind::Other,
+                        "GIF conversion failed - output file not found",
+                    ))
+                }
+            }
+            Err(e) => {
+                println!("Failed to convert MP4 to GIF: {}", e);
+                Err(std::io::Error::new(
+                    std::io::ErrorKind::Other,
+                    format!("Failed to convert MP4 to GIF: {}", e),
                 ))
             }
         }

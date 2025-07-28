@@ -523,6 +523,79 @@ const SelectLayerCore: React.FC<SelectLayerProps> = ({ actionRef }) => {
         },
         [getSelectRect, setSelectState, updateDragMode],
     );
+
+    const onMouseMoveAutoSelectCore = useCallback(
+        async (mousePosition: MousePosition, ignoreAnimation: boolean = false) => {
+            // 防止自动框选阻塞手动选择
+            const currentSelectRect = await autoSelect(mousePosition);
+
+            // 判断当前是否还是自动选择状态
+            if (selectStateRef.current !== SelectState.Auto) {
+                return;
+            }
+
+            // 注意做个纠正，防止超出显示器范围
+            currentSelectRect.min_x = Math.max(currentSelectRect.min_x, 0);
+            currentSelectRect.min_y = Math.max(currentSelectRect.min_y, 0);
+            currentSelectRect.max_x = Math.min(
+                currentSelectRect.max_x,
+                monitorInfoRef.current?.monitor_width ?? 0,
+            );
+            currentSelectRect.max_y = Math.min(
+                currentSelectRect.max_y,
+                monitorInfoRef.current?.monitor_height ?? 0,
+            );
+
+            if (
+                drawSelectRectAnimationRef.current?.isDone() &&
+                currentSelectRect.min_x === getSelectRect()?.min_x &&
+                currentSelectRect.min_y === getSelectRect()?.min_y &&
+                currentSelectRect.max_x === getSelectRect()?.max_x &&
+                currentSelectRect.max_y === getSelectRect()?.max_y
+            ) {
+                setSelectRect(currentSelectRect, true, true);
+            } else {
+                setSelectRect(
+                    currentSelectRect,
+                    ignoreAnimation || getScreenshotType() === ScreenshotType.TopWindow,
+                );
+            }
+        },
+        [autoSelect, getSelectRect, setSelectRect, getScreenshotType],
+    );
+    const onMouseMoveAutoSelectLastParamsRef = useRef<
+        | {
+              mousePosition: MousePosition;
+              ignoreAnimation: boolean;
+          }
+        | undefined
+    >(undefined);
+    const onMouseMoveAutoSelect = useCallback(
+        async (mousePosition: MousePosition, ignoreAnimation: boolean = false) => {
+            onMouseMoveAutoSelectLastParamsRef.current = {
+                mousePosition,
+                ignoreAnimation,
+            };
+
+            while (onMouseMoveAutoSelectLastParamsRef.current) {
+                await onMouseMoveAutoSelectCore(
+                    onMouseMoveAutoSelectLastParamsRef.current.mousePosition,
+                    onMouseMoveAutoSelectLastParamsRef.current.ignoreAnimation,
+                );
+
+                if (
+                    onMouseMoveAutoSelectLastParamsRef.current &&
+                    onMouseMoveAutoSelectLastParamsRef.current.mousePosition.equals(
+                        mousePosition,
+                    ) &&
+                    onMouseMoveAutoSelectLastParamsRef.current.ignoreAnimation === ignoreAnimation
+                ) {
+                    onMouseMoveAutoSelectLastParamsRef.current = undefined;
+                }
+            }
+        },
+        [onMouseMoveAutoSelectCore],
+    );
     const onMouseMove = useCallback(
         (mousePosition: MousePosition, ignoreAnimation: boolean = false) => {
             // 检测下鼠标移动的距离
@@ -540,42 +613,8 @@ const SelectLayerCore: React.FC<SelectLayerProps> = ({ actionRef }) => {
                     }
                 }
 
-                // 防止自动框选阻塞手动选择
-                (async () => {
-                    const currentSelectRect = await autoSelect(mousePosition);
-
-                    // 判断当前是否还是自动选择状态
-                    if (selectStateRef.current !== SelectState.Auto) {
-                        return;
-                    }
-
-                    // 注意做个纠正，防止超出显示器范围
-                    currentSelectRect.min_x = Math.max(currentSelectRect.min_x, 0);
-                    currentSelectRect.min_y = Math.max(currentSelectRect.min_y, 0);
-                    currentSelectRect.max_x = Math.min(
-                        currentSelectRect.max_x,
-                        monitorInfoRef.current?.monitor_width ?? 0,
-                    );
-                    currentSelectRect.max_y = Math.min(
-                        currentSelectRect.max_y,
-                        monitorInfoRef.current?.monitor_height ?? 0,
-                    );
-
-                    if (
-                        drawSelectRectAnimationRef.current?.isDone() &&
-                        currentSelectRect.min_x === getSelectRect()?.min_x &&
-                        currentSelectRect.min_y === getSelectRect()?.min_y &&
-                        currentSelectRect.max_x === getSelectRect()?.max_x &&
-                        currentSelectRect.max_y === getSelectRect()?.max_y
-                    ) {
-                        setSelectRect(currentSelectRect, true, true);
-                    } else {
-                        setSelectRect(
-                            currentSelectRect,
-                            ignoreAnimation || getScreenshotType() === ScreenshotType.TopWindow,
-                        );
-                    }
-                })();
+                // 防止自动框选阻塞手动选择，使用异步方案
+                onMouseMoveAutoSelect(mousePosition, ignoreAnimation);
             } else if (selectStateRef.current === SelectState.Manual) {
                 if (!mouseDownPositionRef.current) {
                     return;
@@ -600,14 +639,7 @@ const SelectLayerCore: React.FC<SelectLayerProps> = ({ actionRef }) => {
                 );
             }
         },
-        [
-            autoSelect,
-            getScreenshotType,
-            getSelectRect,
-            setSelectRect,
-            setSelectState,
-            updateDragMode,
-        ],
+        [onMouseMoveAutoSelect, getScreenshotType, setSelectState, setSelectRect, updateDragMode],
     );
     const onMouseUp = useCallback(() => {
         if (!mouseDownPositionRef.current) {

@@ -10,12 +10,15 @@ import { showImageDialog, ImageFormat, ImagePath } from '@/utils/file';
 import { MonitorInfo } from '@/commands/core';
 import { AppSettingsData } from '../contextWrap';
 import { writeImageToClipboard } from '@/utils/clipboard';
+import { AppOcrResult } from '../fixedContent/components/ocrResult';
 
 export const getCanvas = async (
     selectRect: ElementRect,
     drawLayerAction: DrawLayerActionType,
     drawCacheLayerAction: DrawCacheLayerActionType,
 ): Promise<HTMLCanvasElement | undefined> => {
+    drawCacheLayerAction.finishDraw();
+
     // 获取图像数据
     const drawLayerImageData = await drawLayerAction.getImageData(selectRect);
     const drawCacheLayerCanvas = drawCacheLayerAction.getCanvas();
@@ -115,6 +118,8 @@ export const fixedToScreen = async (
     drawCacheLayerAction: DrawCacheLayerActionType,
     fixedContentAction: FixedContentActionType,
     setCaptureStep: (step: CaptureStep) => void,
+    /** 已有的 OCR 结果 */
+    ocrResult: AppOcrResult | undefined,
 ) => {
     const selectRect = selectLayerAction.getSelectRect();
     if (!selectRect) {
@@ -160,7 +165,7 @@ export const fixedToScreen = async (
     await Promise.all([
         appWindow.show(),
         appWindow.setAlwaysOnTop(true),
-        fixedContentAction.init({ canvas: imageCanvas, monitorInfo }),
+        fixedContentAction.init({ canvas: imageCanvas, monitorInfo, ocrResult }),
         appWindow.setPosition(
             new PhysicalPosition(
                 selectRect.min_x + monitorInfo.monitor_x,
@@ -240,5 +245,5 @@ export const handleOcrDetect = async (
         return;
     }
 
-    await ocrBlocksAction.init(selectRect, monitorInfo, imageCanvas);
+    await ocrBlocksAction.init(selectRect, monitorInfo, imageCanvas, undefined);
 };

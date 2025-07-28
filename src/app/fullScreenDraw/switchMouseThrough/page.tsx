@@ -60,7 +60,7 @@ export default function MouseThroughPage() {
     }, [addListener, removeListener, enable]);
 
     return (
-        <div className="container">
+        <div className="container" onContextMenu={(e) => e.preventDefault()}>
             <Button
                 block
                 icon={<MouseThroughIcon />}

@@ -1,6 +1,12 @@
 'use client';
 
-import { CloseOutlined, CopyOutlined, HolderOutlined, PauseOutlined } from '@ant-design/icons';
+import {
+    CloseOutlined,
+    CopyOutlined,
+    GifOutlined,
+    HolderOutlined,
+    PauseOutlined,
+} from '@ant-design/icons';
 import { Button, Flex, Spin, theme } from 'antd';
 import { useIntl } from 'react-intl';
 import { useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
@@ -191,32 +197,35 @@ export default function VideoRecordToolbar() {
         true,
     );
 
-    const stopRecord = useCallback(async (): Promise<string | null | undefined> => {
-        setStopRecordLoading(true);
+    const stopRecord = useCallback(
+        async (convertToGif: boolean): Promise<string | null | undefined> => {
+            setStopRecordLoading(true);
 
-        let outputFile: string | null | undefined = undefined;
-        try {
-            outputFile = await videoRecordStop();
+            let outputFile: string | null | undefined = undefined;
+            try {
+                outputFile = await videoRecordStop(convertToGif);
 
-            setVideoRecordState(VideoRecordState.Idle);
+                setVideoRecordState(VideoRecordState.Idle);
 
-            stopDurationTimer();
+                stopDurationTimer();
 
-            durationRef.current = 0;
-            updateDurationFormat();
-        } catch {}
+                durationRef.current = 0;
+                updateDurationFormat();
+            } catch {}
 
-        setStopRecordLoading(false);
+            setStopRecordLoading(false);
 
-        return outputFile;
-    }, [updateDurationFormat, stopDurationTimer]);
+            return outputFile;
+        },
+        [updateDurationFormat, stopDurationTimer],
+    );
 
     const enableStopRecord =
         videoRecordState === VideoRecordState.Recording ||
         videoRecordState === VideoRecordState.Paused;
 
     return (
-        <div className="video-record-toolbar-container">
+        <div className="video-record-toolbar-container" onContextMenu={(e) => e.preventDefault()}>
             <div data-tauri-drag-region className="toolbar-drag-region before" />
             <div data-tauri-drag-region className="toolbar-drag-region after" />
 
@@ -291,7 +300,7 @@ export default function VideoRecordToolbar() {
                             <Button
                                 loading={stopRecordLoading}
                                 onClick={() => {
-                                    stopRecord();
+                                    stopRecord(false);
                                 }}
                                 icon={
                                     <StopRecordIcon
@@ -439,7 +448,7 @@ export default function VideoRecordToolbar() {
 
                         <Button
                             onClick={() => {
-                                stopRecord().then(() => {
+                                stopRecord(false).then(() => {
                                     closeVideoRecordWindow().then(() => {
                                         getCurrentWindow().close();
                                     });
@@ -460,7 +469,29 @@ export default function VideoRecordToolbar() {
 
                         <Button
                             onClick={() => {
-                                stopRecord().then((outputFile) => {
+                                stopRecord(true).then((outputFile) => {
+                                    if (outputFile) {
+                                        clipboard.writeFiles([outputFile]);
+                                    }
+                                });
+                            }}
+                            icon={
+                                <GifOutlined
+                                    style={{
+                                        fontSize: '0.96em',
+                                        color: enableStopRecord ? token.colorPrimary : undefined,
+                                    }}
+                                />
+                            }
+                            disabled={!enableStopRecord}
+                            title={intl.formatMessage({ id: 'videoRecord.copyGif' })}
+                            type={'text'}
+                            key="copy-gif"
+                        />
+
+                        <Button
+                            onClick={() => {
+                                stopRecord(false).then((outputFile) => {
                                     if (outputFile) {
                                         clipboard.writeFiles([outputFile]);
                                     }

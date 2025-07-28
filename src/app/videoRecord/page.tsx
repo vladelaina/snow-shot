@@ -147,7 +147,7 @@ export default function VideoRecordPage() {
     }, [addListener, init, removeListener]);
 
     return (
-        <div className="container">
+        <div className="container" onContextMenu={(e) => e.preventDefault()}>
             <canvas ref={selectCanvasRef} className="select-canvas" />
 
             <style jsx>{`

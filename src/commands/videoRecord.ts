@@ -38,8 +38,12 @@ export const videoRecordStart = async (
     return result;
 };
 
-export const videoRecordStop = async (): Promise<string | null | undefined> => {
-    const result = await invoke<string | null | undefined>('video_record_stop');
+export const videoRecordStop = async (
+    convertToGif: boolean,
+): Promise<string | null | undefined> => {
+    const result = await invoke<string | null | undefined>('video_record_stop', {
+        convertToGif,
+    });
     return result;
 };
 
