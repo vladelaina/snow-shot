@@ -570,28 +570,39 @@ const SelectLayerCore: React.FC<SelectLayerProps> = ({ actionRef }) => {
           }
         | undefined
     >(undefined);
+    const onMouseMoveAutoSelectRunningRef = useRef<boolean>(false);
     const onMouseMoveAutoSelect = useCallback(
         async (mousePosition: MousePosition, ignoreAnimation: boolean = false) => {
+            // 保存最新的参数
             onMouseMoveAutoSelectLastParamsRef.current = {
                 mousePosition,
                 ignoreAnimation,
             };
 
-            while (onMouseMoveAutoSelectLastParamsRef.current) {
-                await onMouseMoveAutoSelectCore(
-                    onMouseMoveAutoSelectLastParamsRef.current.mousePosition,
-                    onMouseMoveAutoSelectLastParamsRef.current.ignoreAnimation,
-                );
+            // 如果已经在运行，直接返回，等待当前执行完成
+            if (onMouseMoveAutoSelectRunningRef.current) {
+                return;
+            }
 
-                if (
-                    onMouseMoveAutoSelectLastParamsRef.current &&
-                    onMouseMoveAutoSelectLastParamsRef.current.mousePosition.equals(
-                        mousePosition,
-                    ) &&
-                    onMouseMoveAutoSelectLastParamsRef.current.ignoreAnimation === ignoreAnimation
-                ) {
+            // 标记开始运行
+            onMouseMoveAutoSelectRunningRef.current = true;
+
+            try {
+                // 循环处理，直到没有新的参数
+                while (onMouseMoveAutoSelectLastParamsRef.current) {
+                    const currentParams = onMouseMoveAutoSelectLastParamsRef.current;
+                    // 清空参数，防止重复处理
                     onMouseMoveAutoSelectLastParamsRef.current = undefined;
+
+                    // 执行核心逻辑
+                    await onMouseMoveAutoSelectCore(
+                        currentParams.mousePosition,
+                        currentParams.ignoreAnimation,
+                    );
                 }
+            } finally {
+                // 确保标记为未运行
+                onMouseMoveAutoSelectRunningRef.current = false;
             }
         },
         [onMouseMoveAutoSelectCore],

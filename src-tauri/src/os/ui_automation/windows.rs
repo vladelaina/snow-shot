@@ -23,6 +23,18 @@ use xcap::Window;
 
 use super::ElementRect;
 
+enum ElementChildrenNextSiblingCacheItem {
+    Element(UIElement, ElementLevel),
+    /**
+     * 叶子节点
+     */
+    Leaf,
+    /**
+     * 没有下一个兄弟节点
+     */
+    NoNext,
+}
+
 pub struct UIElements {
     automation: Option<UIAutomation>,
     automation_walker: Option<UITreeWalker>,
@@ -31,7 +43,7 @@ pub struct UIElements {
     element_level_map: HashMap<ElementLevel, (UIElement, Token)>,
     element_rect_tree: Arena<uiautomation::types::Rect>,
     monitor_rect: ElementRect,
-    element_children_next_sibling_cache: HashMap<ElementLevel, Option<(UIElement, ElementLevel)>>,
+    element_children_next_sibling_cache: HashMap<ElementLevel, ElementChildrenNextSiblingCacheItem>,
     window_rect_map: HashMap<ElementLevel, uiautomation::types::Rect>,
     window_focus_count_map: HashMap<i32, i32>,
     window_index_level_map: HashMap<i32, ElementLevel>,
@@ -467,40 +479,50 @@ impl UIElements {
 
         let mut queue = Option::<UIElement>::None;
 
+        let mut try_get_first_child = false;
         // let mut cache_level = Option::<ElementLevel>::None;
         match self.element_children_next_sibling_cache.get(&parent_level) {
             Some(element) => match element {
-                Some((element, level)) => {
+                ElementChildrenNextSiblingCacheItem::Element(element, level) => {
                     queue = Some(element.clone());
                     current_level = level.clone();
                 }
-                None => {}
+                // 叶子节点说明直接命中了，不需要重新获取
+                ElementChildrenNextSiblingCacheItem::Leaf => {}
+                // 没有下一个节点说明遍历结束了
+                ElementChildrenNextSiblingCacheItem::NoNext => {}
             },
             None => {
-                // 这里主动获取下，这时写入了缓存，但没有符合上一次的筛选条件
-                let first_child = self.get_first_child(&parent_element, &parent_level, app_window);
-                match first_child {
-                    Ok(element) => {
-                        queue = Some(element.clone());
-                        current_level = parent_level.clone();
-                        current_level.next_level();
-
-                        self.element_children_next_sibling_cache
-                            .insert(parent_level, Some((element, current_level)));
-
-                        // cache_level = Some(parent_level.clone());
-                        // cache_level.as_mut().unwrap().next_level();
-
-                        // self.element_children_next_sibling_cache
-                        //     .insert(parent_level, Some((element, cache_level.as_ref().unwrap().clone())));
-                    }
-                    Err(_) => {
-                        self.element_children_next_sibling_cache
-                            .insert(parent_level, None);
-                    }
-                }
+                try_get_first_child = true;
             }
         };
+
+        if try_get_first_child {
+            // UI Automation 每次获取的元素不一定是全的，这里重新获取下
+            let first_child = self.get_first_child(&parent_element, &parent_level, app_window);
+            match first_child {
+                Ok(element) => {
+                    queue = Some(element.clone());
+                    current_level = parent_level.clone();
+                    current_level.next_level();
+
+                    self.element_children_next_sibling_cache.insert(
+                        parent_level,
+                        ElementChildrenNextSiblingCacheItem::Element(element, current_level),
+                    );
+
+                    // cache_level = Some(parent_level.clone());
+                    // cache_level.as_mut().unwrap().next_level();
+
+                    // self.element_children_next_sibling_cache
+                    //     .insert(parent_level, Some((element, cache_level.as_ref().unwrap().clone())));
+                }
+                Err(_) => {
+                    self.element_children_next_sibling_cache
+                        .insert(parent_level, ElementChildrenNextSiblingCacheItem::Leaf);
+                }
+            }
+        }
 
         // let mut first_child_level = Option::<ElementLevel>::None;
         // let first_child = automation_walker.get_first_child(&self.element_level_map.get(&parent_level).unwrap().0);
@@ -566,13 +588,15 @@ impl UIElements {
 
                         current_level.next_level();
 
-                        self.element_children_next_sibling_cache
-                            .insert(parent_level, Some((child, current_level)));
+                        self.element_children_next_sibling_cache.insert(
+                            parent_level,
+                            ElementChildrenNextSiblingCacheItem::Element(child, current_level),
+                        );
 
                         continue;
                     } else {
                         self.element_children_next_sibling_cache
-                            .insert(current_level, None);
+                            .insert(current_level, ElementChildrenNextSiblingCacheItem::Leaf);
                     }
                 }
             }
@@ -583,12 +607,15 @@ impl UIElements {
                     queue = Some(sibling.clone());
                     current_level.next_element();
 
-                    self.element_children_next_sibling_cache
-                        .insert(parent_level, Some((sibling, current_level)));
+                    self.element_children_next_sibling_cache.insert(
+                        parent_level,
+                        ElementChildrenNextSiblingCacheItem::Element(sibling, current_level),
+                    );
                 }
                 Err(_) => {
+                    // 如果当前层级遍历结束了，标记已经遍历结束
                     self.element_children_next_sibling_cache
-                        .insert(parent_level, None);
+                        .insert(parent_level, ElementChildrenNextSiblingCacheItem::NoNext);
                 }
             }
         }
