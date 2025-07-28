@@ -216,7 +216,7 @@ export default function VideoRecordToolbar() {
         videoRecordState === VideoRecordState.Paused;
 
     return (
-        <div className="video-record-toolbar-container">
+        <div className="video-record-toolbar-container" onContextMenu={(e) => e.preventDefault()}>
             <div data-tauri-drag-region className="toolbar-drag-region before" />
             <div data-tauri-drag-region className="toolbar-drag-region after" />
 

@@ -144,7 +144,13 @@ const FullScreenDrawPage = () => {
     return (
         <FullScreenDrawContext.Provider value={fullScreenDrawContextValue}>
             <DrawCoreContext.Provider value={drawCoreContextValue}>
-                <div className="full-screen-draw-page" ref={fullScreenContainerRef}>
+                <div
+                    className="full-screen-draw-page"
+                    ref={fullScreenContainerRef}
+                    onContextMenu={(e) => {
+                        e.preventDefault();
+                    }}
+                >
                     <DrawCore
                         actionRef={drawCoreActionRef}
                         zIndex={zIndexs.FullScreenDraw_DrawLayer}
