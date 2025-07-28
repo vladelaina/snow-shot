@@ -161,6 +161,15 @@ const TrayIconLoaderComponent = () => {
                             },
                         },
                         {
+                            id: `${appWindow.label}-screenshot-copy`,
+                            text: intl.formatMessage({
+                                id: 'home.screenshotFunction.screenshotCopy',
+                            }),
+                            action: async () => {
+                                executeScreenshot(ScreenshotType.Copy);
+                            },
+                        },
+                        {
                             id: `${appWindow.label}-screenshot-focused-window`,
                             text: intl.formatMessage({
                                 id: 'home.screenshotFunction.screenshotFocusedWindow',

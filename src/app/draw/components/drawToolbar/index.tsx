@@ -436,6 +436,9 @@ const DrawToolbarCore: React.FC<DrawToolbarProps> = ({
                     case ScreenshotType.OcrDetect:
                         onToolClick(DrawState.OcrDetect);
                         break;
+                    case ScreenshotType.Copy:
+                        onCopyToClipboard();
+                        break;
                     case ScreenshotType.TopWindow:
                         onTopWindow();
                         break;
@@ -452,7 +455,14 @@ const DrawToolbarCore: React.FC<DrawToolbarProps> = ({
                 showDrawToolbarContainerDebounce();
             }
         },
-        [getScreenshotType, onFixed, onToolClick, onTopWindow, showDrawToolbarContainerDebounce],
+        [
+            getScreenshotType,
+            onCopyToClipboard,
+            onFixed,
+            onToolClick,
+            onTopWindow,
+            showDrawToolbarContainerDebounce,
+        ],
     );
 
     const setEnable = useCallback(

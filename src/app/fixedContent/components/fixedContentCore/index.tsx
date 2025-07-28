@@ -20,7 +20,6 @@ import clipboard from 'tauri-plugin-clipboard-api';
 import { KeyEventKey, KeyEventValue } from '@/core/hotKeys';
 import { useHotkeys } from 'react-hotkeys-hook';
 import { MonitorInfo, startFreeDrag } from '@/commands/core';
-import { getCurrentWebview, Webview } from '@tauri-apps/api/webview';
 import { setDrawWindowStyle } from '@/commands/screenshot';
 import html2canvas from 'html2canvas';
 import { openUrl } from '@tauri-apps/plugin-opener';
@@ -29,6 +28,8 @@ import {
     writeImageToClipboard,
     writeTextToClipboard,
 } from '@/utils/clipboard';
+import { TweenAnimation } from '@/utils/tweenAnimation';
+import * as TWEEN from '@tweenjs/tween.js';
 
 export type FixedContentInitDrawParams = {
     monitorInfo: MonitorInfo;
@@ -90,10 +91,8 @@ export const FixedContentCore: React.FC<{
     );
 
     const appWindowRef = useRef<AppWindow | undefined>(undefined);
-    const appWebViewRef = useRef<Webview | undefined>(undefined);
     useEffect(() => {
         appWindowRef.current = getCurrentWindow();
-        appWebViewRef.current = getCurrentWebview();
     }, []);
 
     const [getAppSettings] = useStateSubscriber(AppSettingsPublisher, undefined);
@@ -391,21 +390,59 @@ export const FixedContentCore: React.FC<{
           }
         | undefined
     >(undefined);
+
+    const switchThumbnailAnimationRef = useRef<
+        | TweenAnimation<{
+              width: number;
+              height: number;
+              x: number;
+              y: number;
+          }>
+        | undefined
+    >(undefined); // 切换缩略图的动画
+
     const switchThumbnail = useCallback(async () => {
+        if (!switchThumbnailAnimationRef.current) {
+            switchThumbnailAnimationRef.current = new TweenAnimation<{
+                width: number;
+                height: number;
+                x: number;
+                y: number;
+            }>(
+                {
+                    width: 0,
+                    height: 0,
+                    x: 0,
+                    y: 0,
+                },
+                TWEEN.Easing.Quadratic.Out,
+                128,
+                ({ width, height, x, y }) => {
+                    const appWindow = appWindowRef.current;
+                    if (!appWindow) {
+                        return;
+                    }
+
+                    appWindow.setSize(new PhysicalSize(Math.round(width), Math.round(height)));
+                    appWindow.setPosition(new PhysicalPosition(Math.round(x), Math.round(y)));
+                },
+            );
+        }
+
         const appWindow = appWindowRef.current;
-        const appWebView = appWebViewRef.current;
-        if (!appWindow || !appWebView) {
+        if (!appWindow) {
             return;
         }
 
         setDrawWindowStyle();
 
         if (originWindowSizeAndPositionRef.current) {
-            await Promise.all([
-                appWindow.setSize(originWindowSizeAndPositionRef.current.size),
-                appWebView.setSize(originWindowSizeAndPositionRef.current.size),
-                appWindow.setPosition(originWindowSizeAndPositionRef.current.position),
-            ]);
+            switchThumbnailAnimationRef.current.update({
+                width: originWindowSizeAndPositionRef.current.size.width,
+                height: originWindowSizeAndPositionRef.current.size.height,
+                x: originWindowSizeAndPositionRef.current.position.x,
+                y: originWindowSizeAndPositionRef.current.position.y,
+            });
             originWindowSizeAndPositionRef.current = undefined;
             setIsThumbnail(false);
         } else {
@@ -413,6 +450,16 @@ export const FixedContentCore: React.FC<{
                 appWindow.innerSize(),
                 appWindow.outerPosition(),
             ]);
+
+            switchThumbnailAnimationRef.current.update(
+                {
+                    width: windowSize.width,
+                    height: windowSize.height,
+                    x: windowPosition.x,
+                    y: windowPosition.y,
+                },
+                true,
+            );
 
             originWindowSizeAndPositionRef.current = {
                 size: windowSize,
@@ -429,11 +476,12 @@ export const FixedContentCore: React.FC<{
             const newY = Math.round(mouseY - thumbnailSize / 2);
 
             // 同时设置窗口大小和位置
-            await Promise.all([
-                appWindow.setSize(new PhysicalSize(thumbnailSize, thumbnailSize)),
-                appWindow.setPosition(new PhysicalPosition(newX, newY)),
-                appWebView.setSize(new PhysicalSize(thumbnailSize, thumbnailSize)),
-            ]);
+            switchThumbnailAnimationRef.current.update({
+                width: thumbnailSize,
+                height: thumbnailSize,
+                x: newX,
+                y: newY,
+            });
 
             setIsThumbnail(true);
         }
@@ -636,8 +684,7 @@ export const FixedContentCore: React.FC<{
     const scaleWindow = useCallback(
         async (scaleDelta: number) => {
             const appWindow = appWindowRef.current;
-            const appWebView = appWebViewRef.current;
-            if (!appWindow || !appWebView) {
+            if (!appWindow) {
                 return;
             }
 
@@ -691,23 +738,16 @@ export const FixedContentCore: React.FC<{
                     // 同时设置窗口大小和位置
                     await Promise.all([
                         appWindow.setSize(new PhysicalSize(newWidth, newHeight)),
-                        appWebView.setSize(new PhysicalSize(newWidth, newHeight)),
                         appWindow.setPosition(new PhysicalPosition(newX, newY)),
                     ]);
                 } catch (error) {
                     console.error('Error during mouse-centered scaling:', error);
                     // 如果出错，回退到普通缩放
-                    await Promise.all([
-                        appWindow.setSize(new PhysicalSize(newWidth, newHeight)),
-                        appWebView.setSize(new PhysicalSize(newWidth, newHeight)),
-                    ]);
+                    await Promise.all([appWindow.setSize(new PhysicalSize(newWidth, newHeight))]);
                 }
             } else {
                 // 普通缩放，只改变窗口大小
-                await Promise.all([
-                    appWindow.setSize(new PhysicalSize(newWidth, newHeight)),
-                    appWebView.setSize(new PhysicalSize(newWidth, newHeight)),
-                ]);
+                await Promise.all([appWindow.setSize(new PhysicalSize(newWidth, newHeight))]);
             }
 
             setScale(targetScale);
@@ -818,6 +858,7 @@ export const FixedContentCore: React.FC<{
                 zIndex: zIndexs.Draw_FixedImage,
                 pointerEvents:
                     canvasImageUrl || htmlBlobUrl || textContent || imageUrl ? 'auto' : 'none',
+                opacity: isThumbnail ? 0.42 : 1,
             }}
             onContextMenu={handleContextMenu}
             onDoubleClick={onDoubleClick}

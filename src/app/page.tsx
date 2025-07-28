@@ -120,6 +120,13 @@ export default function Home() {
                             executeScreenshotFocusedWindow(getAppSettings());
                         };
                         break;
+                    case AppFunction.ScreenshotCopy:
+                        buttonTitle = (
+                            <FormattedMessage id="home.screenshotFunction.screenshotCopy" />
+                        );
+                        buttonIcon = <ClipboardIcon />;
+                        buttonOnClick = () => executeScreenshot(ScreenshotType.Copy);
+                        break;
                     case AppFunction.TranslationSelectText:
                         buttonTitle = <FormattedMessage id="home.translationSelectText" />;
                         buttonIcon = <SelectTextIcon style={{ fontSize: '1em' }} />;
