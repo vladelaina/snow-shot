@@ -8,7 +8,11 @@ import { useIntl } from 'react-intl';
 import { getCurrentWindow } from '@tauri-apps/api/window';
 import { Menu } from '@tauri-apps/api/menu';
 import OcrTool from '../drawToolbar/components/tools/ocrTool';
-import { OcrResult, OcrResultActionType } from '@/app/fixedContent/components/ocrResult';
+import {
+    AppOcrResult,
+    OcrResult,
+    OcrResultActionType,
+} from '@/app/fixedContent/components/ocrResult';
 import { zIndexs } from '@/utils/zIndex';
 import { MonitorInfo } from '@/commands/core';
 import { writeTextToClipboard } from '@/utils/clipboard';
@@ -18,6 +22,7 @@ export type OcrBlocksActionType = {
         selectRect: ElementRect,
         monitorInfo: MonitorInfo,
         canvas: HTMLCanvasElement,
+        ocrResult: AppOcrResult | undefined,
     ) => Promise<void>;
     setEnable: (enable: boolean | ((enable: boolean) => boolean)) => void;
     getOcrResultAction: () => OcrResultActionType | undefined;
@@ -47,11 +52,13 @@ export const OcrBlocks: React.FC<{
                 selectRect: ElementRect,
                 monitorInfo: MonitorInfo,
                 canvas: HTMLCanvasElement,
+                ocrResult: AppOcrResult | undefined,
             ) => {
                 ocrResultActionRef.current?.init({
                     selectRect,
                     monitorInfo,
                     canvas,
+                    ocrResult,
                 });
             },
             setEnable: (enable: boolean | ((enable: boolean) => boolean)) => {

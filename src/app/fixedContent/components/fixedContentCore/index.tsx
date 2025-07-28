@@ -15,7 +15,7 @@ import { useCallbackRender } from '@/hooks/useCallbackRender';
 import { zIndexs } from '@/utils/zIndex';
 import Image from 'next/image';
 import { CloseOutlined } from '@ant-design/icons';
-import { OcrResult, OcrResultActionType } from '../ocrResult';
+import { AppOcrResult, OcrResult, OcrResultActionType } from '../ocrResult';
 import clipboard from 'tauri-plugin-clipboard-api';
 import { KeyEventKey, KeyEventValue } from '@/core/hotKeys';
 import { useHotkeys } from 'react-hotkeys-hook';
@@ -33,6 +33,8 @@ import {
 export type FixedContentInitDrawParams = {
     monitorInfo: MonitorInfo;
     canvas: HTMLCanvasElement;
+    /** 已有的 OCR 结果 */
+    ocrResult: AppOcrResult | undefined;
 };
 
 export type FixedContentInitHtmlParams = {
@@ -253,6 +255,7 @@ export const FixedContentCore: React.FC<{
         selectRect: ElementRect;
         canvas: HTMLCanvasElement;
         monitorInfo: MonitorInfo;
+        ocrResult: undefined;
     }>(undefined);
 
     const imageRef = useRef<HTMLImageElement>(null);
@@ -282,11 +285,15 @@ export const FixedContentCore: React.FC<{
                 max_x: canvas.width,
                 max_y: canvas.height,
             };
-            if (!getAppSettings()[AppSettingsGroup.FunctionFixedContent].autoOcr) {
+            if (
+                !getAppSettings()[AppSettingsGroup.FunctionFixedContent].autoOcr &&
+                !params.ocrResult
+            ) {
                 initOcrParams.current = {
                     selectRect: ocrRect,
                     monitorInfo,
                     canvas,
+                    ocrResult: params.ocrResult,
                 };
             }
 
@@ -329,6 +336,7 @@ export const FixedContentCore: React.FC<{
                     },
                     monitorInfo,
                     canvas,
+                    ocrResult: params.ocrResult,
                 });
             }
         },
@@ -792,6 +800,15 @@ export const FixedContentCore: React.FC<{
         enabled: !disabled,
     });
 
+    const onDoubleClick = useCallback(
+        (e: React.MouseEvent<HTMLDivElement>) => {
+            e.stopPropagation();
+            e.preventDefault();
+            switchThumbnail();
+        },
+        [switchThumbnail],
+    );
+
     return (
         <div
             className="fixed-image-container"
@@ -803,7 +820,7 @@ export const FixedContentCore: React.FC<{
                     canvasImageUrl || htmlBlobUrl || textContent || imageUrl ? 'auto' : 'none',
             }}
             onContextMenu={handleContextMenu}
-            onDoubleClick={switchThumbnail}
+            onDoubleClick={onDoubleClick}
         >
             <OcrResult
                 actionRef={ocrResultActionRef}

@@ -659,6 +659,13 @@ const TranslatorCore: React.FC<{
         return true;
     }, [translationType]);
 
+    const onCopy = useCallback(() => {
+        if (!translatedContentRef.current) {
+            return;
+        }
+        writeTextToClipboard(translatedContentRef.current);
+    }, [translatedContentRef]);
+
     const hasSourceContent = !!sourceContent;
     const hasTranslatedContent = !!translatedContent;
 
@@ -924,9 +931,7 @@ const TranslatorCore: React.FC<{
                                         type="text"
                                         shape="circle"
                                         icon={<CopyOutlined />}
-                                        onClick={() => {
-                                            writeTextToClipboard(translatedContent);
-                                        }}
+                                        onClick={onCopy}
                                     />
                                 </Flex>
                             </div>

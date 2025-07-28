@@ -534,6 +534,10 @@ const DrawPageCore: React.FC = () => {
             drawCacheLayerActionRef.current,
             fixedContentActionRef.current,
             setCaptureStep,
+            // 如果当前是 OCR 识别状态，则使用已有的 OCR 结果
+            getDrawState() === DrawState.OcrDetect
+                ? ocrBlocksActionRef.current?.getOcrResultAction()?.getOcrResult()
+                : undefined,
         );
 
         switchLayer(undefined, drawLayerActionRef.current, selectLayerActionRef.current);
@@ -597,7 +601,7 @@ const DrawPageCore: React.FC = () => {
             getAppSettings()[AppSettingsGroup.FunctionScreenshot].ocrCopyText
         ) {
             const ocrResult = ocrBlocksActionRef.current?.getOcrResultAction()?.getOcrResult();
-            writeTextToClipboard(ocrResult ? covertOcrResultToText(ocrResult) : '');
+            writeTextToClipboard(ocrResult ? covertOcrResultToText(ocrResult.result) : '');
             finishCapture();
             return;
         } else if (

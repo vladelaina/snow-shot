@@ -16,10 +16,17 @@ import { writeTextToClipboard } from '@/utils/clipboard';
 // 定义角度阈值常量（以度为单位）
 const ROTATION_THRESHOLD = 3; // 小于3度的旋转被视为误差，不进行旋转
 
+export type AppOcrResult = {
+    result: OcrDetectResult;
+    ignoreScale: boolean;
+};
+
 export type OcrResultInitDrawCanvasParams = {
     selectRect: ElementRect;
     canvas: HTMLCanvasElement;
     monitorInfo: MonitorInfo;
+    /** 已有的 OCR 结果 */
+    ocrResult: AppOcrResult | undefined;
 };
 
 export type OcrResultInitImageParams = {
@@ -33,7 +40,7 @@ export type OcrResultActionType = {
     setScale: (scale: number) => void;
     clear: () => void;
     updateOcrTextElements: (ocrResult: OcrDetectResult, ignoreScale?: boolean) => void;
-    getOcrResult: () => OcrDetectResult | undefined;
+    getOcrResult: () => AppOcrResult | undefined;
 };
 
 export const covertOcrResultToText = (ocrResult: OcrDetectResult) => {
@@ -73,7 +80,7 @@ export const OcrResult: React.FC<{
 
     const [getAppSettings] = useStateSubscriber(AppSettingsPublisher, undefined);
 
-    const currentOcrResultRef = useRef<OcrDetectResult | undefined>(undefined);
+    const currentOcrResultRef = useRef<AppOcrResult | undefined>(undefined);
 
     const enableRef = useRef<boolean>(false);
     const setEnable = useCallback((enable: boolean | ((enable: boolean) => boolean)) => {
@@ -107,7 +114,10 @@ export const OcrResult: React.FC<{
                 return;
             }
 
-            currentOcrResultRef.current = ocrResult;
+            currentOcrResultRef.current = {
+                result: ocrResult,
+                ignoreScale: ignoreScale ?? false,
+            };
 
             const transformScale = 1 / monitorScaleFactor;
 
@@ -245,28 +255,36 @@ export const OcrResult: React.FC<{
 
             if (imageBlob) {
                 monitorScaleFactorRef.current = monitorInfo.monitor_scale_factor;
-                const ocrResult = await ocrDetect(
-                    await imageBlob.arrayBuffer(),
-                    monitorInfo.monitor_scale_factor,
-                    getAppSettings()[AppSettingsGroup.SystemScreenshot].ocrDetectAngle,
-                );
+                const ocrResult = params.ocrResult ?? {
+                    result: await ocrDetect(
+                        await imageBlob.arrayBuffer(),
+                        monitorInfo.monitor_scale_factor,
+                        getAppSettings()[AppSettingsGroup.SystemScreenshot].ocrDetectAngle,
+                    ),
+                    ignoreScale: false,
+                };
 
                 const ocrAfterAction =
                     getAppSettings()[AppSettingsGroup.FunctionScreenshot].ocrAfterAction;
 
                 if (ocrAfterAction === OcrDetectAfterAction.CopyText) {
-                    writeTextToClipboard(covertOcrResultToText(ocrResult));
+                    writeTextToClipboard(covertOcrResultToText(ocrResult.result));
                 } else if (ocrAfterAction === OcrDetectAfterAction.CopyTextAndCloseWindow) {
-                    writeTextToClipboard(covertOcrResultToText(ocrResult));
+                    writeTextToClipboard(covertOcrResultToText(ocrResult.result));
                     finishCapture?.();
                 }
 
                 selectRectRef.current = selectRect;
-                updateOcrTextElements(ocrResult);
-                onOcrDetect?.(ocrResult);
+                updateOcrTextElements(ocrResult.result, ocrResult.ignoreScale);
+                onOcrDetect?.(ocrResult.result);
+
+                // 如果已有的 OCR 结果不为空，则直接显示
+                if (params.ocrResult) {
+                    setEnable(true);
+                }
             }
         },
-        [finishCapture, getAppSettings, onOcrDetect, updateOcrTextElements],
+        [finishCapture, getAppSettings, onOcrDetect, setEnable, updateOcrTextElements],
     );
 
     const initImage = useCallback(
