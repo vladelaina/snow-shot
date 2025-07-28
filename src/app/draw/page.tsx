@@ -607,7 +607,7 @@ const DrawPageCore: React.FC = () => {
         } else if (
             (getDrawState() === DrawState.OcrDetect || getDrawState() === DrawState.ScanQrcode) &&
             selected &&
-            selected.toString()
+            selected.toString().trim()
         ) {
             writeTextToClipboard(selected.toString());
             finishCapture();

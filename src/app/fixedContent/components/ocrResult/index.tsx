@@ -131,6 +131,8 @@ export const OcrResult: React.FC<{
 
             textContainerElement.style.left = `${baseX}px`;
             textContainerElement.style.top = `${baseY}px`;
+            textContainerElement.style.width = `${(selectRect.max_x - selectRect.min_x) * transformScale}px`;
+            textContainerElement.style.height = `${(selectRect.max_y - selectRect.min_y) * transformScale}px`;
 
             textContainerElement.innerHTML = '';
 
@@ -443,6 +445,11 @@ export const OcrResult: React.FC<{
                         position: 'absolute',
                         top: 0,
                         left: 0,
+                    }}
+                    onDoubleClick={(e) => {
+                        // OCR 区域双击不进行任何操作
+                        e.preventDefault();
+                        e.stopPropagation();
                     }}
                 />
             </div>
