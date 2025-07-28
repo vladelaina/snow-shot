@@ -422,6 +422,12 @@ export const OcrResult: React.FC<{
         [onContextMenuProp],
     );
 
+    const onDoubleClick = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+        // 阻止截图双击复制和固定到屏幕双击缩放的操作
+        e.preventDefault();
+        e.stopPropagation();
+    }, []);
+
     return (
         <>
             <div
@@ -446,11 +452,7 @@ export const OcrResult: React.FC<{
                         top: 0,
                         left: 0,
                     }}
-                    onDoubleClick={(e) => {
-                        // OCR 区域双击不进行任何操作
-                        e.preventDefault();
-                        e.stopPropagation();
-                    }}
+                    onDoubleClick={onDoubleClick}
                 />
             </div>
         </>

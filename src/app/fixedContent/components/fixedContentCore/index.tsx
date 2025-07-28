@@ -111,6 +111,13 @@ export const FixedContentCore: React.FC<{
     const [canvasImageUrl, setCanvasImageUrl] = useState<string | undefined>(undefined);
     const [imageUrl, setImageUrl] = useState<string | undefined>(undefined);
     const imageBlobRef = useRef<Blob | undefined>(undefined);
+    const [scale, setScale, scaleRef] = useStateRef<{
+        x: number;
+        y: number;
+    }>({
+        x: 100,
+        y: 100,
+    });
 
     const [fixedContentType, setFixedContentType] = useState<FixedContentType | undefined>(
         undefined,
@@ -387,6 +394,10 @@ export const FixedContentCore: React.FC<{
         | {
               size: PhysicalSize;
               position: PhysicalPosition;
+              scale: {
+                  x: number;
+                  y: number;
+              };
           }
         | undefined
     >(undefined);
@@ -443,6 +454,10 @@ export const FixedContentCore: React.FC<{
                 x: originWindowSizeAndPositionRef.current.position.x,
                 y: originWindowSizeAndPositionRef.current.position.y,
             });
+            setScale({
+                x: originWindowSizeAndPositionRef.current.scale.x,
+                y: originWindowSizeAndPositionRef.current.scale.y,
+            });
             originWindowSizeAndPositionRef.current = undefined;
             setIsThumbnail(false);
         } else {
@@ -464,6 +479,10 @@ export const FixedContentCore: React.FC<{
             originWindowSizeAndPositionRef.current = {
                 size: windowSize,
                 position: windowPosition,
+                scale: {
+                    x: scaleRef.current.x,
+                    y: scaleRef.current.y,
+                },
             };
 
             const thumbnailSize = Math.floor(42 * window.devicePixelRatio);
@@ -483,9 +502,18 @@ export const FixedContentCore: React.FC<{
                 y: newY,
             });
 
+            setScale({
+                x: Math.round(
+                    (thumbnailSize / (windowSize.width / (scaleRef.current.x / 100))) * 100,
+                ),
+                y: Math.round(
+                    (thumbnailSize / (windowSize.height / (scaleRef.current.y / 100))) * 100,
+                ),
+            });
+
             setIsThumbnail(true);
         }
-    }, []);
+    }, [scaleRef, setScale]);
 
     const menuRef = useRef<Menu>(undefined);
 
@@ -664,7 +692,6 @@ export const FixedContentCore: React.FC<{
         };
     }, [initMenu]);
 
-    const [scale, setScale, scaleRef] = useStateRef(100);
     const [showScaleInfo, setShowScaleInfo] = useState(false);
     const scaleTimerRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -700,7 +727,7 @@ export const FixedContentCore: React.FC<{
             const zoomWithMouse =
                 getAppSettings()[AppSettingsGroup.FunctionFixedContent].zoomWithMouse;
 
-            let targetScale = scaleRef.current + scaleDelta;
+            let targetScale = scaleRef.current.x + scaleDelta;
 
             if (targetScale <= 20) {
                 targetScale = 20;
@@ -708,7 +735,7 @@ export const FixedContentCore: React.FC<{
                 targetScale = 500;
             }
 
-            if (targetScale === scaleRef.current) {
+            if (targetScale === scaleRef.current.x) {
                 return;
             }
 
@@ -750,7 +777,10 @@ export const FixedContentCore: React.FC<{
                 await Promise.all([appWindow.setSize(new PhysicalSize(newWidth, newHeight))]);
             }
 
-            setScale(targetScale);
+            setScale({
+                x: targetScale,
+                y: targetScale,
+            });
             ocrResultActionRef.current?.setScale(targetScale);
             showScaleInfoTemporary();
         },
@@ -858,7 +888,7 @@ export const FixedContentCore: React.FC<{
                 zIndex: zIndexs.Draw_FixedImage,
                 pointerEvents:
                     canvasImageUrl || htmlBlobUrl || textContent || imageUrl ? 'auto' : 'none',
-                opacity: isThumbnail ? 0.42 : 1,
+                opacity: isThumbnail ? 0.72 : 1,
             }}
             onContextMenu={handleContextMenu}
             onDoubleClick={onDoubleClick}
@@ -881,7 +911,7 @@ export const FixedContentCore: React.FC<{
                     }}
                     style={{
                         transformOrigin: 'top left',
-                        transform: `scale(${scale / 100})`,
+                        transform: `scale(${scale.x / 100}, ${scale.y / 100})`,
                         userSelect: 'none',
                     }}
                 />
@@ -909,7 +939,7 @@ export const FixedContentCore: React.FC<{
                     }}
                     style={{
                         transformOrigin: 'top left',
-                        transform: `scale(${scale / 100 / window.devicePixelRatio})`,
+                        transform: `scale(${scale.x / 100 / window.devicePixelRatio}, ${scale.y / 100 / window.devicePixelRatio})`,
                         userSelect: 'none',
                     }}
                 />
@@ -975,7 +1005,7 @@ export const FixedContentCore: React.FC<{
                         transition: `opacity ${token.motionDurationFast} ${token.motionEaseInOut}`,
                     }}
                 >
-                    {scale}%
+                    {scale.x}%
                 </div>
             </div>
 
@@ -1018,7 +1048,7 @@ export const FixedContentCore: React.FC<{
                 .fixed-html-content,
                 .fixed-text-content {
                     transform-origin: top left;
-                    transform: scale(${scale / 100});
+                    transform: scale(${scale.x / 100}, ${scale.y / 100});
                     z-index: ${enableSelectText ? 1 : 'unset'};
                     position: absolute;
                     top: 0;
