@@ -1,3 +1,5 @@
+use thiserror::Error;
+
 #[cfg(target_os = "windows")]
 #[path = "./notification/windows.rs"]
 pub mod notification;
@@ -179,4 +181,17 @@ impl From<uiautomation::types::Rect> for ElementRect {
             max_y: rect.get_bottom(),
         }
     }
+}
+
+#[derive(Error, Debug)]
+pub enum UIAutomationError {
+    #[error("Capture error")]
+    Capture(#[from] xcap::XCapError),
+
+    #[cfg(target_os = "windows")]
+    #[error("Windows error")]
+    Windows(#[from] windows::core::Error),
+    #[cfg(target_os = "windows")]
+    #[error("UIAutomation error")]
+    UIAError(#[from] uiautomation::errors::Error),
 }

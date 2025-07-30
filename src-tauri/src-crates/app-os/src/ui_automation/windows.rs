@@ -3,9 +3,6 @@ use std::collections::HashMap;
 use std::collections::HashSet;
 use std::mem;
 
-use crate::app_error::AutomationError;
-use crate::os::ElementLevel;
-use crate::os::TryGetElementByFocus;
 use atree::Arena;
 use atree::Token;
 use rtree_rs::{RTree, Rect};
@@ -20,7 +17,10 @@ use windows::Win32::UI::WindowsAndMessaging::GetClassNameW;
 use windows::Win32::UI::WindowsAndMessaging::SetForegroundWindow;
 use xcap::Window;
 
+use super::ElementLevel;
 use super::ElementRect;
+use super::TryGetElementByFocus;
+use super::UIAutomationError;
 
 enum ElementChildrenNextSiblingCacheItem {
     Element(UIElement, ElementLevel),
@@ -77,7 +77,7 @@ impl UIElements {
         }
     }
 
-    pub fn init(&mut self) -> Result<(), AutomationError> {
+    pub fn init(&mut self) -> Result<(), UIAutomationError> {
         if self.automation.is_some() && self.automation_walker.is_some() {
             return Ok(());
         }
@@ -160,7 +160,7 @@ impl UIElements {
         &mut self,
         monitor_rect: ElementRect,
         try_get_element_by_focus: TryGetElementByFocus,
-    ) -> Result<(), AutomationError> {
+    ) -> Result<(), UIAutomationError> {
         self.try_get_element_by_focus = try_get_element_by_focus;
         self.monitor_rect = monitor_rect;
 
@@ -319,7 +319,7 @@ impl UIElements {
         &self,
         mouse_x: i32,
         mouse_y: i32,
-    ) -> Result<Option<ElementRect>, AutomationError> {
+    ) -> Result<Option<ElementRect>, UIAutomationError> {
         let automation = match self.automation.as_ref() {
             Some(automation) => automation,
             None => return Ok(None),
@@ -414,12 +414,15 @@ impl UIElements {
         }
     }
 
-    fn get_first_child(
+    fn get_first_child<F>(
         &mut self,
         element: &UIElement,
         level: &ElementLevel,
-        app_window: &tauri::Window,
-    ) -> Result<UIElement, uiautomation::Error> {
+        on_try_focus: &F,
+    ) -> Result<UIElement, uiautomation::Error>
+    where
+        F: Fn(),
+    {
         let automation_walker = self.automation_walker.as_mut().unwrap();
 
         let mut first_child = automation_walker.get_first_child(element);
@@ -433,8 +436,8 @@ impl UIElements {
             let mut try_count = 0;
             while *focus_count < 3 * 4 && try_count < 3 {
                 if element.try_focus() {
-                    // 交给前端节流处理，避免焦点快速切换
-                    let _ = app_window.emit("ui-automation-try-focus", ());
+                    // 截图窗口此时会失去焦点，交给前端节流处理，避免焦点快速切换
+                    on_try_focus();
 
                     sleep(Duration::from_millis(32));
                     first_child = automation_walker.get_first_child(element);
@@ -451,12 +454,15 @@ impl UIElements {
     /**
      * 获取所有可选区域
      */
-    pub fn get_element_from_point_walker(
+    pub fn get_element_from_point_walker<F>(
         &mut self,
         mouse_x: i32,
         mouse_y: i32,
-        app_window: &tauri::Window,
-    ) -> Result<Vec<ElementRect>, AutomationError> {
+        on_try_focus: &F,
+    ) -> Result<Vec<ElementRect>, UIAutomationError>
+    where
+        F: Fn(),
+    {
         let automation_walker = self.automation_walker.clone().unwrap();
         let (parent_element, mut parent_level, parent_rect, mut parent_tree_token) = match self
             .get_element_from_cache(
@@ -498,7 +504,7 @@ impl UIElements {
 
         if try_get_first_child {
             // 没有命中缓存，说明是第一次获取
-            let first_child = self.get_first_child(&parent_element, &parent_level, app_window);
+            let first_child = self.get_first_child(&parent_element, &parent_level, on_try_focus);
             match first_child {
                 Ok(element) => {
                     queue = Some(element.clone());
@@ -579,7 +585,7 @@ impl UIElements {
                     result_rect = current_element_rect;
 
                     let first_child =
-                        self.get_first_child(&current_element, &current_level, app_window);
+                        self.get_first_child(&current_element, &current_level, on_try_focus);
                     if let Ok(child) = first_child {
                         queue = Some(child.clone());
                         parent_tree_token = current_element_token;

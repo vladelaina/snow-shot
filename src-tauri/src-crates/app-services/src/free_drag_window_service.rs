@@ -41,8 +41,16 @@ impl FreeDragWindowService {
                 ));
             }
         };
+
+        #[cfg(target_os = "macos")]
         let mut window_x = window_position.x as f64;
+        #[cfg(target_os = "macos")]
         let mut window_y = window_position.y as f64;
+
+        #[cfg(not(target_os = "macos"))]
+        let window_x = window_position.x as f64;
+        #[cfg(not(target_os = "macos"))]
+        let window_y = window_position.y as f64;
 
         #[cfg(target_os = "macos")]
         {
@@ -107,7 +115,10 @@ impl FreeDragWindowService {
 
                 #[cfg(not(target_os = "macos"))]
                 {
-                    let _ = target_window.set_position(PhysicalPosition::new(window_x, window_y));
+                    let _ = target_window.set_position(tauri::PhysicalPosition::new(
+                        window_x as i32,
+                        window_y as i32,
+                    ));
                 }
             }),
         ));

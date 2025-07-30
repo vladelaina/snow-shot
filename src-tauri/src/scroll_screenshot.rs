@@ -59,7 +59,10 @@ pub async fn scroll_screenshot_capture(
     let image = {
         let monitor = Monitor::from_point(monitor_x, monitor_y).unwrap();
 
+        #[cfg(target_os = "macos")]
         let mut rect_scale = 1.0f64;
+        #[cfg(not(target_os = "macos"))]
+        let rect_scale = 1.0f64;
 
         // macOS 下截图区域是基于逻辑像素
         #[cfg(target_os = "macos")]
@@ -75,6 +78,9 @@ pub async fn scroll_screenshot_capture(
         if let Some(image) = app_utils::capture_current_monitor_with_scap(
             &window,
             &monitor,
+            #[cfg(target_os = "windows")]
+            None,
+            #[cfg(target_os = "macos")]
             Some(scap::capturer::Area {
                 origin: scap::capturer::Point { x: min_x, y: min_y },
                 size: scap::capturer::Size { width, height },

@@ -85,7 +85,7 @@ pub fn send_simple_notification(title: &str, body: &str) -> Result<()> {
     Command::new("powershell")
         .args(&["-Command", &script])
         .output()
-        .map_err(|e| Error::from_hresult(windows::Win32::Foundation::E_FAIL))?;
+        .map_err(|_| Error::from_hresult(windows::Win32::Foundation::E_FAIL))?;
 
     Ok(())
 }

@@ -1,12 +1,10 @@
-mod app_error;
-mod app_log;
-mod app_utils;
-mod core;
-mod file;
-mod ocr;
-mod screenshot;
-mod scroll_screenshot;
-mod video_record;
+pub mod app_utils;
+pub mod core;
+pub mod file;
+pub mod ocr;
+pub mod screenshot;
+pub mod scroll_screenshot;
+pub mod video_record;
 
 use tokio::sync::Mutex;
 

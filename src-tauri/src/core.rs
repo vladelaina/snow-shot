@@ -242,12 +242,24 @@ pub struct MonitorInfo {
 
 #[command]
 pub async fn get_current_monitor_info() -> Result<MonitorInfo, ()> {
+    #[cfg(target_os = "macos")]
     let (mut mouse_x, mut mouse_y, monitor) = get_target_monitor();
+    #[cfg(not(target_os = "macos"))]
+    let (mouse_x, mouse_y, monitor) = get_target_monitor();
 
     let monitor_x = monitor.x().unwrap();
     let monitor_y = monitor.y().unwrap();
+
+    #[cfg(target_os = "macos")]
     let mut monitor_width = monitor.width().unwrap();
+    #[cfg(not(target_os = "macos"))]
+    let monitor_width = monitor.width().unwrap();
+
+    #[cfg(target_os = "macos")]
     let mut monitor_height = monitor.height().unwrap();
+    #[cfg(not(target_os = "macos"))]
+    let monitor_height = monitor.height().unwrap();
+
     let monitor_scale_factor = monitor.scale_factor().unwrap();
 
     // macOS 下，屏幕宽高是逻辑像素，这里统一转换为物理像素
@@ -413,4 +425,4 @@ pub async fn start_free_drag(
 }
 
 #[command]
-pub async fn set_always_on_top(window: tauri::Window) {}
+pub async fn set_always_on_top() {}

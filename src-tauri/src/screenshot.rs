@@ -1,17 +1,17 @@
 use crate::app_utils;
 use crate::app_utils::save_image_to_file;
-use snow_shot_app_os::ui_automation::UIElements;
-use snow_shot_app_os::ElementRect;
-use snow_shot_app_os::TryGetElementByFocus;
 use device_query::{DeviceQuery, DeviceState, MouseState};
 use image::EncodableLayout;
 use image::codecs::png::{CompressionType, FilterType, PngEncoder};
 use image::codecs::webp::WebPEncoder;
 use serde::Serialize;
+use snow_shot_app_os::ElementRect;
+use snow_shot_app_os::TryGetElementByFocus;
+use snow_shot_app_os::ui_automation::UIElements;
 use std::path::PathBuf;
 use std::time::{SystemTime, UNIX_EPOCH};
-use tauri::command;
 use tauri::ipc::Response;
+use tauri::{Emitter, command};
 use tauri_plugin_clipboard_manager::ClipboardExt;
 use tokio::sync::Mutex;
 use xcap::{Monitor, Window};
@@ -248,7 +248,10 @@ pub async fn get_window_elements() -> Result<Vec<WindowElement>, ()> {
         max_y: monitor_max_y - monitor_min_y,
     };
 
+    #[cfg(target_os = "macos")]
     let mut window_size_scale = 1.0f32;
+    #[cfg(not(target_os = "macos"))]
+    let window_size_scale = 1.0f32;
 
     #[cfg(target_os = "macos")]
     {
@@ -382,7 +385,9 @@ pub async fn get_element_from_position(
     let mut ui_elements = ui_elements.lock().await;
 
     let element_rect_list =
-        match ui_elements.get_element_from_point_walker(mouse_x, mouse_y, &window) {
+        match ui_elements.get_element_from_point_walker(mouse_x, mouse_y, &|| {
+            let _ = window.emit("ui-automation-try-focus", ());
+        }) {
             Ok(element_rect) => element_rect,
             Err(_) => {
                 return Err(());

@@ -1,5 +1,9 @@
 [workspace]
-members = ["src-crates/app-services", "src-crates/app-os"]
+members = [
+    "src-crates/app-services",
+    "src-crates/app-os",
+    "src-crates/app-shared",
+]
 
 [package]
 name = "app"
@@ -39,9 +43,6 @@ xcap = { git = "https://github.com/mg-chao/xcap", branch = "20250710_fix_macos" 
 device_query = { git = "https://github.com/mg-chao/device_query", branch = "20250703_fix_index_out" }
 log = "^0.4"
 image = { version = "^0.25", features = ["png", "webp"] }
-thiserror = "2.0.12"
-rtree_rs = "^0.1.4"
-atree = "^0.5.2"
 tauri-plugin-dialog = "^2"
 paddle-ocr-rs = "0.5.2"
 # paddle-ocr-rs = { git = "https://github.com/mg-chao/paddle-ocr-rs.git", branch = "main" }
@@ -91,3 +92,6 @@ tauri-nspanel = { git = "https://github.com/ahkohd/tauri-nspanel", branch = "v2.
 tauri-plugin-autostart = "2"
 tauri-plugin-global-shortcut = "^2"
 tauri-plugin-single-instance = "2"
+
+[profile.dev]
+opt-level = 1

@@ -50,12 +50,16 @@ pub fn save_image_to_file(image: &image::DynamicImage, file_path: PathBuf) -> Re
     return Ok(());
 }
 
-pub fn get_mouse_position(app: &AppHandle) -> (i32, i32) {
+pub fn get_mouse_position(#[allow(unused_variables)] app: &AppHandle) -> (i32, i32) {
     let device_state = DeviceState::new();
     let mouse: MouseState = device_state.get_mouse();
     let (mouse_x, mouse_y) = mouse.coords;
 
+    #[cfg(target_os = "macos")]
     let mut position_scale = 1.0;
+    #[cfg(not(target_os = "macos"))]
+    let position_scale = 1.0;
+
     // macOS 下的鼠标位置是基于逻辑像素
     #[cfg(target_os = "macos")]
     {
@@ -82,9 +86,12 @@ pub fn get_window_id_from_ns_handle(ns_handle: *mut std::ffi::c_void) -> u32 {
 }
 
 pub fn capture_current_monitor_with_scap(
-    window: &tauri::Window,
-    monitor: &Monitor,
-    crop_area: Option<scap::capturer::Area>,
+    #[allow(unused_variables)] window: &tauri::Window,
+    #[allow(unused_variables)] monitor: &Monitor,
+    #[cfg(target_os = "macos")] crop_area: Option<scap::capturer::Area>,
+    #[allow(unused_variables)]
+    #[cfg(not(target_os = "macos"))]
+    crop_area: Option<()>,
 ) -> Option<image::DynamicImage> {
     #[cfg(not(target_os = "macos"))]
     {

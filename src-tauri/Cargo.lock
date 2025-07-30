@@ -183,7 +183,6 @@ checksum = "e16d2d3311acee920a9eb8d33b8cbc1787ce4a264e85f964c2404b969bdcd487"
 name = "app"
 version = "0.1.0"
 dependencies = [
- "atree",
  "base64 0.22.1",
  "bytemuck",
  "clipboard-rs",
@@ -198,7 +197,6 @@ dependencies = [
  "objc2 0.6.1",
  "objc2-app-kit",
  "paddle-ocr-rs",
- "rtree_rs",
  "scap",
  "serde",
  "serde_json",
@@ -221,7 +219,6 @@ dependencies = [
  "tauri-plugin-process",
  "tauri-plugin-single-instance",
  "tauri-plugin-store",
- "thiserror 2.0.12",
  "tokio",
  "uiautomation",
  "windows 0.61.3",
@@ -6033,11 +6030,16 @@ checksum = "67b1b7a3b5fe4f1376887184045fcf45c69e92af734b7aaddc05fb777b6fbd03"
 name = "snow-shot-app-os"
 version = "0.1.0"
 dependencies = [
+ "atree",
  "log",
+ "rtree_rs",
  "serde",
+ "snow-shot-app-shared",
  "tauri",
+ "thiserror 2.0.12",
  "uiautomation",
  "windows 0.61.3",
+ "xcap",
 ]
 
 [[package]]
@@ -6055,6 +6057,10 @@ dependencies = [
  "serde",
  "tauri",
 ]
+
+[[package]]
+name = "snow-shot-app-shared"
+version = "0.1.0"
 
 [[package]]
 name = "socket2"
