@@ -106,7 +106,6 @@ const TrayIconLoaderComponent = () => {
 
             const options: TrayIconOptions = {
                 icon: iconImage ? iconImage : ((await defaultWindowIcon()) ?? ''),
-                title: 'Snow Shot',
                 showMenuOnLeftClick: false,
                 tooltip: 'Snow Shot',
                 action: (event) => {

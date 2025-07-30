@@ -104,14 +104,38 @@ where
 
     #[cfg(target_os = "macos")]
     {
-        let (_, _, monitor) = snow_shot_app_utils::get_target_monitor();
+        let window_list = xcap::Window::all().unwrap_or_default();
+        let window = window_list.iter().find(|w| {
+            w.is_focused().unwrap_or(false)
+                // 排除某些托盘应用，托盘应用会捕获到托盘图标
+                && w.y().unwrap_or(0) != 0
+                && !w.title().unwrap_or_default().starts_with("Item-")
+        });
 
-        image = match monitor.capture_image() {
-            Ok(image) => image,
-            Err(_) => {
-                return Err(String::from(
-                    "[capture_focused_window] Failed to capture image",
-                ));
+        let window_image = match window {
+            Some(window) => match window.capture_image() {
+                Ok(image) => Some(image),
+                Err(_) => None,
+            },
+            None => None,
+        };
+
+        image = match window_image {
+            Some(image) => image,
+            None => {
+                log::warn!("[capture_focused_window] Failed to capture focused window");
+                // 改成捕获当前显示器
+
+                let (_, _, monitor) = snow_shot_app_utils::get_target_monitor();
+
+                match monitor.capture_image() {
+                    Ok(image) => image,
+                    Err(_) => {
+                        return Err(String::from(
+                            "[capture_focused_window] Failed to capture image",
+                        ));
+                    }
+                }
             }
         };
     }

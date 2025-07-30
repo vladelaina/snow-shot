@@ -19,7 +19,15 @@ import {
     ExcalidrawEventPublisher,
     ExcalidrawEventParams,
 } from '../drawCore/extra';
-import { useCallback, useContext, useImperativeHandle, useMemo, useRef, useState } from 'react';
+import {
+    useCallback,
+    useContext,
+    useEffect,
+    useImperativeHandle,
+    useMemo,
+    useRef,
+    useState,
+} from 'react';
 import { useStateSubscriber } from '@/hooks/useStateSubscriber';
 import { useFullScreenDrawContext } from '../../extra';
 import { CloseOutlined, LockOutlined } from '@ant-design/icons';
@@ -30,6 +38,7 @@ import { fullScreenDrawChangeMouseThrough, closeFullScreenDraw } from '@/functio
 import { useStateRef } from '@/hooks/useStateRef';
 import { zIndexs } from '@/utils/zIndex';
 import { useAppSettingsLoad } from '@/hooks/useAppSettingsLoad';
+import * as tauriOs from '@tauri-apps/plugin-os';
 
 export type FullScreenDrawToolbarActionType = {
     setTool: (drawState: DrawState) => void;
@@ -239,6 +248,11 @@ export const FullScreenDrawToolbar: React.FC<{
             },
         );
     }, [intl, mouseThroughHotkey]);
+
+    const [currentPlatform, setCurrentPlatform] = useState<tauriOs.Platform>();
+    useEffect(() => {
+        setCurrentPlatform(tauriOs.platform());
+    }, []);
 
     return (
         <div className="full-screen-draw-toolbar-container">
@@ -455,7 +469,8 @@ export const FullScreenDrawToolbar: React.FC<{
 
                 .full-screen-draw-toolbar {
                     pointer-events: auto;
-                    margin-top: ${token.marginLG}px;
+                    /* macOS 下加上 menu bar 的高度 */
+                    margin-top: ${token.marginLG + (currentPlatform === 'macos' ? 24 : 0)}px;
                     z-index: ${zIndexs.FullScreenDraw_Toolbar};
                 }
 

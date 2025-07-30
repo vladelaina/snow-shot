@@ -1,7 +1,5 @@
-pub fn get_focused_window() -> () {
-    log::warn!("[os::utils::linux::get_focused_window] not implemented");
-
-    ()
+pub fn get_focused_window() -> Option<()> {
+    None
 }
 
 pub fn switch_always_on_top() -> () {

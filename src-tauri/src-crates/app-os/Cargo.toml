@@ -27,3 +27,5 @@ windows = { version = "0.61.1", features = [
     "Win32_System_WinRT",
 ] }
 uiautomation = "0.22.0"
+
+[target.'cfg(any(target_os = "macos"))'.dependencies]

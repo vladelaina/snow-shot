@@ -47,6 +47,7 @@ import { GlobalEventHandler } from './components/globalEventHandler';
 import { withStatePublisher } from '@/hooks/useStatePublisher';
 import { CheckVersion } from '@/components/checkVersion';
 import { InitService } from '@/components/initService';
+import * as tauriOs from '@tauri-apps/plugin-os';
 
 type MenuItem = ItemType<MenuItemType>;
 
@@ -103,10 +104,16 @@ const MenuSiderCore: React.FC<{
             window.oncontextmenu = null;
         };
     }, []);
+
+    const [currentPlatform, setCurrentPlatform] = useState<tauriOs.Platform | undefined>(undefined);
+    useEffect(() => {
+        setCurrentPlatform(tauriOs.platform());
+    }, []);
+
     return (
         <Sider
             theme={darkMode ? 'dark' : 'light'}
-            collapsible
+            collapsible={currentPlatform !== 'macos'}
             collapsed={collapsed}
             onCollapse={(value) => {
                 setCollapsed(value);
@@ -119,21 +126,27 @@ const MenuSiderCore: React.FC<{
                 );
             }}
         >
-            <div className="logo-wrap">
-                <div className="logo-text">
-                    {collapsed ? (
-                        <>
-                            <div className="logo-text-highlight">S</div>
-                            <div>now</div>
-                        </>
-                    ) : (
-                        <>
-                            <div className="logo-text-highlight">Snow</div>
-                            <div>Shot</div>
-                        </>
-                    )}
+            {currentPlatform === 'macos' && (
+                <div className="macos-title-bar-margin app-tauri-drag-region"></div>
+            )}
+
+            {currentPlatform !== 'macos' && (
+                <div className="logo-wrap">
+                    <div className="logo-text">
+                        {collapsed ? (
+                            <>
+                                <div className="logo-text-highlight">S</div>
+                                <div>now</div>
+                            </>
+                        ) : (
+                            <>
+                                <div className="logo-text-highlight">Snow</div>
+                                <div>Shot</div>
+                            </>
+                        )}
+                    </div>
                 </div>
-            </div>
+            )}
             <Menu
                 defaultSelectedKeys={[menuItems[0]!.key?.toString() ?? '/']}
                 selectedKeys={[pathname]}
@@ -154,13 +167,14 @@ const MenuSiderCore: React.FC<{
                 }
 
                 .logo-wrap .logo-text {
-                    color: ${darkMode ? '#fff' : '#000'};
+                    color: var(--snow-shot-text-color);
                     display: inline-block;
                     padding: 0px 12px;
                 }
 
                 :global(body) {
                     --snow-shot-purple-color: ${darkMode ? token['purple-7'] : token['purple-5']};
+                    --snow-shot-text-color: ${darkMode ? '#fff' : '#000'};
                 }
 
                 .logo-wrap .logo-text .logo-text-highlight {
@@ -169,6 +183,11 @@ const MenuSiderCore: React.FC<{
 
                 .logo-wrap .logo-text div {
                     display: inline;
+                }
+
+                .macos-title-bar-margin {
+                    width: 100%;
+                    height: 32px;
                 }
             `}</style>
         </Sider>
@@ -194,27 +213,44 @@ const MenuContentCore: React.FC<{
 
     const pageNavActionRef = useRef<PageNavActionType | null>(null);
     const contentRef = useRef<HTMLDivElement>(null);
+
+    const [currentPlatform, setCurrentPlatform] = useState<tauriOs.Platform | undefined>(undefined);
+    useEffect(() => {
+        setCurrentPlatform(tauriOs.platform());
+    }, []);
+
     return (
         <Layout>
             <Header data-tauri-drag-region className="app-tauri-drag-region">
-                <Space>
-                    <Button
-                        type="text"
-                        size="small"
-                        icon={<MinusOutlined />}
-                        onClick={() => {
-                            appWindowRef.current?.minimize();
-                        }}
-                    />
-                    <Button
-                        type="text"
-                        size="small"
-                        icon={<CloseOutlined />}
-                        onClick={() => {
-                            appWindowRef.current?.hide();
-                        }}
-                    />
-                </Space>
+                {currentPlatform !== 'macos' && (
+                    <Space>
+                        <Button
+                            type="text"
+                            size="small"
+                            icon={<MinusOutlined />}
+                            onClick={() => {
+                                appWindowRef.current?.minimize();
+                            }}
+                        />
+                        <Button
+                            type="text"
+                            size="small"
+                            icon={<CloseOutlined />}
+                            onClick={() => {
+                                appWindowRef.current?.hide();
+                            }}
+                        />
+                    </Space>
+                )}
+
+                {currentPlatform === 'macos' && (
+                    <div data-tauri-drag-region className="logo-text">
+                        <div data-tauri-drag-region className="logo-text-highlight">
+                            Snow
+                        </div>
+                        <div data-tauri-drag-region>Shot</div>
+                    </div>
+                )}
             </Header>
             <Content>
                 <div className="content-wrap">
@@ -273,6 +309,26 @@ const MenuContentCore: React.FC<{
                     width: 100%;
                     height: 100%;
                     overflow-x: hidden;
+                }
+
+                .logo-text {
+                    position: absolute;
+                    line-height: initial;
+                    display: flex;
+                    width: 100%;
+                    height: 32px;
+                    align-items: center;
+                    justify-content: center;
+                    color: var(--snow-shot-text-color);
+                    font-style: italic;
+                    font-weight: 600;
+                    user-select: none;
+                    /* 对齐系统里的 title 位置 */
+                    padding-left: 32px;
+                }
+
+                .logo-text-highlight {
+                    color: var(--snow-shot-purple-color);
                 }
             `}</style>
         </Layout>

@@ -1,7 +1,9 @@
 use enigo::{Axis, Mouse};
+use objc2::runtime::AnyObject;
 use serde::Serialize;
 use std::{
     env,
+    ffi::c_void,
     path::PathBuf,
     time::{SystemTime, UNIX_EPOCH},
 };
@@ -9,9 +11,9 @@ use tauri::Emitter;
 use tauri::Manager;
 use tokio::{sync::Mutex, time::Duration};
 
-use snow_shot_app_shared::EnigoManager;
 use snow_shot_app_os::notification;
 use snow_shot_app_services::free_drag_window_service::FreeDragWindowService;
+use snow_shot_app_shared::EnigoManager;
 use snow_shot_app_utils::get_target_monitor;
 
 pub async fn exit_app(window: tauri::Window, handle: tauri::AppHandle) {
@@ -403,4 +405,92 @@ pub async fn start_free_drag(
     Ok(())
 }
 
-pub async fn set_always_on_top() {}
+pub async fn set_current_window_always_on_top(
+    #[allow(unused_variables)] window: tauri::WebviewWindow,
+    allow_input_method_overlay: bool,
+) -> Result<(), String> {
+    #[cfg(target_os = "macos")]
+    {
+        let window_ns = window.ns_window();
+
+        let window_ns = match window_ns {
+            Ok(window_ns) => window_ns as usize,
+            Err(_) => {
+                return Err(String::from(
+                    "[set_current_window_always_on_top] Failed to get NSWindow",
+                ));
+            }
+        };
+
+        match window.run_on_main_thread(move || unsafe {
+            use objc2_app_kit::NSWindowCollectionBehavior;
+
+            let window_ns = window_ns as *mut c_void;
+
+            if window_ns.is_null() {
+                log::error!("[set_current_window_always_on_top] NSWindow is null");
+                return;
+            }
+
+            let window_ns = window_ns as *mut AnyObject;
+
+            // level 为 20 不遮挡输入法
+            if allow_input_method_overlay {
+                let _: () = objc2::msg_send![window_ns, setLevel: 20];
+            } else {
+                let _: () =
+                    objc2::msg_send![window_ns, setLevel: objc2_app_kit::NSStatusWindowLevel + 1];
+            }
+
+            let _: () = objc2::msg_send![
+                window_ns,
+                setCollectionBehavior: NSWindowCollectionBehavior::CanJoinAllSpaces
+                | NSWindowCollectionBehavior::Stationary
+                | NSWindowCollectionBehavior::FullScreenAuxiliary,
+            ];
+        }) {
+            Ok(_) => (),
+            Err(_) => {
+                return Err(String::from(
+                    "[set_current_window_always_on_top] Failed to run on main thread",
+                ));
+            }
+        }
+
+        match window.set_focus() {
+            Ok(_) => (),
+            Err(_) => {
+                log::warn!("[set_current_window_always_on_top] Failed to set focus");
+            }
+        }
+    }
+
+    Ok(())
+}
+
+/// 处理 macOS 关闭按钮点击
+pub async fn handle_macos_close_button(window: tauri::WebviewWindow) -> Result<(), String> {
+    #[cfg(target_os = "macos")]
+    {
+        // 这里可以添加自定义的关闭逻辑
+        // 比如显示确认对话框、保存数据等
+        
+        log::info!("[macos] 处理关闭按钮点击");
+        
+        // 示例：隐藏窗口而不是关闭
+        match window.hide() {
+            Ok(_) => {
+                log::info!("[macos] 窗口已隐藏");
+            }
+            Err(e) => {
+                log::error!("[macos] 隐藏窗口失败: {:?}", e);
+                return Err(format!("隐藏窗口失败: {:?}", e));
+            }
+        }
+        
+        // 或者发送事件到前端显示确认对话框
+        // window.emit("show-close-confirmation", ()).unwrap();
+    }
+    
+    Ok(())
+}

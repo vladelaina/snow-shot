@@ -59,7 +59,12 @@ import { scrollScreenshotSaveToFile } from '@/commands/scrollScreenshot';
 import { AppSettingsActionContext, AppSettingsGroup } from '../contextWrap';
 import { AppSettingsPublisher } from '../contextWrap';
 import { ExtraTool } from './components/drawToolbar/components/tools/extraTool';
-import { createFixedContentWindow, getCurrentMonitorInfo, MonitorInfo } from '@/commands/core';
+import {
+    createFixedContentWindow,
+    getCurrentMonitorInfo,
+    MonitorInfo,
+    setCurrentWindowAlwaysOnTop,
+} from '@/commands/core';
 import {
     DrawState,
     DrawStatePublisher,
@@ -130,7 +135,16 @@ const DrawPageCore: React.FC = () => {
         CaptureStepPublisher,
         undefined,
     );
-    const [getDrawState, , resetDrawState] = useStateSubscriber(DrawStatePublisher, undefined);
+    const [getDrawState, , resetDrawState] = useStateSubscriber(
+        DrawStatePublisher,
+        useCallback((drawState: DrawState) => {
+            if (drawState === DrawState.Text) {
+                setCurrentWindowAlwaysOnTop(true);
+            } else {
+                setCurrentWindowAlwaysOnTop(false);
+            }
+        }, []),
+    );
     const [, setCaptureLoading] = useStateSubscriber(CaptureLoadingPublisher, undefined);
     const [getCaptureEvent, setCaptureEvent] = useStateSubscriber(CaptureEventPublisher, undefined);
     const onCaptureLoad = useCallback<BaseLayerEventActionType['onCaptureLoad']>(
@@ -280,6 +294,7 @@ const DrawPageCore: React.FC = () => {
                 await appWindow.setAlwaysOnTop(false);
             }
 
+            setCurrentWindowAlwaysOnTop(false);
             setDrawWindowStyle();
         },
         [getScreenshotType],

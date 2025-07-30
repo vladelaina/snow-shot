@@ -10,16 +10,24 @@
         "beforeBuildCommand": "pnpm build"
     },
     "app": {
+        "withGlobalTauri": true,
         "windows": [
             {
                 "label": "main",
                 "fullscreen": false,
                 "height": 632,
                 "resizable": false,
+                "maximizable": false,
                 "title": "Snow Shot",
                 "width": 1024,
                 "center": true,
-                "decorations": false,
+                "decorations": true,
+                "titleBarStyle": "Overlay",
+                "hiddenTitle": true,
+                "trafficLightPosition": {
+                    "x": 16,
+                    "y": 16
+                },
                 "url": "/"
             },
             {

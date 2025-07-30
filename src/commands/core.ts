@@ -104,3 +104,14 @@ export const createVideoRecordWindow = async (
     });
     return result;
 };
+
+/**
+ * 设置当前窗口置顶
+ * @param allowInputMethodOverlay 是否允许输入法覆盖
+ */
+export const setCurrentWindowAlwaysOnTop = async (allowInputMethodOverlay: boolean) => {
+    const result = await invoke<void>('set_current_window_always_on_top', {
+        allowInputMethodOverlay,
+    });
+    return result;
+};

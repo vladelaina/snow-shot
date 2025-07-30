@@ -10,12 +10,12 @@ use tokio::sync::Mutex;
 use tauri::Manager;
 use tauri_plugin_log::{Target, TargetKind};
 
-use snow_shot_app_shared::EnigoManager;
 use snow_shot_app_os::ui_automation::UIElements;
-use snow_shot_app_services::free_drag_window_service;
 use snow_shot_app_scroll_screenshot_service::scroll_screenshot_image_service;
 use snow_shot_app_scroll_screenshot_service::scroll_screenshot_service;
+use snow_shot_app_services::free_drag_window_service;
 use snow_shot_app_services::video_record_service;
+use snow_shot_app_shared::EnigoManager;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -68,17 +68,47 @@ pub fn run() {
         .plugin(tauri_plugin_notification::init())
         .plugin(tauri_plugin_process::init())
         .setup(|app| {
-            if cfg!(debug_assertions) {
-                app.handle().plugin(
-                    tauri_plugin_log::Builder::default()
-                        .targets([
-                            Target::new(TargetKind::Stdout),
-                            Target::new(TargetKind::LogDir { file_name: None }),
-                            Target::new(TargetKind::Webview),
-                        ])
-                        .level(log::LevelFilter::Info)
-                        .build(),
-                )?;
+            #[cfg(debug_assertions)]
+            app.handle().plugin(
+                tauri_plugin_log::Builder::default()
+                    .targets([
+                        Target::new(TargetKind::Stdout),
+                        Target::new(TargetKind::LogDir { file_name: None }),
+                        Target::new(TargetKind::Webview),
+                    ])
+                    .level(log::LevelFilter::Info)
+                    .build(),
+            )?;
+
+            #[cfg(target_os = "windows")]
+            {
+                match main_window.set_decorations(false) {
+                    Ok(_) => (),
+                    Err(_) => {
+                        log::error!("[init_main_window] Failed to set decorations");
+                    }
+                }
+            }
+
+            #[cfg(target_os = "macos")]
+            {
+                // macOS 下不在 dock 显示
+                app.set_activation_policy(tauri::ActivationPolicy::Accessory);
+
+                if let Some(main_window) = app.get_webview_window("main") {
+                    // 监听窗口关闭事件，拦截关闭按钮
+                    let window_clone = main_window.clone();
+                    main_window.on_window_event(move |event| {
+                        if let tauri::WindowEvent::CloseRequested { api, .. } = event {
+                            api.prevent_close();
+
+                            // 隐藏窗口而不是关闭
+                            if let Err(e) = window_clone.hide() {
+                                log::error!("[macos] hide window error: {:?}", e);
+                            }
+                        }
+                    });
+                }
             }
 
             Ok(())
@@ -121,7 +151,7 @@ pub fn run() {
             core::get_current_monitor_info,
             core::send_new_version_notification,
             core::create_video_record_window,
-            core::set_always_on_top,
+            core::set_current_window_always_on_top,
             scroll_screenshot::scroll_screenshot_get_image_data,
             scroll_screenshot::scroll_screenshot_init,
             scroll_screenshot::scroll_screenshot_capture,

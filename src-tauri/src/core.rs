@@ -114,7 +114,39 @@ pub async fn start_free_drag(
     snow_shot_tauri_commands_core::start_free_drag(window, free_drag_window_service).await
 }
 
+tauri_nspanel::tauri_panel! {
+    panel!(AlwaysOnTopPanel {
+        config: {
+        }
+    })
+}
+
 #[command]
-pub async fn set_always_on_top() {
-    snow_shot_tauri_commands_core::set_always_on_top().await
+pub async fn set_current_window_always_on_top(
+    window: tauri::WebviewWindow,
+    allow_input_method_overlay: bool,
+) -> Result<(), String> {
+    // #[cfg(target_os = "macos")]
+    // {
+    //     use tauri_nspanel::WebviewWindowExt;
+    //     use tauri_nspanel::panel::NSWindowCollectionBehavior;
+
+    //     let panel = window.to_panel::<AlwaysOnTopPanel>().unwrap();
+
+    //     panel.set_level(83);
+
+    //     panel.set_collection_behavior(
+    //         NSWindowCollectionBehavior::CanJoinAllSpaces
+    //             | NSWindowCollectionBehavior::Stationary
+    //             | NSWindowCollectionBehavior::FullScreenAuxiliary,
+    //     );
+    // }
+
+    // Ok(())
+
+    snow_shot_tauri_commands_core::set_current_window_always_on_top(
+        window,
+        allow_input_method_overlay,
+    )
+    .await
 }

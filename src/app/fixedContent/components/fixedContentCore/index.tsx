@@ -19,7 +19,7 @@ import { AppOcrResult, OcrResult, OcrResultActionType } from '../ocrResult';
 import clipboard from 'tauri-plugin-clipboard-api';
 import { KeyEventKey, KeyEventValue } from '@/core/hotKeys';
 import { useHotkeys } from 'react-hotkeys-hook';
-import { MonitorInfo, startFreeDrag } from '@/commands/core';
+import { MonitorInfo, setCurrentWindowAlwaysOnTop, startFreeDrag } from '@/commands/core';
 import { setDrawWindowStyle } from '@/commands/screenshot';
 import html2canvas from 'html2canvas';
 import { openUrl } from '@tauri-apps/plugin-opener';
@@ -124,6 +124,7 @@ export const FixedContentCore: React.FC<{
         undefined,
     );
     const [enableSelectText, setEnableSelectText] = useState(false);
+    const dragRegionMouseDownMousePositionRef = useRef<MousePosition>(undefined);
 
     const [htmlBlobUrl, setHtmlBlobUrl] = useState<string | undefined>(undefined);
     const originHtmlContentRef = useRef<string | undefined>(undefined);
@@ -354,6 +355,8 @@ export const FixedContentCore: React.FC<{
         actionRef,
         () => ({
             init: async (params) => {
+                setCurrentWindowAlwaysOnTop(true);
+
                 if ('htmlContent' in params) {
                     initHtml(params.htmlContent);
                 } else if ('textContent' in params) {
@@ -437,6 +440,9 @@ export const FixedContentCore: React.FC<{
 
                     appWindow.setSize(new PhysicalSize(Math.round(width), Math.round(height)));
                     appWindow.setPosition(new PhysicalPosition(Math.round(x), Math.round(y)));
+
+                    // 切换缩略图时，不会触发 mouse up 事件，这里清除下
+                    dragRegionMouseDownMousePositionRef.current = undefined;
                 },
             );
         }
@@ -880,8 +886,8 @@ export const FixedContentCore: React.FC<{
         [switchThumbnail],
     );
 
-    const dragRegionMouseDownMousePositionRef = useRef<MousePosition>(undefined);
     const onDragRegionMouseDown = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+        dragRegionMouseDownMousePositionRef.current = undefined;
         if (e.button === 0) {
             dragRegionMouseDownMousePositionRef.current = new MousePosition(e.clientX, e.clientY);
         }
@@ -895,8 +901,8 @@ export const FixedContentCore: React.FC<{
             new MousePosition(e.clientX, e.clientY),
         );
         if (distance > 6) {
-            startFreeDrag();
             dragRegionMouseDownMousePositionRef.current = undefined;
+            startFreeDrag();
         }
     }, []);
     const onDragRegionMouseUp = useCallback(() => {
