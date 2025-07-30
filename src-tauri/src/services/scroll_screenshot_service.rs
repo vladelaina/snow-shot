@@ -122,6 +122,12 @@ pub struct ScrollScreenshotService {
     pub enable_corner_fast12: Option<bool>,
     /// 是否尝试回滚
     pub try_rollback: bool,
+    /// 采样率
+    pub sample_rate: f32,
+    /// 最小采样尺寸
+    pub min_sample_size: u32,
+    /// 最大采样尺寸
+    pub max_sample_size: u32,
 }
 
 impl ScrollScreenshotService {
@@ -219,6 +225,9 @@ impl ScrollScreenshotService {
             bottom_image_ann_index: ScrollIndex::new(0),
             enable_corner_fast12: None,
             try_rollback: false,
+            sample_rate: 0.0,
+            min_sample_size: 0,
+            max_sample_size: 0,
         }
     }
 
@@ -232,8 +241,6 @@ impl ScrollScreenshotService {
     pub fn init(
         &mut self,
         direction: ScrollDirection,
-        image_width: u32,
-        image_height: u32,
         sample_rate: f32,
         min_sample_size: u32,
         max_sample_size: u32,
@@ -245,8 +252,8 @@ impl ScrollScreenshotService {
         self.top_image_list.clear();
         self.bottom_image_list.clear();
         self.current_direction = direction;
-        self.image_width = image_width;
-        self.image_height = image_height;
+        self.image_width = 0;
+        self.image_height = 0;
         self.top_image_size = 0;
         self.bottom_image_size = 0;
         self.corner_threshold = corner_threshold;
@@ -257,6 +264,15 @@ impl ScrollScreenshotService {
         self.top_image_ann_index = ScrollIndex::new(self.get_descriptor_size());
         self.bottom_image_ann_index = ScrollIndex::new(self.get_descriptor_size());
         self.try_rollback = try_rollback;
+        self.enable_corner_fast12 = None;
+        self.sample_rate = sample_rate;
+        self.min_sample_size = min_sample_size;
+        self.max_sample_size = max_sample_size;
+    }
+
+    pub fn init_image_size(&mut self, image_width: u32, image_height: u32) {
+        self.image_width = image_width;
+        self.image_height = image_height;
 
         let image_scale_side_size;
         if self.current_direction == ScrollDirection::Vertical {
@@ -265,9 +281,9 @@ impl ScrollScreenshotService {
             image_scale_side_size = image_height as f32;
         }
 
-        let target_side_size = (image_scale_side_size * sample_rate)
-            .min(max_sample_size as f32)
-            .max(min_sample_size as f32);
+        let target_side_size = (image_scale_side_size * self.sample_rate)
+            .min(self.max_sample_size as f32)
+            .max(self.min_sample_size as f32);
 
         self.image_scale = (target_side_size / image_scale_side_size).min(1.0);
 
@@ -284,8 +300,6 @@ impl ScrollScreenshotService {
         } else {
             self.image_width as i32
         };
-
-        self.enable_corner_fast12 = None;
     }
 
     fn get_descriptors(
@@ -718,7 +732,11 @@ impl ScrollScreenshotService {
         let image_width = image.width();
         let image_height = image.height();
 
-        if image_width != self.image_width || image_height != self.image_height {
+        if self.image_width == 0 || self.image_height == 0 {
+            // 在首次处理图片时初始化图片尺寸
+            // 因为在 macOS 下，截图使用的是逻辑像素，和物理像素不一样
+            self.init_image_size(image_width, image_height);
+        } else if image_width != self.image_width || image_height != self.image_height {
             return (None, false);
         }
 

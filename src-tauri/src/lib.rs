@@ -49,6 +49,12 @@ pub fn run() {
             app_window.show().unwrap();
         }));
     }
+
+    #[cfg(target_os = "macos")]
+    {
+        app_builder = app_builder.plugin(tauri_nspanel::init());
+    }
+
     app_builder
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_clipboard_manager::init())
@@ -80,21 +86,6 @@ pub fn run() {
 
             Ok(())
         })
-        // 已通过检测鼠标事件实现拖动窗口
-        // .on_window_event(|window, event| {
-        //     if let tauri::WindowEvent::CloseRequested { .. } = event {
-        //         #[cfg(target_os = "windows")]
-        //         {
-        //             if let Ok(hwnd) = window.hwnd() {
-        //                 let _ = remove_window_proc(hwnd);
-        //             }
-        //         }
-        //         #[cfg(target_os = "linux")]
-        //         {
-        //             let _ = remove_window_proc();
-        //         }
-        //     }
-        // })
         .manage(ui_elements)
         .manage(ocr_instance)
         .manage(auto_start_hide_window)
@@ -116,7 +107,6 @@ pub fn run() {
             screenshot::set_draw_window_style,
             screenshot::recovery_window_z_order,
             core::exit_app,
-            core::enable_free_drag,
             core::start_free_drag,
             file::save_file,
             file::create_dir,
@@ -134,6 +124,7 @@ pub fn run() {
             core::get_current_monitor_info,
             core::send_new_version_notification,
             core::create_video_record_window,
+            core::set_always_on_top,
             scroll_screenshot::scroll_screenshot_get_image_data,
             scroll_screenshot::scroll_screenshot_init,
             scroll_screenshot::scroll_screenshot_capture,

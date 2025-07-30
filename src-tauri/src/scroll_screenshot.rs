@@ -9,7 +9,7 @@ use tauri_plugin_clipboard_manager::ClipboardExt;
 use tokio::sync::Mutex;
 use xcap::Monitor;
 
-use crate::app_utils::save_image_to_file;
+use crate::app_utils::{self, save_image_to_file};
 use crate::services::{
     ScrollDirection, ScrollImageList, ScrollScreenshotImageService, ScrollScreenshotService,
 };
@@ -18,8 +18,6 @@ use crate::services::{
 pub async fn scroll_screenshot_init(
     scroll_screenshot_service: tauri::State<'_, Mutex<ScrollScreenshotService>>,
     direction: ScrollDirection,
-    image_width: u32,
-    image_height: u32,
     sample_rate: f32,
     min_sample_size: u32,
     max_sample_size: u32,
@@ -32,8 +30,6 @@ pub async fn scroll_screenshot_init(
 
     scroll_screenshot_service.init(
         direction,
-        image_width,
-        image_height,
         sample_rate,
         min_sample_size,
         max_sample_size,
@@ -48,6 +44,7 @@ pub async fn scroll_screenshot_init(
 
 #[command]
 pub async fn scroll_screenshot_capture(
+    window: tauri::Window,
     scroll_screenshot_image_service: tauri::State<'_, Mutex<ScrollScreenshotImageService>>,
     scroll_image_list: ScrollImageList,
     monitor_x: i32,
@@ -56,21 +53,47 @@ pub async fn scroll_screenshot_capture(
     min_y: u32,
     max_x: u32,
     max_y: u32,
-) -> Result<(), ()> {
+) -> Result<(), String> {
     // 区域截图
     let image = {
         let monitor = Monitor::from_point(monitor_x, monitor_y).unwrap();
 
-        match monitor.capture_region(min_x, min_y, max_x - min_x, max_y - min_y) {
-            Ok(image) => image,
-            Err(_) => return Err(()),
+        let mut rect_scale = 1.0f64;
+
+        // macOS 下截图区域是基于逻辑像素
+        #[cfg(target_os = "macos")]
+        {
+            rect_scale = (1.0 / monitor.scale_factor().unwrap_or(1.0)) as f64;
+        }
+
+        let min_x = min_x as f64 * rect_scale;
+        let min_y = min_y as f64 * rect_scale;
+        let width = max_x as f64 * rect_scale - min_x;
+        let height = max_y as f64 * rect_scale - min_y;
+
+        if let Some(image) = app_utils::capture_current_monitor_with_scap(
+            &window,
+            &monitor,
+            Some(scap::capturer::Area {
+                origin: scap::capturer::Point { x: min_x, y: min_y },
+                size: scap::capturer::Size { width, height },
+            }),
+        ) {
+            image
+        } else {
+            match monitor.capture_region(min_x as u32, min_y as u32, width as u32, height as u32) {
+                Ok(image) => image::DynamicImage::ImageRgba8(image),
+                Err(error) => {
+                    return Err(format!("[scroll_screenshot_capture] error: {}", error));
+                }
+            }
         }
     };
 
     scroll_screenshot_image_service
         .lock()
         .await
-        .push_image(image::DynamicImage::ImageRgba8(image), scroll_image_list);
+        .push_image(image, scroll_image_list);
 
     Ok(())
 }

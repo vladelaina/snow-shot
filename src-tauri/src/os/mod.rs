@@ -1,14 +1,4 @@
 #[cfg(target_os = "windows")]
-#[path = "./free_drag/windows.rs"]
-pub mod free_drag;
-#[cfg(target_os = "linux")]
-#[path = "./free_drag/linux.rs"]
-pub mod free_drag;
-#[cfg(target_os = "macos")]
-#[path = "./free_drag/macos.rs"]
-pub mod free_drag;
-
-#[cfg(target_os = "windows")]
 #[path = "./notification/windows.rs"]
 pub mod notification;
 #[cfg(target_os = "linux")]
@@ -77,6 +67,24 @@ impl ElementRect {
             min_y: self.min_y.max(rect.min_y),
             max_x: self.max_x.min(rect.max_x),
             max_y: self.max_y.min(rect.max_y),
+        }
+    }
+
+    /// 检查两个 ElementRect 是否有重叠部分
+    pub fn overlaps(&self, other: &ElementRect) -> bool {
+        // 检查是否有重叠：一个矩形在另一个矩形的左边、右边、上边或下边时，它们不重叠
+        !(self.max_x <= other.min_x
+            || self.min_x >= other.max_x
+            || self.max_y <= other.min_y
+            || self.min_y >= other.max_y)
+    }
+
+    pub fn scale(&self, scale: f32) -> ElementRect {
+        ElementRect {
+            min_x: (self.min_x as f32 * scale) as i32,
+            min_y: (self.min_y as f32 * scale) as i32,
+            max_x: (self.max_x as f32 * scale) as i32,
+            max_y: (self.max_y as f32 * scale) as i32,
         }
     }
 }

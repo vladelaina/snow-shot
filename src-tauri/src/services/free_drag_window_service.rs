@@ -1,11 +1,12 @@
-use tauri::PhysicalPosition;
+use tauri::{Manager, PhysicalPosition};
 extern crate device_query;
 use device_query::{
     DeviceEvents, DeviceEventsHandler, DeviceQuery, DeviceState, MouseButton, MousePosition,
-    MouseState,
 };
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
+
+use crate::app_utils;
 
 pub struct FreeDragWindowService {
     /* 目标窗口 */
@@ -31,9 +32,10 @@ impl FreeDragWindowService {
         self.stop_drag();
 
         // 计算当前鼠标相对窗口的位置
-        let device_state = DeviceState::new();
-        let mouse_state: MouseState = device_state.get_mouse();
-        let (mouse_x, mouse_y) = (mouse_state.coords.0 as f64, mouse_state.coords.1 as f64);
+        // windows 下获取的是物理像素，macOS 下获取的是逻辑像素
+        // 为了方便处理，计算时 windows 下用物理像素，macOS 下用逻辑像素
+        let (mouse_x, mouse_y) = DeviceState::new().get_mouse().coords;
+        let (mouse_x, mouse_y) = (mouse_x as f64, mouse_y as f64);
 
         let window_position = match window.outer_position() {
             Ok(position) => position,
@@ -43,8 +45,16 @@ impl FreeDragWindowService {
                 ));
             }
         };
-        let window_x = window_position.x as f64;
-        let window_y = window_position.y as f64;
+        let mut window_x = window_position.x as f64;
+        let mut window_y = window_position.y as f64;
+
+        #[cfg(target_os = "macos")]
+        {
+            let logical_window_positon: tauri::LogicalPosition<f64> =
+                window_position.to_logical(window.scale_factor().unwrap_or(1.0));
+            window_x = logical_window_positon.x as f64;
+            window_y = logical_window_positon.y as f64;
+        }
 
         self.target_window = Arc::new(Mutex::new(Some(window)));
 
@@ -71,6 +81,7 @@ impl FreeDragWindowService {
         // 克隆需要在闭包中使用的变量
         let target_window = Arc::clone(&self.target_window);
         let relative_position = Arc::new(Mutex::new((mouse_x - window_x, mouse_y - window_y)));
+
         self._mouse_move_guard.lock().unwrap().replace(Box::new(
             device_event_handler.on_mouse_move(move |position: &MousePosition| {
                 let target_window = match target_window.lock() {
@@ -88,10 +99,20 @@ impl FreeDragWindowService {
                 };
 
                 let (mouse_x, mouse_y) = (position.0 as f64, position.1 as f64);
+
                 let (window_x, window_y) =
                     (mouse_x - relative_position.0, mouse_y - relative_position.1);
 
-                let _ = target_window.set_position(PhysicalPosition::new(window_x, window_y));
+                #[cfg(target_os = "macos")]
+                {
+                    let _ =
+                        target_window.set_position(tauri::LogicalPosition::new(window_x, window_y));
+                }
+
+                #[cfg(not(target_os = "macos"))]
+                {
+                    let _ = target_window.set_position(PhysicalPosition::new(window_x, window_y));
+                }
             }),
         ));
 

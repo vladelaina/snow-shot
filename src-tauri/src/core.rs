@@ -10,11 +10,7 @@ use tauri::{Manager, command};
 use tauri_plugin_clipboard;
 use tokio::{sync::Mutex, time::Duration};
 
-use crate::{
-    os::{self, free_drag::set_window_proc},
-    screenshot::get_target_monitor,
-    services::FreeDragWindowService,
-};
+use crate::{os, screenshot::get_target_monitor, services::FreeDragWindowService};
 
 #[command]
 pub async fn exit_app(window: tauri::Window, handle: tauri::AppHandle) {
@@ -244,13 +240,23 @@ pub struct MonitorInfo {
 
 #[command]
 pub async fn get_current_monitor_info() -> Result<MonitorInfo, ()> {
-    let (mouse_x, mouse_y, monitor) = get_target_monitor();
+    let (mut mouse_x, mut mouse_y, monitor) = get_target_monitor();
 
     let monitor_x = monitor.x().unwrap();
     let monitor_y = monitor.y().unwrap();
-    let monitor_width = monitor.width().unwrap();
-    let monitor_height = monitor.height().unwrap();
+    let mut monitor_width = monitor.width().unwrap();
+    let mut monitor_height = monitor.height().unwrap();
     let monitor_scale_factor = monitor.scale_factor().unwrap();
+
+    // macOS 下，屏幕宽高是逻辑像素，这里统一转换为物理像素
+    #[cfg(target_os = "macos")]
+    {
+        monitor_width = (monitor_width as f32 * monitor_scale_factor) as u32;
+        monitor_height = (monitor_height as f32 * monitor_scale_factor) as u32;
+        // 把鼠标坐标转换为物理像素
+        mouse_x = (mouse_x as f32 * monitor_scale_factor) as i32;
+        mouse_y = (mouse_y as f32 * monitor_scale_factor) as i32;
+    }
 
     let monitor_info = MonitorInfo {
         mouse_x: mouse_x - monitor_x,
@@ -262,26 +268,6 @@ pub async fn get_current_monitor_info() -> Result<MonitorInfo, ()> {
         monitor_scale_factor: monitor_scale_factor,
     };
     Ok(monitor_info)
-}
-
-#[cfg(target_os = "windows")]
-#[command]
-pub async fn enable_free_drag(window: tauri::Window) {
-    if let Ok(hwnd) = window.hwnd() {
-        let _ = set_window_proc(hwnd);
-    }
-}
-
-#[cfg(target_os = "linux")]
-#[command]
-pub async fn enable_free_drag() {
-    let _ = set_window_proc();
-}
-
-#[cfg(target_os = "macos")]
-#[command]
-pub async fn enable_free_drag() {
-    let _ = set_window_proc();
 }
 
 #[command]
@@ -423,3 +409,6 @@ pub async fn start_free_drag(
 
     Ok(())
 }
+
+#[command]
+pub async fn set_always_on_top(window: tauri::Window) {}

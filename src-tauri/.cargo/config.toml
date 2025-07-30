@@ -2,6 +2,8 @@
 rustflags = ["-Ctarget-feature=+crt-static"]
 [target.i686-pc-windows-msvc]
 rustflags = ["-Ctarget-feature=+crt-static"]
+[target.aarch64-apple-darwin]
+rustflags = ["-Ctarget-feature=+crt-static"]
 
 [env]
 ORT_LIB_LOCATION = "./lib"

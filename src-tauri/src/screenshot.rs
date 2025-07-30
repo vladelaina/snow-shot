@@ -1,3 +1,4 @@
+use crate::app_utils;
 use crate::app_utils::save_image_to_file;
 use crate::os;
 use crate::os::ElementRect;
@@ -10,7 +11,6 @@ use image::codecs::webp::WebPEncoder;
 use serde::Serialize;
 use std::path::PathBuf;
 use std::time::{SystemTime, UNIX_EPOCH};
-use tauri::Manager;
 use tauri::command;
 use tauri::ipc::Response;
 use tauri_plugin_clipboard_manager::ClipboardExt;
@@ -22,30 +22,6 @@ pub fn get_device_mouse_position() -> (i32, i32) {
     let mouse: MouseState = device_state.get_mouse();
 
     mouse.coords
-}
-
-#[cfg(target_os = "macos")]
-fn bgra_to_rgb(bgra_data: &[u8]) -> Vec<u8> {
-    let pixel_count = bgra_data.len() / 4;
-    let mut rgb_data = Vec::with_capacity(pixel_count * 3);
-
-    unsafe {
-        rgb_data.set_len(pixel_count * 3);
-
-        let bgra_ptr = bgra_data.as_ptr();
-        let rgb_ptr: *mut u8 = rgb_data.as_mut_ptr();
-
-        for i in 0..pixel_count {
-            let bgra_base = i * 4;
-            let rgb_base = i * 3;
-
-            *rgb_ptr.add(rgb_base) = *bgra_ptr.add(bgra_base + 2); // R
-            *rgb_ptr.add(rgb_base + 1) = *bgra_ptr.add(bgra_base + 1); // G  
-            *rgb_ptr.add(rgb_base + 2) = *bgra_ptr.add(bgra_base); // B
-        }
-    }
-
-    rgb_data
 }
 
 pub fn get_target_monitor() -> (i32, i32, Monitor) {
@@ -69,151 +45,12 @@ pub fn get_target_monitor() -> (i32, i32, Monitor) {
     (mouse_x, mouse_y, monitor)
 }
 
-#[cfg(target_os = "macos")]
-pub fn get_window_id_from_ns_handle(ns_handle: *mut std::ffi::c_void) -> u32 {
-    use objc2::runtime::AnyObject;
-
-    unsafe {
-        let ns_window = ns_handle as *mut AnyObject;
-        let window_id: u32 = objc2::msg_send![ns_window, windowNumber];
-        window_id
-    }
-}
-
-fn capture_current_monitor_with_scap(
-    window: &tauri::Window,
-    monitor: &Monitor,
-) -> Option<image::DynamicImage> {
-    #[cfg(not(target_os = "macos"))]
-    {
-        return None;
-    }
-
-    #[cfg(target_os = "macos")]
-    {
-        // macOS 下用 scap 截取，scap 使用最新的 ScreenCaptureKit API 进行截取
-        // macOS 可能遇到旧平台，这时回退到 xcap 截取
-        // if !scap::is_supported() {
-        //     return None;
-        // }
-        // scap 的版本比较看着不是很可靠，用 tauri 提供的方案比较下
-        let os_version = tauri_plugin_os::version();
-        if os_version.cmp(&tauri_plugin_os::Version::from_string("12.3.0"))
-            != std::cmp::Ordering::Greater
-        {
-            return None;
-        }
-
-        if !scap::has_permission() {
-            log::warn!("[capture_current_monitor_with_scap] failed tohas_permission");
-            if !scap::request_permission() {
-                log::error!("[capture_current_monitor_with_scap] failed to request_permission");
-                return None;
-            }
-        }
-
-        let ns_handle = match window.ns_window() {
-            Ok(ns_handle) => ns_handle,
-            Err(_) => {
-                log::error!("[capture_current_monitor_with_scap] failed to get ns_window");
-                return None;
-            }
-        };
-
-        let monitor_id = match monitor.id() {
-            Ok(id) => id,
-            Err(e) => {
-                log::error!(
-                    "[capture_current_monitor_with_scap] failed to get monitor id: {:?}",
-                    e
-                );
-                return None;
-            }
-        };
-
-        let window_id = get_window_id_from_ns_handle(ns_handle);
-
-        let options = scap::capturer::Options {
-            fps: 1,
-            target: Some(scap::Target::Display(scap::Display {
-                id: monitor_id as u32,
-                title: "".to_string(), // 这里 title 不重要
-                raw_handle: core_graphics_helmer_fork::display::CGDisplay::new(monitor_id),
-            })),
-            show_cursor: false,
-            show_highlight: true,
-            excluded_targets: Some(vec![scap::Target::Window(scap::Window {
-                id: window_id,
-                title: "Snow Shot - Draw".to_string(),
-                raw_handle: window_id,
-            })]),
-            output_type: scap::frame::FrameType::BGRAFrame,
-            output_resolution: scap::capturer::Resolution::Captured,
-            crop_area: Some(scap::capturer::Area {
-                origin: scap::capturer::Point {
-                    x: monitor.x().unwrap_or(0) as f64,
-                    y: monitor.y().unwrap_or(0) as f64,
-                },
-                size: scap::capturer::Size {
-                    width: monitor.width().unwrap_or(0) as f64,
-                    height: monitor.height().unwrap_or(0) as f64,
-                },
-            }),
-            ..Default::default()
-        };
-
-        // Create Capturer
-        let capturer = scap::capturer::Capturer::build(options);
-        let mut capturer = match capturer {
-            Ok(capturer) => capturer,
-            Err(e) => {
-                log::error!(
-                    "[capture_current_monitor_with_scap] failed to build capturer: {:?}",
-                    e
-                );
-                return None;
-            }
-        };
-
-        capturer.start_capture();
-        let frame = match capturer.get_next_frame() {
-            Ok(frame) => match frame {
-                scap::frame::Frame::BGRA(frame) => frame,
-                _ => {
-                    log::error!("[capture_current_monitor_with_scap] valid frame type");
-                    return None;
-                }
-            },
-            Err(e) => {
-                log::error!(
-                    "[capture_current_monitor_with_scap] failed to get_next_frame: {:?}",
-                    e
-                );
-                return None;
-            }
-        };
-        capturer.stop_capture();
-
-        match image::RgbImage::from_raw(
-            frame.width as u32,
-            frame.height as u32,
-            bgra_to_rgb(&frame.data),
-        ) {
-            Some(rgb_image) => Some(image::DynamicImage::ImageRgb8(rgb_image)),
-            None => {
-                log::error!("[capture_current_monitor_with_scap] failed to create image");
-                return None;
-            }
-        }
-    }
-}
-
 #[command]
 pub async fn capture_current_monitor(window: tauri::Window, encoder: String) -> Response {
     // 获取当前鼠标的位置
     let (_, _, monitor) = get_target_monitor();
 
-    let image_buffer = match capture_current_monitor_with_scap(&window, &monitor) {
+    let image_buffer = match app_utils::capture_current_monitor_with_scap(&window, &monitor, None) {
         Some(image) => image,
         None => match monitor.capture_image() {
             Ok(image) => image::DynamicImage::ImageRgba8(image),
@@ -397,6 +234,7 @@ pub struct WindowElement {
 pub async fn get_window_elements() -> Result<Vec<WindowElement>, ()> {
     let (_, _, monitor) = get_target_monitor();
 
+    // 注意 macOS 下的 monitor 是基于逻辑像素
     let monitor_min_x = monitor.x().unwrap_or(0);
     let monitor_min_y = monitor.y().unwrap_or(0);
     let monitor_max_x = monitor_min_x + monitor.width().unwrap_or(0) as i32;
@@ -404,14 +242,31 @@ pub async fn get_window_elements() -> Result<Vec<WindowElement>, ()> {
     // 获取所有窗口，简单筛选下需要的窗口，然后获取窗口所有元素
     let windows = Window::all().unwrap_or_default();
 
+    let monitor_rect = ElementRect {
+        min_x: 0,
+        min_y: 0,
+        max_x: monitor_max_x - monitor_min_x,
+        max_y: monitor_max_y - monitor_min_y,
+    };
+
+    let mut window_size_scale = 1.0f32;
+
+    #[cfg(target_os = "macos")]
+    {
+        // macOS 下窗口基于逻辑像素，这里统一转为物理像素
+        window_size_scale = monitor.scale_factor().unwrap_or(1.0);
+    }
+
     let mut rect_list = Vec::new();
     for window in windows {
         if window.is_minimized().unwrap_or(true) {
             continue;
         }
 
-        if let Ok(title) = window.title() {
-            if title.eq("Shell Handwriting Canvas") {
+        let window_title = window.title().unwrap_or_default();
+        #[cfg(target_os = "windows")]
+        {
+            if window_title.eq("Shell Handwriting Canvas") {
                 continue;
             }
         }
@@ -440,30 +295,41 @@ pub async fn get_window_elements() -> Result<Vec<WindowElement>, ()> {
             Err(_) => continue,
         };
 
+        let window_rect = ElementRect {
+            min_x: x - monitor_min_x,
+            min_y: y - monitor_min_y,
+            max_x: x + width as i32 - monitor_min_x,
+            max_y: y + height as i32 - monitor_min_y,
+        };
+
+        #[cfg(target_os = "macos")]
+        {
+            if window_title.eq("Dock")
+                && window_rect.equals(
+                    monitor_rect.min_x,
+                    monitor_rect.min_y,
+                    monitor_rect.max_x,
+                    monitor_rect.max_y,
+                )
+            {
+                continue;
+            }
+        }
+
         // 保留在屏幕内的窗口
-        if !(x >= monitor_min_x && y >= monitor_min_y && x <= monitor_max_x && y <= monitor_max_y) {
+        if !monitor_rect.overlaps(&window_rect) {
             continue;
         }
 
         rect_list.push(WindowElement {
-            element_rect: ElementRect {
-                min_x: x - monitor_min_x,
-                min_y: y - monitor_min_y,
-                max_x: x + width as i32 - monitor_min_x,
-                max_y: y + height as i32 - monitor_min_y,
-            },
+            element_rect: window_rect.scale(window_size_scale),
             window_id,
         });
     }
 
     // 把显示器的窗口也推入到 rect_list 中
     rect_list.push(WindowElement {
-        element_rect: ElementRect {
-            min_x: monitor_min_x,
-            min_y: monitor_min_y,
-            max_x: monitor_max_x,
-            max_y: monitor_max_y,
-        },
+        element_rect: monitor_rect.scale(window_size_scale),
         window_id: 0,
     });
 
@@ -528,12 +394,8 @@ pub async fn get_element_from_position(
 }
 
 #[command]
-pub async fn get_mouse_position() -> Result<(i32, i32), ()> {
-    let device_state = DeviceState::new();
-    let mouse: MouseState = device_state.get_mouse();
-    let (mouse_x, mouse_y) = mouse.coords;
-
-    Ok((mouse_x, mouse_y))
+pub async fn get_mouse_position(app: tauri::AppHandle) -> Result<(i32, i32), ()> {
+    Ok(app_utils::get_mouse_position(&app))
 }
 
 #[command]
