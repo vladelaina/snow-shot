@@ -47,6 +47,7 @@ rayon = "^1.10"
 regex = "^1.11"
 zune-jpegxl = "^0.4"
 zune-core = "^0.4"
+scap = { git = "https://github.com/mg-chao/scap", branch = "20250712_custom" }
 
 # 项目内依赖
 snow-shot-app-services = { path = "src-crates/app-services" }
@@ -96,26 +97,7 @@ tauri-plugin-process = "^2"
 tauri-plugin-notification = "^2"
 tauri-plugin-os = "^2"
 
-[target.'cfg(any(target_os = "windows"))'.dependencies]
-windows = { version = "0.61.1", features = [
-    "Win32_Foundation",
-    "UI_UIAutomation",
-    "Win32_UI_WindowsAndMessaging",
-    "Win32_System_LibraryLoader",
-    "UI_Notifications",
-    "Data_Xml_Dom",
-    "Foundation",
-    "ApplicationModel_Core",
-    "Win32_System_Com",
-    "Win32_System_WinRT",
-] }
-uiautomation = "0.22.0"
-
 [target.'cfg(any(target_os = "macos"))'.dependencies]
-scap = { git = "https://github.com/mg-chao/scap", branch = "20250712_custom" }
-core-graphics-helmer-fork = "0.24.0"
-objc2 = "0.6.1"
-objc2-app-kit = "0.3.1"
 tauri-nspanel = { git = "https://github.com/ahkohd/tauri-nspanel", branch = "v2.1" }
 
 [target.'cfg(not(any(target_os = "android", target_os = "ios")))'.dependencies]

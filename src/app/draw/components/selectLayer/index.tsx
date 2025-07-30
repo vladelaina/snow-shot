@@ -618,8 +618,8 @@ const SelectLayerCore: React.FC<SelectLayerProps> = ({ actionRef }) => {
                     getScreenshotType() !== ScreenshotType.TopWindow
                 ) {
                     // 检测拖动距离是否启用手动选择
-                    const maxDistance = mouseDownPositionRef.current.getMaxDistance(mousePosition);
-                    if (maxDistance > 9) {
+                    const maxSide = mouseDownPositionRef.current.getMaxSide(mousePosition);
+                    if (maxSide > 6) {
                         setSelectState(SelectState.Manual);
                     }
                 }

@@ -207,7 +207,7 @@ pub async fn get_window_elements() -> Result<Vec<WindowElement>, ()> {
     };
 
     #[cfg(target_os = "macos")]
-    let mut window_size_scale = 1.0f32;
+    let window_size_scale;
     #[cfg(not(target_os = "macos"))]
     let window_size_scale = 1.0f32;
 
@@ -324,6 +324,10 @@ pub async fn switch_always_on_top(window_id: u32) -> bool {
     }
 
     #[cfg(target_os = "linux")]
+    {
+        snow_shot_app_os::utils::switch_always_on_top();
+    }
+
     #[cfg(target_os = "macos")]
     {
         snow_shot_app_os::utils::switch_always_on_top();

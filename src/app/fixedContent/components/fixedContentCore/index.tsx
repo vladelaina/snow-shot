@@ -30,6 +30,7 @@ import {
 } from '@/utils/clipboard';
 import { TweenAnimation } from '@/utils/tweenAnimation';
 import * as TWEEN from '@tweenjs/tween.js';
+import { MousePosition } from '@/utils/mousePosition';
 
 export type FixedContentInitDrawParams = {
     monitorInfo: MonitorInfo;
@@ -879,6 +880,29 @@ export const FixedContentCore: React.FC<{
         [switchThumbnail],
     );
 
+    const dragRegionMouseDownMousePositionRef = useRef<MousePosition>(undefined);
+    const onDragRegionMouseDown = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+        if (e.button === 0) {
+            dragRegionMouseDownMousePositionRef.current = new MousePosition(e.clientX, e.clientY);
+        }
+    }, []);
+    const onDragRegionMouseMove = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+        if (!dragRegionMouseDownMousePositionRef.current) {
+            return;
+        }
+
+        const distance = dragRegionMouseDownMousePositionRef.current.getDistance(
+            new MousePosition(e.clientX, e.clientY),
+        );
+        if (distance > 6) {
+            startFreeDrag();
+            dragRegionMouseDownMousePositionRef.current = undefined;
+        }
+    }, []);
+    const onDragRegionMouseUp = useCallback(() => {
+        dragRegionMouseDownMousePositionRef.current = undefined;
+    }, []);
+
     return (
         <div
             className="fixed-image-container"
@@ -962,11 +986,9 @@ export const FixedContentCore: React.FC<{
             <div
                 className="fixed-image-container-inner"
                 onWheel={onWheel}
-                onMouseDown={(event) => {
-                    if (event.button === 0) {
-                        startFreeDrag();
-                    }
-                }}
+                onMouseDown={onDragRegionMouseDown}
+                onMouseMove={onDragRegionMouseMove}
+                onMouseUp={onDragRegionMouseUp}
             >
                 <Button
                     className="fixed-image-close-button"

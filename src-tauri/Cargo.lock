@@ -183,11 +183,7 @@ checksum = "e16d2d3311acee920a9eb8d33b8cbc1787ce4a264e85f964c2404b969bdcd487"
 name = "app"
 version = "0.1.0"
 dependencies = [
- "core-graphics-helmer-fork",
  "log",
- "objc2 0.6.1",
- "objc2-app-kit",
- "scap",
  "snow-shot-app-os",
  "snow-shot-app-scroll-screenshot-service",
  "snow-shot-app-services",
@@ -215,8 +211,6 @@ dependencies = [
  "tauri-plugin-single-instance",
  "tauri-plugin-store",
  "tokio",
- "uiautomation",
- "windows 0.61.3",
 ]
 
 [[package]]
@@ -6068,9 +6062,12 @@ dependencies = [
 name = "snow-shot-app-utils"
 version = "0.1.0"
 dependencies = [
+ "core-graphics-helmer-fork",
  "device_query",
  "image",
  "log",
+ "objc2 0.6.1",
+ "scap",
  "tauri",
  "xcap",
  "zune-core",
@@ -6135,6 +6132,7 @@ name = "snow-shot-tauri-commands-scroll-screenshot"
 version = "0.1.0"
 dependencies = [
  "image",
+ "scap",
  "serde",
  "snow-shot-app-scroll-screenshot-service",
  "snow-shot-app-utils",

@@ -128,19 +128,6 @@ pub fn capture_current_monitor_with_scap(
 
     #[cfg(target_os = "macos")]
     {
-        // macOS 下用 scap 截取，scap 使用最新的 ScreenCaptureKit API 进行截取
-        // macOS 可能遇到旧平台，这时回退到 xcap 截取
-        // if !scap::is_supported() {
-        //     return None;
-        // }
-        // scap 的版本比较看着不是很可靠，用 tauri 提供的方案比较下
-        let os_version = tauri_plugin_os::version();
-        if os_version.cmp(&tauri_plugin_os::Version::from_string("12.3.0"))
-            != std::cmp::Ordering::Greater
-        {
-            return None;
-        }
-
         if !scap::has_permission() {
             log::warn!("[capture_current_monitor_with_scap] failed tohas_permission");
             if !scap::request_permission() {

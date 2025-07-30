@@ -62,13 +62,14 @@ const FullScreenDrawPage = () => {
             inited.current = true;
 
             drawCoreActionRef.current?.setEnable(true);
-            toolbarActionRef.current?.setTool(DrawState.Select);
             setExcalidrawEvent({
                 event: 'onDraw',
                 params: undefined,
             });
             setExcalidrawEvent(undefined);
             setEnableKeyEvent(true);
+
+            getCurrentWindow().setFocus();
         }, 0);
     }, [setEnableKeyEvent, setExcalidrawEvent]);
 

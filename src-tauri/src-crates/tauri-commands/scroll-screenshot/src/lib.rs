@@ -56,7 +56,7 @@ pub async fn scroll_screenshot_capture(
         let monitor = Monitor::from_point(monitor_x, monitor_y).unwrap();
 
         #[cfg(target_os = "macos")]
-        let mut rect_scale = 1.0f64;
+        let rect_scale;
         #[cfg(not(target_os = "macos"))]
         let rect_scale = 1.0f64;
 

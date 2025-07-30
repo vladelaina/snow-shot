@@ -43,9 +43,9 @@ impl FreeDragWindowService {
         };
 
         #[cfg(target_os = "macos")]
-        let mut window_x = window_position.x as f64;
+        let window_x;
         #[cfg(target_os = "macos")]
-        let mut window_y = window_position.y as f64;
+        let window_y;
 
         #[cfg(not(target_os = "macos"))]
         let window_x = window_position.x as f64;

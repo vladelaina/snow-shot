@@ -11,3 +11,9 @@ zune-core = { workspace = true }
 device_query = { workspace = true }
 image = { workspace = true }
 log = { workspace = true }
+
+[target.'cfg(any(target_os = "macos"))'.dependencies]
+scap = { workspace = true }
+
+objc2 = "0.6.1"
+core-graphics-helmer-fork = "0.24.0"
