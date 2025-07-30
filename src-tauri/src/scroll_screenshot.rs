@@ -9,7 +9,7 @@ use tauri_plugin_clipboard_manager::ClipboardExt;
 use tokio::sync::Mutex;
 use xcap::Monitor;
 
-use crate::app_utils::{self, save_image_to_file};
+use snow_shot_app_utils::{self, save_image_to_file};
 use snow_shot_app_services::scroll_screenshot_image_service::ScrollScreenshotImageService;
 use snow_shot_app_services::scroll_screenshot_service::{
     ScrollDirection, ScrollImageList, ScrollScreenshotService,
@@ -75,7 +75,7 @@ pub async fn scroll_screenshot_capture(
         let width = max_x as f64 * rect_scale - min_x;
         let height = max_y as f64 * rect_scale - min_y;
 
-        if let Some(image) = app_utils::capture_current_monitor_with_scap(
+        if let Some(image) = snow_shot_app_utils::capture_current_monitor_with_scap(
             &window,
             &monitor,
             #[cfg(target_os = "windows")]

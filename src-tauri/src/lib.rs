@@ -1,4 +1,3 @@
-pub mod app_utils;
 pub mod core;
 pub mod file;
 pub mod ocr;

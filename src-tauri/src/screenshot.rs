@@ -1,5 +1,3 @@
-use crate::app_utils;
-use crate::app_utils::save_image_to_file;
 use device_query::{DeviceQuery, DeviceState, MouseState};
 use image::EncodableLayout;
 use image::codecs::png::{CompressionType, FilterType, PngEncoder};
@@ -49,16 +47,17 @@ pub async fn capture_current_monitor(window: tauri::Window, encoder: String) -> 
     // 获取当前鼠标的位置
     let (_, _, monitor) = get_target_monitor();
 
-    let image_buffer = match app_utils::capture_current_monitor_with_scap(&window, &monitor, None) {
-        Some(image) => image,
-        None => match monitor.capture_image() {
-            Ok(image) => image::DynamicImage::ImageRgba8(image),
-            Err(_) => {
-                log::error!("Failed to capture current monitor");
-                return Response::new(Vec::new());
-            }
-        },
-    };
+    let image_buffer =
+        match snow_shot_app_utils::capture_current_monitor_with_scap(&window, &monitor, None) {
+            Some(image) => image,
+            None => match monitor.capture_image() {
+                Ok(image) => image::DynamicImage::ImageRgba8(image),
+                Err(_) => {
+                    log::error!("Failed to capture current monitor");
+                    return Response::new(Vec::new());
+                }
+            },
+        };
 
     // 前端处理渲染图片的方式有两种
     // 1. 接受 RGBA 数据通过 canvas 转为 base64 后显示
@@ -162,7 +161,7 @@ pub async fn capture_focused_window(
     }
 
     if let Some(file_path) = file_path {
-        save_image_to_file(
+        snow_shot_app_utils::save_image_to_file(
             &image::DynamicImage::ImageRgba8(image),
             PathBuf::from(file_path),
         )?;
@@ -399,7 +398,7 @@ pub async fn get_element_from_position(
 
 #[command]
 pub async fn get_mouse_position(app: tauri::AppHandle) -> Result<(i32, i32), ()> {
-    Ok(app_utils::get_mouse_position(&app))
+    Ok(snow_shot_app_utils::get_mouse_position(&app))
 }
 
 #[command]
