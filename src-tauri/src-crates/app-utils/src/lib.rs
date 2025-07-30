@@ -9,6 +9,34 @@ use zune_core::colorspace::ColorSpace;
 use zune_core::options::EncoderOptions;
 use zune_jpegxl::JxlSimpleEncoder;
 
+pub fn get_device_mouse_position() -> (i32, i32) {
+    let device_state = DeviceState::new();
+    let mouse: MouseState = device_state.get_mouse();
+
+    mouse.coords
+}
+
+pub fn get_target_monitor() -> (i32, i32, Monitor) {
+    let (mut mouse_x, mut mouse_y) = get_device_mouse_position();
+    let monitor = Monitor::from_point(mouse_x, mouse_y).unwrap_or_else(|_| {
+        // 在 Wayland 中，获取不到鼠标位置，选用第一个显示器作为位置
+
+        log::warn!("[get_target_monitor] No monitor found, using first monitor");
+
+        let monitor_list = xcap::Monitor::all().expect("[get_target_monitor] No monitor found");
+        let first_monitor = monitor_list
+            .first()
+            .expect("[get_target_monitor] No monitor found");
+
+        mouse_x = first_monitor.x().unwrap_or(0) + first_monitor.width().unwrap_or(0) as i32 / 2;
+        mouse_y = first_monitor.y().unwrap_or(0) + first_monitor.height().unwrap_or(0) as i32 / 2;
+
+        first_monitor.clone()
+    });
+
+    (mouse_x, mouse_y, monitor)
+}
+
 pub fn save_image_to_file(image: &image::DynamicImage, file_path: PathBuf) -> Result<(), String> {
     if file_path.ends_with(".jxl") {
         let image_data = image.to_rgb8();

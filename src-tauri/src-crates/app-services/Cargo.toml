@@ -4,14 +4,9 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-image = { workspace = true }
-imageproc = { workspace = true }
 serde = { workspace = true }
-rayon = { workspace = true }
 tauri = { workspace = true }
 device_query = { workspace = true }
 regex = { workspace = true }
 
-fast_image_resize = { version = "^5.2", features = ["rayon"] }
-hora = { version = "^0.1.1" }
 ffmpeg-sidecar = "^2.0.6"

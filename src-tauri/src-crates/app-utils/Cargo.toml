@@ -10,3 +10,4 @@ zune-jpegxl = { workspace = true }
 zune-core = { workspace = true }
 device_query = { workspace = true }
 image = { workspace = true }
+log = { workspace = true }

@@ -1,0 +1,18 @@
+[package]
+name = "snow-shot-tauri-commands-core"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+snow-shot-app-shared = { workspace = true }
+snow-shot-app-utils = { workspace = true }
+snow-shot-app-os = { workspace = true }
+snow-shot-app-services = { workspace = true }
+
+enigo = { workspace = true }
+serde = { workspace = true }
+tauri = { workspace = true }
+tokio = { workspace = true }
+log = { workspace = true }
+
+get-selected-text = "^0.1"

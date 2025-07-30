@@ -7,27 +7,22 @@ pub mod video_record;
 
 use tokio::sync::Mutex;
 
-use enigo::{Enigo, Settings};
-use ocr::OcrLiteWrap;
-use paddle_ocr_rs::ocr_lite::OcrLite;
-use snow_shot_app_os::ui_automation::UIElements;
-use snow_shot_app_services::free_drag_window_service;
-use snow_shot_app_services::scroll_screenshot_image_service;
-use snow_shot_app_services::scroll_screenshot_service;
-use snow_shot_app_services::video_record_service;
 use tauri::Manager;
 use tauri_plugin_log::{Target, TargetKind};
 
+use snow_shot_app_shared::EnigoManager;
+use snow_shot_app_os::ui_automation::UIElements;
+use snow_shot_app_services::free_drag_window_service;
+use snow_shot_app_scroll_screenshot_service::scroll_screenshot_image_service;
+use snow_shot_app_scroll_screenshot_service::scroll_screenshot_service;
+use snow_shot_app_services::video_record_service;
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    let ocr_instance = OcrLiteWrap {
-        ocr_instance: Some(OcrLite::new()),
-    };
-    let ocr_instance = Mutex::new(ocr_instance);
+    let ocr_instance = Mutex::new(snow_shot_tauri_commands_ocr::OcrLiteWrap::new());
     let video_record_service = Mutex::new(video_record_service::VideoRecordService::new());
 
-    let enigo_instance = Enigo::new(&Settings::default()).unwrap();
-    let enigo_instance = Mutex::new(enigo_instance);
+    let enigo_instance = Mutex::new(EnigoManager::new());
 
     let ui_elements = Mutex::new(UIElements::new());
     let auto_start_hide_window = Mutex::new(false);

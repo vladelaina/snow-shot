@@ -183,28 +183,20 @@ checksum = "e16d2d3311acee920a9eb8d33b8cbc1787ce4a264e85f964c2404b969bdcd487"
 name = "app"
 version = "0.1.0"
 dependencies = [
- "base64 0.22.1",
- "bytemuck",
- "clipboard-rs 0.3.0",
  "core-graphics-helmer-fork",
- "device_query",
- "enigo 0.5.0",
- "get-selected-text",
- "image",
- "imageproc",
  "log",
- "num_cpus",
  "objc2 0.6.1",
  "objc2-app-kit",
- "paddle-ocr-rs",
- "rayon",
- "regex",
  "scap",
- "serde",
- "serde_json",
  "snow-shot-app-os",
+ "snow-shot-app-scroll-screenshot-service",
  "snow-shot-app-services",
- "snow-shot-app-utils",
+ "snow-shot-app-shared",
+ "snow-shot-tauri-commands-core",
+ "snow-shot-tauri-commands-file",
+ "snow-shot-tauri-commands-ocr",
+ "snow-shot-tauri-commands-screenshot",
+ "snow-shot-tauri-commands-scroll-screenshot",
  "tauri",
  "tauri-build",
  "tauri-nspanel",
@@ -225,9 +217,6 @@ dependencies = [
  "tokio",
  "uiautomation",
  "windows 0.61.3",
- "xcap",
- "zune-core",
- "zune-jpegxl",
 ]
 
 [[package]]
@@ -1028,22 +1017,6 @@ dependencies = [
  "objc2 0.6.1",
  "objc2-app-kit",
  "objc2-foundation 0.3.1",
- "windows 0.59.0",
- "x11rb",
-]
-
-[[package]]
-name = "clipboard-rs"
-version = "0.3.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c4320896621317ada426b440ebb0534c6234d2da9714ac05ae604ea7e2ddc3a5"
-dependencies = [
- "clipboard-win",
- "image",
- "objc2 0.6.1",
- "objc2-app-kit",
- "objc2-foundation 0.3.1",
- "objc2-ui-kit",
  "windows 0.59.0",
  "x11rb",
 ]
@@ -2380,9 +2353,9 @@ dependencies = [
 
 [[package]]
 name = "geo-types"
-version = "0.7.16"
+version = "0.7.17"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "62ddb1950450d67efee2bbc5e429c68d052a822de3aad010d28b351fbb705224"
+checksum = "75a4dcd69d35b2c87a7c83bce9af69fd65c9d68d3833a0ded568983928f3fc99"
 dependencies = [
  "approx",
  "num-traits",
@@ -4218,16 +4191,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "objc2-core-location"
-version = "0.3.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ac0f75792558aa9d618443bbb5db7426a7a0b6fddf96903f86ef9ad02e135740"
-dependencies = [
- "objc2 0.6.1",
- "objc2-foundation 0.3.1",
-]
-
-[[package]]
 name = "objc2-core-media"
 version = "0.3.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4353,7 +4316,6 @@ checksum = "90ffb6a0cd5f182dc964334388560b12a57f7b74b3e2dec5e2722aa2dfb2ccd5"
 dependencies = [
  "bitflags 2.9.1",
  "objc2 0.6.1",
- "objc2-core-foundation",
  "objc2-foundation 0.3.1",
 ]
 
@@ -4364,26 +4326,8 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "25b1312ad7bc8a0e92adae17aa10f90aae1fb618832f9b993b022b591027daed"
 dependencies = [
  "bitflags 2.9.1",
- "block2 0.6.1",
  "objc2 0.6.1",
- "objc2-cloud-kit",
- "objc2-core-data",
  "objc2-core-foundation",
- "objc2-core-graphics",
- "objc2-core-image",
- "objc2-core-location",
- "objc2-foundation 0.3.1",
- "objc2-quartz-core 0.3.1",
- "objc2-user-notifications",
-]
-
-[[package]]
-name = "objc2-user-notifications"
-version = "0.3.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2a3f5ec77a81d9e0c5a0b32159b0cb143d7086165e79708351e02bf37dfc65cd"
-dependencies = [
- "objc2 0.6.1",
  "objc2-foundation 0.3.1",
 ]
 
@@ -6091,16 +6035,23 @@ dependencies = [
 ]
 
 [[package]]
-name = "snow-shot-app-services"
+name = "snow-shot-app-scroll-screenshot-service"
 version = "0.1.0"
 dependencies = [
- "device_query",
  "fast_image_resize",
- "ffmpeg-sidecar",
  "hora",
  "image",
  "imageproc",
  "rayon",
+ "serde",
+]
+
+[[package]]
+name = "snow-shot-app-services"
+version = "0.1.0"
+dependencies = [
+ "device_query",
+ "ffmpeg-sidecar",
  "regex",
  "serde",
  "tauri",
@@ -6109,6 +6060,9 @@ dependencies = [
 [[package]]
 name = "snow-shot-app-shared"
 version = "0.1.0"
+dependencies = [
+ "enigo 0.5.0",
+]
 
 [[package]]
 name = "snow-shot-app-utils"
@@ -6116,10 +6070,77 @@ version = "0.1.0"
 dependencies = [
  "device_query",
  "image",
+ "log",
  "tauri",
  "xcap",
  "zune-core",
  "zune-jpegxl",
+]
+
+[[package]]
+name = "snow-shot-tauri-commands-core"
+version = "0.1.0"
+dependencies = [
+ "enigo 0.5.0",
+ "get-selected-text",
+ "log",
+ "serde",
+ "snow-shot-app-os",
+ "snow-shot-app-services",
+ "snow-shot-app-shared",
+ "snow-shot-app-utils",
+ "tauri",
+ "tokio",
+]
+
+[[package]]
+name = "snow-shot-tauri-commands-file"
+version = "0.1.0"
+dependencies = [
+ "base64 0.22.1",
+ "image",
+ "tauri",
+ "zune-core",
+ "zune-jpegxl",
+]
+
+[[package]]
+name = "snow-shot-tauri-commands-ocr"
+version = "0.1.0"
+dependencies = [
+ "image",
+ "num_cpus",
+ "paddle-ocr-rs",
+ "serde",
+ "tauri",
+ "tokio",
+]
+
+[[package]]
+name = "snow-shot-tauri-commands-screenshot"
+version = "0.1.0"
+dependencies = [
+ "image",
+ "log",
+ "serde",
+ "snow-shot-app-os",
+ "snow-shot-app-utils",
+ "tauri",
+ "tokio",
+ "xcap",
+]
+
+[[package]]
+name = "snow-shot-tauri-commands-scroll-screenshot"
+version = "0.1.0"
+dependencies = [
+ "image",
+ "serde",
+ "snow-shot-app-scroll-screenshot-service",
+ "snow-shot-app-utils",
+ "tauri",
+ "tokio",
+ "xcap",
 ]
 
 [[package]]
@@ -6602,7 +6623,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f811a26526cad7291414c526be85b2d1317681c60949bbe8c10902898b7c48d7"
 dependencies = [
  "base64 0.22.1",
- "clipboard-rs 0.2.4",
+ "clipboard-rs",
  "image",
  "serde",
  "tauri",
