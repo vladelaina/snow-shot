@@ -2,8 +2,7 @@ use std::fs;
 use std::path::PathBuf;
 
 use device_query::{DeviceQuery, DeviceState, MouseState};
-use enigo::Mouse;
-use tauri::{AppHandle, Runtime};
+use tauri::AppHandle;
 use xcap::Monitor;
 use zune_core::bit_depth::BitDepth;
 use zune_core::colorspace::ColorSpace;

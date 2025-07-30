@@ -10,8 +10,9 @@ use tokio::sync::Mutex;
 use xcap::Monitor;
 
 use crate::app_utils::{self, save_image_to_file};
-use crate::services::{
-    ScrollDirection, ScrollImageList, ScrollScreenshotImageService, ScrollScreenshotService,
+use snow_shot_app_services::scroll_screenshot_image_service::ScrollScreenshotImageService;
+use snow_shot_app_services::scroll_screenshot_service::{
+    ScrollDirection, ScrollImageList, ScrollScreenshotService,
 };
 
 #[command]

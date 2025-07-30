@@ -11,7 +11,6 @@ use atree::Token;
 use rtree_rs::{RTree, Rect};
 use std::thread::sleep;
 use std::time::Duration;
-use tauri::Emitter;
 use uiautomation::UIAutomation;
 use uiautomation::UIElement;
 use uiautomation::UITreeWalker;

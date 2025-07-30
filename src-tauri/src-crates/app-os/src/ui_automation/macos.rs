@@ -1,5 +1,5 @@
-use crate::os::ElementRect;
-use crate::os::TryGetElementByFocus;
+use crate::ElementRect;
+use crate::TryGetElementByFocus;
 
 pub struct UIElements {}
 

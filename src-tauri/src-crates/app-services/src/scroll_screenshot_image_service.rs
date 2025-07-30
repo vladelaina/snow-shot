@@ -1,7 +1,7 @@
 use image::DynamicImage;
 use std::collections::VecDeque;
 
-use crate::services::ScrollImageList;
+use crate::scroll_screenshot_service::ScrollImageList;
 
 pub struct ScrollScreenshotImage {
     pub image: DynamicImage,

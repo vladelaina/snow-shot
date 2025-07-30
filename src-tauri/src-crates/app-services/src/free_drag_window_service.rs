@@ -1,12 +1,8 @@
-use tauri::{Manager, PhysicalPosition};
-extern crate device_query;
 use device_query::{
     DeviceEvents, DeviceEventsHandler, DeviceQuery, DeviceState, MouseButton, MousePosition,
 };
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
-
-use crate::app_utils;
 
 pub struct FreeDragWindowService {
     /* 目标窗口 */

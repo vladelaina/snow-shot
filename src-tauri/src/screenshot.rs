@@ -1,9 +1,8 @@
 use crate::app_utils;
 use crate::app_utils::save_image_to_file;
-use crate::os;
-use crate::os::ElementRect;
-use crate::os::TryGetElementByFocus;
-use crate::os::ui_automation::UIElements;
+use snow_shot_app_os::ui_automation::UIElements;
+use snow_shot_app_os::ElementRect;
+use snow_shot_app_os::TryGetElementByFocus;
 use device_query::{DeviceQuery, DeviceState, MouseState};
 use image::EncodableLayout;
 use image::codecs::png::{CompressionType, FilterType, PngEncoder};
@@ -96,7 +95,7 @@ pub async fn capture_focused_window(
 
     #[cfg(target_os = "windows")]
     {
-        let hwnd = os::utils::get_focused_window();
+        let hwnd = snow_shot_app_os::utils::get_focused_window();
 
         let focused_window = xcap::Window::new(xcap::ImplWindow::new(hwnd));
 
@@ -361,13 +360,13 @@ pub async fn switch_always_on_top(window_id: u32) -> bool {
             Err(_) => return false,
         };
 
-        os::utils::switch_always_on_top(window_hwnd);
+        snow_shot_app_os::utils::switch_always_on_top(window_hwnd);
     }
 
     #[cfg(target_os = "linux")]
     #[cfg(target_os = "macos")]
     {
-        os::utils::switch_always_on_top();
+        snow_shot_app_os::utils::switch_always_on_top();
     }
 
     true
@@ -435,5 +434,5 @@ pub async fn create_draw_window(app: tauri::AppHandle) {
 
 #[command]
 pub async fn set_draw_window_style(window: tauri::Window) {
-    os::utils::set_draw_window_style(window);
+    snow_shot_app_os::utils::set_draw_window_style(window);
 }

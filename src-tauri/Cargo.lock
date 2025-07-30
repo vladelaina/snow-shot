@@ -190,10 +190,7 @@ dependencies = [
  "core-graphics-helmer-fork",
  "device_query",
  "enigo 0.5.0",
- "fast_image_resize",
- "ffmpeg-sidecar",
  "get-selected-text",
- "hora",
  "image",
  "imageproc",
  "log",
@@ -201,12 +198,12 @@ dependencies = [
  "objc2 0.6.1",
  "objc2-app-kit",
  "paddle-ocr-rs",
- "rayon",
- "regex",
  "rtree_rs",
  "scap",
  "serde",
  "serde_json",
+ "snow-shot-app-os",
+ "snow-shot-app-services",
  "tauri",
  "tauri-build",
  "tauri-nspanel",
@@ -6031,6 +6028,33 @@ name = "smallvec"
 version = "1.15.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "67b1b7a3b5fe4f1376887184045fcf45c69e92af734b7aaddc05fb777b6fbd03"
+
+[[package]]
+name = "snow-shot-app-os"
+version = "0.1.0"
+dependencies = [
+ "log",
+ "serde",
+ "tauri",
+ "uiautomation",
+ "windows 0.61.3",
+]
+
+[[package]]
+name = "snow-shot-app-services"
+version = "0.1.0"
+dependencies = [
+ "device_query",
+ "fast_image_resize",
+ "ffmpeg-sidecar",
+ "hora",
+ "image",
+ "imageproc",
+ "rayon",
+ "regex",
+ "serde",
+ "tauri",
+]
 
 [[package]]
 name = "socket2"

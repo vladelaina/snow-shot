@@ -384,28 +384,6 @@ impl ScrollScreenshotService {
         region
     }
 
-    fn filter_corners_with_region(
-        &self,
-        corners: &[ScrollOffset],
-        region: &CropRegion,
-    ) -> Vec<ScrollOffset> {
-        let min_x = region.x as i32;
-        let max_x = (region.x + region.width) as i32;
-        let min_y = region.y as i32;
-        let max_y = (region.y + region.height) as i32;
-
-        corners
-            .par_iter()
-            .filter_map(|corner| {
-                if corner.x >= min_x && corner.x < max_x && corner.y >= min_y && corner.y < max_y {
-                    Some(*corner)
-                } else {
-                    None
-                }
-            })
-            .collect()
-    }
-
     fn get_corners(&mut self, image: &image::GrayImage) -> Vec<ScrollOffset> {
         let corners;
         if self.enable_corner_fast12.is_none() {

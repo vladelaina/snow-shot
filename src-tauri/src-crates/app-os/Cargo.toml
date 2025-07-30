@@ -1,0 +1,24 @@
+[package]
+name = "snow-shot-app-os"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+log = "^0.4"
+tauri = { version = "^2.3" }
+serde = { version = "^1.0", features = ["derive"] }
+
+[target.'cfg(any(target_os = "windows"))'.dependencies]
+windows = { version = "0.61.1", features = [
+    "Win32_Foundation",
+    "UI_UIAutomation",
+    "Win32_UI_WindowsAndMessaging",
+    "Win32_System_LibraryLoader",
+    "UI_Notifications",
+    "Data_Xml_Dom",
+    "Foundation",
+    "ApplicationModel_Core",
+    "Win32_System_Com",
+    "Win32_System_WinRT",
+] }
+uiautomation = "0.22.0"

@@ -1,21 +1,23 @@
 mod app_error;
 mod app_log;
+mod app_utils;
 mod core;
 mod file;
 mod ocr;
-mod os;
-mod app_utils;
 mod screenshot;
 mod scroll_screenshot;
-mod services;
 mod video_record;
 
 use tokio::sync::Mutex;
 
 use enigo::{Enigo, Settings};
 use ocr::OcrLiteWrap;
-use os::ui_automation::UIElements;
 use paddle_ocr_rs::ocr_lite::OcrLite;
+use snow_shot_app_os::ui_automation::UIElements;
+use snow_shot_app_services::free_drag_window_service;
+use snow_shot_app_services::scroll_screenshot_image_service;
+use snow_shot_app_services::scroll_screenshot_service;
+use snow_shot_app_services::video_record_service;
 use tauri::Manager;
 use tauri_plugin_log::{Target, TargetKind};
 
@@ -25,7 +27,7 @@ pub fn run() {
         ocr_instance: Some(OcrLite::new()),
     };
     let ocr_instance = Mutex::new(ocr_instance);
-    let video_record_service = Mutex::new(services::VideoRecordService::new());
+    let video_record_service = Mutex::new(video_record_service::VideoRecordService::new());
 
     let enigo_instance = Enigo::new(&Settings::default()).unwrap();
     let enigo_instance = Mutex::new(enigo_instance);
@@ -33,10 +35,13 @@ pub fn run() {
     let ui_elements = Mutex::new(UIElements::new());
     let auto_start_hide_window = Mutex::new(false);
 
-    let scroll_screenshot_service = Mutex::new(services::ScrollScreenshotService::new());
-    let scroll_screenshot_image_service = Mutex::new(services::ScrollScreenshotImageService::new());
+    let scroll_screenshot_service =
+        Mutex::new(scroll_screenshot_service::ScrollScreenshotService::new());
+    let scroll_screenshot_image_service =
+        Mutex::new(scroll_screenshot_image_service::ScrollScreenshotImageService::new());
 
-    let free_drag_window_service = Mutex::new(services::FreeDragWindowService::new());
+    let free_drag_window_service =
+        Mutex::new(free_drag_window_service::FreeDragWindowService::new());
 
     let mut app_builder = tauri::Builder::default().plugin(tauri_plugin_os::init());
 

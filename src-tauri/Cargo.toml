@@ -1,3 +1,6 @@
+[workspace]
+members = ["src-crates/app-services", "src-crates/app-os"]
+
 [package]
 name = "app"
 version = "0.1.0"
@@ -16,6 +19,8 @@ crate-type = ["staticlib", "cdylib", "rlib"]
 tauri-build = { version = "^2.0.6", features = [] }
 
 [dependencies]
+snow-shot-app-services = { path = "src-crates/app-services" }
+snow-shot-app-os = { path = "src-crates/app-os" }
 serde_json = "^1.0"
 serde = { version = "^1.0", features = ["derive"] }
 tauri = { version = "^2.3", features = [
@@ -46,10 +51,7 @@ get-selected-text = "0.1.6"
 tauri-plugin-store = "2"
 base64 = "0.22.1"
 enigo = "0.5.0"
-hora = { version = "0.1.1" }
 imageproc = "0.25.0"
-rayon = "1.10.0"
-fast_image_resize = { version = "5.1.4", features = ["rayon"] }
 bytemuck = "1.23.0"
 tauri-plugin-clipboard-manager = "2"
 clipboard-rs = "0.2.4"
@@ -59,8 +61,6 @@ zune-core = "0.4.12"
 tauri-plugin-clipboard = "2.1.11"
 tauri-plugin-process = "2"
 tauri-plugin-notification = "2"
-ffmpeg-sidecar = "2.0.6"
-regex = "1.11.1"
 tauri-plugin-os = "2"
 tokio = { version = "1.45.1" }
 

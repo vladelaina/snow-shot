@@ -10,7 +10,9 @@ use tauri::{Manager, command};
 use tauri_plugin_clipboard;
 use tokio::{sync::Mutex, time::Duration};
 
-use crate::{os, screenshot::get_target_monitor, services::FreeDragWindowService};
+use crate::screenshot::get_target_monitor;
+use snow_shot_app_os::notification;
+use snow_shot_app_services::free_drag_window_service::FreeDragWindowService;
 
 #[command]
 pub async fn exit_app(window: tauri::Window, handle: tauri::AppHandle) {
@@ -272,7 +274,7 @@ pub async fn get_current_monitor_info() -> Result<MonitorInfo, ()> {
 
 #[command]
 pub async fn send_new_version_notification(title: String, body: String) {
-    os::notification::send_new_version_notification(title, body);
+    notification::send_new_version_notification(title, body);
 }
 
 #[derive(Serialize, Clone, Copy)]

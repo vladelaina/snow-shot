@@ -6,7 +6,6 @@ mod app_log;
 mod app_utils;
 mod file;
 mod ocr;
-mod os;
 mod screenshot;
 
 fn main() {

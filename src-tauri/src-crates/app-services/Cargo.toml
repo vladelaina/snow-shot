@@ -1,0 +1,16 @@
+[package]
+name = "snow-shot-app-services"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+image = { version = "^0.25" }
+fast_image_resize = { version = "5.1.4", features = ["rayon"] }
+hora = { version = "0.1.1" }
+imageproc = "0.25.0"
+serde = { version = "^1.0", features = ["derive"] }
+rayon = "1.10.0"
+ffmpeg-sidecar = "2.0.6"
+tauri = { version = "^2.3" }
+device_query = { git = "https://github.com/mg-chao/device_query", branch = "20250703_fix_index_out" }
+regex = "1.11.1"
