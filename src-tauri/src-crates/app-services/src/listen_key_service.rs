@@ -65,8 +65,6 @@ impl ListenKeyService {
             let key_down_app_handle = app_handle.clone();
             *key_down_guard_lock = Some(Box::new(device_event_handler.on_key_down(
                 move |key: &Keycode| {
-                    println!("on_key_down {}", key);
-
                     match key_down_app_handle.emit(
                         "listen-key-service:key-down",
                         ListenKeyDownEvent { key: *key as usize },

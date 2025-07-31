@@ -1,4 +1,5 @@
 import { createPublisher } from '@/hooks/useStatePublisher';
+import { getPlatformValue } from '@/utils';
 
 export const EnableKeyEventPublisher = createPublisher<boolean>(false);
 
@@ -60,7 +61,7 @@ export const defaultDrawToolbarKeyEventSettings: Record<KeyEventKey, KeyEventVal
         unique: true,
     },
     [KeyEventKey.LockDrawTool]: {
-        hotKey: 'Ctrl+Alt+L',
+        hotKey: getPlatformValue('Ctrl+Alt+L', 'Meta+Option+L'),
         unique: true,
     },
     [KeyEventKey.RectTool]: {
@@ -96,11 +97,11 @@ export const defaultDrawToolbarKeyEventSettings: Record<KeyEventKey, KeyEventVal
         unique: true,
     },
     [KeyEventKey.UndoTool]: {
-        hotKey: 'Ctrl+Z',
+        hotKey: getPlatformValue('Ctrl+Z', 'Meta+Z'),
         unique: true,
     },
     [KeyEventKey.RedoTool]: {
-        hotKey: 'Ctrl+Y',
+        hotKey: getPlatformValue('Ctrl+Y', 'Meta+Y'),
         unique: true,
     },
     [KeyEventKey.CancelTool]: {
@@ -108,19 +109,19 @@ export const defaultDrawToolbarKeyEventSettings: Record<KeyEventKey, KeyEventVal
         unique: true,
     },
     [KeyEventKey.FixedTool]: {
-        hotKey: 'Ctrl+F',
+        hotKey: getPlatformValue('Ctrl+F', 'Meta+F'),
         unique: true,
     },
     [KeyEventKey.CopyTool]: {
-        hotKey: 'Ctrl+C',
+        hotKey: getPlatformValue('Ctrl+C', 'Meta+C'),
         unique: true,
     },
     [KeyEventKey.ExtraToolsTool]: {
-        hotKey: 'Ctrl+E',
+        hotKey: getPlatformValue('Ctrl+E', 'Meta+E'),
         unique: true,
     },
     [KeyEventKey.OcrDetectTool]: {
-        hotKey: 'Ctrl+D',
+        hotKey: getPlatformValue('Ctrl+D', 'Meta+D'),
         unique: true,
     },
     [KeyEventKey.ScrollScreenshotTool]: {
@@ -128,11 +129,11 @@ export const defaultDrawToolbarKeyEventSettings: Record<KeyEventKey, KeyEventVal
         unique: true,
     },
     [KeyEventKey.SaveTool]: {
-        hotKey: 'Ctrl+S',
+        hotKey: getPlatformValue('Ctrl+S', 'Meta+S'),
         unique: true,
     },
     [KeyEventKey.FastSaveTool]: {
-        hotKey: 'Ctrl+Shift+S',
+        hotKey: getPlatformValue('Ctrl+Shift+S', 'Meta+Shift+S'),
         unique: true,
     },
     [KeyEventKey.ColorPickerCopy]: {
@@ -151,12 +152,12 @@ export const defaultDrawToolbarKeyEventSettings: Record<KeyEventKey, KeyEventVal
     [KeyEventKey.RotateWithDiscreteAnglePicker]: {
         hotKey: 'Shift',
     },
-    [KeyEventKey.SwitchColorFormat]: {
-        hotKey: 'Shift',
-    },
     [KeyEventKey.AutoAlignPicker]: {
         hotKey: 'Ctrl',
         unique: true,
+    },
+    [KeyEventKey.SwitchColorFormat]: {
+        hotKey: 'Shift',
     },
     [KeyEventKey.RemoveTool]: {
         hotKey: 'Delete',
@@ -183,7 +184,7 @@ export const defaultDrawToolbarKeyEventSettings: Record<KeyEventKey, KeyEventVal
         unique: true,
     },
     [KeyEventKey.LaserPointerTool]: {
-        hotKey: 'Ctrl+L',
+        hotKey: getPlatformValue('Ctrl+L', 'Meta+L'),
         unique: true,
     },
 };

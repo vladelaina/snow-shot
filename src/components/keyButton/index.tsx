@@ -1,10 +1,11 @@
 import { Button, ButtonProps, Flex, Modal, Space, theme } from 'antd';
 import { KeyboardGrayIcon } from '../icons';
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { FormattedMessage } from 'react-intl';
 import { CheckOutlined, DeleteOutlined, PlusOutlined } from '@ant-design/icons';
 import { useRecordHotkeys } from 'react-hotkeys-hook';
 import { trim } from 'es-toolkit';
+import { formatKey } from '@/utils/format';
 
 type KeyConfig = {
     recordKeys: string;
@@ -16,25 +17,29 @@ const convertKeyConfigToString = (keys: Set<string>, spicalRecordKeys?: Record<s
         return `${item[0].toUpperCase()}${item.slice(1).toLowerCase()}`;
     });
 
+    let text = '';
+
     // 如果没有特殊按键，直接返回原有逻辑
     if (!spicalRecordKeys || Object.keys(spicalRecordKeys).length === 0) {
-        return keysArray.join('+');
+        text = keysArray.join('+');
+    } else {
+        // 创建结果数组，初始为普通按键
+        const result = [...keysArray, ...Object.keys(spicalRecordKeys)];
+
+        // 将特殊按键按照位置从大到小排序，这样插入时不会影响前面的位置
+        const sortedSpecialKeys = Object.entries(spicalRecordKeys).sort(
+            ([, positionA], [, positionB]) => positionB - positionA,
+        );
+
+        // 按位置插入特殊按键
+        sortedSpecialKeys.forEach(([key, position]) => {
+            result.splice(position, 0, key);
+        });
+
+        text = result.join('+');
     }
 
-    // 创建结果数组，初始为普通按键
-    const result = [...keysArray];
-
-    // 将特殊按键按照位置从大到小排序，这样插入时不会影响前面的位置
-    const sortedSpecialKeys = Object.entries(spicalRecordKeys).sort(
-        ([, positionA], [, positionB]) => positionB - positionA,
-    );
-
-    // 按位置插入特殊按键
-    sortedSpecialKeys.forEach(([key, position]) => {
-        result.splice(position, 0, key);
-    });
-
-    return result.join('+');
+    return formatKey(text);
 };
 
 export const KeyButton: React.FC<{
@@ -144,6 +149,9 @@ export const KeyButton: React.FC<{
         updateKeyConfig();
     }, [recordKeys, setInputAnyKeyConfigIndex, spicalRecordKeys, stopRecord, updateKeyConfig]);
 
+    const formatKeyText = useMemo(() => {
+        return formatKey(keyValue);
+    }, [keyValue]);
     return (
         <>
             <Modal
@@ -315,7 +323,7 @@ export const KeyButton: React.FC<{
                     buttonProps?.onClick?.(e);
                     setOpen(true);
                 }}
-                title={keyValue}
+                title={formatKeyText}
             >
                 <div
                     style={{
@@ -325,7 +333,7 @@ export const KeyButton: React.FC<{
                         overflow: 'hidden',
                     }}
                 >
-                    {keyValue}
+                    {formatKeyText}
                 </div>
                 {buttonProps?.children}
             </Button>

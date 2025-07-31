@@ -62,6 +62,7 @@ import path from 'path';
 import { ModelSelectLabel } from './components/modelSelectLabel';
 import { openUrl } from '@tauri-apps/plugin-opener';
 import { writeTextToClipboard } from '@/utils/clipboard';
+import { formatKey } from '@/utils/format';
 
 type BubbleDataType = AntdBubbleDataType & {
     flow_config?: ChatMessageFlowConfig;
@@ -741,7 +742,7 @@ const Chat = () => {
                         },
                         {
                             message: intl.formatMessage({ id: 'tools.chat.newSession' }),
-                            key: hotKeys?.[KeyEventKey.ChatNewSession]?.hotKey,
+                            key: formatKey(hotKeys?.[KeyEventKey.ChatNewSession]?.hotKey),
                         },
                     )}
                 >
@@ -1046,7 +1047,7 @@ const Chat = () => {
                                         id="settings.hotKeySettings.keyEventTooltip"
                                         values={{
                                             message: <FormattedMessage id="tools.chat.chatCopy" />,
-                                            key: hotKeys?.[KeyEventKey.ChatCopy]?.hotKey,
+                                            key: formatKey(hotKeys?.[KeyEventKey.ChatCopy]?.hotKey),
                                         }}
                                     />
                                 ),
@@ -1061,7 +1062,9 @@ const Chat = () => {
                                             message: (
                                                 <FormattedMessage id="tools.chat.chatCopyAndHide" />
                                             ),
-                                            key: hotKeys?.[KeyEventKey.ChatCopyAndHide]?.hotKey,
+                                            key: formatKey(
+                                                hotKeys?.[KeyEventKey.ChatCopyAndHide]?.hotKey,
+                                            ),
                                         }}
                                     />
                                 ),
