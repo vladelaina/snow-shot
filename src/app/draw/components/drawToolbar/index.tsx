@@ -82,6 +82,7 @@ export type DrawToolbarProps = {
 
 export type DrawToolbarActionType = {
     setEnable: (enable: boolean) => void;
+    onToolClick: (drawState: DrawState) => void;
 };
 
 export const DrawToolbarStatePublisher = createPublisher<{
@@ -492,8 +493,9 @@ const DrawToolbarCore: React.FC<DrawToolbarProps> = ({
     useImperativeHandle(actionRef, () => {
         return {
             setEnable,
+            onToolClick,
         };
-    }, [setEnable]);
+    }, [onToolClick, setEnable]);
 
     const disableNormalScreenshotTool = enableScrollScreenshot;
 

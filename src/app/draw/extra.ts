@@ -27,7 +27,9 @@ export const switchLayer = (
     }
 
     drawLayerAction?.setEnable(switchDraw);
-    selectLayerAction?.setEnable(switchSelect);
+    // 保持 select 层激活，实现在绘制阶段，依旧能更改选区
+    // 在 select 层做更精细的控制
+    selectLayerAction?.setEnable(switchSelect || true);
 };
 
 export const getMonitorRect = (monitorInfo: MonitorInfo | undefined) => {

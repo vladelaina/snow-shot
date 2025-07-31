@@ -21,8 +21,10 @@ import {
     DragMode,
     dragRect,
     drawSelectRect,
+    EDGE_DETECTION_TOLERANCE,
     getDragModeFromMousePosition,
     limitRect,
+    positoinInRect,
     SelectState,
 } from './extra';
 import { MousePosition } from '@/utils/mousePosition';
@@ -43,6 +45,7 @@ import { KeyEventKey } from '../drawToolbar/components/keyEventWrap/extra';
 import { DrawState, DrawStatePublisher } from '@/app/fullScreenDraw/components/drawCore/extra';
 import { MonitorInfo } from '@/commands/core';
 import { getCurrentWindow } from '@tauri-apps/api/window';
+import { getPlatform } from '@/utils';
 
 export type SelectLayerActionType = {
     getSelectRect: () => ElementRect | undefined;
@@ -63,7 +66,6 @@ const SelectLayerCore: React.FC<SelectLayerProps> = ({ actionRef }) => {
     const resizeToolbarActionRef = useRef<ResizeToolbarActionType | undefined>(undefined);
 
     const { finishCapture, drawToolbarActionRef, colorPickerActionRef } = useContext(DrawContext);
-    const [isEnable, setIsEnable] = useState(false);
 
     const [findChildrenElements, setFindChildrenElements] = useState(false);
     const fullScreenAuxiliaryLineColorRef = useRef<string | undefined>(undefined);
@@ -124,6 +126,10 @@ const SelectLayerCore: React.FC<SelectLayerProps> = ({ actionRef }) => {
     const selectStateRef = useRef(SelectState.Auto); // 当前的选择状态
     const [getCaptureEvent] = useStateSubscriber(CaptureEventPublisher, undefined);
 
+    const getSelectRect = useCallback(() => {
+        return drawSelectRectAnimationRef.current?.getTargetObject();
+    }, []);
+
     const tryEnableToolbar = useCallback(() => {
         if (
             selectStateRef.current !== SelectState.Selected ||
@@ -163,24 +169,77 @@ const SelectLayerCore: React.FC<SelectLayerProps> = ({ actionRef }) => {
     const mouseDownPositionRef = useRef<MousePosition | undefined>(undefined); // 鼠标按下时的位置
     const dragModeRef = useRef<DragMode | undefined>(undefined); // 拖动模式
     const dragRectRef = useRef<ElementRect | undefined>(undefined); // 拖动矩形
-    const enableSelectRef = useRef(false); // 是否启用选择
-    const updateEnableSelect = useCallback(
-        (captureStep: CaptureStep) => {
-            enableSelectRef.current = captureStep === CaptureStep.Select;
 
-            if (captureStep === CaptureStep.Fixed) {
-                if (layerContainerElementRef.current) {
-                    layerContainerElementRef.current.style.opacity = '0';
-                }
-            }
-        },
-        [layerContainerElementRef],
+    const [captureStep, setCaptureStep] = useState(CaptureStep.Select);
+    const [getCaptureStep] = useStateSubscriber(
+        CaptureStepPublisher,
+        useCallback((captureStep: CaptureStep) => {
+            setCaptureStep(captureStep);
+        }, []),
     );
-    useStateSubscriber(CaptureStepPublisher, updateEnableSelect);
+    const [getDrawState] = useStateSubscriber(DrawStatePublisher, undefined);
+    const isEnableSelect = useCallback(() => {
+        // 拖动状态保持可变更选区
+        if (selectStateRef.current === SelectState.Drag) {
+            return true;
+        }
 
-    const getSelectRect = useCallback(() => {
-        return drawSelectRectAnimationRef.current?.getTargetObject();
-    }, []);
+        const captureStep = getCaptureStep();
+        if (captureStep === CaptureStep.Select) {
+            return true;
+        }
+
+        if (captureStep === CaptureStep.Draw) {
+            // 判断当前鼠标位置，是否在选区框的附近
+            const mousePosition = lastMouseMovePositionRef.current;
+            const selectRect = getSelectRect();
+
+            if (!selectRect || !mousePosition) {
+                return false;
+            }
+
+            const tolerance = EDGE_DETECTION_TOLERANCE * window.devicePixelRatio;
+
+            // 在选区的边框的附近，但是不在选区框内
+            if (
+                positoinInRect(
+                    {
+                        min_x: selectRect.min_x - tolerance,
+                        min_y: selectRect.min_y - tolerance,
+                        max_x: selectRect.max_x + tolerance,
+                        max_y: selectRect.max_y + tolerance,
+                    },
+                    mousePosition,
+                ) &&
+                !positoinInRect(
+                    {
+                        min_x: selectRect.min_x + tolerance,
+                        min_y: selectRect.min_y + tolerance,
+                        max_x: selectRect.max_x - tolerance,
+                        max_y: selectRect.max_y - tolerance,
+                    },
+                    mousePosition,
+                )
+            ) {
+                return true;
+            }
+        }
+
+        return false;
+    }, [getCaptureStep, getSelectRect]);
+
+    const isEnableSelectRef = useRef(false);
+    const updateLayerPointerEvents = useCallback((): boolean => {
+        if (!layerContainerElementRef.current) {
+            return false;
+        }
+
+        const isEnable = isEnableSelect();
+        layerContainerElementRef.current.style.pointerEvents = isEnable ? 'auto' : 'none';
+        isEnableSelectRef.current = isEnable;
+
+        return isEnableSelectRef.current;
+    }, [isEnableSelect]);
 
     /**
      * 初始化元素选择功能
@@ -510,6 +569,8 @@ const SelectLayerCore: React.FC<SelectLayerProps> = ({ actionRef }) => {
         [getAppSettings, updateSelectRect],
     );
 
+    // 保存当前的绘制状态，在拖动结束后恢复
+    const dragDrawStateRef = useRef<DrawState | undefined>(undefined);
     const onMouseDown = useCallback(
         (mousePosition: MousePosition) => {
             mouseDownPositionRef.current = mousePosition;
@@ -519,9 +580,24 @@ const SelectLayerCore: React.FC<SelectLayerProps> = ({ actionRef }) => {
                 setSelectState(SelectState.Drag);
                 updateDragMode(mousePosition);
                 dragRectRef.current = getSelectRect()!;
+
+                if (captureStep === CaptureStep.Draw && getDrawState() !== DrawState.Idle) {
+                    dragDrawStateRef.current = getDrawState();
+                    // 将工具设置为 Idle
+                    drawToolbarActionRef.current?.onToolClick(DrawState.Idle);
+                } else {
+                    dragDrawStateRef.current = undefined;
+                }
             }
         },
-        [getSelectRect, setSelectState, updateDragMode],
+        [
+            captureStep,
+            drawToolbarActionRef,
+            getDrawState,
+            getSelectRect,
+            setSelectState,
+            updateDragMode,
+        ],
     );
 
     const onMouseMoveAutoSelectCore = useCallback(
@@ -609,9 +685,6 @@ const SelectLayerCore: React.FC<SelectLayerProps> = ({ actionRef }) => {
     );
     const onMouseMove = useCallback(
         (mousePosition: MousePosition, ignoreAnimation: boolean = false) => {
-            // 检测下鼠标移动的距离
-            lastMouseMovePositionRef.current = mousePosition;
-
             if (selectStateRef.current === SelectState.Auto) {
                 if (
                     mouseDownPositionRef.current &&
@@ -619,7 +692,7 @@ const SelectLayerCore: React.FC<SelectLayerProps> = ({ actionRef }) => {
                 ) {
                     // 检测拖动距离是否启用手动选择
                     const maxSide = mouseDownPositionRef.current.getMaxSide(mousePosition);
-                    if (maxSide > 6) {
+                    if (maxSide > 6 * window.devicePixelRatio) {
                         setSelectState(SelectState.Manual);
                     }
                 }
@@ -667,10 +740,14 @@ const SelectLayerCore: React.FC<SelectLayerProps> = ({ actionRef }) => {
             setSelectState(SelectState.Selected);
             setSelectRect(limitRect(getSelectRect()!, getMonitorRect(monitorInfoRef.current)));
             dragRectRef.current = undefined;
+
+            if (dragDrawStateRef.current) {
+                drawToolbarActionRef.current?.onToolClick(dragDrawStateRef.current);
+            }
         }
 
         mouseDownPositionRef.current = undefined;
-    }, [getSelectRect, setSelectRect, setSelectState]);
+    }, [drawToolbarActionRef, getSelectRect, setSelectRect, setSelectState]);
 
     const onMouseMoveRenderCallback = useCallbackRender(onMouseMove);
     // 用上一次的鼠标移动事件触发 onMouseMove 来更新一些状态
@@ -745,7 +822,7 @@ const SelectLayerCore: React.FC<SelectLayerProps> = ({ actionRef }) => {
     }, [tabFindChildrenElements, refreshMouseMove]);
 
     useEffect(() => {
-        if (!isEnable) {
+        if (!(captureStep === CaptureStep.Select || captureStep === CaptureStep.Draw)) {
             return;
         }
 
@@ -755,41 +832,36 @@ const SelectLayerCore: React.FC<SelectLayerProps> = ({ actionRef }) => {
         }
 
         const handleMouseDown = (e: MouseEvent) => {
-            if (!enableSelectRef.current) {
+            if (!monitorInfoRef.current) {
                 return;
             }
+
+            const mousePosition = new MousePosition(e.clientX, e.clientY).scale(
+                monitorInfoRef.current.monitor_scale_factor,
+            );
 
             if (e.button !== 0) {
                 return;
             }
 
-            if (!monitorInfoRef.current) {
-                return;
-            }
-
-            onMouseDown(
-                new MousePosition(e.clientX, e.clientY).scale(
-                    monitorInfoRef.current.monitor_scale_factor,
-                ),
-            );
+            onMouseDown(mousePosition);
         };
         const handleMouseMove = (e: MouseEvent) => {
-            if (!enableSelectRef.current) {
-                return;
-            }
-
             if (!monitorInfoRef.current) {
                 return;
             }
-
-            onMouseMoveRenderCallback(
-                new MousePosition(e.clientX, e.clientY).scale(
-                    monitorInfoRef.current.monitor_scale_factor,
-                ),
+            const mousePosition = new MousePosition(e.clientX, e.clientY).scale(
+                monitorInfoRef.current.monitor_scale_factor,
             );
+
+            if (!isEnableSelectRef.current) {
+                return;
+            }
+
+            onMouseMoveRenderCallback(mousePosition);
         };
         const handleMouseUp = (e: MouseEvent) => {
-            if (!enableSelectRef.current) {
+            if (!isEnableSelectRef.current) {
                 return;
             }
 
@@ -812,13 +884,37 @@ const SelectLayerCore: React.FC<SelectLayerProps> = ({ actionRef }) => {
             layerContainerElement.removeEventListener('wheel', onMouseWheelRenderCallback);
         };
     }, [
-        isEnable,
+        captureStep,
+        isEnableSelect,
         layerContainerElementRef,
         onMouseDown,
         onMouseMoveRenderCallback,
         onMouseUp,
         onMouseWheelRenderCallback,
+        updateLayerPointerEvents,
     ]);
+
+    useEffect(() => {
+        const handleMouseMove = (e: MouseEvent) => {
+            if (!monitorInfoRef.current) {
+                return;
+            }
+
+            const mousePosition = new MousePosition(e.clientX, e.clientY).scale(
+                monitorInfoRef.current.monitor_scale_factor,
+            );
+
+            lastMouseMovePositionRef.current = mousePosition;
+
+            updateLayerPointerEvents();
+        };
+
+        document.addEventListener('mousemove', handleMouseMove);
+
+        return () => {
+            document.removeEventListener('mousemove', handleMouseMove);
+        };
+    }, [updateLayerPointerEvents]);
 
     useImperativeHandle(
         actionRef,
@@ -831,27 +927,18 @@ const SelectLayerCore: React.FC<SelectLayerProps> = ({ actionRef }) => {
             getWindowId: () => selectedWindowIdRef.current,
             onCaptureFinish,
             getSelectRect,
-            setEnable: (enable: boolean) => {
-                setIsEnable(enable);
-            },
+            setEnable: () => {},
             getSelectState: () => selectStateRef.current,
         }),
         [getSelectRect, onCaptureFinish, onExecuteScreenshot, onMonitorInfoReady, refreshMouseMove],
     );
 
     useEffect(() => {
-        if (
-            !isEnable &&
-            getAppSettings()[AppSettingsGroup.FunctionScreenshot].findChildrenElements
-        ) {
+        if (captureStep !== CaptureStep.Select) {
             return;
         }
 
         const onKeyDown = (e: KeyboardEvent) => {
-            if (!enableSelectRef.current) {
-                return;
-            }
-
             if (isHotkeyPressed('Tab')) {
                 setTabFindChildrenElements((prev) => !prev);
                 e.preventDefault();
@@ -898,28 +985,30 @@ const SelectLayerCore: React.FC<SelectLayerProps> = ({ actionRef }) => {
             document.removeEventListener('keydown', onKeyDown);
         };
     }, [
+        captureStep,
         finishCapture,
         getAppSettings,
         getSelectRect,
-        isEnable,
+        isEnableSelect,
         setSelectRect,
         setSelectState,
         setTabFindChildrenElements,
     ]);
 
     useEffect(() => {
-        if (layerContainerElementRef.current) {
-            layerContainerElementRef.current.style.pointerEvents = isEnable ? 'auto' : 'none';
-        }
-
+        updateLayerPointerEvents();
         // 切换为其他功能时，渲染元素遮罩
-        renderElementMask(isEnable);
+        renderElementMask(captureStep === CaptureStep.Select);
 
-        if (!isEnable) {
+        if (captureStep !== CaptureStep.Select) {
             return;
         }
 
         const mouseRightClick = (e: MouseEvent) => {
+            if (process.env.NODE_ENV === 'development' && getPlatform() === 'macos') {
+                return;
+            }
+
             e.preventDefault();
             // 回退到选择
             if (selectStateRef.current === SelectState.Selected) {
@@ -936,7 +1025,14 @@ const SelectLayerCore: React.FC<SelectLayerProps> = ({ actionRef }) => {
         return () => {
             document.removeEventListener('contextmenu', mouseRightClick);
         };
-    }, [finishCapture, isEnable, refreshMouseMove, renderElementMask, setSelectState]);
+    }, [
+        captureStep,
+        finishCapture,
+        refreshMouseMove,
+        renderElementMask,
+        setSelectState,
+        updateLayerPointerEvents,
+    ]);
 
     return (
         <>

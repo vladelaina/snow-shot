@@ -210,11 +210,13 @@ export const convertDragModeToCursor = (dragMode: DragMode) => {
 };
 
 // 缓存常用的边缘检测容差值
-const EDGE_DETECTION_TOLERANCE = 8;
+export const EDGE_DETECTION_TOLERANCE = 8;
 export const getDragModeFromMousePosition = (
     selectRect: ElementRect,
     mousePosition: MousePosition,
 ) => {
+    const tolerance = EDGE_DETECTION_TOLERANCE * window.devicePixelRatio;
+
     const { min_x: rectMinX, min_y: rectMinY, max_x: rectMaxX, max_y: rectMaxY } = selectRect;
     const { mouseX, mouseY } = mousePosition;
 
@@ -222,10 +224,10 @@ export const getDragModeFromMousePosition = (
     let position = 0;
 
     // 位掩码: 0b0000, 代表 [top, right, bottom, left]
-    if (mouseY <= rectMinY + EDGE_DETECTION_TOLERANCE) position |= 0b1000;
-    if (mouseX >= rectMaxX - EDGE_DETECTION_TOLERANCE) position |= 0b0100;
-    if (mouseY >= rectMaxY - EDGE_DETECTION_TOLERANCE) position |= 0b0010;
-    if (mouseX <= rectMinX + EDGE_DETECTION_TOLERANCE) position |= 0b0001;
+    if (mouseY <= rectMinY + tolerance) position |= 0b1000;
+    if (mouseX >= rectMaxX - tolerance) position |= 0b0100;
+    if (mouseY >= rectMaxY - tolerance) position |= 0b0010;
+    if (mouseX <= rectMinX + tolerance) position |= 0b0001;
 
     // 使用映射表快速确定拖动模式
     switch (position) {
@@ -353,4 +355,14 @@ export const limitRect = (currentRect: ElementRect, limitRect: ElementRect) => {
         max_x: Math.min(max_x, limitMaxX),
         max_y: Math.min(max_y, limitMaxY),
     };
+};
+
+export const positoinInRect = (rect: ElementRect, mousePosition: MousePosition) => {
+    const { mouseX, mouseY } = mousePosition;
+
+    console.log(mouseX, mouseY, rect.min_x, rect.max_x, rect.min_y, rect.max_y);
+
+    return (
+        mouseX >= rect.min_x && mouseX <= rect.max_x && mouseY >= rect.min_y && mouseY <= rect.max_y
+    );
 };

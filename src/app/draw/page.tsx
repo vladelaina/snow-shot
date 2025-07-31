@@ -435,6 +435,7 @@ const DrawPageCore: React.FC = () => {
             setCaptureEvent,
             initMonitorInfoAndShowWindow,
             getCaptureEvent,
+            finishCapture,
             readyCapture,
         ],
     );
