@@ -402,6 +402,10 @@ export const SerialNumberTool: React.FC = () => {
     useHotkeysApp(
         disableArrowHotKey,
         useCallback(() => {
+            if (!enableRef.current) {
+                return;
+            }
+
             updateAppSettings(
                 AppSettingsGroup.Cache,
                 {
@@ -413,7 +417,7 @@ export const SerialNumberTool: React.FC = () => {
                 true,
                 false,
             );
-        }, [disableArrowRef, updateAppSettings]),
+        }, [disableArrowRef, enableRef, updateAppSettings]),
         {
             preventDefault: true,
             keyup: true,

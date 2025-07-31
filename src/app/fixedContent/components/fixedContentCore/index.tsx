@@ -16,7 +16,7 @@ import { zIndexs } from '@/utils/zIndex';
 import Image from 'next/image';
 import { CloseOutlined } from '@ant-design/icons';
 import { AppOcrResult, OcrResult, OcrResultActionType } from '../ocrResult';
-import clipboard from 'tauri-plugin-clipboard-api';
+import * as clipboard from '@tauri-apps/plugin-clipboard-manager';
 import { KeyEventKey, KeyEventValue } from '@/core/hotKeys';
 import { useHotkeys } from 'react-hotkeys-hook';
 import { MonitorInfo, setCurrentWindowAlwaysOnTop, startFreeDrag } from '@/commands/core';
@@ -558,9 +558,7 @@ export const FixedContentCore: React.FC<{
                         ) {
                             // 这里的图片类型不确定，浏览器不一定支持，所以通过本地 API 写入
                             const arrayBuffer = await imageBlobRef.current.arrayBuffer();
-                            await clipboard.writeImageBinary(
-                                Array.from(new Uint8Array(arrayBuffer)),
-                            );
+                            await clipboard.writeImage(arrayBuffer);
                         }
                     },
                 },

@@ -6,6 +6,7 @@ import { CheckOutlined, DeleteOutlined, PlusOutlined } from '@ant-design/icons';
 import { useRecordHotkeys } from 'react-hotkeys-hook';
 import { trim } from 'es-toolkit';
 import { formatKey } from '@/utils/format';
+import { listenKeyStart, listenKeyStop } from '@/commands/listenKey';
 
 type KeyConfig = {
     recordKeys: string;
@@ -148,6 +149,14 @@ export const KeyButton: React.FC<{
 
         updateKeyConfig();
     }, [recordKeys, setInputAnyKeyConfigIndex, spicalRecordKeys, stopRecord, updateKeyConfig]);
+
+    useEffect(() => {
+        if (open) {
+            listenKeyStart();
+        } else {
+            listenKeyStop();
+        }
+    }, [open]);
 
     const formatKeyText = useMemo(() => {
         return formatKey(keyValue);

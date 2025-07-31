@@ -79,6 +79,7 @@ import { covertOcrResultToText } from '../fixedContent/components/ocrResult';
 import { writeTextToClipboard } from '@/utils/clipboard';
 import * as tauriOs from '@tauri-apps/plugin-os';
 import { compare } from 'compare-versions';
+import { listenKeyStart, listenKeyStop } from '@/commands/listenKey';
 
 const DrawCacheLayer = dynamic(
     async () => (await import('./components/drawCacheLayer')).DrawCacheLayer,
@@ -296,6 +297,9 @@ const DrawPageCore: React.FC = () => {
 
             setCurrentWindowAlwaysOnTop(false);
             setDrawWindowStyle();
+
+            // 监听键盘
+            listenKeyStart();
         },
         [getScreenshotType],
     );
@@ -321,6 +325,9 @@ const DrawPageCore: React.FC = () => {
 
     const finishCapture = useCallback<DrawContextType['finishCapture']>(
         async (clearScrollScreenshot: boolean = true) => {
+            // 停止监听键盘
+            listenKeyStop();
+
             drawPageStateRef.current = DrawPageState.WaitRelease;
             releasePage();
 
@@ -528,6 +535,9 @@ const DrawPageCore: React.FC = () => {
     );
 
     const onFixed = useCallback(async () => {
+        // 停止监听键盘
+        listenKeyStop();
+
         if (getDrawState() === DrawState.ScrollScreenshot) {
             createFixedContentWindow(true);
             finishCapture(false);

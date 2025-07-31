@@ -27,7 +27,19 @@ pub async fn listen_key_stop(
 ) -> Result<(), String> {
     let mut listen_key_service = listen_key_service.lock().await;
 
-    listen_key_service.stop(&window)?;
+    listen_key_service.stop_by_window_label(window.label())?;
+
+    Ok(())
+}
+
+#[command]
+pub async fn listen_key_stop_by_window_label(
+    listen_key_service: tauri::State<'_, Mutex<ListenKeyService>>,
+    window_label: String,
+) -> Result<(), String> {
+    let mut listen_key_service = listen_key_service.lock().await;
+
+    listen_key_service.stop_by_window_label(&window_label)?;
 
     Ok(())
 }

@@ -4,7 +4,7 @@ use device_query::{
     CallbackGuard, DeviceEvents, DeviceEventsHandler, Keycode, MouseButton, MousePosition,
 };
 
-const DEVICE_EVENT_HANDLER_FPS: u64 = 60;
+const DEVICE_EVENT_HANDLER_FPS: u64 = 100;
 
 pub struct DeviceEventHandlerService {
     /* 设备事件处理 */

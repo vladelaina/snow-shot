@@ -1,12 +1,13 @@
 pub mod core;
 pub mod file;
+pub mod listen_key;
 pub mod ocr;
 pub mod screenshot;
 pub mod scroll_screenshot;
 pub mod video_record;
-mod listen_key;
 
 use snow_shot_app_services::device_event_handler_service;
+use tauri::Emitter;
 use tokio::sync::Mutex;
 
 use tauri::Manager;
@@ -62,6 +63,7 @@ pub fn run() {
 
     app_builder
         .plugin(tauri_plugin_opener::init())
+        .plugin(tauri_plugin_clipboard::init())
         .plugin(tauri_plugin_clipboard_manager::init())
         .plugin(tauri_plugin_store::Builder::new().build())
         .plugin(tauri_plugin_http::init())
@@ -179,7 +181,24 @@ pub fn run() {
             video_record::video_record_init,
             listen_key::listen_key_start,
             listen_key::listen_key_stop,
+            listen_key::listen_key_stop_by_window_label,
         ])
+        .on_window_event(|window, event| {
+            if let tauri::WindowEvent::CloseRequested { .. } = event {
+                let window_label = window.label().to_owned();
+
+                // 用 tokio 异步进程实现清除有异步所有权问题，通知前端清理，简单处理
+                match window
+                    .app_handle()
+                    .emit("listen-key-service:stop", window_label)
+                {
+                    Ok(_) => (),
+                    Err(e) => {
+                        log::error!("[listen_key_service:stop] Failed to emit event: {}", e);
+                    }
+                }
+            }
+        })
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }

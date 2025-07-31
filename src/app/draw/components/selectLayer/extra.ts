@@ -360,8 +360,6 @@ export const limitRect = (currentRect: ElementRect, limitRect: ElementRect) => {
 export const positoinInRect = (rect: ElementRect, mousePosition: MousePosition) => {
     const { mouseX, mouseY } = mousePosition;
 
-    console.log(mouseX, mouseY, rect.min_x, rect.max_x, rect.min_y, rect.max_y);
-
     return (
         mouseX >= rect.min_x && mouseX <= rect.max_x && mouseY >= rect.min_y && mouseY <= rect.max_y
     );

@@ -13,7 +13,7 @@ export const decodeParamsValue = (value: string) => {
 
 export const copyText = (text: string) => {
     const selected = window.getSelection();
-    if (selected && selected.toString()) {
+    if (selected && selected.toString().trim()) {
         writeTextToClipboard(selected.toString());
         selected.removeAllRanges();
     } else {

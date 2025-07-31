@@ -604,6 +604,10 @@ const ColorPickerCore: React.FC<{
             <KeyEventWrap
                 componentKey={KeyEventKey.SwitchColorFormat}
                 onKeyDown={() => {
+                    if (!enableRef.current) {
+                        return;
+                    }
+
                     updateAppSettings(
                         AppSettingsGroup.Cache,
                         {

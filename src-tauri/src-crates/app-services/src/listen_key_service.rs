@@ -160,12 +160,12 @@ impl ListenKeyService {
         Ok(())
     }
 
-    pub fn stop(&mut self, window: &tauri::Window) -> Result<(), String> {
+    pub fn stop_by_window_label(&mut self, window_label: &str) -> Result<(), String> {
         Self::stop_core(
             &self._key_down_guard,
             &self._key_up_guard,
             &self.window_label_set,
-            window.label(),
+            window_label,
         )
     }
 }

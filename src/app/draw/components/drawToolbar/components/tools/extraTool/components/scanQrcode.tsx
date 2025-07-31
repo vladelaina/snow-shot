@@ -7,6 +7,7 @@ import { AntdContext } from '@/components/globalLayoutExtra';
 import { useIntl } from 'react-intl';
 import { useHotkeysApp } from '@/hooks/useHotkeysApp';
 import { openUrl } from '@tauri-apps/plugin-opener';
+import { getPlatformValue } from '@/utils';
 
 export const ScanQrcodeTool: React.FC<{
     finishCapture: () => void;
@@ -93,7 +94,7 @@ export const ScanQrcodeTool: React.FC<{
     }, [drawLayerActionRef, monitorInfoRef, intl, message, selectLayerActionRef]);
 
     useHotkeysApp(
-        'Ctrl+A',
+        getPlatformValue('Ctrl+A', 'Meta+A'),
         (event) => {
             event.preventDefault();
 

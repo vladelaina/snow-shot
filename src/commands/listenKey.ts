@@ -1,3 +1,4 @@
+import { getPlatform } from '@/utils';
 import { invoke } from '@tauri-apps/api/core';
 
 export type ListenKeyDownEvent = {
@@ -25,13 +26,24 @@ export enum ListenKeyCode {
 
 export const LISTEN_KEY_SERVICE_KEY_DOWN_EMIT_KEY = 'listen-key-service:key-down';
 export const LISTEN_KEY_SERVICE_KEY_UP_EMIT_KEY = 'listen-key-service:key-up';
+export const LISTEN_KEY_SERVICE_STOP_EMIT_KEY = 'listen-key-service:stop'; // 停止监听键盘
 
 export const listenKeyStart = async () => {
+    // macOS 下 Ctrl、Shift、Command 等键浏览器不会响应，特殊处理下
+    if (getPlatform() !== 'macos') {
+        return;
+    }
+
     const result = await invoke<void>('listen_key_start');
     return result;
 };
 
 export const listenKeyStop = async () => {
     const result = await invoke<void>('listen_key_stop');
+    return result;
+};
+
+export const listenKeyStopByWindowLabel = async (windowLabel: string) => {
+    const result = await invoke<void>('listen_key_stop_by_window_label', { windowLabel });
     return result;
 };

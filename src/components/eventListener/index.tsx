@@ -11,13 +11,13 @@ import { AppSettingsActionContext } from '@/app/contextWrap';
 import {
     LISTEN_KEY_SERVICE_KEY_DOWN_EMIT_KEY,
     LISTEN_KEY_SERVICE_KEY_UP_EMIT_KEY,
+    LISTEN_KEY_SERVICE_STOP_EMIT_KEY,
     ListenKeyCode,
     ListenKeyDownEvent,
-    listenKeyStart,
     listenKeyStop,
+    listenKeyStopByWindowLabel,
     ListenKeyUpEvent,
 } from '@/commands/listenKey';
-import * as tauriOs from '@tauri-apps/plugin-os';
 
 type Listener = {
     event: string;
@@ -184,11 +184,6 @@ const EventListenerCore: React.FC<{ children: React.ReactNode }> = ({ children }
             };
         };
 
-        // macOS 下 Ctrl、Shift、Command 等键浏览器不会响应，特殊处理下
-        if (tauriOs.platform() === 'macos') {
-            listenKeyStart();
-        }
-
         defaultListener.push({
             event: LISTEN_KEY_SERVICE_KEY_DOWN_EMIT_KEY,
             callback: listenKeyCallback(LISTEN_KEY_SERVICE_KEY_DOWN_EMIT_KEY),
@@ -220,6 +215,12 @@ const EventListenerCore: React.FC<{ children: React.ReactNode }> = ({ children }
             defaultListener.push({
                 event: 'execute-translate-selected-text',
                 callback: async () => {},
+            });
+            defaultListener.push({
+                event: LISTEN_KEY_SERVICE_STOP_EMIT_KEY,
+                callback: async ({ payload }: { payload: string }) => {
+                    listenKeyStopByWindowLabel(payload);
+                },
             });
         } else {
             defaultListener.push({

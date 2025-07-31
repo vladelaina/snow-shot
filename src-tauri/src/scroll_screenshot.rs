@@ -105,16 +105,20 @@ pub async fn scroll_screenshot_save_to_clipboard(
     scroll_screenshot_service: tauri::State<'_, Mutex<ScrollScreenshotService>>,
 ) -> Result<(), String> {
     snow_shot_tauri_commands_scroll_screenshot::scroll_screenshot_save_to_clipboard(
-        |image| match app.clipboard().write_image(&tauri::image::Image::new(
-            image.as_bytes(),
-            image.width(),
-            image.height(),
-        )) {
-            Ok(_) => Ok(()),
-            Err(e) => Err(format!(
-                "[scroll_screenshot_save_to_clipboard] Failed to write image to clipboard: {}",
-                e
-            )),
+        |image| {
+            let rgba_image = image.to_rgba8();
+
+            match app.clipboard().write_image(&tauri::image::Image::new(
+                rgba_image.as_raw(),
+                rgba_image.width(),
+                rgba_image.height(),
+            )) {
+                Ok(_) => Ok(()),
+                Err(e) => Err(format!(
+                    "[scroll_screenshot_save_to_clipboard] Failed to write image to clipboard: {}",
+                    e
+                )),
+            }
         },
         scroll_screenshot_service,
     )

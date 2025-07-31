@@ -12,6 +12,7 @@ import { MonitorInfo } from '@/commands/core';
 import { useStateSubscriber } from '@/hooks/useStateSubscriber';
 import { AppSettingsGroup, AppSettingsPublisher } from '@/app/contextWrap';
 import { writeTextToClipboard } from '@/utils/clipboard';
+import { getPlatformValue } from '@/utils';
 
 // 定义角度阈值常量（以度为单位）
 const ROTATION_THRESHOLD = 3; // 小于3度的旋转被视为误差，不进行旋转
@@ -385,7 +386,7 @@ export const OcrResult: React.FC<{
     }, [initMenu]);
 
     useHotkeysApp(
-        'Ctrl+A',
+        getPlatformValue('Ctrl+A', 'Meta+A'),
         (event) => {
             if (!enableRef.current) {
                 return;
