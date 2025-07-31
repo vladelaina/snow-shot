@@ -207,6 +207,25 @@ const DrawToolbarCore: React.FC<DrawToolbarProps> = ({
                 return;
             }
 
+            if (prev === DrawState.Text) {
+                // 判断是否有未完成编辑的文本
+                const appState = drawCacheLayerActionRef.current?.getAppState();
+                if (appState?.editingTextElement) {
+                    // 将点击事件传递给 excalidraw，停止文本编辑
+                    const elementList = document.getElementsByClassName(
+                        'excalidraw__canvas interactive',
+                    );
+
+                    if (elementList.length === 0) {
+                        return;
+                    }
+
+                    const canvas = elementList[0] as HTMLCanvasElement;
+
+                    canvas.dispatchEvent(new PointerEvent('pointerdown'));
+                }
+            }
+
             let next = drawState;
             if (prev === drawState && prev !== DrawState.Idle) {
                 if (drawState === DrawState.ScrollScreenshot) {
@@ -229,14 +248,7 @@ const DrawToolbarCore: React.FC<DrawToolbarProps> = ({
 
             if (next === DrawState.Select || next === DrawState.Idle) {
                 // 取消正在编辑中的元素
-                drawCacheLayerActionRef.current?.updateScene({
-                    appState: {
-                        newElement: undefined,
-                        editingLinearElement: undefined,
-                        editingTextElement: undefined,
-                    },
-                    captureUpdate: 'NEVER',
-                });
+                drawCacheLayerActionRef.current?.finishDraw();
             }
 
             switch (next) {

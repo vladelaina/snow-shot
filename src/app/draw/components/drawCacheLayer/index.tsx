@@ -40,6 +40,7 @@ const DrawCacheLayerCore: React.FC<{
                 newElement: null,
                 editingTextElement: null,
                 selectedLinearElement: null,
+                selectionElement: null,
             },
             captureUpdate: 'NEVER',
         });
