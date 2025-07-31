@@ -221,7 +221,7 @@ export const KeyButton: React.FC<{
                                                 )}
                                             </>
                                         ) : (
-                                            keyConfig.recordKeys
+                                            formatKey(keyConfig.recordKeys)
                                         )}
                                     </Button>
                                 </Space>

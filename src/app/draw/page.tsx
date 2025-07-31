@@ -400,7 +400,14 @@ const DrawPageCore: React.FC = () => {
             });
 
             const initMonitorInfoPromise = initMonitorInfoAndShowWindow();
-            imageBufferRef.current = await captureCurrentMonitorPromise;
+
+            const imageBuffer = await captureCurrentMonitorPromise;
+            if (!imageBuffer) {
+                finishCapture();
+                return;
+            }
+
+            imageBufferRef.current = imageBuffer;
             await initMonitorInfoPromise;
 
             // 防止用户提前退出报错

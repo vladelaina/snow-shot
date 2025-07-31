@@ -132,8 +132,10 @@ pub fn capture_current_monitor_with_scap(
             log::warn!("[capture_current_monitor_with_scap] failed tohas_permission");
             if !scap::request_permission() {
                 log::error!("[capture_current_monitor_with_scap] failed to request_permission");
-                return None;
             }
+
+            // macOS 必须重启应用后生效，所以这里返回 None
+            return None;
         }
 
         let ns_handle = match window.ns_window() {
