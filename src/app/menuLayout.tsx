@@ -315,7 +315,6 @@ const MenuContentCore: React.FC<{
                     position: absolute;
                     line-height: initial;
                     display: flex;
-                    width: 100%;
                     height: 32px;
                     align-items: center;
                     justify-content: center;
@@ -324,7 +323,9 @@ const MenuContentCore: React.FC<{
                     font-weight: 600;
                     user-select: none;
                     /* 对齐系统里的 title 位置 */
-                    padding-left: 32px;
+                    position: absolute;
+                    left: 0;
+                    right: 0;
                 }
 
                 .logo-text-highlight {
