@@ -8,5 +8,6 @@ serde = { workspace = true }
 tauri = { workspace = true }
 device_query = { workspace = true }
 regex = { workspace = true }
+log = { workspace = true }
 
 ffmpeg-sidecar = "^2.0.6"

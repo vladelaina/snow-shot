@@ -12,7 +12,10 @@ use tauri::Manager;
 use tokio::{sync::Mutex, time::Duration};
 
 use snow_shot_app_os::notification;
-use snow_shot_app_services::free_drag_window_service::FreeDragWindowService;
+use snow_shot_app_services::{
+    device_event_handler_service::DeviceEventHandlerService,
+    free_drag_window_service::FreeDragWindowService,
+};
 use snow_shot_app_shared::EnigoManager;
 use snow_shot_app_utils::get_target_monitor;
 
@@ -396,11 +399,13 @@ pub async fn create_video_record_window(
 
 pub async fn start_free_drag(
     window: tauri::Window,
+    device_event_handler_service: tauri::State<'_, Mutex<DeviceEventHandlerService>>,
     free_drag_window_service: tauri::State<'_, Mutex<FreeDragWindowService>>,
 ) -> Result<(), String> {
     let mut free_drag_window_service = free_drag_window_service.lock().await;
+    let device_event_handler_service = device_event_handler_service.lock().await;
 
-    free_drag_window_service.start_drag(window)?;
+    free_drag_window_service.start_drag(window, &device_event_handler_service)?;
 
     Ok(())
 }
@@ -465,32 +470,5 @@ pub async fn set_current_window_always_on_top(
         }
     }
 
-    Ok(())
-}
-
-/// 处理 macOS 关闭按钮点击
-pub async fn handle_macos_close_button(window: tauri::WebviewWindow) -> Result<(), String> {
-    #[cfg(target_os = "macos")]
-    {
-        // 这里可以添加自定义的关闭逻辑
-        // 比如显示确认对话框、保存数据等
-        
-        log::info!("[macos] 处理关闭按钮点击");
-        
-        // 示例：隐藏窗口而不是关闭
-        match window.hide() {
-            Ok(_) => {
-                log::info!("[macos] 窗口已隐藏");
-            }
-            Err(e) => {
-                log::error!("[macos] 隐藏窗口失败: {:?}", e);
-                return Err(format!("隐藏窗口失败: {:?}", e));
-            }
-        }
-        
-        // 或者发送事件到前端显示确认对话框
-        // window.emit("show-close-confirmation", ()).unwrap();
-    }
-    
     Ok(())
 }

@@ -155,7 +155,7 @@ export const defaultDrawToolbarKeyEventSettings: Record<KeyEventKey, KeyEventVal
         hotKey: 'Shift',
     },
     [KeyEventKey.AutoAlignPicker]: {
-        hotKey: 'Control',
+        hotKey: 'Ctrl',
         unique: true,
     },
     [KeyEventKey.RemoveTool]: {

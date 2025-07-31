@@ -196,7 +196,7 @@ export const SerialNumberTool: React.FC = () => {
         AppSettingsPublisher,
         useCallback(
             (appSettings: AppSettingsData) => {
-                setDisableArrow(appSettings[AppSettingsGroup.CacheV2].disableArrowPicker);
+                setDisableArrow(appSettings[AppSettingsGroup.Cache].disableArrowPicker);
                 setDisableArrowHotKey(
                     appSettings[AppSettingsGroup.DrawToolbarKeyEvent].serialNumberDisableArrow
                         .hotKey,
@@ -403,7 +403,7 @@ export const SerialNumberTool: React.FC = () => {
         disableArrowHotKey,
         useCallback(() => {
             updateAppSettings(
-                AppSettingsGroup.CacheV2,
+                AppSettingsGroup.Cache,
                 {
                     disableArrowPicker: !disableArrowRef.current,
                 },

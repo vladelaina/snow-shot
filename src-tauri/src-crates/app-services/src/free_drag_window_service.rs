@@ -1,14 +1,11 @@
-use device_query::{
-    DeviceEvents, DeviceEventsHandler, DeviceQuery, DeviceState, MouseButton, MousePosition,
-};
+use device_query::{DeviceQuery, DeviceState, MouseButton, MousePosition};
 use std::sync::{Arc, Mutex};
-use std::time::Duration;
+
+use crate::device_event_handler_service::DeviceEventHandlerService;
 
 pub struct FreeDragWindowService {
     /* 目标窗口 */
     target_window: Arc<Mutex<Option<tauri::Window>>>,
-    /* 设备事件处理 */
-    device_event_handler: Option<DeviceEventsHandler>,
     _mouse_move_guard: Arc<Mutex<Option<Box<dyn std::any::Any + Send>>>>,
     _mouse_up_guard: Arc<Mutex<Option<Box<dyn std::any::Any + Send>>>>,
 }
@@ -17,14 +14,16 @@ impl FreeDragWindowService {
     pub fn new() -> Self {
         return Self {
             target_window: Arc::new(Mutex::new(None)),
-            // 先设置为 60fps
-            device_event_handler: None,
             _mouse_move_guard: Arc::new(Mutex::new(None)),
             _mouse_up_guard: Arc::new(Mutex::new(None)),
         };
     }
 
-    pub fn start_drag(&mut self, window: tauri::Window) -> Result<(), String> {
+    pub fn start_drag(
+        &mut self,
+        window: tauri::Window,
+        device_event_handler: &DeviceEventHandlerService,
+    ) -> Result<(), String> {
         self.stop_drag();
 
         // 计算当前鼠标相对窗口的位置
@@ -61,25 +60,6 @@ impl FreeDragWindowService {
         }
 
         self.target_window = Arc::new(Mutex::new(Some(window)));
-
-        let device_event_handler = match self.device_event_handler.as_ref() {
-            Some(handler) => handler,
-            None => {
-                let fps = 60;
-                let handler = match DeviceEventsHandler::new(Duration::from_millis(1000 / fps)) {
-                    Some(handler) => handler,
-                    None => {
-                        return Err(String::from(
-                            "[FreeDragWindowService] Could not get device event handler",
-                        ));
-                    }
-                };
-
-                self.device_event_handler = Some(handler);
-
-                self.device_event_handler.as_ref().unwrap()
-            }
-        };
 
         // 监听鼠标移动事件
         // 克隆需要在闭包中使用的变量

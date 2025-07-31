@@ -4,7 +4,9 @@ pub mod ocr;
 pub mod screenshot;
 pub mod scroll_screenshot;
 pub mod video_record;
+mod listen_key;
 
+use snow_shot_app_services::device_event_handler_service;
 use tokio::sync::Mutex;
 
 use tauri::Manager;
@@ -14,6 +16,7 @@ use snow_shot_app_os::ui_automation::UIElements;
 use snow_shot_app_scroll_screenshot_service::scroll_screenshot_image_service;
 use snow_shot_app_scroll_screenshot_service::scroll_screenshot_service;
 use snow_shot_app_services::free_drag_window_service;
+use snow_shot_app_services::listen_key_service;
 use snow_shot_app_services::video_record_service;
 use snow_shot_app_shared::EnigoManager;
 
@@ -32,8 +35,13 @@ pub fn run() {
     let scroll_screenshot_image_service =
         Mutex::new(scroll_screenshot_image_service::ScrollScreenshotImageService::new());
 
+    let device_event_handler_service =
+        Mutex::new(device_event_handler_service::DeviceEventHandlerService::new());
+
     let free_drag_window_service =
         Mutex::new(free_drag_window_service::FreeDragWindowService::new());
+
+    let listen_key_service = Mutex::new(listen_key_service::ListenKeyService::new());
 
     let mut app_builder = tauri::Builder::default().plugin(tauri_plugin_os::init());
 
@@ -120,7 +128,9 @@ pub fn run() {
         .manage(scroll_screenshot_service)
         .manage(video_record_service)
         .manage(scroll_screenshot_image_service)
+        .manage(device_event_handler_service)
         .manage(free_drag_window_service)
+        .manage(listen_key_service)
         .invoke_handler(tauri::generate_handler![
             screenshot::capture_current_monitor,
             screenshot::capture_focused_window,
@@ -167,6 +177,8 @@ pub fn run() {
             video_record::video_record_kill,
             video_record::video_record_get_microphone_device_names,
             video_record::video_record_init,
+            listen_key::listen_key_start,
+            listen_key::listen_key_stop,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

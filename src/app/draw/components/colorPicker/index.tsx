@@ -81,8 +81,8 @@ export enum ColorPickerColorFormat {
 }
 
 const colorPickerColorFormatList = [
-    ColorPickerColorFormat.RGB,
     ColorPickerColorFormat.HEX,
+    ColorPickerColorFormat.RGB,
     ColorPickerColorFormat.HSL,
 ];
 
@@ -270,7 +270,7 @@ const ColorPickerCore: React.FC<{
             const colorFormatIndex =
                 colorPickerColorFormatList[
                     getAppSettings()[AppSettingsGroup.Cache].colorPickerColorFormatIndex
-                ] ?? ColorPickerColorFormat.RGB;
+                ] ?? ColorPickerColorFormat.HEX;
 
             switch (colorFormatIndex) {
                 case ColorPickerColorFormat.HEX:
@@ -685,10 +685,8 @@ const ColorPickerCore: React.FC<{
                     }
 
                     .preview-canvas {
-                        width: ${previewCanvasSize}px;
-                        height: ${previewCanvasSize}px;
-                        transform-origin: 0 0;
-                        transform: scale(${previewScale});
+                        width: ${previewCanvasSize * previewScale}px;
+                        height: ${previewCanvasSize * previewScale}px;
                         image-rendering: pixelated;
                     }
 
