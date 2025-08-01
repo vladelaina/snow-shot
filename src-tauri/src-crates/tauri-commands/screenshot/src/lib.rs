@@ -243,43 +243,91 @@ pub async fn get_window_elements() -> Result<Vec<WindowElement>, ()> {
 
     let mut rect_list = Vec::new();
     for window in windows {
-        if window.is_minimized().unwrap_or(true) {
-            continue;
+        #[cfg(target_os = "macos")]
+        let cf_dict = match window.window_cf_dictionary() {
+            Ok(cf_dict) => cf_dict,
+            Err(_) => continue,
+        };
+
+        #[cfg(target_os = "windows")]
+        {
+            if window.is_minimized().unwrap_or(true) {
+                continue;
+            }
         }
 
-        let window_title = window.title().unwrap_or_default();
+        #[cfg(target_os = "macos")]
+        {
+            if xcap::ImplWindow::is_minimized_by_cf_dictionary(cf_dict.as_ref()).unwrap_or(true) {
+                continue;
+            }
+        }
+
+        let window_title;
+        #[cfg(target_os = "windows")]
+        {
+            window_title = window.title().unwrap_or_default();
+        }
+        #[cfg(target_os = "macos")]
+        {
+            window_title = match xcap::ImplWindow::title_by_cf_dictionary(cf_dict.as_ref()) {
+                Ok(title) => title,
+                Err(_) => continue,
+            };
+        }
+
+        let window_rect: ElementRect;
+        let window_id: u32;
+        let x: i32;
+        let y: i32;
+        let width: i32;
+        let height: i32;
+
         #[cfg(target_os = "windows")]
         {
             if window_title.eq("Shell Handwriting Canvas") {
                 continue;
             }
+
+            x = match window.x() {
+                Ok(x) => x,
+                Err(_) => continue,
+            };
+
+            y = match window.y() {
+                Ok(y) => y,
+                Err(_) => continue,
+            };
+
+            width = match window.width() {
+                Ok(width) => width,
+                Err(_) => continue,
+            };
+            height = match window.height() {
+                Ok(height) => height,
+                Err(_) => continue,
+            };
         }
 
-        let x = match window.x() {
-            Ok(x) => x,
-            Err(_) => continue,
-        };
+        #[cfg(target_os = "macos")]
+        {
+            let cg_rect = match xcap::ImplWindow::cg_rect_by_cf_dictionary(cf_dict.as_ref()) {
+                Ok(window_rect) => window_rect,
+                Err(_) => continue,
+            };
 
-        let y = match window.y() {
-            Ok(y) => y,
-            Err(_) => continue,
-        };
+            x = cg_rect.origin.x as i32;
+            y = cg_rect.origin.y as i32;
+            width = cg_rect.size.width as i32;
+            height = cg_rect.size.height as i32;
+        }
 
-        let width = match window.width() {
-            Ok(width) => width,
-            Err(_) => continue,
-        };
-        let height = match window.height() {
-            Ok(height) => height,
-            Err(_) => continue,
-        };
-
-        let window_id = match window.id() {
+        window_id = match window.id() {
             Ok(id) => id,
             Err(_) => continue,
         };
 
-        let window_rect = ElementRect {
+        window_rect = ElementRect {
             min_x: x - monitor_min_x,
             min_y: y - monitor_min_y,
             max_x: x + width as i32 - monitor_min_x,
