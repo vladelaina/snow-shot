@@ -924,18 +924,21 @@ const Chat = () => {
     useHotkeys(hotKeys?.[KeyEventKey.ChatCopyAndHide]?.hotKey ?? '', onCopyAndHide, {
         keyup: false,
         keydown: true,
+        preventDefault: true,
         enableOnFormTags: ['INPUT', 'TEXTAREA', 'SELECT'],
     });
 
     useHotkeys(hotKeys?.[KeyEventKey.ChatCopy]?.hotKey ?? '', onCopy, {
         keyup: false,
         keydown: true,
+        preventDefault: true,
         enableOnFormTags: ['INPUT', 'TEXTAREA', 'SELECT'],
     });
 
     useHotkeys(hotKeys?.[KeyEventKey.ChatNewSession]?.hotKey ?? '', onNewSessionClick, {
         keyup: false,
         keydown: true,
+        preventDefault: true,
         enableOnFormTags: ['INPUT', 'TEXTAREA', 'SELECT'],
     });
 

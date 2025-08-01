@@ -405,6 +405,7 @@ export const OcrResult: React.FC<{
         {
             keyup: false,
             keydown: true,
+            preventDefault: true,
         },
     );
 

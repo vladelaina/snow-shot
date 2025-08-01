@@ -867,12 +867,14 @@ export const FixedContentCore: React.FC<{
         keyup: false,
         keydown: true,
         enabled: !disabled,
+        preventDefault: true,
     });
 
     useHotkeys(hotkeys?.[KeyEventKey.FixedContentCloseWindow]?.hotKey ?? '', closeWindowComplete, {
         keyup: false,
         keydown: true,
         enabled: !disabled,
+        preventDefault: true,
     });
 
     const onDoubleClick = useCallback(

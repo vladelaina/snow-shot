@@ -78,11 +78,13 @@ const TranslationCore = () => {
     useHotkeys(hotKeys?.[KeyEventKey.CopyAndHide]?.hotKey ?? '', onCopyAndHide, {
         keyup: false,
         keydown: true,
+        preventDefault: true,
         enableOnFormTags: ['INPUT', 'TEXTAREA', 'SELECT'],
     });
     useHotkeys(hotKeys?.[KeyEventKey.Copy]?.hotKey ?? '', onCopy, {
         keyup: false,
         keydown: true,
+        preventDefault: true,
         enableOnFormTags: ['INPUT', 'TEXTAREA', 'SELECT'],
     });
 
