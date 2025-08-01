@@ -30,6 +30,7 @@ import { AntdContext } from '@/components/globalLayoutExtra';
 import { Image } from '@tauri-apps/api/image';
 import { createFixedContentWindow, createFullScreenDrawWindow } from '@/commands/core';
 import { useRouter } from 'next/navigation';
+import { getPlatformValue } from '@/utils';
 
 export const TrayIconStatePublisher = createPublisher<{
     disableShortcut: boolean;
@@ -229,16 +230,21 @@ const TrayIconLoaderComponent = () => {
                         {
                             item: 'Separator',
                         },
-                        {
-                            id: `${appWindow.label}-screenshot-topWindow`,
-                            text: intl.formatMessage({ id: 'home.topWindow' }),
-                            accelerator: disableShortcut
-                                ? undefined
-                                : shortcutKeys[AppFunction.TopWindow].shortcutKey,
-                            action: async () => {
-                                executeScreenshot(ScreenshotType.TopWindow);
-                            },
-                        },
+                        ...getPlatformValue(
+                            [
+                                {
+                                    id: `${appWindow.label}-screenshot-topWindow`,
+                                    text: intl.formatMessage({ id: 'home.topWindow' }),
+                                    accelerator: disableShortcut
+                                        ? undefined
+                                        : shortcutKeys[AppFunction.TopWindow].shortcutKey,
+                                    action: async () => {
+                                        executeScreenshot(ScreenshotType.TopWindow);
+                                    },
+                                },
+                            ],
+                            [],
+                        ),
                         {
                             id: `${appWindow.label}-screenshot-fixedContent`,
                             text: intl.formatMessage({ id: 'home.fixedContent' }),

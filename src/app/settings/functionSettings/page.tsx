@@ -51,6 +51,7 @@ import { TestChat } from './components/testChat';
 import { DrawState } from '@/app/fullScreenDraw/components/drawCore/extra';
 import { videoRecordGetMicrophoneDeviceNames } from '@/commands/videoRecord';
 import { OcrDetectAfterAction } from '@/app/fixedContent/components/ocrResult';
+import { usePlatform } from '@/hooks/usePlatform';
 
 export default function SystemSettings() {
     const intl = useIntl();
@@ -188,6 +189,8 @@ export default function SystemSettings() {
             });
     }, [intl]);
 
+    const [currentPlatform] = usePlatform();
+
     return (
         <ContentWrap>
             <GroupTitle
@@ -222,15 +225,17 @@ export default function SystemSettings() {
                     layout="horizontal"
                 >
                     <Row gutter={token.padding}>
-                        <Col span={12}>
-                            <ProFormSwitch
-                                name="findChildrenElements"
-                                layout="horizontal"
-                                label={
-                                    <FormattedMessage id="settings.functionSettings.screenshotSettings.findChildrenElements" />
-                                }
-                            />
-                        </Col>
+                        {currentPlatform !== 'macos' && (
+                            <Col span={12}>
+                                <ProFormSwitch
+                                    name="findChildrenElements"
+                                    layout="horizontal"
+                                    label={
+                                        <FormattedMessage id="settings.functionSettings.screenshotSettings.findChildrenElements" />
+                                    }
+                                />
+                            </Col>
+                        )}
 
                         <Col span={12}>
                             <ProFormSwitch

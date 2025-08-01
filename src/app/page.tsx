@@ -61,6 +61,7 @@ import {
 import { TrayIconStatePublisher } from './trayIcon';
 import { createFixedContentWindow, createFullScreenDrawWindow } from '@/commands/core';
 import { IconLabel } from '@/components/iconLable';
+import { getPlatform } from '@/utils';
 
 export default function Home() {
     const { token } = theme.useToken();
@@ -77,160 +78,168 @@ export default function Home() {
         configs: Record<AppFunction, AppFunctionComponentConfig>;
         groupConfigs: Record<AppFunctionGroup, AppFunctionComponentConfig[]>;
     } = useMemo(() => {
-        const configs = Object.keys(defaultAppFunctionConfigs).reduce(
-            (configs, key) => {
-                let buttonTitle;
-                let buttonIcon;
-                let buttonOnClick: () => void | Promise<void>;
-                switch (key) {
-                    case AppFunction.ScreenshotFixed:
-                        buttonTitle = (
-                            <FormattedMessage
-                                id="home.screenshotAfter"
-                                values={{
-                                    text: <FormattedMessage id="draw.fixedTool" />,
-                                }}
-                            />
-                        );
-                        buttonIcon = <FixedIcon style={{ fontSize: '1.3em' }} />;
-                        buttonOnClick = () => executeScreenshot(ScreenshotType.Fixed);
-                        break;
-                    case AppFunction.ScreenshotOcr:
-                        buttonTitle = (
-                            <FormattedMessage
-                                id="home.screenshotAfter"
-                                values={{
-                                    text: <FormattedMessage id="draw.ocrDetectTool" />,
-                                }}
-                            />
-                        );
-                        buttonIcon = <OcrDetectIcon />;
-                        buttonOnClick = () => executeScreenshot(ScreenshotType.OcrDetect);
-                        break;
-                    case AppFunction.ScreenshotFocusedWindow:
-                        buttonTitle = (
-                            <IconLabel
-                                label={
-                                    <FormattedMessage id="home.screenshotFunction.screenshotFocusedWindow" />
-                                }
-                            />
-                        );
-                        buttonIcon = <FocusedWindowIcon />;
-                        buttonOnClick = async () => {
-                            executeScreenshotFocusedWindow(getAppSettings());
-                        };
-                        break;
-                    case AppFunction.ScreenshotCopy:
-                        buttonTitle = (
-                            <FormattedMessage id="home.screenshotFunction.screenshotCopy" />
-                        );
-                        buttonIcon = <ClipboardIcon />;
-                        buttonOnClick = () => executeScreenshot(ScreenshotType.Copy);
-                        break;
-                    case AppFunction.TranslationSelectText:
-                        buttonTitle = <FormattedMessage id="home.translationSelectText" />;
-                        buttonIcon = <SelectTextIcon style={{ fontSize: '1em' }} />;
-                        buttonOnClick = async () => {
-                            executeTranslateSelectedText();
-                        };
-                        break;
-                    case AppFunction.Translation:
-                        buttonTitle = <FormattedMessage id="home.translation" />;
-                        buttonIcon = <TranslationIcon />;
-                        buttonOnClick = () => {
-                            executeTranslate();
-                        };
-                        break;
-                    case AppFunction.ChatSelectText:
-                        buttonTitle = <FormattedMessage id="home.chatSelectText" />;
-                        buttonIcon = <SelectTextIcon style={{ fontSize: '1em' }} />;
-                        buttonOnClick = async () => {
-                            executeChatSelectedText();
-                        };
-                        break;
-                    case AppFunction.Chat:
-                        buttonTitle = <FormattedMessage id="home.chat" />;
-                        buttonIcon = <ChatIcon />;
-                        buttonOnClick = () => {
-                            executeChat();
-                        };
-                        break;
-                    case AppFunction.TopWindow:
-                        buttonTitle = <FormattedMessage id="home.topWindow" />;
-                        buttonIcon = <TopWindowIcon />;
-                        buttonOnClick = () => executeScreenshot(ScreenshotType.TopWindow);
-                        break;
-                    case AppFunction.FixedContent:
-                        buttonTitle = <FormattedMessage id="home.fixedContent" />;
-                        buttonIcon = <ClipboardIcon style={{ fontSize: '1.1em' }} />;
-                        buttonOnClick = () => createFixedContentWindow();
-                        break;
-                    case AppFunction.FullScreenDraw:
-                        buttonTitle = <FormattedMessage id="home.fullScreenDraw" />;
-                        buttonIcon = <FullScreenDrawIcon style={{ fontSize: '1.1em' }} />;
-                        buttonOnClick = () => createFullScreenDrawWindow();
-                        break;
-                    case AppFunction.Screenshot:
-                    default:
-                        buttonTitle = <FormattedMessage id="home.screenshot" />;
-                        buttonIcon = <ScreenshotIcon />;
-                        buttonOnClick = () => executeScreenshot();
-                        break;
+        const configs = Object.keys(defaultAppFunctionConfigs)
+            .filter((key) => {
+                if (getPlatform() === 'macos' && key === AppFunction.TopWindow) {
+                    return false;
                 }
 
-                const onClick = async () => {
-                    if (disableShortcutKeyRef.current) {
-                        return;
+                return true;
+            })
+            .reduce(
+                (configs, key) => {
+                    let buttonTitle;
+                    let buttonIcon;
+                    let buttonOnClick: () => void | Promise<void>;
+                    switch (key) {
+                        case AppFunction.ScreenshotFixed:
+                            buttonTitle = (
+                                <FormattedMessage
+                                    id="home.screenshotAfter"
+                                    values={{
+                                        text: <FormattedMessage id="draw.fixedTool" />,
+                                    }}
+                                />
+                            );
+                            buttonIcon = <FixedIcon style={{ fontSize: '1.3em' }} />;
+                            buttonOnClick = () => executeScreenshot(ScreenshotType.Fixed);
+                            break;
+                        case AppFunction.ScreenshotOcr:
+                            buttonTitle = (
+                                <FormattedMessage
+                                    id="home.screenshotAfter"
+                                    values={{
+                                        text: <FormattedMessage id="draw.ocrDetectTool" />,
+                                    }}
+                                />
+                            );
+                            buttonIcon = <OcrDetectIcon />;
+                            buttonOnClick = () => executeScreenshot(ScreenshotType.OcrDetect);
+                            break;
+                        case AppFunction.ScreenshotFocusedWindow:
+                            buttonTitle = (
+                                <IconLabel
+                                    label={
+                                        <FormattedMessage id="home.screenshotFunction.screenshotFocusedWindow" />
+                                    }
+                                />
+                            );
+                            buttonIcon = <FocusedWindowIcon />;
+                            buttonOnClick = async () => {
+                                executeScreenshotFocusedWindow(getAppSettings());
+                            };
+                            break;
+                        case AppFunction.ScreenshotCopy:
+                            buttonTitle = (
+                                <FormattedMessage id="home.screenshotFunction.screenshotCopy" />
+                            );
+                            buttonIcon = <ClipboardIcon />;
+                            buttonOnClick = () => executeScreenshot(ScreenshotType.Copy);
+                            break;
+                        case AppFunction.TranslationSelectText:
+                            buttonTitle = <FormattedMessage id="home.translationSelectText" />;
+                            buttonIcon = <SelectTextIcon style={{ fontSize: '1em' }} />;
+                            buttonOnClick = async () => {
+                                executeTranslateSelectedText();
+                            };
+                            break;
+                        case AppFunction.Translation:
+                            buttonTitle = <FormattedMessage id="home.translation" />;
+                            buttonIcon = <TranslationIcon />;
+                            buttonOnClick = () => {
+                                executeTranslate();
+                            };
+                            break;
+                        case AppFunction.ChatSelectText:
+                            buttonTitle = <FormattedMessage id="home.chatSelectText" />;
+                            buttonIcon = <SelectTextIcon style={{ fontSize: '1em' }} />;
+                            buttonOnClick = async () => {
+                                executeChatSelectedText();
+                            };
+                            break;
+                        case AppFunction.Chat:
+                            buttonTitle = <FormattedMessage id="home.chat" />;
+                            buttonIcon = <ChatIcon />;
+                            buttonOnClick = () => {
+                                executeChat();
+                            };
+                            break;
+                        case AppFunction.TopWindow:
+                            buttonTitle = <FormattedMessage id="home.topWindow" />;
+                            buttonIcon = <TopWindowIcon />;
+                            buttonOnClick = () => executeScreenshot(ScreenshotType.TopWindow);
+                            break;
+                        case AppFunction.FixedContent:
+                            buttonTitle = <FormattedMessage id="home.fixedContent" />;
+                            buttonIcon = <ClipboardIcon style={{ fontSize: '1.1em' }} />;
+                            buttonOnClick = () => createFixedContentWindow();
+                            break;
+                        case AppFunction.FullScreenDraw:
+                            buttonTitle = <FormattedMessage id="home.fullScreenDraw" />;
+                            buttonIcon = <FullScreenDrawIcon style={{ fontSize: '1.1em' }} />;
+                            buttonOnClick = () => createFullScreenDrawWindow();
+                            break;
+                        case AppFunction.Screenshot:
+                        default:
+                            buttonTitle = <FormattedMessage id="home.screenshot" />;
+                            buttonIcon = <ScreenshotIcon />;
+                            buttonOnClick = () => executeScreenshot();
+                            break;
                     }
 
-                    await buttonOnClick();
-                };
-                configs[key as AppFunction] = {
-                    ...defaultAppFunctionConfigs[key as AppFunction],
-                    configKey: key as AppFunction,
-                    title: buttonTitle,
-                    icon: buttonIcon,
-                    onClick,
-                    onKeyChange: async (value: string, prevValue: string) => {
-                        if (prevValue) {
-                            if (await isRegistered(prevValue)) {
-                                await unregister(prevValue);
+                    const onClick = async () => {
+                        if (disableShortcutKeyRef.current) {
+                            return;
+                        }
+
+                        await buttonOnClick();
+                    };
+                    configs[key as AppFunction] = {
+                        ...defaultAppFunctionConfigs[key as AppFunction],
+                        configKey: key as AppFunction,
+                        title: buttonTitle,
+                        icon: buttonIcon,
+                        onClick,
+                        onKeyChange: async (value: string, prevValue: string) => {
+                            if (prevValue) {
+                                if (await isRegistered(prevValue)) {
+                                    await unregister(prevValue);
+                                }
                             }
-                        }
 
-                        if (!value) {
-                            return false;
-                        }
+                            if (!value) {
+                                return false;
+                            }
 
-                        if (await isRegistered(value)) {
-                            return false;
-                        }
+                            if (await isRegistered(value)) {
+                                return false;
+                            }
 
-                        try {
-                            await register(value, (event) => {
-                                if (event.state !== 'Released') {
-                                    return;
-                                }
+                            try {
+                                await register(value, (event) => {
+                                    if (event.state !== 'Released') {
+                                        return;
+                                    }
 
-                                if (getTrayIconState()?.disableShortcut) {
-                                    return;
-                                }
+                                    if (getTrayIconState()?.disableShortcut) {
+                                        return;
+                                    }
 
-                                onClick();
-                            });
-                        } catch (error) {
-                            // 将错误传给组件，组件捕获错误来判断快捷键状态
-                            throw error;
-                        }
+                                    onClick();
+                                });
+                            } catch (error) {
+                                // 将错误传给组件，组件捕获错误来判断快捷键状态
+                                throw error;
+                            }
 
-                        return true;
-                    },
-                };
+                            return true;
+                        },
+                    };
 
-                return configs;
-            },
-            {} as Record<AppFunction, AppFunctionComponentConfig>,
-        );
+                    return configs;
+                },
+                {} as Record<AppFunction, AppFunctionComponentConfig>,
+            );
 
         const groupConfigs = Object.values(configs).reduce(
             (groupConfigs, config) => {

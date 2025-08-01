@@ -103,6 +103,10 @@ const SelectLayerCore: React.FC<SelectLayerProps> = ({ actionRef }) => {
         [],
     );
     const isEnableFindChildrenElements = useCallback(() => {
+        if (getPlatform() === 'macos') {
+            return false;
+        }
+
         return (
             tabFindChildrenElementsRef.current && getScreenshotType() !== ScreenshotType.TopWindow
         );
