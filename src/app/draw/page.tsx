@@ -296,7 +296,6 @@ const DrawPageCore: React.FC = () => {
             }
 
             setCurrentWindowAlwaysOnTop(false);
-            setDrawWindowStyle();
 
             // 监听键盘
             listenKeyStart();
@@ -775,6 +774,7 @@ const DrawPageCore: React.FC = () => {
     // 默认隐藏
     useEffect(() => {
         hideWindow();
+        setDrawWindowStyle();
     }, [hideWindow]);
 
     const drawContextValue = useMemo<DrawContextType>(() => {

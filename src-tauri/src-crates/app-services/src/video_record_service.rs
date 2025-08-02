@@ -27,7 +27,7 @@ impl VideoFormat {
 }
 
 // 录制参数结构体，用于在暂停后恢复录制时重用参数
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 struct RecordingParams {
     min_x: i32,
     min_y: i32,
@@ -37,6 +37,7 @@ struct RecordingParams {
     format: VideoFormat,
     frame_rate: u32,
     enable_microphone: bool,
+    #[allow(unused)]
     enable_system_audio: bool,
     microphone_device_name: String,
     hwaccel: bool,
@@ -52,6 +53,21 @@ pub struct VideoRecordService {
     segment_counter: u32,                      // 片段计数器
     recording_params: Option<RecordingParams>, // 录制参数，用于恢复录制
     ffmpeg_path: Option<PathBuf>,
+}
+
+#[cfg(target_os = "macos")]
+#[derive(PartialEq, Serialize, Deserialize, Debug, Clone, Copy)]
+pub enum DeviceType {
+    Audio,
+    Video,
+}
+
+#[cfg(target_os = "macos")]
+#[derive(PartialEq, Serialize, Deserialize, Debug, Clone)]
+pub struct DeviceInfo {
+    pub name: String,
+    pub index: usize,
+    pub device_type: DeviceType,
 }
 
 impl VideoRecordService {
@@ -72,7 +88,16 @@ impl VideoRecordService {
                 Ok(resource_path) => resource_path,
                 Err(_) => panic!("[VideoRecordService] Failed to get resource path"),
             };
-            self.ffmpeg_path = Some(resource_path.join("ffmpeg.exe"));
+
+            #[cfg(target_os = "windows")]
+            {
+                self.ffmpeg_path = Some(resource_path.join("ffmpeg.exe"));
+            }
+
+            #[cfg(target_os = "macos")]
+            {
+                self.ffmpeg_path = Some(resource_path.join("ffmpeg"));
+            }
         }
     }
 
@@ -170,51 +195,131 @@ impl VideoRecordService {
             command.arg("-hwaccel").arg("auto");
         }
 
-        // 设置输入格式为 gdigrab (Windows 屏幕录制)
-        command
-            .arg("-f")
-            .arg("gdigrab")
-            .arg("-framerate")
-            .arg(params.frame_rate.to_string())
-            // 设置偏移量
-            .arg("-offset_x")
-            .arg(params.min_x.to_string())
-            .arg("-offset_y")
-            .arg(params.min_y.to_string())
-            // 设置录制区域大小
-            .arg("-video_size")
-            .arg(format!("{}x{}", width, height))
-            // 输入源为桌面
-            .arg("-i")
-            .arg("desktop");
-
-        // 音频输入计数器
-        let mut audio_inputs: Vec<String> = Vec::new();
-
-        // 添加系统音频输入
-        if params.enable_system_audio {
-            // command
-            //     .arg("-f")
-            //     .arg("dshow")
-            //     .arg("-i")
-            //     .arg("audio=virtual-audio-capturer");
-            // audio_inputs.push("1:a".to_string());
+        // 根据平台设置不同的输入格式
+        #[cfg(target_os = "windows")]
+        {
+            // Windows 使用 gdigrab
+            command
+                .arg("-f")
+                .arg("gdigrab")
+                .arg("-framerate")
+                .arg(params.frame_rate.to_string())
+                // 设置偏移量
+                .arg("-offset_x")
+                .arg(params.min_x.to_string())
+                .arg("-offset_y")
+                .arg(params.min_y.to_string())
+                // 设置录制区域大小
+                .arg("-video_size")
+                .arg(format!("{}x{}", width, height))
+                // 输入源为桌面
+                .arg("-i")
+                .arg("desktop");
         }
 
-        // 添加麦克风音频输入
-        if params.enable_microphone {
-            let device_names = self.get_microphone_device_names();
+        #[cfg(target_os = "macos")]
+        {
+            // macOS 使用 avfoundation
+            command
+                .arg("-f")
+                .arg("avfoundation")
+                .arg("-framerate")
+                .arg(params.frame_rate.to_string());
+        }
 
-            if device_names.len() > 0 {
-                command.arg("-f").arg("dshow").arg("-i").arg(format!(
-                    "audio={}",
-                    if device_names.contains(&params.microphone_device_name) {
-                        params.microphone_device_name.clone()
-                    } else {
-                        device_names[0].clone()
-                    }
-                ));
-                audio_inputs.push(format!("{}:a", audio_inputs.len() + 1));
+        let mut audio_input = String::new();
+
+        // 根据平台添加音频输入
+        #[cfg(target_os = "windows")]
+        {
+            // 添加系统音频输入
+            if params.enable_system_audio {
+                // command
+                //     .arg("-f")
+                //     .arg("dshow")
+                //     .arg("-i")
+                //     .arg("audio=virtual-audio-capturer");
+                // audio_inputs.push("1:a".to_string());
+            }
+
+            // 添加麦克风音频输入
+            if params.enable_microphone {
+                let device_names = self.get_microphone_device_names();
+
+                if device_names.len() > 0 {
+                    command.arg("-f").arg("dshow").arg("-i").arg(format!(
+                        "audio={}",
+                        if device_names.contains(&params.microphone_device_name) {
+                            params.microphone_device_name.clone()
+                        } else {
+                            device_names[0].clone()
+                        }
+                    ));
+                    audio_input = format!("{}:a", audio_inputs.len() + 1);
+                }
+            }
+        }
+
+        // macOS 音频输入处理
+        #[cfg(target_os = "macos")]
+        {
+            let device_info_list = self.get_device_info_list();
+
+            let audio_device = if params.enable_microphone {
+                device_info_list
+                    .iter()
+                    .find(|d| {
+                        d.device_type == DeviceType::Audio
+                            && Self::format_device_name(d) == params.microphone_device_name
+                    })
+                    .or(device_info_list.first())
+            } else {
+                None
+            };
+
+            // 没有找到对应的显示器，回退到默认显示器
+            let mut target_monitor_index = 0;
+            for (monitor_index, monitor) in
+                xcap::Monitor::all().unwrap_or_default().iter().enumerate()
+            {
+                let scale_factor = monitor.scale_factor().unwrap_or_default();
+                let monitor_min_x = monitor.x().unwrap_or_default() as f32 * scale_factor;
+                let monitor_min_y = monitor.y().unwrap_or_default() as f32 * scale_factor;
+                let monitor_max_x =
+                    (monitor_min_x + monitor.width().unwrap_or_default() as f32) * scale_factor;
+                let monitor_max_y =
+                    (monitor_min_y + monitor.height().unwrap_or_default() as f32) * scale_factor;
+
+                if monitor_min_x <= params.min_x as f32
+                    && monitor_min_y <= params.min_y as f32
+                    && monitor_max_x >= params.min_x as f32
+                    && monitor_max_y >= params.min_y as f32
+                {
+                    target_monitor_index = monitor_index;
+                    break;
+                }
+            }
+
+            // 判断是否存在对应的显示器
+            if !device_info_list.iter().any(|d| {
+                d.device_type == DeviceType::Video
+                    && d.name == format!("Capture screen {}", target_monitor_index)
+            }) {
+                target_monitor_index = 0;
+                log::warn!(
+                    "[video_record_service::start_segment] No corresponding display found for microphone device: {}",
+                    params.microphone_device_name
+                );
+            }
+
+            if let Some(audio_device) = audio_device {
+                // 格式: -f avfoundation -i "0:设备索引"
+                command
+                    .arg("-i")
+                    .arg(format!("{}:{}", target_monitor_index, audio_device.index));
+                audio_input = format!("{}:a", audio_device.index);
+            } else {
+                command.arg("-i").arg(format!("{}", target_monitor_index));
             }
         }
 
@@ -276,28 +381,30 @@ impl VideoRecordService {
                     command.arg("-preset").arg(&params.encoder_preset);
                 }
 
-                command.arg("-crf").arg("23").arg("-pix_fmt").arg("yuv420p"); // 添加像素格式，确保兼容性
+                #[cfg(target_os = "windows")]
+                {
+                    command.arg("-crf").arg("23").arg("-pix_fmt").arg("yuv420p"); // 添加像素格式，确保兼容性
+                }
+
+                #[cfg(target_os = "macos")]
+                {
+                    let crop_filter = format!(
+                        "crop={}:{}:{}:{}",
+                        width, height, params.min_x, params.min_y
+                    );
+                    command.arg("-vf").arg(crop_filter);
+                    command.arg("-crf").arg("23").arg("-pix_fmt").arg("uyvy422"); // 添加像素格式，确保兼容性
+                }
 
                 // 音频编码设置
-                if !audio_inputs.is_empty() {
+                if !audio_input.is_empty() {
                     command.arg("-c:a").arg("aac").arg("-b:a").arg("128k");
 
-                    // 如果有多个音频输入，需要混音
-                    if audio_inputs.len() > 1 {
-                        let filter_complex = format!(
-                            "[{}]amix=inputs={}[aout]",
-                            audio_inputs.join("]["),
-                            audio_inputs.len()
-                        );
-                        command.arg("-filter_complex").arg(filter_complex);
-                        command.arg("-map").arg("0:v").arg("-map").arg("[aout]");
-                    } else {
-                        command
-                            .arg("-map")
-                            .arg("0:v")
-                            .arg("-map")
-                            .arg(&audio_inputs[0]);
-                    }
+                    // macOS 音频处理，添加降噪
+                    let filter_complex =
+                        format!("[{}]anlmdn=s=10:p=0.001:r=0.005[aout]", audio_input);
+                    command.arg("-filter_complex").arg(filter_complex);
+                    command.arg("-map").arg("0:v").arg("-map").arg("[aout]");
                 } else {
                     // 没有音频输入时，只映射视频
                     command.arg("-map").arg("0:v");
@@ -356,60 +463,78 @@ impl VideoRecordService {
         }
     }
 
-    pub fn get_microphone_device_names(&self) -> Vec<String> {
+    #[cfg(target_os = "macos")]
+    pub fn get_device_info_list(&self) -> Vec<DeviceInfo> {
+        let mut device_info_list = Vec::new();
+
         let mut command = self.get_ffmpeg_command();
         command
             .arg("-list_devices")
             .arg("true")
             .arg("-f")
-            .arg("dshow")
+            .arg("avfoundation")
             .arg("-i")
             .arg("dummy");
 
-        let mut device_names = Vec::new();
+        println!(
+            "FFmpeg get_microphone_device_names command (macOS): {:?}",
+            command
+        );
 
         let mut child = match command.spawn() {
             Ok(child) => child,
             Err(e) => {
-                println!(
-                    "[get_microphone_device_names] Failed to spawn ffmpeg: {}",
-                    e
-                );
-                return device_names;
+                println!("[get_device_names] Failed to spawn ffmpeg: {}", e);
+                return device_info_list;
             }
         };
 
         let output_iter = match child.iter() {
             Ok(output) => output,
             Err(e) => {
-                println!("[get_microphone_device_names] Failed to iter ffmpeg: {}", e);
-                return device_names;
+                println!("[get_device_names] Failed to iter ffmpeg: {}", e);
+                return device_info_list;
             }
         };
 
-        // 创建正则表达式来匹配音频设备
-        // 格式: [dshow @ address] [info] "设备名称" (audio)
-        let device_regex = match Regex::new(r#"\[info\]\s+"([^"]+)"\s+\(audio\)"#) {
-            Ok(regex) => regex,
-            Err(e) => {
-                println!(
-                    "[get_microphone_device_names] Failed to create regex: {}",
-                    e
-                );
-                return device_names;
-            }
-        };
+        // macOS avfoundation 格式的正则表达式
+        // 格式: [AVFoundation indev @ 0x...] [info] [0] 设备名称
+        let device_regex =
+            match Regex::new(r#"\[AVFoundation indev @ [^\]]+\]\s+\[info\]\s+\[(\d+)\]\s+(.+)"#) {
+                Ok(regex) => regex,
+                Err(e) => {
+                    println!("[get_device_names] Failed to create regex: {}", e);
+                    return device_info_list;
+                }
+            };
+
+        // 检测是否已经开始音频设备列表的标志
+        let mut found_audio_devices_marker = false;
 
         for line in output_iter {
             match line {
                 FfmpegEvent::Log(_, line) => {
-                    // 使用正则表达式解析音频设备
+                    // 首先检查是否遇到了音频设备列表的标记
+                    if line.contains("AVFoundation audio devices:") {
+                        found_audio_devices_marker = true;
+                        println!(
+                            "[get_microphone_device_names] Found audio devices marker, starting to parse devices"
+                        );
+                        continue;
+                    }
+
                     if let Some(captures) = device_regex.captures(&line) {
-                        if let Some(device_name) = captures.get(1) {
-                            let name = device_name.as_str().to_string();
-                            device_names.push(name.clone());
-                            println!("[get_microphone_device_names] Found audio device: {}", name);
-                        }
+                        let device_index = captures.get(1).unwrap().as_str().to_string();
+                        let device_name = captures.get(2).unwrap().as_str().to_string();
+                        device_info_list.push(DeviceInfo {
+                            name: device_name,
+                            index: device_index.parse::<usize>().unwrap(),
+                            device_type: if found_audio_devices_marker {
+                                DeviceType::Audio
+                            } else {
+                                DeviceType::Video
+                            },
+                        });
                     }
                 }
                 _ => {}
@@ -419,10 +544,125 @@ impl VideoRecordService {
         let _ = child.wait();
 
         println!(
+            "[get_device_names] Total found devices: {}",
+            device_info_list.len()
+        );
+        device_info_list
+    }
+
+    fn format_device_name(device_info: &DeviceInfo) -> String {
+        format!("[{}] {}", device_info.index, device_info.name)
+    }
+
+    pub fn get_microphone_device_names(&self) -> Vec<String> {
+        let mut device_names = Vec::new();
+
+        #[cfg(target_os = "windows")]
+        {
+            let mut command = self.get_ffmpeg_command();
+            command
+                .arg("-list_devices")
+                .arg("true")
+                .arg("-f")
+                .arg("dshow")
+                .arg("-i")
+                .arg("dummy");
+
+            let mut child = match command.spawn() {
+                Ok(child) => child,
+                Err(e) => {
+                    println!(
+                        "[get_microphone_device_names] Failed to spawn ffmpeg: {}",
+                        e
+                    );
+                    return device_names;
+                }
+            };
+
+            let output_iter = match child.iter() {
+                Ok(output) => output,
+                Err(e) => {
+                    println!("[get_microphone_device_names] Failed to iter ffmpeg: {}", e);
+                    return device_names;
+                }
+            };
+
+            // Windows dshow 格式的正则表达式
+            // 格式: [dshow @ address] [info] "设备名称" (audio)
+            let device_regex = match Regex::new(r#"\[info\]\s+"([^"]+)"\s+\(audio\)"#) {
+                Ok(regex) => regex,
+                Err(e) => {
+                    println!(
+                        "[get_microphone_device_names] Failed to create regex: {}",
+                        e
+                    );
+                    return device_names;
+                }
+            };
+
+            for line in output_iter {
+                match line {
+                    FfmpegEvent::Log(_, line) => {
+                        // 使用正则表达式解析音频设备
+                        if let Some(captures) = device_regex.captures(&line) {
+                            if let Some(device_name) = captures.get(1) {
+                                let name = device_name.as_str().to_string();
+                                device_names.push(name.clone());
+                                println!(
+                                    "[get_microphone_device_names] Found audio device: {}",
+                                    name
+                                );
+                            }
+                        }
+                    }
+                    _ => {}
+                }
+            }
+
+            let _ = child.wait();
+        }
+
+        #[cfg(target_os = "macos")]
+        {
+            let device_info_list = self.get_device_info_list();
+            for device_info in device_info_list {
+                if device_info.device_type == DeviceType::Audio {
+                    device_names.push(Self::format_device_name(&device_info));
+                }
+            }
+        }
+
+        println!(
             "[get_microphone_device_names] Total found devices: {}",
             device_names.len()
         );
         device_names
+    }
+
+    /// 根据设备名称获取设备索引
+    /// 返回 Option<u32>，如果找不到设备则返回 None
+    pub fn get_microphone_device_index(&self, device_name: &str) -> Option<u32> {
+        // 使用正则表达式从设备名称中提取索引
+        // 设备名称格式: [0] 设备名称
+        if let Ok(device_index_regex) = Regex::new(r#"\[(\d+)\]\s+(.+)"#) {
+            if let Some(captures) = device_index_regex.captures(device_name) {
+                if let Some(index_match) = captures.get(1) {
+                    if let Ok(device_index) = index_match.as_str().parse::<u32>() {
+                        println!(
+                            "[get_microphone_device_index] Found device index {} for device: {}",
+                            device_index, device_name
+                        );
+                        return Some(device_index);
+                    }
+                }
+            }
+        }
+
+        println!(
+            "[get_microphone_device_index] Failed to extract index from device name: {}",
+            device_name
+        );
+        None
     }
 
     pub fn kill(&mut self) -> Result<()> {
