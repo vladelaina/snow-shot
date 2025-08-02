@@ -179,10 +179,10 @@ impl UIElements {
         // 桌面的窗口索引应该是最高，因为其优先级最低
         let mut current_level = ElementLevel::min();
         let root_element_rect = uiautomation::types::Rect::new(
-            self.monitor_rect.min_x,
-            self.monitor_rect.min_y,
-            self.monitor_rect.max_x,
-            self.monitor_rect.max_y,
+            monitor_rect.min_x - monitor_rect.min_x,
+            monitor_rect.min_y - monitor_rect.min_y,
+            monitor_rect.max_x - monitor_rect.min_x,
+            monitor_rect.max_y - monitor_rect.min_y,
         );
 
         let root_tree_token = self.element_rect_tree.new_node(root_element_rect);
@@ -294,7 +294,8 @@ impl UIElements {
             current_level.next_element();
 
             let current_child_rect = current_child.get_bounding_rectangle()?;
-            self.insert_element_cache(
+
+            let (current_child_rect, _) = self.insert_element_cache(
                 current_child.clone(),
                 current_child_rect,
                 current_level,
@@ -362,6 +363,7 @@ impl UIElements {
             )
             .unwrap_or(&element_rect)
             .clone();
+
         if Self::beyond_rect(element_rect, window_rect) {
             element_rect = Self::clip_rect(element_rect, window_rect);
         }
