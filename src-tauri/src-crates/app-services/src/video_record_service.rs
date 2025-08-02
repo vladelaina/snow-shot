@@ -421,7 +421,7 @@ impl VideoRecordService {
                 if !audio_input.is_empty() {
                     command.arg("-c:a").arg("aac").arg("-b:a").arg("128k");
 
-                    // macOS 音频处理，添加降噪
+                    // 音频处理，添加降噪
                     let filter_complex =
                         format!("[{}]anlmdn=s=10:p=0.001:r=0.005[aout]", audio_input);
                     command.arg("-filter_complex").arg(filter_complex);
