@@ -1,12 +1,17 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { getVersion } from '@tauri-apps/api/app';
 import { fetch } from '@tauri-apps/plugin-http';
-import { isPermissionGranted, requestPermission } from '@tauri-apps/plugin-notification';
+import {
+    isPermissionGranted,
+    requestPermission,
+    sendNotification,
+} from '@tauri-apps/plugin-notification';
 import { useIntl } from 'react-intl';
 import { sendNewVersionNotification } from '@/commands/core';
 import { AppSettingsData, AppSettingsGroup } from '@/app/contextWrap';
 import { useAppSettingsLoad } from '@/hooks/useAppSettingsLoad';
 import { compare } from 'compare-versions';
+import { getPlatform } from '@/utils';
 
 const WEBSITE_URL = 'https://snowshot.top/';
 
@@ -58,24 +63,42 @@ export const CheckVersion: React.FC = () => {
             }
 
             if (permissionGranted) {
-                sendNewVersionNotification(
-                    intl.formatMessage(
-                        { id: 'common.newVersion.title' },
-                        {
-                            latestVersion,
-                        },
-                    ),
-                    intl.formatMessage(
-                        { id: 'common.newVersion' },
-                        {
-                            latestVersion,
-                            currentVersion,
-                        },
-                    ),
-                ).then(() => {
-                    hasSendRef.current = true;
-                    clearIntervalRef();
-                });
+                if (getPlatform() === 'macos') {
+                    sendNotification({
+                        title: intl.formatMessage(
+                            { id: 'common.newVersion.title' },
+                            {
+                                latestVersion,
+                            },
+                        ),
+                        body: intl.formatMessage(
+                            { id: 'common.newVersion' },
+                            {
+                                latestVersion,
+                                currentVersion,
+                            },
+                        ),
+                    });
+                } else {
+                    sendNewVersionNotification(
+                        intl.formatMessage(
+                            { id: 'common.newVersion.title' },
+                            {
+                                latestVersion,
+                            },
+                        ),
+                        intl.formatMessage(
+                            { id: 'common.newVersion' },
+                            {
+                                latestVersion,
+                                currentVersion,
+                            },
+                        ),
+                    ).then(() => {
+                        hasSendRef.current = true;
+                        clearIntervalRef();
+                    });
+                }
             }
         } catch (error) {
             console.error('Failed to check version:', error);

@@ -1,7 +1,7 @@
 use ffmpeg_sidecar::{child::FfmpegChild, command::FfmpegCommand, event::FfmpegEvent};
 use regex::Regex;
 use serde::{Deserialize, Serialize};
-use std::{io::Result, path::PathBuf};
+use std::{io::Result, path::PathBuf, fs, os::unix::fs::PermissionsExt};
 use tauri::{Manager, path::BaseDirectory};
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Copy)]
@@ -96,7 +96,23 @@ impl VideoRecordService {
 
             #[cfg(target_os = "macos")]
             {
-                self.ffmpeg_path = Some(resource_path.join("ffmpeg"));
+                let ffmpeg_path = resource_path.join("ffmpeg");
+                
+                // 为 ffmpeg 文件添加可执行权限
+                if ffmpeg_path.exists() {
+                    if let Ok(metadata) = fs::metadata(&ffmpeg_path) {
+                        let mut permissions = metadata.permissions();
+                        permissions.set_mode(0o755); // 设置可执行权限 (rwxr-xr-x)
+                        
+                        if let Err(e) = fs::set_permissions(&ffmpeg_path, permissions) {
+                            eprintln!("[VideoRecordService] Failed to set executable permissions for ffmpeg: {}", e);
+                        } else {
+                            println!("[VideoRecordService] Successfully set executable permissions for ffmpeg");
+                        }
+                    }
+                }
+                
+                self.ffmpeg_path = Some(ffmpeg_path);
             }
         }
     }

@@ -10,7 +10,6 @@ impl UIElements {
     }
 
     pub fn init(&mut self) -> Result<(), ()> {
-        log::warn!("[os::ui_automation::linux::init] not implemented");
         Ok(())
     }
 
@@ -19,12 +18,10 @@ impl UIElements {
         monitor_rect: ElementRect,
         try_get_element_by_focus: TryGetElementByFocus,
     ) -> Result<(), ()> {
-        log::warn!("[os::ui_automation::linux::init_cache] not implemented");
         Ok(())
     }
 
     pub fn recovery_window_z_order(&self) {
-        log::warn!("[os::ui_automation::linux::recovery_window_z_order] not implemented");
     }
 
     pub fn get_element_from_point_walker<F>(
