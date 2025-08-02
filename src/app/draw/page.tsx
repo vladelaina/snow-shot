@@ -391,6 +391,8 @@ const DrawPageCore: React.FC = () => {
     /** 执行截图 */
     const excuteScreenshot = useCallback(
         async (excuteScreenshotType: ScreenshotType) => {
+            setDrawWindowStyle();
+
             capturingRef.current = true;
             drawToolbarActionRef.current?.setEnable(false);
 
@@ -774,7 +776,6 @@ const DrawPageCore: React.FC = () => {
     // 默认隐藏
     useEffect(() => {
         hideWindow();
-        setDrawWindowStyle();
     }, [hideWindow]);
 
     const drawContextValue = useMemo<DrawContextType>(() => {

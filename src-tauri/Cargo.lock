@@ -195,7 +195,6 @@ dependencies = [
  "snow-shot-tauri-commands-scroll-screenshot",
  "tauri",
  "tauri-build",
- "tauri-nspanel",
  "tauri-plugin-autostart",
  "tauri-plugin-clipboard",
  "tauri-plugin-clipboard-manager",
@@ -4540,12 +4539,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "57c0d7b74b563b49d38dae00a0c37d4d6de9b432382b2892f0574ddcae73fd0a"
 
 [[package]]
-name = "pastey"
-version = "0.1.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b3a8cb46bdc156b1c90460339ae6bfd45ba0394e5effbaa640badb4987fdc261"
-
-[[package]]
 name = "pathdiff"
 version = "0.2.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -6644,18 +6637,6 @@ dependencies = [
  "syn 2.0.104",
  "tauri-codegen",
  "tauri-utils",
-]
-
-[[package]]
-name = "tauri-nspanel"
-version = "2.1.0"
-source = "git+https://github.com/ahkohd/tauri-nspanel?branch=v2.1#5dadef4796c7f1fb9b3a8f0e51869165c6d3d3b6"
-dependencies = [
- "objc2 0.6.1",
- "objc2-app-kit",
- "objc2-foundation 0.3.1",
- "pastey",
- "tauri",
 ]
 
 [[package]]

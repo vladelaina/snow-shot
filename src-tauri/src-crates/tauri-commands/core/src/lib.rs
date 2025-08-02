@@ -1,9 +1,7 @@
 use enigo::{Axis, Mouse};
-use objc2::runtime::AnyObject;
 use serde::Serialize;
 use std::{
     env,
-    ffi::c_void,
     path::PathBuf,
     time::{SystemTime, UNIX_EPOCH},
 };
@@ -412,7 +410,7 @@ pub async fn start_free_drag(
 
 pub async fn set_current_window_always_on_top(
     #[allow(unused_variables)] window: tauri::WebviewWindow,
-    allow_input_method_overlay: bool,
+    #[allow(unused_variables)] allow_input_method_overlay: bool,
 ) -> Result<(), String> {
     #[cfg(target_os = "macos")]
     {
@@ -428,7 +426,9 @@ pub async fn set_current_window_always_on_top(
         };
 
         match window.run_on_main_thread(move || unsafe {
+            use objc2::runtime::AnyObject;
             use objc2_app_kit::NSWindowCollectionBehavior;
+            use std::ffi::c_void;
 
             let window_ns = window_ns as *mut c_void;
 

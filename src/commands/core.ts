@@ -120,11 +120,3 @@ export const setCurrentWindowAlwaysOnTop = async (allowInputMethodOverlay: boole
     });
     return result;
 };
-
-export const setCursorPosition = async (x: number, y: number) => {
-    const result = await invoke<void>('set_cursor_position', {
-        x,
-        y,
-    });
-    return result;
-};

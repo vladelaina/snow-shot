@@ -932,6 +932,7 @@ const SelectLayerCore: React.FC<SelectLayerProps> = ({ actionRef }) => {
             (drawEvent: DrawEventParams | undefined) => {
                 if (drawEvent?.event === DrawEvent.MoveCursor) {
                     disableMouseMove();
+
                     onMouseMoveRenderCallback(
                         new MousePosition(drawEvent.params.x, drawEvent.params.y),
                     );

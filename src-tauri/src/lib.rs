@@ -90,6 +90,10 @@ pub fn run() {
                     .build(),
             )?;
 
+            let main_window = app
+                .get_webview_window("main")
+                .expect("[lib::setup] no main window");
+
             #[cfg(target_os = "windows")]
             {
                 match main_window.set_decorations(false) {
@@ -105,20 +109,18 @@ pub fn run() {
                 // macOS 下不在 dock 显示
                 app.set_activation_policy(tauri::ActivationPolicy::Accessory);
 
-                if let Some(main_window) = app.get_webview_window("main") {
-                    // 监听窗口关闭事件，拦截关闭按钮
-                    let window_clone = main_window.clone();
-                    main_window.on_window_event(move |event| {
-                        if let tauri::WindowEvent::CloseRequested { api, .. } = event {
-                            api.prevent_close();
+                // 监听窗口关闭事件，拦截关闭按钮
+                let window_clone = main_window.clone();
+                main_window.on_window_event(move |event| {
+                    if let tauri::WindowEvent::CloseRequested { api, .. } = event {
+                        api.prevent_close();
 
-                            // 隐藏窗口而不是关闭
-                            if let Err(e) = window_clone.hide() {
-                                log::error!("[macos] hide window error: {:?}", e);
-                            }
+                        // 隐藏窗口而不是关闭
+                        if let Err(e) = window_clone.hide() {
+                            log::error!("[macos] hide window error: {:?}", e);
                         }
-                    });
-                }
+                    }
+                });
             }
 
             Ok(())

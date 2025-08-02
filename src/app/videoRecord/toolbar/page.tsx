@@ -93,9 +93,9 @@ export default function VideoRecordToolbar() {
                     Math.round(
                         monitorInfo.monitor_y +
                             monitorInfo.monitor_height -
-                            //  任务栏高度
-                            48 * scaleFactor -
-                            8 * scaleFactor,
+                            physicalHeight -
+                            //  任务栏高度 48pt
+                            (48 + 24) * scaleFactor,
                     ),
                     Math.round(
                         monitorInfo.monitor_y +

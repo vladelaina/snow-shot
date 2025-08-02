@@ -300,11 +300,11 @@ pub async fn get_window_elements() -> Result<Vec<WindowElement>, ()> {
             };
 
             width = match window.width() {
-                Ok(width) => width,
+                Ok(width) => width as i32,
                 Err(_) => continue,
             };
             height = match window.height() {
-                Ok(height) => height,
+                Ok(height) => height as i32,
                 Err(_) => continue,
             };
         }
@@ -330,8 +330,8 @@ pub async fn get_window_elements() -> Result<Vec<WindowElement>, ()> {
         window_rect = ElementRect {
             min_x: x - monitor_min_x,
             min_y: y - monitor_min_y,
-            max_x: x + width as i32 - monitor_min_x,
-            max_y: y + height as i32 - monitor_min_y,
+            max_x: x + width - monitor_min_x,
+            max_y: y + height - monitor_min_y,
         };
 
         #[cfg(target_os = "macos")]
