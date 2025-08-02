@@ -69,6 +69,7 @@ import {
     ExcalidrawEventPublisher,
 } from '@/app/fullScreenDraw/components/drawCore/extra';
 import { useStateRef } from '@/hooks/useStateRef';
+import { getExcalidrawCanvas } from '@/utils/excalidraw';
 
 export type DrawToolbarProps = {
     actionRef: React.RefObject<DrawToolbarActionType | undefined>;
@@ -213,17 +214,8 @@ const DrawToolbarCore: React.FC<DrawToolbarProps> = ({
                 const appState = drawCacheLayerActionRef.current?.getAppState();
                 if (appState?.editingTextElement) {
                     // 将点击事件传递给 excalidraw，停止文本编辑
-                    const elementList = document.getElementsByClassName(
-                        'excalidraw__canvas interactive',
-                    );
-
-                    if (elementList.length === 0) {
-                        return;
-                    }
-
-                    const canvas = elementList[0] as HTMLCanvasElement;
-
-                    canvas.dispatchEvent(new PointerEvent('pointerdown'));
+                    const canvas = getExcalidrawCanvas();
+                    canvas?.dispatchEvent(new PointerEvent('pointerdown'));
                 }
             }
 

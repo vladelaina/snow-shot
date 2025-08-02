@@ -22,6 +22,8 @@ import {
     CaptureEventPublisher,
     CaptureLoadingPublisher,
     CaptureStepPublisher,
+    DrawEvent,
+    DrawEventPublisher,
     ScreenshotTypePublisher,
 } from '../../extra';
 import { withStatePublisher } from '@/hooks/useStatePublisher';
@@ -39,6 +41,9 @@ import { DrawToolbarStatePublisher } from '../drawToolbar';
 import { SelectState } from '../selectLayer/extra';
 import { DrawState, DrawStatePublisher } from '@/app/fullScreenDraw/components/drawCore/extra';
 import { writeTextToClipboard } from '@/utils/clipboard';
+import { useMoveCursor } from './extra';
+import { getPlatform } from '@/utils';
+import { getExcalidrawCanvas } from '@/utils/excalidraw';
 
 const previewScale = 12;
 const previewPickerSize = 10 + 1;
@@ -307,8 +312,7 @@ const ColorPickerCore: React.FC<{
 
     const pickerPositionElementRef = useRef<HTMLDivElement>(null);
 
-    const moveCursorFinishedRef = useRef(true);
-    const moveCursorFinishedTimeoutRef = useRef<NodeJS.Timeout | undefined>(undefined);
+    const { isDisableMouseMove, enableMouseMove, disableMouseMove } = useMoveCursor();
     const updateImageDataPutImage = useCallback(
         (ctx: CanvasRenderingContext2D, x: number, y: number, imageData: ImageData) => {
             ctx.clearRect(0, 0, previewCanvasSize, previewCanvasSize);
@@ -329,14 +333,8 @@ const ColorPickerCore: React.FC<{
                 return;
             }
 
-            // 延迟一下阻止鼠标事件触发
-            if (moveCursorFinishedTimeoutRef.current) {
-                clearTimeout(moveCursorFinishedTimeoutRef.current);
-            }
-            moveCursorFinishedTimeoutRef.current = setTimeout(() => {
-                moveCursorFinishedRef.current = true;
-                moveCursorFinishedTimeoutRef.current = undefined;
-            }, 256);
+            // 恢复鼠标事件触发
+            enableMouseMove();
 
             // 带宽限制，暂时不从系统获取 mouseposition
             // let [mouseX, mouseY] = await getMousePosition();
@@ -372,7 +370,13 @@ const ColorPickerCore: React.FC<{
             // 计算和绘制错开 1 帧率
             updateImageDataPutImageRender(ctx, x, y, imageData);
         },
-        [monitorInfoRef, updateColor, updateImageDataPutImageRender, updatePickerPosition],
+        [
+            enableMouseMove,
+            monitorInfoRef,
+            updateColor,
+            updateImageDataPutImageRender,
+            updatePickerPosition,
+        ],
     );
     const updateImageRender = useCallbackRenderSlow(updateImageData);
 
@@ -466,6 +470,7 @@ const ColorPickerCore: React.FC<{
         [initImageData, initPreviewCanvas, setEnableKeyEvent],
     );
     useStateSubscriber(CaptureLoadingPublisher, onCaptureLoad);
+    const [, setDrawEvent] = useStateSubscriber(DrawEventPublisher, undefined);
 
     useStateSubscriber(
         CaptureEventPublisher,
@@ -478,7 +483,7 @@ const ColorPickerCore: React.FC<{
 
     useEffect(() => {
         const handleMouseMove = (e: MouseEvent) => {
-            if (!moveCursorFinishedRef.current) {
+            if (isDisableMouseMove()) {
                 return;
             }
 
@@ -490,7 +495,7 @@ const ColorPickerCore: React.FC<{
         return () => {
             document.removeEventListener('mousemove', handleMouseMove);
         };
-    }, [enableRef, update]);
+    }, [enableRef, isDisableMouseMove, update]);
 
     const moveCursor = useCallback(
         (offsetX: number, offsetY: number) => {
@@ -501,17 +506,6 @@ const ColorPickerCore: React.FC<{
 
             let mouseX = pickerPositionRef.current.mouseX + offsetX;
             let mouseY = pickerPositionRef.current.mouseY + offsetY;
-            if (!enableRef.current) {
-                // 未启用时，用全局位置简单计算下
-                mouseX = Math.round(
-                    (mousePositionRef.current.mouseX + offsetX) *
-                        monitorInfoRef.current!.monitor_scale_factor,
-                );
-                mouseY = Math.round(
-                    (mousePositionRef.current.mouseY + offsetY) *
-                        monitorInfoRef.current!.monitor_scale_factor,
-                );
-            }
 
             if (mouseX < 0) {
                 mouseX = 0;
@@ -525,19 +519,38 @@ const ColorPickerCore: React.FC<{
                 mouseY = monitorInfoRef.current!.monitor_height;
             }
 
-            moveCursorFinishedRef.current = false;
+            disableMouseMove();
             appWindow.setCursorPosition(new PhysicalPosition(mouseX, mouseY));
+            setDrawEvent({
+                event: DrawEvent.MoveCursor,
+                params: {
+                    x: mouseX,
+                    y: mouseY,
+                },
+            });
+            setDrawEvent(undefined);
 
-            if (enableRef.current) {
-                update(
-                    mouseX / monitorInfoRef.current!.monitor_scale_factor,
-                    mouseY / monitorInfoRef.current!.monitor_scale_factor,
-                    mouseX,
-                    mouseY,
+            // 在 macOS 下，鼠标移动不会触发 mousemove 事件，给 excalidraw 发送一个 mousemove 事件
+            if (getPlatform() === 'macos') {
+                const canvas = getExcalidrawCanvas();
+                canvas?.dispatchEvent(
+                    new PointerEvent('pointermove', {
+                        clientX: Math.round(mouseX / monitorInfoRef.current!.monitor_scale_factor),
+                        clientY: Math.round(mouseY / monitorInfoRef.current!.monitor_scale_factor),
+                        bubbles: true,
+                        cancelable: true,
+                    }),
                 );
             }
+
+            update(
+                mouseX / monitorInfoRef.current!.monitor_scale_factor,
+                mouseY / monitorInfoRef.current!.monitor_scale_factor,
+                mouseX,
+                mouseY,
+            );
         },
-        [monitorInfoRef, mousePositionRef, update],
+        [disableMouseMove, monitorInfoRef, setDrawEvent, update],
     );
 
     useImperativeHandle(

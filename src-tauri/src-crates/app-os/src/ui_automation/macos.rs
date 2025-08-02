@@ -3,6 +3,7 @@ use crate::TryGetElementByFocus;
 
 pub struct UIElements {}
 
+#[allow(unused)]
 impl UIElements {
     pub fn new() -> Self {
         Self {}

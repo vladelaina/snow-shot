@@ -31,6 +31,9 @@ import { MousePosition } from '@/utils/mousePosition';
 import {
     CaptureEvent,
     CaptureEventPublisher,
+    DrawEvent,
+    DrawEventParams,
+    DrawEventPublisher,
     getMonitorRect,
     ScreenshotTypePublisher,
 } from '../../extra';
@@ -46,6 +49,7 @@ import { DrawState, DrawStatePublisher } from '@/app/fullScreenDraw/components/d
 import { MonitorInfo } from '@/commands/core';
 import { getCurrentWindow } from '@tauri-apps/api/window';
 import { getPlatform } from '@/utils';
+import { useMoveCursor } from '../colorPicker/extra';
 
 export type SelectLayerActionType = {
     getSelectRect: () => ElementRect | undefined;
@@ -696,11 +700,16 @@ const SelectLayerCore: React.FC<SelectLayerProps> = ({ actionRef }) => {
         },
         [onMouseMoveAutoSelectCore],
     );
+
+    const { disableMouseMove, enableMouseMove, isDisableMouseMove } = useMoveCursor();
     const onMouseMove = useCallback(
         (mousePosition: MousePosition, ignoreAnimation: boolean = false) => {
             if (!enableSelectRef.current) {
                 return;
             }
+
+            // 恢复鼠标事件
+            enableMouseMove();
 
             // 检测下鼠标移动的距离
             lastMouseMovePositionRef.current = mousePosition;
@@ -743,7 +752,14 @@ const SelectLayerCore: React.FC<SelectLayerProps> = ({ actionRef }) => {
                 );
             }
         },
-        [onMouseMoveAutoSelect, getScreenshotType, setSelectState, setSelectRect, updateDragMode],
+        [
+            enableMouseMove,
+            getScreenshotType,
+            onMouseMoveAutoSelect,
+            setSelectState,
+            setSelectRect,
+            updateDragMode,
+        ],
     );
     const onMouseUp = useCallback(() => {
         if (!enableSelectRef.current) {
@@ -873,6 +889,10 @@ const SelectLayerCore: React.FC<SelectLayerProps> = ({ actionRef }) => {
                 return;
             }
 
+            if (isDisableMouseMove()) {
+                return;
+            }
+
             onMouseMoveRenderCallback(
                 new MousePosition(e.clientX, e.clientY).scale(
                     monitorInfoRef.current.monitor_scale_factor,
@@ -899,12 +919,27 @@ const SelectLayerCore: React.FC<SelectLayerProps> = ({ actionRef }) => {
             layerContainerElement.removeEventListener('wheel', onMouseWheelRenderCallback);
         };
     }, [
+        isDisableMouseMove,
         layerContainerElementRef,
         onMouseDown,
         onMouseMoveRenderCallback,
         onMouseUp,
         onMouseWheelRenderCallback,
     ]);
+    useStateSubscriber(
+        DrawEventPublisher,
+        useCallback(
+            (drawEvent: DrawEventParams | undefined) => {
+                if (drawEvent?.event === DrawEvent.MoveCursor) {
+                    disableMouseMove();
+                    onMouseMoveRenderCallback(
+                        new MousePosition(drawEvent.params.x, drawEvent.params.y),
+                    );
+                }
+            },
+            [disableMouseMove, onMouseMoveRenderCallback],
+        ),
+    );
 
     // 选择状态未激活时，鼠标在选区边框附件依旧可以更改选区
     useEffect(() => {

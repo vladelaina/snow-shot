@@ -368,23 +368,23 @@ pub async fn get_window_elements() -> Result<Vec<WindowElement>, ()> {
     Ok(rect_list)
 }
 
-pub async fn switch_always_on_top(window_id: u32) -> bool {
-    if window_id == 0 {
-        return false;
-    }
-
-    let window_list = Window::all().unwrap_or_default();
-    let window = window_list
-        .iter()
-        .find(|w| w.id().unwrap_or(0) == window_id);
-
-    let window = match window {
-        Some(window) => window,
-        None => return false,
-    };
-
+pub async fn switch_always_on_top(#[allow(unused_variables)] window_id: u32) -> bool {
     #[cfg(target_os = "windows")]
     {
+        if window_id == 0 {
+            return false;
+        }
+
+        let window_list = Window::all().unwrap_or_default();
+        let window = window_list
+            .iter()
+            .find(|w| w.id().unwrap_or(0) == window_id);
+
+        let window = match window {
+            Some(window) => window,
+            None => return false,
+        };
+
         let window_hwnd = window.hwnd();
 
         let window_hwnd = match window_hwnd {

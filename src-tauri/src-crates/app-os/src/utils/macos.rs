@@ -8,8 +8,8 @@ pub fn switch_always_on_top() -> () {
     ()
 }
 
-pub fn set_draw_window_style(window: tauri::Window) {
-    log::warn!("[os::utils::linux::set_draw_window_style] not implemented");
+pub fn set_draw_window_style(#[allow(unused_variables)] window: tauri::Window) {
+    // macOS 无需实现
 
     ()
 }
