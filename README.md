@@ -40,6 +40,7 @@ _注意：软件正在快速迭代中，Bug 和使用问题难以避免。且因
 ### 相关文档
 
 [开发文档](./docs/development.md)
+[macOS 权限异常](./docs/macos-permissions.md)
 
 ### 特别鸣谢
 
