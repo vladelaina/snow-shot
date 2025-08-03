@@ -56,11 +56,6 @@ pub fn run() {
         }));
     }
 
-    #[cfg(target_os = "macos")]
-    {
-        app_builder = app_builder.plugin(tauri_nspanel::init());
-    }
-
     app_builder
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_clipboard::init())

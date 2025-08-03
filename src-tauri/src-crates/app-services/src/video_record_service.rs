@@ -96,6 +96,9 @@ impl VideoRecordService {
 
             #[cfg(target_os = "macos")]
             {
+                use std::fs;
+                use std::os::unix::fs::PermissionsExt;
+
                 let ffmpeg_path = resource_path.join("ffmpeg");
 
                 // 为 ffmpeg 文件添加可执行权限

@@ -167,7 +167,21 @@ pub async fn create_full_screen_draw_window(app: tauri::AppHandle) {
     let monitor_y = monitor.y().unwrap() as f64;
     let monitor_width = monitor.width().unwrap() as f64;
     let monitor_height = monitor.height().unwrap() as f64;
-    let monitor_scale_factor = monitor.scale_factor().unwrap() as f64;
+
+    let window_width;
+    let window_height;
+
+    #[cfg(target_os = "macos")]
+    {
+        window_width = monitor_width;
+        window_height = monitor_height;
+    }
+    #[cfg(not(target_os = "macos"))]
+    {
+        let monitor_scale_factor = monitor.scale_factor().unwrap() as f64;
+        window_width = monitor_width / monitor_scale_factor;
+        window_height = monitor_height / monitor_scale_factor;
+    }
 
     tauri::WebviewWindowBuilder::new(
         &app,
@@ -180,10 +194,7 @@ pub async fn create_full_screen_draw_window(app: tauri::AppHandle) {
     .minimizable(false)
     .title("Snow Shot - Full Screen Draw")
     .position(monitor_x, monitor_y)
-    .inner_size(
-        monitor_width / monitor_scale_factor,
-        monitor_height / monitor_scale_factor,
-    )
+    .inner_size(window_width, window_height)
     .decorations(false)
     .shadow(false)
     .transparent(true)
@@ -328,6 +339,20 @@ pub async fn create_video_record_window(
         return;
     }
 
+    let window_width;
+    let window_height;
+
+    #[cfg(target_os = "macos")]
+    {
+        window_width = monitor_width;
+        window_height = monitor_height;
+    }
+    #[cfg(not(target_os = "macos"))]
+    {
+        window_width = monitor_width / monitor_scale_factor;
+        window_height = monitor_height / monitor_scale_factor;
+    }
+
     tauri::WebviewWindowBuilder::new(
         &app,
         window_label,
@@ -350,7 +375,7 @@ pub async fn create_video_record_window(
     .minimizable(false)
     .title("Snow Shot - Video Record")
     .position(monitor_x, monitor_y)
-    .inner_size(monitor_width / monitor_scale_factor, monitor_height / monitor_scale_factor)
+    .inner_size(window_width, window_height)
     .decorations(false)
     .shadow(false)
     .transparent(true)
