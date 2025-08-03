@@ -71,24 +71,39 @@ pub async fn scroll_screenshot_capture(
         let width = max_x as f64 * rect_scale - min_x;
         let height = max_y as f64 * rect_scale - min_y;
 
-        if let Some(image) = snow_shot_app_utils::capture_current_monitor_with_scap(
-            &window,
-            &monitor,
-            #[cfg(target_os = "windows")]
-            None,
-            #[cfg(target_os = "macos")]
-            Some(scap::capturer::Area {
-                origin: scap::capturer::Point { x: min_x, y: min_y },
-                size: scap::capturer::Size { width, height },
-            }),
-        ) {
-            image
-        } else {
-            match monitor.capture_region(min_x as u32, min_y as u32, width as u32, height as u32) {
-                Ok(image) => image::DynamicImage::ImageRgba8(image),
-                Err(error) => {
-                    return Err(format!("[scroll_screenshot_capture] error: {}", error));
-                }
+        let image: Option<image::DynamicImage>;
+
+        #[cfg(target_os = "macos")]
+        {
+            image = snow_shot_app_utils::capture_current_monitor_with_scap(
+                &window,
+                &monitor,
+                Some(scap::capturer::Area {
+                    origin: scap::capturer::Point { x: min_x, y: min_y },
+                    size: scap::capturer::Size { width, height },
+                }),
+            );
+        }
+
+        #[cfg(target_os = "windows")]
+        {
+            image = match monitor.capture_region(
+                min_x as u32,
+                min_y as u32,
+                width as u32,
+                height as u32,
+            ) {
+                Ok(image) => Some(image::DynamicImage::ImageRgba8(image)),
+                Err(_) => None,
+            };
+        }
+
+        match image {
+            Some(image) => image,
+            None => {
+                return Err(format!(
+                    "[scroll_screenshot_capture] Failed to capture current monitor"
+                ));
             }
         }
     };
