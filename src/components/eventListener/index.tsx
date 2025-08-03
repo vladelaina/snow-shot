@@ -18,6 +18,8 @@ import {
     listenKeyStopByWindowLabel,
     ListenKeyUpEvent,
 } from '@/commands/listenKey';
+import { showWindow } from '@/utils/window';
+import { AntdContext } from '../globalLayoutExtra';
 
 type Listener = {
     event: string;
@@ -38,6 +40,8 @@ export const EventListenerContext = createContext<EventListenerContextType>({
  * 监听 tauri 的消息
  */
 const EventListenerCore: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+    const { message } = useContext(AntdContext);
+
     const { pathname, mainWindow } = useContext(MenuLayoutContext);
     const appWindowRef = useRef<AppWindow | undefined>(undefined);
     useEffect(() => {
@@ -217,6 +221,13 @@ const EventListenerCore: React.FC<{ children: React.ReactNode }> = ({ children }
                 callback: async () => {},
             });
             defaultListener.push({
+                event: 'main-window:send-error-message',
+                callback: async ({ payload }: { payload: string }) => {
+                    showWindow();
+                    message.error(payload);
+                },
+            });
+            defaultListener.push({
                 event: LISTEN_KEY_SERVICE_STOP_EMIT_KEY,
                 callback: async ({ payload }: { payload: string }) => {
                     listenKeyStopByWindowLabel(payload);
@@ -333,6 +344,7 @@ const EventListenerCore: React.FC<{ children: React.ReactNode }> = ({ children }
         isFullScreenDrawSwitchMouseThrough,
         isVideoRecordPage,
         isVideoRecordToolbarPage,
+        message,
     ]);
 
     const eventListenerContextValue = useMemo(() => {
