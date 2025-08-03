@@ -1,5 +1,5 @@
 import { platform } from '@tauri-apps/plugin-os';
-import clipboard from 'tauri-plugin-clipboard-api';
+import * as clipboard from '@tauri-apps/plugin-clipboard-manager';
 
 export const writeTextToClipboard = async (text: string) => {
     const currentPlatform = platform();
@@ -44,7 +44,7 @@ export const writeImageToClipboard = async (image: Blob, format = 'image/png') =
         return;
     }
 
-    await clipboard.writeImageBinary(Array.from(new Uint8Array(await image.arrayBuffer())));
+    await clipboard.writeImage(await image.arrayBuffer());
 };
 
 export const writeHtmlToClipboard = async (html: string) => {

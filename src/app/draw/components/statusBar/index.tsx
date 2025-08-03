@@ -20,6 +20,7 @@ import { debounce } from 'es-toolkit';
 import { ScreenshotType } from '@/functions/screenshot';
 import { DrawState, DrawStatePublisher } from '@/app/fullScreenDraw/components/drawCore/extra';
 import { useAppSettingsLoad } from '@/hooks/useAppSettingsLoad';
+import { getPlatformValue } from '@/utils';
 
 const KeyLabel: React.FC<{
     messageId?: string;
@@ -112,11 +113,16 @@ const StatusBar: React.FC = () => {
 
         if (captureStep === CaptureStep.Select) {
             [
-                {
-                    key: 'selectWindowOrElement',
-                    label: <FormattedMessage id="draw.selectWindowOrElement" />,
-                    children: <KeyLabel messageId="draw.tabKey" />,
-                },
+                ...getPlatformValue(
+                    [
+                        {
+                            key: 'selectWindowOrElement',
+                            label: <FormattedMessage id="draw.selectWindowOrElement" />,
+                            children: <KeyLabel messageId="draw.tabKey" />,
+                        },
+                    ],
+                    [],
+                ),
                 {
                     key: 'changeSelectLevel',
                     label: <FormattedMessage id="draw.changeSelectLevel" />,

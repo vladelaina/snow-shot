@@ -59,7 +59,12 @@ import { scrollScreenshotSaveToFile } from '@/commands/scrollScreenshot';
 import { AppSettingsActionContext, AppSettingsGroup } from '../contextWrap';
 import { AppSettingsPublisher } from '../contextWrap';
 import { ExtraTool } from './components/drawToolbar/components/tools/extraTool';
-import { createFixedContentWindow, getCurrentMonitorInfo, MonitorInfo } from '@/commands/core';
+import {
+    createFixedContentWindow,
+    getCurrentMonitorInfo,
+    MonitorInfo,
+    setCurrentWindowAlwaysOnTop,
+} from '@/commands/core';
 import {
     DrawState,
     DrawStatePublisher,
@@ -74,6 +79,7 @@ import { covertOcrResultToText } from '../fixedContent/components/ocrResult';
 import { writeTextToClipboard } from '@/utils/clipboard';
 import * as tauriOs from '@tauri-apps/plugin-os';
 import { compare } from 'compare-versions';
+import { listenKeyStart, listenKeyStop } from '@/commands/listenKey';
 
 const DrawCacheLayer = dynamic(
     async () => (await import('./components/drawCacheLayer')).DrawCacheLayer,
@@ -130,7 +136,16 @@ const DrawPageCore: React.FC = () => {
         CaptureStepPublisher,
         undefined,
     );
-    const [getDrawState, , resetDrawState] = useStateSubscriber(DrawStatePublisher, undefined);
+    const [getDrawState, , resetDrawState] = useStateSubscriber(
+        DrawStatePublisher,
+        useCallback((drawState: DrawState) => {
+            if (drawState === DrawState.Text) {
+                setCurrentWindowAlwaysOnTop(true);
+            } else {
+                setCurrentWindowAlwaysOnTop(false);
+            }
+        }, []),
+    );
     const [, setCaptureLoading] = useStateSubscriber(CaptureLoadingPublisher, undefined);
     const [getCaptureEvent, setCaptureEvent] = useStateSubscriber(CaptureEventPublisher, undefined);
     const onCaptureLoad = useCallback<BaseLayerEventActionType['onCaptureLoad']>(
@@ -280,6 +295,11 @@ const DrawPageCore: React.FC = () => {
                 await appWindow.setAlwaysOnTop(false);
             }
 
+            setCurrentWindowAlwaysOnTop(false);
+
+            // 监听键盘
+            listenKeyStart();
+
             setDrawWindowStyle();
         },
         [getScreenshotType],
@@ -306,6 +326,9 @@ const DrawPageCore: React.FC = () => {
 
     const finishCapture = useCallback<DrawContextType['finishCapture']>(
         async (clearScrollScreenshot: boolean = true) => {
+            // 停止监听键盘
+            listenKeyStop();
+
             drawPageStateRef.current = DrawPageState.WaitRelease;
             releasePage();
 
@@ -385,7 +408,14 @@ const DrawPageCore: React.FC = () => {
             });
 
             const initMonitorInfoPromise = initMonitorInfoAndShowWindow();
-            imageBufferRef.current = await captureCurrentMonitorPromise;
+
+            const imageBuffer = await captureCurrentMonitorPromise;
+            if (!imageBuffer) {
+                finishCapture();
+                return;
+            }
+
+            imageBufferRef.current = imageBuffer;
             await initMonitorInfoPromise;
 
             // 防止用户提前退出报错
@@ -413,6 +443,7 @@ const DrawPageCore: React.FC = () => {
             setCaptureEvent,
             initMonitorInfoAndShowWindow,
             getCaptureEvent,
+            finishCapture,
             readyCapture,
         ],
     );
@@ -505,6 +536,9 @@ const DrawPageCore: React.FC = () => {
     );
 
     const onFixed = useCallback(async () => {
+        // 停止监听键盘
+        listenKeyStop();
+
         if (getDrawState() === DrawState.ScrollScreenshot) {
             createFixedContentWindow(true);
             finishCapture(false);

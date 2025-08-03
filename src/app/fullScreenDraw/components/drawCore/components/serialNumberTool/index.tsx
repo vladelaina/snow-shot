@@ -87,6 +87,7 @@ const generateSerialNumber = (
             y: position.y - ellipseHeight / 2,
             width: ellipseWidth,
             height: ellipseHeight,
+            // @ts-expect-error 忽略 angle 的类型，因为所需的 Radians 无法导出
             angle: 0,
             strokeColor: appState.currentItemStrokeColor,
             backgroundColor: ellipseBackgroundColor,
@@ -118,6 +119,7 @@ const generateSerialNumber = (
             y: position.y - ellipseHeight / 2,
             width: ellipseWidth,
             height: ellipseHeight,
+            // @ts-expect-error 忽略 angle 的类型，因为所需的 Radians 无法导出
             angle: 0,
             strokeColor: appState.currentItemStrokeColor,
             backgroundColor: appState.currentItemBackgroundColor,
@@ -194,7 +196,7 @@ export const SerialNumberTool: React.FC = () => {
         AppSettingsPublisher,
         useCallback(
             (appSettings: AppSettingsData) => {
-                setDisableArrow(appSettings[AppSettingsGroup.CacheV2].disableArrowPicker);
+                setDisableArrow(appSettings[AppSettingsGroup.Cache].disableArrowPicker);
                 setDisableArrowHotKey(
                     appSettings[AppSettingsGroup.DrawToolbarKeyEvent].serialNumberDisableArrow
                         .hotKey,
@@ -263,7 +265,7 @@ export const SerialNumberTool: React.FC = () => {
                             ?.getSceneElements()
                             .filter((item) => item.id !== newElement.id),
                         appState: {
-                            newElement: undefined,
+                            newElement: null,
                         },
                         captureUpdate: 'NEVER',
                     });
@@ -308,7 +310,7 @@ export const SerialNumberTool: React.FC = () => {
             arrowElementIdsRef.current.add(newArrowElement.id);
 
             sceneElements.forEach((item) => {
-                if (item.id === newArrowElement.id) {
+                if (item.id === newArrowElement.id && 'startBinding' in item) {
                     (
                         serialNumberElement[0] as ExcalidrawElement & {
                             boundElements: BoundElement[];
@@ -320,11 +322,11 @@ export const SerialNumberTool: React.FC = () => {
                         },
                     ] as never[];
 
+                    // @ts-expect-error - 忽略 startBinding 是只读属性
                     item.startBinding = {
                         elementId: serialNumberElement[0].id,
                         focus: 0,
                         gap: 8,
-                        fixedPoint: [1, 0.5],
                     };
                 }
             });
@@ -400,8 +402,12 @@ export const SerialNumberTool: React.FC = () => {
     useHotkeysApp(
         disableArrowHotKey,
         useCallback(() => {
+            if (!enableRef.current) {
+                return;
+            }
+
             updateAppSettings(
-                AppSettingsGroup.CacheV2,
+                AppSettingsGroup.Cache,
                 {
                     disableArrowPicker: !disableArrowRef.current,
                 },
@@ -411,7 +417,7 @@ export const SerialNumberTool: React.FC = () => {
                 true,
                 false,
             );
-        }, [disableArrowRef, updateAppSettings]),
+        }, [disableArrowRef, enableRef, updateAppSettings]),
         {
             preventDefault: true,
             keyup: true,

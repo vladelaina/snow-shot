@@ -2,7 +2,8 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { FixedContentCore, FixedContentActionType } from './components/fixedContentCore';
-import clipboard from 'tauri-plugin-clipboard-api';
+import extraClipboard from 'tauri-plugin-clipboard-api';
+import * as clipboard from '@tauri-apps/plugin-clipboard-manager';
 import { showWindow } from '@/utils/window';
 import { getCurrentWindow, PhysicalPosition, PhysicalSize } from '@tauri-apps/api/window';
 import { setDrawWindowStyle } from '@/commands/screenshot';
@@ -47,7 +48,7 @@ export default function FixedContentPage() {
             } catch {}
 
             try {
-                const htmlContent = await clipboard.readHtml();
+                const htmlContent = await extraClipboard.readHtml();
                 if (htmlContent) {
                     fixedContentActionRef.current?.init({ htmlContent });
                     return;
@@ -63,7 +64,7 @@ export default function FixedContentPage() {
             } catch {}
 
             try {
-                const fileUris = await clipboard.readFilesURIs();
+                const fileUris = await extraClipboard.readFilesURIs();
                 let imageFileUri: string | undefined = undefined;
                 for (const fileUri of fileUris) {
                     if (

@@ -19,21 +19,26 @@ import {
     ExcalidrawEventPublisher,
     ExcalidrawEventParams,
 } from '../drawCore/extra';
-import { useCallback, useContext, useImperativeHandle, useMemo, useState } from 'react';
+import {
+    useCallback,
+    useContext,
+    useEffect,
+    useImperativeHandle,
+    useMemo,
+    useRef,
+    useState,
+} from 'react';
 import { useStateSubscriber } from '@/hooks/useStateSubscriber';
 import { useFullScreenDrawContext } from '../../extra';
 import { CloseOutlined, LockOutlined } from '@ant-design/icons';
 import { getCurrentWindow } from '@tauri-apps/api/window';
 import { useIntl } from 'react-intl';
-import {
-    AppSettingsActionContext,
-    AppSettingsData,
-    AppSettingsGroup,
-    AppSettingsPublisher,
-} from '@/app/contextWrap';
+import { AppSettingsActionContext, AppSettingsData, AppSettingsGroup } from '@/app/contextWrap';
 import { fullScreenDrawChangeMouseThrough, closeFullScreenDraw } from '@/functions/fullScreenDraw';
 import { useStateRef } from '@/hooks/useStateRef';
 import { zIndexs } from '@/utils/zIndex';
+import { useAppSettingsLoad } from '@/hooks/useAppSettingsLoad';
+import * as tauriOs from '@tauri-apps/plugin-os';
 
 export type FullScreenDrawToolbarActionType = {
     setTool: (drawState: DrawState) => void;
@@ -51,19 +56,8 @@ export const FullScreenDrawToolbar: React.FC<{
 
     const [showLockDrawTool, setShowLockDrawTool, showLockDrawToolRef] = useStateRef(false);
     const [enableLockDrawTool, setEnableLockDrawTool, enableLockDrawToolRef] = useStateRef(false);
+    const [mouseThroughHotkey, setMouseThroughHotkey] = useState('');
 
-    useStateSubscriber(
-        AppSettingsPublisher,
-        useCallback(
-            (settings: AppSettingsData) => {
-                // 不显示锁定绘制工具
-                setShowLockDrawTool(!settings[AppSettingsGroup.FunctionScreenshot].lockDrawTool);
-                // 是否启用锁定绘制工具
-                setEnableLockDrawTool(settings[AppSettingsGroup.Cache].enableLockDrawTool);
-            },
-            [setEnableLockDrawTool, setShowLockDrawTool],
-        ),
-    );
     const onToolClick = useCallback(
         (drawState: DrawState) => {
             const drawCoreAction = getDrawCoreAction();
@@ -170,6 +164,37 @@ export const FullScreenDrawToolbar: React.FC<{
         ],
     );
 
+    const appSettingsDefaultToolRef = useRef<DrawState | undefined>(undefined);
+    const excalidrawReadyRef = useRef(false);
+    const initDefaultTool = useCallback(() => {
+        if (!appSettingsDefaultToolRef.current || !excalidrawReadyRef.current) {
+            return;
+        }
+
+        onToolClick(appSettingsDefaultToolRef.current);
+    }, [onToolClick]);
+
+    useAppSettingsLoad(
+        useCallback(
+            (settings: AppSettingsData) => {
+                // 不显示锁定绘制工具
+                setShowLockDrawTool(!settings[AppSettingsGroup.FunctionScreenshot].lockDrawTool);
+                // 是否启用锁定绘制工具
+                setEnableLockDrawTool(settings[AppSettingsGroup.Cache].enableLockDrawTool);
+
+                setMouseThroughHotkey(
+                    settings[AppSettingsGroup.AppFunction].fullScreenDraw.shortcutKey,
+                );
+
+                appSettingsDefaultToolRef.current =
+                    settings[AppSettingsGroup.FunctionFullScreenDraw].defaultTool;
+
+                initDefaultTool();
+            },
+            [initDefaultTool, setEnableLockDrawTool, setShowLockDrawTool],
+        ),
+    );
+
     useStateSubscriber(
         ExcalidrawEventPublisher,
         useCallback(
@@ -183,8 +208,13 @@ export const FullScreenDrawToolbar: React.FC<{
                         onToolClick(DrawState.Select);
                     }
                 }
+
+                if (params?.event === 'onDraw') {
+                    excalidrawReadyRef.current = true;
+                    initDefaultTool();
+                }
             },
-            [getDrawState, onToolClick],
+            [getDrawState, initDefaultTool, onToolClick],
         ),
     );
 
@@ -203,21 +233,6 @@ export const FullScreenDrawToolbar: React.FC<{
         };
     }, []);
 
-    const [mouseThroughHotkey, setMouseThroughHotkey] = useState('');
-    useStateSubscriber(
-        AppSettingsPublisher,
-        useCallback(
-            (appSettings: AppSettingsData) => {
-                setMouseThroughHotkey(
-                    appSettings[AppSettingsGroup.AppFunction].fullScreenDraw.shortcutKey,
-                );
-
-                onToolClick(appSettings[AppSettingsGroup.FunctionFullScreenDraw].defaultTool);
-            },
-            [onToolClick],
-        ),
-    );
-
     const mouseThroughButtonTitle = useMemo(() => {
         if (!mouseThroughHotkey) {
             return intl.formatMessage({ id: 'draw.mouseThroughTool' });
@@ -233,6 +248,11 @@ export const FullScreenDrawToolbar: React.FC<{
             },
         );
     }, [intl, mouseThroughHotkey]);
+
+    const [currentPlatform, setCurrentPlatform] = useState<tauriOs.Platform>();
+    useEffect(() => {
+        setCurrentPlatform(tauriOs.platform());
+    }, []);
 
     return (
         <div className="full-screen-draw-toolbar-container">
@@ -449,7 +469,8 @@ export const FullScreenDrawToolbar: React.FC<{
 
                 .full-screen-draw-toolbar {
                     pointer-events: auto;
-                    margin-top: ${token.marginLG}px;
+                    /* macOS 下加上 menu bar 的高度 */
+                    margin-top: ${token.marginLG + (currentPlatform === 'macos' ? 24 : 0)}px;
                     z-index: ${zIndexs.FullScreenDraw_Toolbar};
                 }
 

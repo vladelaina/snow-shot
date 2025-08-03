@@ -13,6 +13,7 @@ import { useHotkeys } from 'react-hotkeys-hook';
 import { FormattedMessage } from 'react-intl';
 import { ContentWrap } from '@/components/contentWrap';
 import { Translator, TranslatorActionType } from '@/components/translator';
+import { formatKey } from '@/utils/format';
 
 const TranslationCore = () => {
     const { token } = theme.useToken();
@@ -77,11 +78,13 @@ const TranslationCore = () => {
     useHotkeys(hotKeys?.[KeyEventKey.CopyAndHide]?.hotKey ?? '', onCopyAndHide, {
         keyup: false,
         keydown: true,
+        preventDefault: true,
         enableOnFormTags: ['INPUT', 'TEXTAREA', 'SELECT'],
     });
     useHotkeys(hotKeys?.[KeyEventKey.Copy]?.hotKey ?? '', onCopy, {
         keyup: false,
         keydown: true,
+        preventDefault: true,
         enableOnFormTags: ['INPUT', 'TEXTAREA', 'SELECT'],
     });
 
@@ -102,7 +105,7 @@ const TranslationCore = () => {
                                             message: (
                                                 <FormattedMessage id="tools.translation.copy" />
                                             ),
-                                            key: hotKeys?.[KeyEventKey.Copy]?.hotKey,
+                                            key: formatKey(hotKeys?.[KeyEventKey.Copy]?.hotKey),
                                         }}
                                     />
                                 ),
@@ -117,7 +120,9 @@ const TranslationCore = () => {
                                             message: (
                                                 <FormattedMessage id="tools.translation.copyAndHide" />
                                             ),
-                                            key: hotKeys?.[KeyEventKey.CopyAndHide]?.hotKey,
+                                            key: formatKey(
+                                                hotKeys?.[KeyEventKey.CopyAndHide]?.hotKey,
+                                            ),
                                         }}
                                     />
                                 ),

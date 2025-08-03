@@ -12,11 +12,17 @@ export class MousePosition {
      * @param other
      * @returns
      */
-    public getMaxDistance = (other: MousePosition) => {
+    public getMaxSide = (other: MousePosition) => {
         const width = Math.abs(this.mouseX - other.mouseX);
         const height = Math.abs(this.mouseY - other.mouseY);
 
         return Math.max(width, height);
+    };
+
+    public getDistance = (other: MousePosition) => {
+        const width = Math.abs(this.mouseX - other.mouseX);
+        const height = Math.abs(this.mouseY - other.mouseY);
+        return Math.sqrt(width * width + height * height);
     };
 
     public toElementRect = (other: MousePosition) => {

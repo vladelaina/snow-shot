@@ -16,10 +16,10 @@ import { zIndexs } from '@/utils/zIndex';
 import Image from 'next/image';
 import { CloseOutlined } from '@ant-design/icons';
 import { AppOcrResult, OcrResult, OcrResultActionType } from '../ocrResult';
-import clipboard from 'tauri-plugin-clipboard-api';
+import * as clipboard from '@tauri-apps/plugin-clipboard-manager';
 import { KeyEventKey, KeyEventValue } from '@/core/hotKeys';
 import { useHotkeys } from 'react-hotkeys-hook';
-import { MonitorInfo, startFreeDrag } from '@/commands/core';
+import { MonitorInfo, setCurrentWindowAlwaysOnTop, startFreeDrag } from '@/commands/core';
 import { setDrawWindowStyle } from '@/commands/screenshot';
 import html2canvas from 'html2canvas';
 import { openUrl } from '@tauri-apps/plugin-opener';
@@ -30,6 +30,7 @@ import {
 } from '@/utils/clipboard';
 import { TweenAnimation } from '@/utils/tweenAnimation';
 import * as TWEEN from '@tweenjs/tween.js';
+import { MousePosition } from '@/utils/mousePosition';
 
 export type FixedContentInitDrawParams = {
     monitorInfo: MonitorInfo;
@@ -123,6 +124,7 @@ export const FixedContentCore: React.FC<{
         undefined,
     );
     const [enableSelectText, setEnableSelectText] = useState(false);
+    const dragRegionMouseDownMousePositionRef = useRef<MousePosition>(undefined);
 
     const [htmlBlobUrl, setHtmlBlobUrl] = useState<string | undefined>(undefined);
     const originHtmlContentRef = useRef<string | undefined>(undefined);
@@ -353,6 +355,8 @@ export const FixedContentCore: React.FC<{
         actionRef,
         () => ({
             init: async (params) => {
+                setCurrentWindowAlwaysOnTop(true);
+
                 if ('htmlContent' in params) {
                     initHtml(params.htmlContent);
                 } else if ('textContent' in params) {
@@ -436,6 +440,9 @@ export const FixedContentCore: React.FC<{
 
                     appWindow.setSize(new PhysicalSize(Math.round(width), Math.round(height)));
                     appWindow.setPosition(new PhysicalPosition(Math.round(x), Math.round(y)));
+
+                    // 切换缩略图时，不会触发 mouse up 事件，这里清除下
+                    dragRegionMouseDownMousePositionRef.current = undefined;
                 },
             );
         }
@@ -551,9 +558,7 @@ export const FixedContentCore: React.FC<{
                         ) {
                             // 这里的图片类型不确定，浏览器不一定支持，所以通过本地 API 写入
                             const arrayBuffer = await imageBlobRef.current.arrayBuffer();
-                            await clipboard.writeImageBinary(
-                                Array.from(new Uint8Array(arrayBuffer)),
-                            );
+                            await clipboard.writeImage(arrayBuffer);
                         }
                     },
                 },
@@ -862,12 +867,14 @@ export const FixedContentCore: React.FC<{
         keyup: false,
         keydown: true,
         enabled: !disabled,
+        preventDefault: true,
     });
 
     useHotkeys(hotkeys?.[KeyEventKey.FixedContentCloseWindow]?.hotKey ?? '', closeWindowComplete, {
         keyup: false,
         keydown: true,
         enabled: !disabled,
+        preventDefault: true,
     });
 
     const onDoubleClick = useCallback(
@@ -878,6 +885,29 @@ export const FixedContentCore: React.FC<{
         },
         [switchThumbnail],
     );
+
+    const onDragRegionMouseDown = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+        dragRegionMouseDownMousePositionRef.current = undefined;
+        if (e.button === 0) {
+            dragRegionMouseDownMousePositionRef.current = new MousePosition(e.clientX, e.clientY);
+        }
+    }, []);
+    const onDragRegionMouseMove = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+        if (!dragRegionMouseDownMousePositionRef.current) {
+            return;
+        }
+
+        const distance = dragRegionMouseDownMousePositionRef.current.getDistance(
+            new MousePosition(e.clientX, e.clientY),
+        );
+        if (distance > 6) {
+            dragRegionMouseDownMousePositionRef.current = undefined;
+            startFreeDrag();
+        }
+    }, []);
+    const onDragRegionMouseUp = useCallback(() => {
+        dragRegionMouseDownMousePositionRef.current = undefined;
+    }, []);
 
     return (
         <div
@@ -962,11 +992,9 @@ export const FixedContentCore: React.FC<{
             <div
                 className="fixed-image-container-inner"
                 onWheel={onWheel}
-                onMouseDown={(event) => {
-                    if (event.button === 0) {
-                        startFreeDrag();
-                    }
-                }}
+                onMouseDown={onDragRegionMouseDown}
+                onMouseMove={onDragRegionMouseMove}
+                onMouseUp={onDragRegionMouseUp}
             >
                 <Button
                     className="fixed-image-close-button"

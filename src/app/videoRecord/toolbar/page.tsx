@@ -52,6 +52,7 @@ import { join as joinPath } from '@tauri-apps/api/path';
 import clipboard from 'tauri-plugin-clipboard-api';
 import { openPath } from '@tauri-apps/plugin-opener';
 import { createDir } from '@/commands/file';
+import { getPlatformValue } from '@/utils';
 
 dayjs.extend(duration);
 
@@ -88,7 +89,22 @@ export default function VideoRecordToolbar() {
         appWindow.setPosition(
             new PhysicalPosition(
                 Math.round(monitorInfo.monitor_x + centerX),
-                Math.round(monitorInfo.monitor_y + monitorInfo.monitor_height * 0.9),
+                getPlatformValue(
+                    Math.round(
+                        monitorInfo.monitor_y +
+                            monitorInfo.monitor_height -
+                            physicalHeight -
+                            //  任务栏高度 48pt
+                            (48 + 24) * scaleFactor,
+                    ),
+                    Math.round(
+                        monitorInfo.monitor_y +
+                            monitorInfo.monitor_height -
+                            physicalHeight -
+                            // 任务栏高度大概为 72 pt
+                            (72 + 32) * scaleFactor,
+                    ),
+                ),
             ),
         );
     }, []);
@@ -224,8 +240,16 @@ export default function VideoRecordToolbar() {
         videoRecordState === VideoRecordState.Recording ||
         videoRecordState === VideoRecordState.Paused;
 
+    const onContextMenu = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+        if (process.env.NODE_ENV === 'development') {
+            return;
+        }
+
+        e.preventDefault();
+    }, []);
+
     return (
-        <div className="video-record-toolbar-container" onContextMenu={(e) => e.preventDefault()}>
+        <div className="video-record-toolbar-container" onContextMenu={onContextMenu}>
             <div data-tauri-drag-region className="toolbar-drag-region before" />
             <div data-tauri-drag-region className="toolbar-drag-region after" />
 
@@ -246,10 +270,14 @@ export default function VideoRecordToolbar() {
                                     const appSettings = getAppSettings();
 
                                     videoRecordStart(
-                                        selectRectRef.current?.min_x ?? 0,
-                                        selectRectRef.current?.min_y ?? 0,
-                                        selectRectRef.current?.max_x ?? 0,
-                                        selectRectRef.current?.max_y ?? 0,
+                                        (monitorInfoRef.current?.monitor_x ?? 0) +
+                                            (selectRectRef.current?.min_x ?? 0),
+                                        (monitorInfoRef.current?.monitor_y ?? 0) +
+                                            (selectRectRef.current?.min_y ?? 0),
+                                        (monitorInfoRef.current?.monitor_x ?? 0) +
+                                            (selectRectRef.current?.max_x ?? 0),
+                                        (monitorInfoRef.current?.monitor_y ?? 0) +
+                                            (selectRectRef.current?.max_y ?? 0),
                                         await joinPath(
                                             await getVideoRecordSaveDirectory(appSettings),
                                             generateImageFileName(

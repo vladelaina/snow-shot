@@ -70,6 +70,7 @@ export const ScreenshotTypePublisher = createPublisher<ScreenshotType>(Screensho
 export enum DrawEvent {
     OcrDetect = 0,
     ScrollScreenshot = 1,
+    MoveCursor = 2,
 }
 
 export type DrawEventParams =
@@ -82,6 +83,13 @@ export type DrawEventParams =
     | {
           event: DrawEvent.ScrollScreenshot;
           params: undefined;
+      }
+    | {
+          event: DrawEvent.MoveCursor;
+          params: {
+              x: number;
+              y: number;
+          };
       }
     | undefined;
 

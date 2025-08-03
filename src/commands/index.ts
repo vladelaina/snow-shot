@@ -15,10 +15,16 @@ export type ImageBuffer = {
 /**
  * 捕获鼠标所在位置的屏幕图像
  */
-export const captureCurrentMonitor = async (encoder: ImageEncoder): Promise<ImageBuffer> => {
+export const captureCurrentMonitor = async (
+    encoder: ImageEncoder,
+): Promise<ImageBuffer | undefined> => {
     const result = await invoke<ArrayBuffer>('capture_current_monitor', {
         encoder,
     });
+
+    if (result.byteLength === 0) {
+        return undefined;
+    }
 
     return {
         encoder,
@@ -65,7 +71,6 @@ export const recoveryWindowZOrder = async () => {
     const result = await invoke<void>('recovery_window_z_order');
     return result;
 };
-
 
 export const initUiElements = async () => {
     const result = await invoke<void>('init_ui_elements');

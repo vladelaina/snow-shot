@@ -37,9 +37,10 @@ const DrawCacheLayerCore: React.FC<{
         drawCoreActionRef.current?.updateScene({
             appState: {
                 // 清除在编辑中的元素
-                newElement: undefined,
-                editingLinearElement: undefined,
-                editingTextElement: undefined,
+                newElement: null,
+                editingTextElement: null,
+                selectedLinearElement: null,
+                selectionElement: null,
             },
             captureUpdate: 'NEVER',
         });
@@ -80,9 +81,9 @@ const DrawCacheLayerCore: React.FC<{
                     elements: [],
                     appState: {
                         // 清除在编辑中的元素
-                        newElement: undefined,
-                        editingLinearElement: undefined,
-                        editingTextElement: undefined,
+                        newElement: null,
+                        editingTextElement: null,
+                        selectedLinearElement: null,
                         zoom: {
                             value: 1 as NormalizedZoomValue,
                         },
@@ -113,7 +114,7 @@ const DrawCacheLayerCore: React.FC<{
                 return drawCoreActionRef.current?.getExcalidrawAPI();
             },
         }),
-        [history, setExcalidrawEvent],
+        [finishDraw, history, setExcalidrawEvent],
     );
 
     const { selectLayerActionRef, monitorInfoRef } = useContext(DrawContext);

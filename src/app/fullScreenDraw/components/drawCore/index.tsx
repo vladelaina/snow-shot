@@ -36,6 +36,7 @@ import { debounce } from 'es-toolkit';
 import { useHistory } from './components/historyContext';
 import { SerialNumberTool } from '@/app/fullScreenDraw/components/drawCore/components/serialNumberTool';
 import { ExcalidrawElement } from '@mg-chao/excalidraw/element/types';
+import { usePlatform } from '@/hooks/usePlatform';
 
 const strokeWidthList = [1, 2, 4];
 const fontSizeList = [16, 20, 28, 36];
@@ -358,29 +359,58 @@ const DrawCoreComponent: React.FC<{
         [getCanvas, getCanvasContext, getImageData, setEnable, updateScene],
     );
 
+    const [currentPlatform, currentPlatformRef] = usePlatform();
+
+    // macOS 下 Ctrl、Shift、Command 等键浏览器不会响应，特殊处理下
     const shouldResizeFromCenter = useCallback<
         NonNullable<ExcalidrawPropsCustomOptions['shouldResizeFromCenter']>
-    >(() => {
-        return getExcalidrawKeyEvent().resizeFromCenter;
-    }, [getExcalidrawKeyEvent]);
+    >(
+        (event) => {
+            if (currentPlatformRef.current === 'macos') {
+                return event.altKey;
+            }
+
+            return getExcalidrawKeyEvent().resizeFromCenter;
+        },
+        [currentPlatformRef, getExcalidrawKeyEvent],
+    );
 
     const shouldMaintainAspectRatio = useCallback<
         NonNullable<ExcalidrawPropsCustomOptions['shouldMaintainAspectRatio']>
-    >(() => {
-        return getExcalidrawKeyEvent().maintainAspectRatio;
-    }, [getExcalidrawKeyEvent]);
+    >(
+        (event) => {
+            if (currentPlatformRef.current === 'macos') {
+                return event.shiftKey;
+            }
+
+            return getExcalidrawKeyEvent().maintainAspectRatio;
+        },
+        [currentPlatformRef, getExcalidrawKeyEvent],
+    );
 
     const shouldRotateWithDiscreteAngle = useCallback<
         NonNullable<ExcalidrawPropsCustomOptions['shouldRotateWithDiscreteAngle']>
-    >(() => {
-        return getExcalidrawKeyEvent().rotateWithDiscreteAngle;
-    }, [getExcalidrawKeyEvent]);
+    >(
+        (event) => {
+            if (currentPlatformRef.current === 'macos') {
+                return event.shiftKey;
+            }
 
-    const shouldSnapping = useCallback<
-        NonNullable<ExcalidrawPropsCustomOptions['shouldSnapping']>
-    >(() => {
-        return getExcalidrawKeyEvent().autoAlign;
-    }, [getExcalidrawKeyEvent]);
+            return getExcalidrawKeyEvent().rotateWithDiscreteAngle;
+        },
+        [currentPlatformRef, getExcalidrawKeyEvent],
+    );
+
+    const shouldSnapping = useCallback<NonNullable<ExcalidrawPropsCustomOptions['shouldSnapping']>>(
+        (event) => {
+            if (currentPlatformRef.current === 'macos') {
+                return event.metaKey;
+            }
+
+            return getExcalidrawKeyEvent().autoAlign;
+        },
+        [currentPlatformRef, getExcalidrawKeyEvent],
+    );
 
     const onHistoryChange = useCallback<
         NonNullable<ExcalidrawPropsCustomOptions['onHistoryChange']>
@@ -540,7 +570,8 @@ const DrawCoreComponent: React.FC<{
                     onChange={excalidrawOnChange}
                     langCode={excalidrawLangCode}
                 />
-                <ExcalidrawKeyEventHandler />
+                {/* macOS 下 Ctrl、Shift、Command 等键浏览器不会响应，特殊处理下 */}
+                {currentPlatform !== 'macos' && <ExcalidrawKeyEventHandler />}
 
                 <SerialNumberTool />
 

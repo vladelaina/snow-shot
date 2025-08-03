@@ -1,0 +1,31 @@
+[package]
+name = "snow-shot-app-os"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+snow-shot-app-shared = { path = "../app-shared" }
+log = "^0.4"
+tauri = { version = "^2.3" }
+serde = { version = "^1.0", features = ["derive"] }
+rtree_rs = "^0.1.4"
+atree = "^0.5.2"
+xcap = { git = "https://github.com/mg-chao/xcap", branch = "20250710_fix_macos" }
+thiserror = "2.0.12"
+
+[target.'cfg(any(target_os = "windows"))'.dependencies]
+windows = { version = "0.61.1", features = [
+    "Win32_Foundation",
+    "UI_UIAutomation",
+    "Win32_UI_WindowsAndMessaging",
+    "Win32_System_LibraryLoader",
+    "UI_Notifications",
+    "Data_Xml_Dom",
+    "Foundation",
+    "ApplicationModel_Core",
+    "Win32_System_Com",
+    "Win32_System_WinRT",
+] }
+uiautomation = "0.22.0"
+
+[target.'cfg(any(target_os = "macos"))'.dependencies]

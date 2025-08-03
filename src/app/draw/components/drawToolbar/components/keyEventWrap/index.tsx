@@ -13,6 +13,7 @@ import {
 import { AppSettingsData, AppSettingsGroup } from '@/app/contextWrap';
 import { AntdContext, HotkeysScope } from '@/components/globalLayoutExtra';
 import { useHotkeysApp } from '@/hooks/useHotkeysApp';
+import { formatKey } from '@/utils/format';
 
 const KeyEventHandleCore: React.FC<{
     keyEventValue: KeyEventValue;
@@ -52,7 +53,7 @@ const KeyEventHandleCore: React.FC<{
                 message: intl.formatMessage({
                     id: defaultDrawToolbarKeyEventComponentConfig[componentKey].messageId,
                 }),
-                key: keyEventValue.hotKey,
+                key: formatKey(keyEventValue.hotKey),
             },
         );
     }, [componentKey, intl, keyEventValue.hotKey]);

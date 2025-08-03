@@ -69,6 +69,7 @@ import {
     ExcalidrawEventPublisher,
 } from '@/app/fullScreenDraw/components/drawCore/extra';
 import { useStateRef } from '@/hooks/useStateRef';
+import { getExcalidrawCanvas } from '@/utils/excalidraw';
 
 export type DrawToolbarProps = {
     actionRef: React.RefObject<DrawToolbarActionType | undefined>;
@@ -82,6 +83,7 @@ export type DrawToolbarProps = {
 
 export type DrawToolbarActionType = {
     setEnable: (enable: boolean) => void;
+    onToolClick: (drawState: DrawState) => void;
 };
 
 export const DrawToolbarStatePublisher = createPublisher<{
@@ -207,6 +209,16 @@ const DrawToolbarCore: React.FC<DrawToolbarProps> = ({
                 return;
             }
 
+            if (prev === DrawState.Text) {
+                // 判断是否有未完成编辑的文本
+                const appState = drawCacheLayerActionRef.current?.getAppState();
+                if (appState?.editingTextElement) {
+                    // 将点击事件传递给 excalidraw，停止文本编辑
+                    const canvas = getExcalidrawCanvas();
+                    canvas?.dispatchEvent(new PointerEvent('pointerdown'));
+                }
+            }
+
             let next = drawState;
             if (prev === drawState && prev !== DrawState.Idle) {
                 if (drawState === DrawState.ScrollScreenshot) {
@@ -229,14 +241,7 @@ const DrawToolbarCore: React.FC<DrawToolbarProps> = ({
 
             if (next === DrawState.Select || next === DrawState.Idle) {
                 // 取消正在编辑中的元素
-                drawCacheLayerActionRef.current?.updateScene({
-                    appState: {
-                        newElement: undefined,
-                        editingLinearElement: undefined,
-                        editingTextElement: undefined,
-                    },
-                    captureUpdate: 'NEVER',
-                });
+                drawCacheLayerActionRef.current?.finishDraw();
             }
 
             switch (next) {
@@ -480,8 +485,9 @@ const DrawToolbarCore: React.FC<DrawToolbarProps> = ({
     useImperativeHandle(actionRef, () => {
         return {
             setEnable,
+            onToolClick,
         };
-    }, [setEnable]);
+    }, [onToolClick, setEnable]);
 
     const disableNormalScreenshotTool = enableScrollScreenshot;
 

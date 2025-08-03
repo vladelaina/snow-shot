@@ -44,8 +44,7 @@ import { OcrModel } from '@/commands/ocr';
 export enum AppSettingsGroup {
     Common = 'common',
     CommonTrayIcon = 'commonTrayIcon',
-    Cache = 'cache',
-    CacheV2 = 'cacheV2',
+    Cache = 'cache_20250731',
     Screenshot = 'screenshot',
     FixedContent = 'fixedContent',
     DrawToolbarKeyEvent = 'drawToolbarKeyEvent_20250526',
@@ -125,8 +124,7 @@ export type AppSettingsData = {
         enableMicrophone: boolean;
         /** 是否启用锁定绘制工具 */
         enableLockDrawTool: boolean;
-    };
-    [AppSettingsGroup.CacheV2]: {
+        /** 序列号工具是否禁用箭头 */
         disableArrowPicker: boolean;
     };
     [AppSettingsGroup.DrawToolbarKeyEvent]: Record<
@@ -271,8 +269,6 @@ export const defaultAppSettingsData: AppSettingsData = {
         },
         enableMicrophone: false,
         enableLockDrawTool: false,
-    },
-    [AppSettingsGroup.CacheV2]: {
         disableArrowPicker: true,
     },
     [AppSettingsGroup.DrawToolbarKeyEvent]: defaultDrawToolbarKeyEventSettings,
@@ -590,14 +586,6 @@ const ContextWrapCore: React.FC<{ children: React.ReactNode }> = ({ children }) 
                         typeof newSettings?.enableLockDrawTool === 'boolean'
                             ? newSettings.enableLockDrawTool
                             : (prevSettings?.enableLockDrawTool ?? false),
-                };
-            } else if (group === AppSettingsGroup.CacheV2) {
-                newSettings = newSettings as AppSettingsData[typeof group];
-                const prevSettings = appSettingsRef.current[group] as
-                    | AppSettingsData[typeof group]
-                    | undefined;
-
-                settings = {
                     disableArrowPicker:
                         typeof newSettings?.disableArrowPicker === 'boolean'
                             ? newSettings.disableArrowPicker

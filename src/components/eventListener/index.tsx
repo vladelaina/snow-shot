@@ -8,6 +8,16 @@ import React from 'react';
 import { MenuLayoutContext } from '@/app/menuLayout';
 import { getCurrentWindow, Window as AppWindow } from '@tauri-apps/api/window';
 import { AppSettingsActionContext } from '@/app/contextWrap';
+import {
+    LISTEN_KEY_SERVICE_KEY_DOWN_EMIT_KEY,
+    LISTEN_KEY_SERVICE_KEY_UP_EMIT_KEY,
+    LISTEN_KEY_SERVICE_STOP_EMIT_KEY,
+    ListenKeyCode,
+    ListenKeyDownEvent,
+    listenKeyStop,
+    listenKeyStopByWindowLabel,
+    ListenKeyUpEvent,
+} from '@/commands/listenKey';
 
 type Listener = {
     event: string;
@@ -112,6 +122,77 @@ const EventListenerCore: React.FC<{ children: React.ReactNode }> = ({ children }
         const unlistenList: UnlistenFn[] = [];
         const defaultListener: Listener[] = [];
 
+        const listenKeyCallback = (
+            emitKey:
+                | typeof LISTEN_KEY_SERVICE_KEY_DOWN_EMIT_KEY
+                | typeof LISTEN_KEY_SERVICE_KEY_UP_EMIT_KEY,
+        ) => {
+            let type = 'keydown';
+            if (emitKey === LISTEN_KEY_SERVICE_KEY_UP_EMIT_KEY) {
+                type = 'keyup';
+            }
+
+            return async ({ payload }: { payload: ListenKeyDownEvent | ListenKeyUpEvent }) => {
+                switch (payload.key) {
+                    case ListenKeyCode.RControl:
+                    case ListenKeyCode.LControl:
+                        document.dispatchEvent(
+                            new KeyboardEvent(type, {
+                                code: 'ControlLeft',
+                                key: 'Control',
+                                keyCode: 17,
+                                which: 17,
+                            }),
+                        );
+                        break;
+                    case ListenKeyCode.RShift:
+                    case ListenKeyCode.LShift:
+                        document.dispatchEvent(
+                            new KeyboardEvent(type, {
+                                code: 'ShiftLeft',
+                                key: 'Shift',
+                                keyCode: 16,
+                                which: 16,
+                            }),
+                        );
+                        break;
+                    case ListenKeyCode.Command:
+                    case ListenKeyCode.RCommand:
+                        document.dispatchEvent(
+                            new KeyboardEvent(type, {
+                                code: 'MetaLeft',
+                                key: 'Meta',
+                                keyCode: 224,
+                                which: 224,
+                            }),
+                        );
+                        break;
+                    case ListenKeyCode.LOption:
+                    case ListenKeyCode.ROption:
+                        document.dispatchEvent(
+                            new KeyboardEvent(type, {
+                                code: 'AltLeft',
+                                key: 'Alt',
+                                keyCode: 18,
+                                which: 18,
+                            }),
+                        );
+                        break;
+                    default:
+                        break;
+                }
+            };
+        };
+
+        defaultListener.push({
+            event: LISTEN_KEY_SERVICE_KEY_DOWN_EMIT_KEY,
+            callback: listenKeyCallback(LISTEN_KEY_SERVICE_KEY_DOWN_EMIT_KEY),
+        });
+        defaultListener.push({
+            event: LISTEN_KEY_SERVICE_KEY_UP_EMIT_KEY,
+            callback: listenKeyCallback(LISTEN_KEY_SERVICE_KEY_UP_EMIT_KEY),
+        });
+
         if (mainWindow) {
             defaultListener.push({
                 event: 'log-message',
@@ -134,6 +215,12 @@ const EventListenerCore: React.FC<{ children: React.ReactNode }> = ({ children }
             defaultListener.push({
                 event: 'execute-translate-selected-text',
                 callback: async () => {},
+            });
+            defaultListener.push({
+                event: LISTEN_KEY_SERVICE_STOP_EMIT_KEY,
+                callback: async ({ payload }: { payload: string }) => {
+                    listenKeyStopByWindowLabel(payload);
+                },
             });
         } else {
             defaultListener.push({
@@ -219,6 +306,8 @@ const EventListenerCore: React.FC<{ children: React.ReactNode }> = ({ children }
             });
 
         const clear = () => {
+            listenKeyStop();
+
             detach?.();
 
             unlistenList.forEach((unlisten) => {

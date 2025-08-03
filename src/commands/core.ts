@@ -1,4 +1,5 @@
 import { invoke } from '@tauri-apps/api/core';
+import * as tauriOs from '@tauri-apps/plugin-os';
 
 export const getSelectedText = async () => {
     const result = await invoke<string>('get_selected_text');
@@ -101,6 +102,21 @@ export const createVideoRecordWindow = async (
         selectRectMinY,
         selectRectMaxX,
         selectRectMaxY,
+    });
+    return result;
+};
+
+/**
+ * 设置当前窗口置顶
+ * @param allowInputMethodOverlay 是否允许输入法覆盖
+ */
+export const setCurrentWindowAlwaysOnTop = async (allowInputMethodOverlay: boolean) => {
+    if (process.env.NODE_ENV === 'development' && tauriOs.platform() === 'macos') {
+        return;
+    }
+
+    const result = await invoke<void>('set_current_window_always_on_top', {
+        allowInputMethodOverlay,
     });
     return result;
 };

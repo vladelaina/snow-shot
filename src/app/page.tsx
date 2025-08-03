@@ -61,6 +61,7 @@ import {
 import { TrayIconStatePublisher } from './trayIcon';
 import { createFixedContentWindow, createFullScreenDrawWindow } from '@/commands/core';
 import { IconLabel } from '@/components/iconLable';
+import { usePlatform } from '@/hooks/usePlatform';
 
 export default function Home() {
     const { token } = theme.useToken();
@@ -360,6 +361,8 @@ export default function Home() {
         };
     }, []);
 
+    const [currentPlatform] = usePlatform();
+
     return (
         <ContentWrap className="home-wrap">
             {Object.keys(defaultAppFunctionComponentGroupConfigs).map((group) => {
@@ -462,89 +465,100 @@ export default function Home() {
                             spinning={updateShortcutKeyStatusLoading || appSettingsLoading}
                         >
                             <Space direction="vertical" size="middle" style={{ display: 'flex' }}>
-                                {configs.map((config) => {
-                                    const key = config.configKey;
-                                    const currentShortcutKey =
-                                        appFunctionSettings?.[key as AppFunction]?.shortcutKey;
-                                    const statusColor = appSettingsLoading
-                                        ? undefined
-                                        : convertShortcutKeyStatusToButtonColor(
-                                              shortcutKeyStatus?.[key as AppFunction],
-                                          );
+                                {configs
+                                    .filter((config) => {
+                                        if (
+                                            currentPlatform === 'macos' &&
+                                            config.configKey === AppFunction.TopWindow
+                                        ) {
+                                            return false;
+                                        }
 
-                                    const statusTip = appSettingsLoading
-                                        ? undefined
-                                        : convertShortcutKeyStatusToTip(
-                                              shortcutKeyStatus?.[key as AppFunction],
-                                          );
+                                        return true;
+                                    })
+                                    .map((config) => {
+                                        const key = config.configKey;
+                                        const currentShortcutKey =
+                                            appFunctionSettings?.[key as AppFunction]?.shortcutKey;
+                                        const statusColor = appSettingsLoading
+                                            ? undefined
+                                            : convertShortcutKeyStatusToButtonColor(
+                                                  shortcutKeyStatus?.[key as AppFunction],
+                                              );
 
-                                    let children = <></>;
-                                    if (
-                                        shortcutKeyStatus?.[key as AppFunction] ===
-                                        ShortcutKeyStatus.None
-                                    ) {
-                                        children = (
-                                            <div style={{ color: token.colorTextDescription }}>
-                                                <FormattedMessage id="home.shortcut.none" />
+                                        const statusTip = appSettingsLoading
+                                            ? undefined
+                                            : convertShortcutKeyStatusToTip(
+                                                  shortcutKeyStatus?.[key as AppFunction],
+                                              );
+
+                                        let children = <></>;
+                                        if (
+                                            shortcutKeyStatus?.[key as AppFunction] ===
+                                            ShortcutKeyStatus.None
+                                        ) {
+                                            children = (
+                                                <div style={{ color: token.colorTextDescription }}>
+                                                    <FormattedMessage id="home.shortcut.none" />
+                                                </div>
+                                            );
+                                        } else if (statusTip) {
+                                            children = (
+                                                <Tooltip
+                                                    title={convertShortcutKeyStatusToTip(
+                                                        shortcutKeyStatus?.[key as AppFunction],
+                                                    )}
+                                                >
+                                                    <InfoCircleOutlined />
+                                                </Tooltip>
+                                            );
+                                        }
+
+                                        return (
+                                            <div key={`${group}-${key}`}>
+                                                <FunctionButton
+                                                    label={config.title}
+                                                    icon={config.icon}
+                                                    onClick={config.onClick}
+                                                >
+                                                    <KeyButton
+                                                        speicalKeys={speicalKeys}
+                                                        title={config.title}
+                                                        maxWidth={200}
+                                                        keyValue={currentShortcutKey ?? ''}
+                                                        buttonProps={{
+                                                            variant: 'dashed',
+                                                            color: statusColor,
+                                                            children,
+                                                            onClick: () => {
+                                                                disableShortcutKeyRef.current = true;
+                                                            },
+                                                        }}
+                                                        onCancel={() => {
+                                                            disableShortcutKeyRef.current = false;
+                                                        }}
+                                                        onKeyChange={async (value) => {
+                                                            disableShortcutKeyRef.current = false;
+                                                            updateAppSettings(
+                                                                AppSettingsGroup.AppFunction,
+                                                                {
+                                                                    [key as AppFunction]: {
+                                                                        ...appFunctionSettings,
+                                                                        shortcutKey: value,
+                                                                    },
+                                                                },
+                                                                false,
+                                                                true,
+                                                                false,
+                                                                false,
+                                                            );
+                                                        }}
+                                                        maxLength={1}
+                                                    />
+                                                </FunctionButton>
                                             </div>
                                         );
-                                    } else if (statusTip) {
-                                        children = (
-                                            <Tooltip
-                                                title={convertShortcutKeyStatusToTip(
-                                                    shortcutKeyStatus?.[key as AppFunction],
-                                                )}
-                                            >
-                                                <InfoCircleOutlined />
-                                            </Tooltip>
-                                        );
-                                    }
-
-                                    return (
-                                        <div key={`${group}-${key}`}>
-                                            <FunctionButton
-                                                label={config.title}
-                                                icon={config.icon}
-                                                onClick={config.onClick}
-                                            >
-                                                <KeyButton
-                                                    speicalKeys={speicalKeys}
-                                                    title={config.title}
-                                                    maxWidth={200}
-                                                    keyValue={currentShortcutKey ?? ''}
-                                                    buttonProps={{
-                                                        variant: 'dashed',
-                                                        color: statusColor,
-                                                        children,
-                                                        onClick: () => {
-                                                            disableShortcutKeyRef.current = true;
-                                                        },
-                                                    }}
-                                                    onCancel={() => {
-                                                        disableShortcutKeyRef.current = false;
-                                                    }}
-                                                    onKeyChange={async (value) => {
-                                                        disableShortcutKeyRef.current = false;
-                                                        updateAppSettings(
-                                                            AppSettingsGroup.AppFunction,
-                                                            {
-                                                                [key as AppFunction]: {
-                                                                    ...appFunctionSettings,
-                                                                    shortcutKey: value,
-                                                                },
-                                                            },
-                                                            false,
-                                                            true,
-                                                            false,
-                                                            false,
-                                                        );
-                                                    }}
-                                                    maxLength={1}
-                                                />
-                                            </FunctionButton>
-                                        </div>
-                                    );
-                                })}
+                                    })}
                             </Space>
                         </Spin>
                     </div>

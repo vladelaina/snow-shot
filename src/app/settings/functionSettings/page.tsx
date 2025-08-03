@@ -51,6 +51,7 @@ import { TestChat } from './components/testChat';
 import { DrawState } from '@/app/fullScreenDraw/components/drawCore/extra';
 import { videoRecordGetMicrophoneDeviceNames } from '@/commands/videoRecord';
 import { OcrDetectAfterAction } from '@/app/fixedContent/components/ocrResult';
+import { usePlatform } from '@/hooks/usePlatform';
 
 export default function SystemSettings() {
     const intl = useIntl();
@@ -164,6 +165,28 @@ export default function SystemSettings() {
     const [microphoneDeviceNameOptions, setMicrophoneDeviceNameOptions] = useState<
         { label: string; value: string }[]
     >([]);
+
+    const [currentPlatform] = usePlatform();
+
+    const formatMicrophoneDeviceName = useCallback(
+        (microphoneDeviceName: string) => {
+            if (currentPlatform !== 'macos') {
+                return microphoneDeviceName;
+            }
+
+            // 匹配格式: [0] 设备名，直接提取设备名部分
+            const regex = /\[\d+\]\s+(.+)/;
+            const match = microphoneDeviceName.match(regex);
+
+            if (match && match[1]) {
+                return match[1].trim();
+            }
+
+            return microphoneDeviceName;
+        },
+        [currentPlatform],
+    );
+
     useEffect(() => {
         const options: { label: string; value: string }[] = [
             {
@@ -178,7 +201,7 @@ export default function SystemSettings() {
             .then((microphoneDeviceNames) => {
                 for (const microphoneDeviceName of microphoneDeviceNames) {
                     options.push({
-                        label: microphoneDeviceName,
+                        label: formatMicrophoneDeviceName(microphoneDeviceName),
                         value: microphoneDeviceName,
                     });
                 }
@@ -186,7 +209,7 @@ export default function SystemSettings() {
             .finally(() => {
                 setMicrophoneDeviceNameOptions(options);
             });
-    }, [intl]);
+    }, [formatMicrophoneDeviceName, intl]);
 
     return (
         <ContentWrap>
@@ -222,15 +245,17 @@ export default function SystemSettings() {
                     layout="horizontal"
                 >
                     <Row gutter={token.padding}>
-                        <Col span={12}>
-                            <ProFormSwitch
-                                name="findChildrenElements"
-                                layout="horizontal"
-                                label={
-                                    <FormattedMessage id="settings.functionSettings.screenshotSettings.findChildrenElements" />
-                                }
-                            />
-                        </Col>
+                        {currentPlatform !== 'macos' && (
+                            <Col span={12}>
+                                <ProFormSwitch
+                                    name="findChildrenElements"
+                                    layout="horizontal"
+                                    label={
+                                        <FormattedMessage id="settings.functionSettings.screenshotSettings.findChildrenElements" />
+                                    }
+                                />
+                            </Col>
+                        )}
 
                         <Col span={12}>
                             <ProFormSwitch
@@ -1072,14 +1097,18 @@ export default function SystemSettings() {
                                         label: 'Libx265 (CPU)',
                                         value: 'libx265',
                                     },
-                                    {
-                                        label: 'H264_AMF (AMD)',
-                                        value: 'h264_amf',
-                                    },
-                                    {
-                                        label: 'H264_NVENC (NVIDIA)',
-                                        value: 'h264_nvenc',
-                                    },
+                                    ...(currentPlatform === 'windows'
+                                        ? [
+                                              {
+                                                  label: 'H264_AMF (AMD)',
+                                                  value: 'h264_amf',
+                                              },
+                                              {
+                                                  label: 'H264_NVENC (NVIDIA)',
+                                                  value: 'h264_nvenc',
+                                              },
+                                          ]
+                                        : []),
                                 ]}
                             />
                         </Col>

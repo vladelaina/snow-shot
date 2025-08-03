@@ -1,3 +1,5 @@
+import { getPlatformValue } from '@/utils';
+
 export enum KeyEventGroup {
     Translation = 'translation',
     Chat = 'chat',
@@ -26,23 +28,23 @@ export enum KeyEventKey {
 
 export const defaultKeyEventSettings: Record<KeyEventKey, KeyEventValue> = {
     [KeyEventKey.CopyAndHide]: {
-        hotKey: 'Ctrl+Q',
+        hotKey: getPlatformValue('Ctrl+Q', 'Meta+Q'),
         group: KeyEventGroup.Translation,
     },
     [KeyEventKey.Copy]: {
-        hotKey: 'Ctrl+C',
+        hotKey: getPlatformValue('Ctrl+C', 'Meta+C'),
         group: KeyEventGroup.Translation,
     },
     [KeyEventKey.ChatCopyAndHide]: {
-        hotKey: 'Ctrl+Q',
+        hotKey: getPlatformValue('Ctrl+Q', 'Meta+Q'),
         group: KeyEventGroup.Chat,
     },
     [KeyEventKey.ChatCopy]: {
-        hotKey: 'Ctrl+C',
+        hotKey: getPlatformValue('Ctrl+C', 'Meta+C'),
         group: KeyEventGroup.Chat,
     },
     [KeyEventKey.ChatNewSession]: {
-        hotKey: 'Ctrl+N',
+        hotKey: getPlatformValue('Ctrl+N', 'Meta+N'),
         group: KeyEventGroup.Chat,
     },
     [KeyEventKey.FixedContentSwitchThumbnail]: {
@@ -64,7 +66,9 @@ export const defaultKeyEventComponentConfig: Record<KeyEventKey, KeyEventCompone
                 baseMessageId = 'tools.translation';
             } else if (defaultKeyEventSettings[key as KeyEventKey].group === KeyEventGroup.Chat) {
                 baseMessageId = 'tools.chat';
-            } else if (defaultKeyEventSettings[key as KeyEventKey].group === KeyEventGroup.FixedContent) {
+            } else if (
+                defaultKeyEventSettings[key as KeyEventKey].group === KeyEventGroup.FixedContent
+            ) {
                 baseMessageId = 'settings.hotKeySettings.fixedContent';
             }
 
