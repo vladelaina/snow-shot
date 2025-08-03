@@ -113,7 +113,7 @@ const TrayIconLoaderComponent = () => {
                     switch (event.type) {
                         case 'Click':
                             if (event.button === 'Left') {
-                                showWindow();
+                                executeScreenshot();
                             }
                             break;
                     }
@@ -280,15 +280,11 @@ const TrayIconLoaderComponent = () => {
                             item: 'Separator',
                         },
                         {
-                            id: `${appWindow.label}-about`,
-                            text: intl.formatMessage({ id: 'home.about' }),
+                            id: `${appWindow.label}-show-main-window`,
+                            text: intl.formatMessage({ id: 'home.showMainWindow' }),
                             action: async () => {
                                 showWindow();
-                                router.push('/about');
                             },
-                        },
-                        {
-                            item: 'Separator',
                         },
                         {
                             id: `${appWindow.label}-exit`,
