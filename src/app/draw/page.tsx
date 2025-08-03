@@ -299,6 +299,8 @@ const DrawPageCore: React.FC = () => {
 
             // 监听键盘
             listenKeyStart();
+
+            setDrawWindowStyle();
         },
         [getScreenshotType],
     );
@@ -391,8 +393,6 @@ const DrawPageCore: React.FC = () => {
     /** 执行截图 */
     const excuteScreenshot = useCallback(
         async (excuteScreenshotType: ScreenshotType) => {
-            setDrawWindowStyle();
-
             capturingRef.current = true;
             drawToolbarActionRef.current?.setEnable(false);
 

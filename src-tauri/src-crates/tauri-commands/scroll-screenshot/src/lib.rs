@@ -112,8 +112,12 @@ pub async fn scroll_screenshot_handle_image(
     let mut scroll_screenshot_service = scroll_screenshot_service.lock().await;
 
     // 把 scroll_screenshot_image_service.lock 后置，降低阻塞截图的概率，让截图堆积在截图队列中
+    let has_left_image;
     let scroll_image = {
         let mut scroll_screenshot_image_service = scroll_screenshot_image_service.lock().await;
+
+        // 下面 pop 了，所以需要大于 1
+        has_left_image = scroll_screenshot_image_service.image_count() > 1;
 
         match scroll_screenshot_image_service.pop_image() {
             Some(scroll_image) => scroll_image,
@@ -130,7 +134,13 @@ pub async fn scroll_screenshot_handle_image(
 
     let handle_result = match handle_result {
         Some(result) => result,
-        None => return Ok(Response::new(vec![])),
+        None => {
+            return if has_left_image {
+                Ok(Response::new(vec![1])) // 还有剩余图片，这里就返回未变化，不提示用户未识别到
+            } else {
+                Ok(Response::new(vec![]))
+            };
+        }
     };
 
     let crop_image = match handle_result {

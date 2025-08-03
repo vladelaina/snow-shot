@@ -70,6 +70,10 @@ const FullScreenDrawPage = () => {
             setEnableKeyEvent(true);
 
             getCurrentWindow().setFocus();
+
+            if (process.env.NODE_ENV === 'development') {
+                getCurrentWindow().setAlwaysOnTop(false);
+            }
         }, 0);
     }, [setEnableKeyEvent, setExcalidrawEvent]);
 
