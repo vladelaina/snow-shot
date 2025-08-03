@@ -39,7 +39,7 @@
         "dayjs": "1.11.13",
         "es-toolkit": "^1.38.0",
         "flatbush": "^4.4.0",
-        "html2canvas": "^1.4.1",
+        "html-to-image": "^1.11.13",
         "js-base64": "^3.7.7",
         "next": "^15.3.2",
         "openai": "^4.100.0",
