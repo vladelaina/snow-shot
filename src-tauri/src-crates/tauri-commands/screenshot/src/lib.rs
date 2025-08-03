@@ -11,21 +11,37 @@ use tauri::ipc::Response;
 use tokio::sync::Mutex;
 use xcap::Window;
 
-pub async fn capture_current_monitor(window: tauri::Window, encoder: String) -> Response {
+pub async fn capture_current_monitor(
+    #[allow(unused_variables)] window: tauri::Window,
+    encoder: String,
+) -> Response {
     // 获取当前鼠标的位置
     let (_, _, monitor) = snow_shot_app_utils::get_target_monitor();
 
-    let image_buffer =
-        match snow_shot_app_utils::capture_current_monitor_with_scap(&window, &monitor, None) {
-            Some(image) => image,
-            None => match monitor.capture_image() {
-                Ok(image) => image::DynamicImage::ImageRgba8(image),
-                Err(_) => {
-                    log::error!("Failed to capture current monitor");
-                    return Response::new(Vec::new());
-                }
-            },
+    let image_buffer: Option<image::DynamicImage>;
+    #[cfg(target_os = "windows")]
+    {
+        image_buffer = match monitor.capture_image() {
+            Ok(image) => Some(image::DynamicImage::ImageRgba8(image)),
+            Err(_) => None,
         };
+    }
+    #[cfg(target_os = "macos")]
+    {
+        image_buffer =
+            match snow_shot_app_utils::capture_current_monitor_with_scap(&window, &monitor, None) {
+                Some(image) => Some(image),
+                None => None,
+            };
+    }
+
+    let image_buffer = match image_buffer {
+        Some(image) => image,
+        None => {
+            log::error!("Failed to capture current monitor");
+            return Response::new(Vec::new());
+        }
+    };
 
     // 前端处理渲染图片的方式有两种
     // 1. 接受 RGBA 数据通过 canvas 转为 base64 后显示

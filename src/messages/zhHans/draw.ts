@@ -100,4 +100,5 @@ export const draw = {
     'draw.scrollScreenshot.tip': '如果无法滚动窗口，请双击截图区域以聚焦窗口',
     'draw.selectText': '选取文本/拖拽窗口',
     'draw.switchThumbnail': '切换缩略图',
+    'draw.captureError': '截图失败，请检查是否开启“录屏与系统录音”权限',
 };

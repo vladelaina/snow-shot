@@ -21,7 +21,7 @@ import { KeyEventKey, KeyEventValue } from '@/core/hotKeys';
 import { useHotkeys } from 'react-hotkeys-hook';
 import { MonitorInfo, setCurrentWindowAlwaysOnTop, startFreeDrag } from '@/commands/core';
 import { setDrawWindowStyle } from '@/commands/screenshot';
-import html2canvas from 'html2canvas';
+import * as htmlToImage from 'html-to-image';
 import { openUrl } from '@tauri-apps/plugin-opener';
 import {
     writeHtmlToClipboard,
@@ -614,23 +614,25 @@ export const FixedContentCore: React.FC<{
                                               .body;
                                   } else if (fixedContentType === FixedContentType.Text) {
                                       htmlElement = textContentContainerRef.current;
+                                  } else if (fixedContentType === FixedContentType.Image) {
+                                      // 这种情况说明是从本地路径读取的图片
+                                      htmlElement = imageRef.current;
                                   }
 
                                   if (!htmlElement) {
                                       return;
                                   }
 
-                                  html2canvas(htmlElement).then(function (canvas) {
-                                      canvas.toBlob(async (blob) => {
-                                          if (!blob) {
-                                              return;
-                                          }
-                                          await saveFile(
-                                              filePath,
-                                              await blob.arrayBuffer(),
-                                              ImageFormat.PNG,
-                                          );
-                                      });
+                                  htmlToImage.toBlob(htmlElement).then(async (blob) => {
+                                      if (!blob) {
+                                          return;
+                                      }
+
+                                      await saveFile(
+                                          filePath,
+                                          await blob.arrayBuffer(),
+                                          ImageFormat.PNG,
+                                      );
                                   });
                               }
                           },
@@ -948,31 +950,35 @@ export const FixedContentCore: React.FC<{
             )}
 
             {imageUrl && (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                    src={imageUrl}
-                    ref={imageRef}
-                    alt="fixed-image"
-                    onLoad={async (event) => {
-                        const image = event.target as HTMLImageElement;
-                        onImageLoad?.(image);
-
-                        setStyle({
-                            width: `${image.clientWidth / window.devicePixelRatio}px`,
-                            height: `${image.clientHeight / window.devicePixelRatio}px`,
-                        });
-                        canvasPropsRef.current = {
-                            width: image.clientWidth,
-                            height: image.clientHeight,
-                            scaleFactor: window.devicePixelRatio,
-                        };
-                    }}
+                <div
                     style={{
                         transformOrigin: 'top left',
-                        transform: `scale(${scale.x / 100 / window.devicePixelRatio}, ${scale.y / 100 / window.devicePixelRatio})`,
+                        scale: 1 / window.devicePixelRatio,
+                        transform: `scale(${scale.x / 100}, ${scale.y / 100})`,
                         userSelect: 'none',
                     }}
-                />
+                >
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                        src={imageUrl}
+                        ref={imageRef}
+                        alt="fixed-image"
+                        onLoad={async (event) => {
+                            const image = event.target as HTMLImageElement;
+                            onImageLoad?.(image);
+
+                            setStyle({
+                                width: `${image.clientWidth / window.devicePixelRatio}px`,
+                                height: `${image.clientHeight / window.devicePixelRatio}px`,
+                            });
+                            canvasPropsRef.current = {
+                                width: image.clientWidth,
+                                height: image.clientHeight,
+                                scaleFactor: window.devicePixelRatio,
+                            };
+                        }}
+                    />
+                </div>
             )}
 
             {htmlBlobUrl && (

@@ -80,6 +80,8 @@ import { writeTextToClipboard } from '@/utils/clipboard';
 import * as tauriOs from '@tauri-apps/plugin-os';
 import { compare } from 'compare-versions';
 import { listenKeyStart, listenKeyStop } from '@/commands/listenKey';
+import { sendErrorMessage } from '@/functions/sendMessage';
+import { useIntl } from 'react-intl';
 
 const DrawCacheLayer = dynamic(
     async () => (await import('./components/drawCacheLayer')).DrawCacheLayer,
@@ -100,6 +102,8 @@ enum DrawPageState {
 }
 
 const DrawPageCore: React.FC = () => {
+    const intl = useIntl();
+
     const appWindowRef = useRef<AppWindow>(undefined as unknown as AppWindow);
     useEffect(() => {
         appWindowRef.current = getCurrentWindow();
@@ -409,14 +413,24 @@ const DrawPageCore: React.FC = () => {
 
             const initMonitorInfoPromise = initMonitorInfoAndShowWindow();
 
-            const imageBuffer = await captureCurrentMonitorPromise;
+            let imageBuffer: ImageBuffer | undefined;
+            try {
+                imageBuffer = await captureCurrentMonitorPromise;
+            } catch {
+                imageBuffer = undefined;
+            }
+
+            await initMonitorInfoPromise;
+
+            // 如果截图失败了，等窗口显示后，结束截图
             if (!imageBuffer) {
+                sendErrorMessage(intl.formatMessage({ id: 'draw.captureError' }));
+
                 finishCapture();
                 return;
             }
 
             imageBufferRef.current = imageBuffer;
-            await initMonitorInfoPromise;
 
             // 防止用户提前退出报错
             if (getCaptureEvent()?.event !== CaptureEvent.onExecuteScreenshot) {
@@ -443,6 +457,7 @@ const DrawPageCore: React.FC = () => {
             setCaptureEvent,
             initMonitorInfoAndShowWindow,
             getCaptureEvent,
+            intl,
             finishCapture,
             readyCapture,
         ],
