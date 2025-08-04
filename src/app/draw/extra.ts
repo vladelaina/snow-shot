@@ -75,6 +75,8 @@ export enum DrawEvent {
     OcrDetect = 0,
     ScrollScreenshot = 1,
     MoveCursor = 2,
+    /** 选区所在的 monitor 发生变化，可能相同值重复触发 */
+    ChangeMonitor = 3,
 }
 
 export type DrawEventParams =
@@ -93,6 +95,12 @@ export type DrawEventParams =
           params: {
               x: number;
               y: number;
+          };
+      }
+    | {
+          event: DrawEvent.ChangeMonitor;
+          params: {
+              monitorRect: ElementRect;
           };
       }
     | undefined;
@@ -124,20 +132,59 @@ export class CaptureBoundingBoxInfo {
         this.monitorRTree.finish();
     }
 
-    limitRect(rect: ElementRect, search: ElementRect) {
+    /**
+     * 将相对显示器的选区转换为相对于截图窗口的选区
+     * @param rect 选区
+     * @returns 相对于截图窗口的选区
+     */
+    transformMonitorRect(rect: ElementRect) {
+        return {
+            min_x: rect.min_x - this.rect.min_x,
+            min_y: rect.min_y - this.rect.min_y,
+            max_x: rect.max_x - this.rect.min_x,
+            max_y: rect.max_y - this.rect.min_y,
+        };
+    }
+
+    /**
+     * 将相对于截图窗口的选区转换为相对于显示器的选区
+     * @param rect 选区
+     * @returns 相对于显示器的选区
+     */
+    transformWindowRect(rect: ElementRect) {
+        return {
+            min_x: rect.min_x + this.rect.min_x,
+            min_y: rect.min_y + this.rect.min_y,
+            max_x: rect.max_x + this.rect.min_x,
+            max_y: rect.max_y + this.rect.min_y,
+        };
+    }
+
+    getActiveMonitorRect(selectedRect: ElementRect) {
         const monitorRectIndex = last(
-            this.monitorRTree.search(search.min_x, search.min_y, search.max_x, search.max_y),
+            this.monitorRTree.search(
+                selectedRect.min_x,
+                selectedRect.min_y,
+                selectedRect.max_x,
+                selectedRect.max_y,
+            ),
         );
 
         const monitorRect =
             monitorRectIndex !== undefined
                 ? this.monitorRectList[monitorRectIndex]
                 : {
-                      min_x: rect.min_x,
-                      min_y: rect.min_y,
-                      max_x: rect.max_x,
-                      max_y: rect.max_y,
+                      min_x: selectedRect.min_x,
+                      min_y: selectedRect.min_y,
+                      max_x: selectedRect.max_x,
+                      max_y: selectedRect.max_y,
                   };
+
+        return monitorRect;
+    }
+
+    limitRect(rect: ElementRect, searchRect: ElementRect) {
+        const monitorRect = this.getActiveMonitorRect(searchRect);
 
         return {
             min_x: Math.max(rect.min_x, monitorRect.min_x),

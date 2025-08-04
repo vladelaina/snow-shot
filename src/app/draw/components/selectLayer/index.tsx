@@ -177,6 +177,7 @@ const SelectLayerCore: React.FC<SelectLayerProps> = ({ actionRef }) => {
     const dragModeRef = useRef<DragMode | undefined>(undefined); // 拖动模式
     const dragRectRef = useRef<ElementRect | undefined>(undefined); // 拖动矩形
 
+    const [, setDrawEvent] = useStateSubscriber(DrawEventPublisher, undefined);
     const [captureStep, setCaptureStep] = useState(CaptureStep.Select);
     const enableSelectRef = useRef(false); // 是否启用选择
     const updateEnableSelect = useCallback((captureStep: CaptureStep) => {
@@ -335,7 +336,7 @@ const SelectLayerCore: React.FC<SelectLayerProps> = ({ actionRef }) => {
         [isEnableFindChildrenElements],
     );
 
-    const updateSelectRect = useCallback(
+    const drawCanvasSelectRect = useCallback(
         (
             rect: ElementRect,
             captureBoundingBoxInfo: CaptureBoundingBoxInfo,
@@ -388,11 +389,11 @@ const SelectLayerCore: React.FC<SelectLayerProps> = ({ actionRef }) => {
                 TWEEN.Easing.Quadratic.Out,
                 100,
                 (rect) => {
-                    updateSelectRect(rect, captureBoundingBoxInfo);
+                    drawCanvasSelectRect(rect, captureBoundingBoxInfo);
                 },
             );
         },
-        [updateSelectRect],
+        [drawCanvasSelectRect],
     );
 
     const onCaptureBoundingBoxInfoReady = useCallback<
@@ -431,7 +432,7 @@ const SelectLayerCore: React.FC<SelectLayerProps> = ({ actionRef }) => {
             if (isEnable) {
                 // 如果有缓存，则把遮罩去除
                 if (opacityImageDataRef.current && captureBoundingBoxInfoRef.current) {
-                    updateSelectRect(getSelectRect()!, captureBoundingBoxInfoRef.current);
+                    drawCanvasSelectRect(getSelectRect()!, captureBoundingBoxInfoRef.current);
                 }
 
                 return;
@@ -487,7 +488,7 @@ const SelectLayerCore: React.FC<SelectLayerProps> = ({ actionRef }) => {
                 return;
             }
 
-            updateSelectRect(
+            drawCanvasSelectRect(
                 getSelectRect()!,
                 captureBoundingBoxInfoRef.current,
                 imageData
@@ -497,7 +498,7 @@ const SelectLayerCore: React.FC<SelectLayerProps> = ({ actionRef }) => {
                     : undefined,
             );
         },
-        [colorPickerActionRef, getAppSettings, getSelectRect, updateSelectRect],
+        [colorPickerActionRef, getAppSettings, getSelectRect, drawCanvasSelectRect],
     );
 
     const onCaptureFinish = useCallback<BaseLayerEventActionType['onCaptureFinish']>(async () => {
@@ -560,12 +561,7 @@ const SelectLayerCore: React.FC<SelectLayerProps> = ({ actionRef }) => {
                 },
             );
 
-            return {
-                min_x: result.min_x - captureBoundingBoxInfoRef.current!.rect.min_x,
-                min_y: result.min_y - captureBoundingBoxInfoRef.current!.rect.min_y,
-                max_x: result.max_x - captureBoundingBoxInfoRef.current!.rect.min_x,
-                max_y: result.max_y - captureBoundingBoxInfoRef.current!.rect.min_y,
-            };
+            return captureBoundingBoxInfoRef.current!.transformMonitorRect(result);
         },
         [getElementRectFromMousePosition, getScreenshotType],
     );
@@ -586,7 +582,7 @@ const SelectLayerCore: React.FC<SelectLayerProps> = ({ actionRef }) => {
         (rect: ElementRect, ignoreAnimation: boolean = false, forceUpdate: boolean = false) => {
             if (forceUpdate) {
                 if (captureBoundingBoxInfoRef.current) {
-                    updateSelectRect(rect, captureBoundingBoxInfoRef.current);
+                    drawCanvasSelectRect(rect, captureBoundingBoxInfoRef.current);
                 }
             } else {
                 drawSelectRectAnimationRef.current?.update(
@@ -599,8 +595,25 @@ const SelectLayerCore: React.FC<SelectLayerProps> = ({ actionRef }) => {
                 rect.max_x - rect.min_x,
                 rect.max_y - rect.min_y,
             );
+
+            setDrawEvent({
+                event: DrawEvent.ChangeMonitor,
+                params: {
+                    monitorRect: captureBoundingBoxInfoRef.current!.transformMonitorRect(
+                        captureBoundingBoxInfoRef.current!.getActiveMonitorRect(
+                            captureBoundingBoxInfoRef.current!.transformWindowRect({
+                                min_x: rect.min_x,
+                                min_y: rect.min_y,
+                                max_x: rect.min_x,
+                                max_y: rect.min_y,
+                            }),
+                        ),
+                    ),
+                },
+            });
+            setDrawEvent(undefined);
         },
-        [getAppSettings, updateSelectRect],
+        [setDrawEvent, drawCanvasSelectRect, getAppSettings],
     );
 
     const previousDrawStateRef = useRef<DrawState | undefined>(undefined);
@@ -874,14 +887,14 @@ const SelectLayerCore: React.FC<SelectLayerProps> = ({ actionRef }) => {
                 }
 
                 if (drawState === DrawState.ScrollScreenshot) {
-                    updateSelectRect(
+                    drawCanvasSelectRect(
                         getSelectRect()!,
                         captureBoundingBoxInfoRef.current,
                         undefined,
                         true,
                     );
                 } else if (prevDrawState === DrawState.ScrollScreenshot) {
-                    updateSelectRect(
+                    drawCanvasSelectRect(
                         getSelectRect()!,
                         captureBoundingBoxInfoRef.current,
                         undefined,
@@ -889,7 +902,7 @@ const SelectLayerCore: React.FC<SelectLayerProps> = ({ actionRef }) => {
                     );
                 }
             },
-            [getSelectRect, updateSelectRect],
+            [getSelectRect, drawCanvasSelectRect],
         ),
     );
 
