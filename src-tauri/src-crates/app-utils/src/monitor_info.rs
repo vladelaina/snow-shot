@@ -4,8 +4,8 @@ use xcap::Monitor;
 
 #[derive(Debug)]
 pub struct MonitorInfo {
-    monitor: Monitor,
-    rect: ElementRect,
+    pub monitor: Monitor,
+    pub rect: ElementRect,
 }
 
 impl MonitorInfo {
@@ -261,6 +261,10 @@ impl MonitorList {
 
     pub fn monitor_rect_list(&self) -> Vec<ElementRect> {
         self.0.iter().map(|monitor| monitor.rect).collect()
+    }
+
+    pub fn iter(&self) -> impl Iterator<Item = &MonitorInfo> {
+        self.0.iter()
     }
 }
 

@@ -6239,6 +6239,8 @@ dependencies = [
  "log",
  "regex",
  "serde",
+ "snow-shot-app-shared",
+ "snow-shot-app-utils",
  "tauri",
  "xcap",
 ]
