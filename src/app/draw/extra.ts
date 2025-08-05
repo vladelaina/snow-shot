@@ -182,15 +182,4 @@ export class CaptureBoundingBoxInfo {
 
         return monitorRect;
     }
-
-    limitRect(rect: ElementRect, searchRect: ElementRect) {
-        const monitorRect = this.getActiveMonitorRect(searchRect);
-
-        return {
-            min_x: Math.max(rect.min_x, monitorRect.min_x),
-            min_y: Math.max(rect.min_y, monitorRect.min_y),
-            max_x: Math.min(rect.max_x, monitorRect.max_x),
-            max_y: Math.min(rect.max_y, monitorRect.max_y),
-        };
-    }
 }

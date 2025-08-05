@@ -533,7 +533,14 @@ const SelectLayerCore: React.FC<SelectLayerProps> = ({ actionRef }) => {
                 elementRectList =
                     getScreenshotType() === ScreenshotType.TopWindow
                         ? [{ min_x: 0, min_y: 0, max_x: 0, max_y: 0 }]
-                        : [captureBoundingBoxInfoRef.current.rect];
+                        : [
+                              captureBoundingBoxInfoRef.current.getActiveMonitorRect({
+                                  min_x: mousePosition.mouseX,
+                                  min_y: mousePosition.mouseY,
+                                  max_x: mousePosition.mouseX,
+                                  max_y: mousePosition.mouseY,
+                              }),
+                          ];
             }
 
             const minLevel = 0;
@@ -546,22 +553,26 @@ const SelectLayerCore: React.FC<SelectLayerProps> = ({ actionRef }) => {
                 selectWindowFromMousePositionLevelRef.current = maxLevel;
             }
 
-            const result = captureBoundingBoxInfoRef.current!.limitRect(
-                {
-                    min_x: elementRectList[currentLevel].min_x,
-                    min_y: elementRectList[currentLevel].min_y,
-                    max_x: elementRectList[currentLevel].max_x,
-                    max_y: elementRectList[currentLevel].max_y,
-                },
-                {
-                    min_x: mousePosition.mouseX,
-                    min_y: mousePosition.mouseY,
-                    max_x: mousePosition.mouseX,
-                    max_y: mousePosition.mouseY,
-                },
+            let selectedRect = {
+                min_x: elementRectList[currentLevel].min_x,
+                min_y: elementRectList[currentLevel].min_y,
+                max_x: elementRectList[currentLevel].max_x,
+                max_y: elementRectList[currentLevel].max_y,
+            };
+
+            selectedRect = limitRect(
+                selectedRect,
+                currentLevel === elementRectList.length - 1
+                    ? captureBoundingBoxInfoRef.current!.getActiveMonitorRect({
+                          min_x: mousePosition.mouseX,
+                          min_y: mousePosition.mouseY,
+                          max_x: mousePosition.mouseX,
+                          max_y: mousePosition.mouseY,
+                      })
+                    : captureBoundingBoxInfoRef.current.rect,
             );
 
-            return captureBoundingBoxInfoRef.current!.transformMonitorRect(result);
+            return captureBoundingBoxInfoRef.current!.transformMonitorRect(selectedRect);
         },
         [getElementRectFromMousePosition, getScreenshotType],
     );
