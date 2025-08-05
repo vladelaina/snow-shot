@@ -65,8 +65,15 @@ const DrawCoreComponent: React.FC<{
     actionRef: React.RefObject<DrawCoreActionType | undefined>;
     zIndex: number;
     layoutMenuZIndex: number;
+    excalidrawCustomOptions?: NonNullable<ExcalidrawPropsCustomOptions>;
     onLoad?: () => void;
-}> = ({ actionRef, zIndex, layoutMenuZIndex, onLoad }) => {
+}> = ({
+    actionRef,
+    zIndex,
+    layoutMenuZIndex,
+    excalidrawCustomOptions: excalidrawCustomOptionsProp,
+    onLoad,
+}) => {
     const { token } = theme.useToken();
     const intl = useIntl();
 
@@ -542,8 +549,10 @@ const DrawCoreComponent: React.FC<{
                     elements,
                 });
             },
+            ...excalidrawCustomOptionsProp,
         };
     }, [
+        excalidrawCustomOptionsProp,
         getExtraTools,
         handleWheel,
         onHistoryChange,
