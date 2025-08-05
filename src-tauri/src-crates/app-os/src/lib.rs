@@ -1,5 +1,4 @@
 #[cfg(target_os = "windows")]
-use snow_shot_app_shared::ElementRect;
 use thiserror::Error;
 
 #[cfg(target_os = "windows")]
