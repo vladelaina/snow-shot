@@ -52,7 +52,7 @@ import clipboard from 'tauri-plugin-clipboard-api';
 import { openPath } from '@tauri-apps/plugin-opener';
 import { createDir } from '@/commands/file';
 import { getPlatformValue } from '@/utils';
-import { getMonitorsBoundingBox } from '@/commands/core';
+import { getMonitorsBoundingBox, setCurrentWindowAlwaysOnTop } from '@/commands/core';
 
 dayjs.extend(duration);
 
@@ -119,6 +119,7 @@ export default function VideoRecordToolbar() {
             appWindow.setPosition(
                 new PhysicalPosition(Math.round(selectRect.min_x + centerX), targetY),
             ),
+            setCurrentWindowAlwaysOnTop(true),
         ]);
 
         await appWindow.show();
