@@ -25,17 +25,22 @@ import { DrawState, DrawStatePublisher } from '@/app/fullScreenDraw/components/d
 import { useAppSettingsLoad } from '@/hooks/useAppSettingsLoad';
 import { getPlatformValue } from '@/utils';
 import { ElementRect } from '@/commands';
+import { formatKey } from '@/utils/format';
 
 const KeyLabel: React.FC<{
     messageId?: string;
     hotKey?: string;
     icon?: React.ReactNode;
 }> = ({ messageId, hotKey, icon }) => {
+    const formatHotKey = useMemo(() => {
+        return formatKey(hotKey);
+    }, [hotKey]);
+
     return (
         <div className="descriptions-item-btn-label">
             <div className="descriptions-item-btn-label-icon">{icon ?? <KeyboardIcon />}</div>
             {messageId && <FormattedMessage id={messageId} />}
-            {hotKey}
+            {formatHotKey}
         </div>
     );
 };

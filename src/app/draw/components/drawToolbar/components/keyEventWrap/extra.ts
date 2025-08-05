@@ -61,7 +61,7 @@ export const defaultDrawToolbarKeyEventSettings: Record<KeyEventKey, KeyEventVal
         unique: true,
     },
     [KeyEventKey.LockDrawTool]: {
-        hotKey: getPlatformValue('Ctrl+Alt+L', 'Meta+Option+L'),
+        hotKey: getPlatformValue('Ctrl+Alt+L', 'Meta+Alt+L'),
         unique: true,
     },
     [KeyEventKey.RectTool]: {
@@ -153,7 +153,7 @@ export const defaultDrawToolbarKeyEventSettings: Record<KeyEventKey, KeyEventVal
         hotKey: 'Shift',
     },
     [KeyEventKey.AutoAlignPicker]: {
-        hotKey: 'Ctrl',
+        hotKey: getPlatformValue('Ctrl', 'Meta'),
         unique: true,
     },
     [KeyEventKey.SwitchColorFormat]: {
