@@ -16,13 +16,14 @@ pub async fn capture_current_monitor(
     // 获取当前鼠标的位置
     let (_, _, monitor) = snow_shot_app_utils::get_target_monitor();
 
-    let image_buffer = match snow_shot_app_utils::capture_target_monitor(&window, &monitor, None) {
-        Some(image) => image,
-        None => {
-            log::error!("Failed to capture current monitor");
-            return Response::new(Vec::new());
-        }
-    };
+    let image_buffer =
+        match snow_shot_app_utils::capture_target_monitor(&monitor, None, Some(&window)) {
+            Some(image) => image,
+            None => {
+                log::error!("Failed to capture current monitor");
+                return Response::new(Vec::new());
+            }
+        };
 
     let image_buffer = snow_shot_app_utils::encode_image(
         &image_buffer,
@@ -36,8 +37,8 @@ pub async fn capture_current_monitor(
     Response::new(image_buffer)
 }
 
-pub async fn capture_all_monitors() -> Response {
-    let image = snow_shot_app_utils::monitor_info::MonitorList::get().capture();
+pub async fn capture_all_monitors(window: tauri::Window) -> Response {
+    let image = snow_shot_app_utils::monitor_info::MonitorList::all().capture(Some(&window));
 
     let image_buffer =
         snow_shot_app_utils::encode_image(&image, snow_shot_app_utils::ImageEncoder::Webp);

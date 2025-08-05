@@ -170,7 +170,7 @@ impl UIElements {
 
         // 桌面的窗口索引应该是最高，因为其优先级最低
         let mut current_level = ElementLevel::min();
-        let monitors_bounding_box = MonitorList::get().get_monitors_bounding_box();
+        let monitors_bounding_box = MonitorList::all().get_monitors_bounding_box();
         let root_element_rect = uiautomation::types::Rect::new(
             monitors_bounding_box.min_x,
             monitors_bounding_box.min_y,

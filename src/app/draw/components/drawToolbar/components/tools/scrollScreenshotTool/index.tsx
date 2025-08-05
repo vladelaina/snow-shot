@@ -265,7 +265,9 @@ export const ScrollScreenshot: React.FC<{
     const pendingCaptureRef = useRef<boolean>(false);
     const captureImageCore = useCallback(
         async (scrollImageList: ScrollImageList) => {
-            const rect = selectLayerActionRef.current!.getSelectRect()!;
+            const rect = captureBoundingBoxInfoRef.current!.transformWindowRect(
+                selectLayerActionRef.current!.getSelectRect()!,
+            );
 
             if (pendingCaptureRef.current) {
                 return;
@@ -282,10 +284,10 @@ export const ScrollScreenshot: React.FC<{
 
             pendingCaptureRef.current = true;
 
+            console.log(rect);
+
             await scrollScreenshotCapture(
                 scrollImageList,
-                captureBoundingBoxInfoRef.current!.rect.min_x,
-                captureBoundingBoxInfoRef.current!.rect.min_y,
                 rect.min_x,
                 rect.min_y,
                 rect.max_x,
@@ -297,9 +299,9 @@ export const ScrollScreenshot: React.FC<{
             handleCaptureImageListDebounce();
         },
         [
+            captureBoundingBoxInfoRef,
             selectLayerActionRef,
             setDrawEvent,
-            captureBoundingBoxInfoRef,
             handleCaptureImageListDebounce,
         ],
     );

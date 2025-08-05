@@ -14,8 +14,8 @@ pub async fn capture_current_monitor(window: tauri::Window, encoder: String) -> 
 }
 
 #[command]
-pub async fn capture_all_monitors() -> Response {
-    snow_shot_tauri_commands_screenshot::capture_all_monitors().await
+pub async fn capture_all_monitors(window: tauri::Window) -> Response {
+    snow_shot_tauri_commands_screenshot::capture_all_monitors(window).await
 }
 
 #[command]

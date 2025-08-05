@@ -639,22 +639,21 @@ const DrawPageCore: React.FC = () => {
             return;
         }
 
-        const selected = window.getSelection();
+        const selectedText = window.getSelection()?.toString().trim();
 
         if (
+            selectedText &&
+            (getDrawState() === DrawState.OcrDetect || getDrawState() === DrawState.ScanQrcode)
+        ) {
+            writeTextToClipboard(selectedText);
+            finishCapture();
+            return;
+        } else if (
             getDrawState() === DrawState.OcrDetect &&
             getAppSettings()[AppSettingsGroup.FunctionScreenshot].ocrCopyText
         ) {
             const ocrResult = ocrBlocksActionRef.current?.getOcrResultAction()?.getOcrResult();
             writeTextToClipboard(ocrResult ? covertOcrResultToText(ocrResult.result) : '');
-            finishCapture();
-            return;
-        } else if (
-            (getDrawState() === DrawState.OcrDetect || getDrawState() === DrawState.ScanQrcode) &&
-            selected &&
-            selected.toString().trim()
-        ) {
-            writeTextToClipboard(selected.toString());
             finishCapture();
             return;
         } else {
@@ -666,7 +665,7 @@ const DrawPageCore: React.FC = () => {
                 return;
             }
 
-            await copyToClipboard(
+            copyToClipboard(
                 selectLayerActionRef.current,
                 drawLayerActionRef.current,
                 drawCacheLayerActionRef.current,

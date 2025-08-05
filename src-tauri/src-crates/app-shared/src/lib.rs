@@ -71,3 +71,59 @@ impl From<uiautomation::types::Rect> for ElementRect {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_overlaps() {
+        assert_eq!(
+            ElementRect {
+                min_x: 0,
+                min_y: 0,
+                max_x: 100,
+                max_y: 100,
+            }
+            .overlaps(&ElementRect {
+                min_x: 0,
+                min_y: 0,
+                max_x: 100,
+                max_y: 100,
+            }),
+            true
+        );
+
+        assert_eq!(
+            ElementRect {
+                min_x: 0,
+                min_y: 0,
+                max_x: 100,
+                max_y: 100,
+            }
+            .overlaps(&ElementRect {
+                min_x: 101,
+                min_y: 101,
+                max_x: 200,
+                max_y: 200,
+            }),
+            false
+        );
+
+        assert_eq!(
+            ElementRect {
+                min_x: 0,
+                min_y: 0,
+                max_x: 100,
+                max_y: 100,
+            }
+            .overlaps(&ElementRect {
+                min_x: 100,
+                min_y: 100,
+                max_x: 100,
+                max_y: 100,
+            }),
+            false
+        );
+    }
+}

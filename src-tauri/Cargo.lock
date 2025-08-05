@@ -6226,6 +6226,8 @@ dependencies = [
  "imageproc",
  "rayon",
  "serde",
+ "snow-shot-app-shared",
+ "snow-shot-app-utils",
 ]
 
 [[package]]
@@ -6332,6 +6334,7 @@ dependencies = [
  "scap",
  "serde",
  "snow-shot-app-scroll-screenshot-service",
+ "snow-shot-app-shared",
  "snow-shot-app-utils",
  "tauri",
  "tokio",

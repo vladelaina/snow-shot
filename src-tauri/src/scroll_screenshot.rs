@@ -3,6 +3,7 @@ use tauri::ipc::Response;
 use tauri_plugin_clipboard_manager::ClipboardExt;
 use tokio::sync::Mutex;
 
+use snow_shot_app_scroll_screenshot_service::scroll_screenshot_capture_service::ScrollScreenshotCaptureService;
 use snow_shot_app_scroll_screenshot_service::scroll_screenshot_image_service::ScrollScreenshotImageService;
 use snow_shot_app_scroll_screenshot_service::scroll_screenshot_service::{
     ScrollDirection, ScrollImageList, ScrollScreenshotService,
@@ -38,20 +39,18 @@ pub async fn scroll_screenshot_init(
 pub async fn scroll_screenshot_capture(
     window: tauri::Window,
     scroll_screenshot_image_service: tauri::State<'_, Mutex<ScrollScreenshotImageService>>,
+    scroll_screenshot_capture_service: tauri::State<'_, Mutex<ScrollScreenshotCaptureService>>,
     scroll_image_list: ScrollImageList,
-    monitor_x: i32,
-    monitor_y: i32,
-    min_x: u32,
-    min_y: u32,
-    max_x: u32,
-    max_y: u32,
+    min_x: i32,
+    min_y: i32,
+    max_x: i32,
+    max_y: i32,
 ) -> Result<(), String> {
     snow_shot_tauri_commands_scroll_screenshot::scroll_screenshot_capture(
         window,
         scroll_screenshot_image_service,
+        scroll_screenshot_capture_service,
         scroll_image_list,
-        monitor_x,
-        monitor_y,
         min_x,
         min_y,
         max_x,
@@ -128,9 +127,15 @@ pub async fn scroll_screenshot_save_to_clipboard(
 #[command]
 pub async fn scroll_screenshot_clear(
     scroll_screenshot_service: tauri::State<'_, Mutex<ScrollScreenshotService>>,
+    scroll_screenshot_image_service: tauri::State<'_, Mutex<ScrollScreenshotImageService>>,
+    scroll_screenshot_capture_service: tauri::State<'_, Mutex<ScrollScreenshotCaptureService>>,
 ) -> Result<(), ()> {
-    snow_shot_tauri_commands_scroll_screenshot::scroll_screenshot_clear(scroll_screenshot_service)
-        .await
+    snow_shot_tauri_commands_scroll_screenshot::scroll_screenshot_clear(
+        scroll_screenshot_service,
+        scroll_screenshot_image_service,
+        scroll_screenshot_capture_service,
+    )
+    .await
 }
 
 #[command]

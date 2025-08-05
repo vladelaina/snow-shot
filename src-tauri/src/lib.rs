@@ -14,6 +14,7 @@ use tauri::Manager;
 use tauri_plugin_log::{Target, TargetKind};
 
 use snow_shot_app_os::ui_automation::UIElements;
+use snow_shot_app_scroll_screenshot_service::scroll_screenshot_capture_service;
 use snow_shot_app_scroll_screenshot_service::scroll_screenshot_image_service;
 use snow_shot_app_scroll_screenshot_service::scroll_screenshot_service;
 use snow_shot_app_services::free_drag_window_service;
@@ -35,6 +36,8 @@ pub fn run() {
         Mutex::new(scroll_screenshot_service::ScrollScreenshotService::new());
     let scroll_screenshot_image_service =
         Mutex::new(scroll_screenshot_image_service::ScrollScreenshotImageService::new());
+    let scroll_screenshot_capture_service =
+        Mutex::new(scroll_screenshot_capture_service::ScrollScreenshotCaptureService::new());
 
     let device_event_handler_service =
         Mutex::new(device_event_handler_service::DeviceEventHandlerService::new());
@@ -125,8 +128,9 @@ pub fn run() {
         .manage(auto_start_hide_window)
         .manage(enigo_instance)
         .manage(scroll_screenshot_service)
-        .manage(video_record_service)
         .manage(scroll_screenshot_image_service)
+        .manage(scroll_screenshot_capture_service)
+        .manage(video_record_service)
         .manage(device_event_handler_service)
         .manage(free_drag_window_service)
         .manage(listen_key_service)

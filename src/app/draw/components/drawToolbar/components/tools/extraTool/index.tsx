@@ -73,26 +73,14 @@ export const ExtraTool: React.FC<{
                                 return;
                             }
 
-                            let rectWidth = selectRect.max_x - selectRect.min_x;
-                            let rectHeight = selectRect.max_y - selectRect.min_y;
-
-                            if (rectWidth % 2 === 1) {
-                                rectWidth--;
-                            }
-                            if (rectHeight % 2 === 1) {
-                                rectHeight--;
-                            }
+                            const monitorRect =
+                                captureBoundingBoxInfo.transformWindowRect(selectRect);
 
                             createVideoRecordWindow(
-                                captureBoundingBoxInfo.rect.min_x,
-                                captureBoundingBoxInfo.rect.min_y,
-                                captureBoundingBoxInfo.width,
-                                captureBoundingBoxInfo.height,
-                                window.devicePixelRatio,
-                                selectRect.min_x,
-                                selectRect.min_y,
-                                selectRect.min_x + rectWidth,
-                                selectRect.min_y + rectHeight,
+                                monitorRect.min_x,
+                                monitorRect.min_y,
+                                monitorRect.max_x,
+                                monitorRect.max_y,
                             );
 
                             finishCapture();

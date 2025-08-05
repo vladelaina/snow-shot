@@ -2,10 +2,11 @@ use image::codecs::jpeg::JpegEncoder;
 use image::codecs::png::{self, CompressionType, PngEncoder};
 use image::imageops::FilterType;
 use serde::Serialize;
+use snow_shot_app_scroll_screenshot_service::scroll_screenshot_capture_service::ScrollScreenshotCaptureService;
+use snow_shot_app_shared::ElementRect;
 use std::path::PathBuf;
 use tauri::ipc::Response;
 use tokio::sync::Mutex;
-use xcap::Monitor;
 
 use snow_shot_app_scroll_screenshot_service::scroll_screenshot_image_service::ScrollScreenshotImageService;
 use snow_shot_app_scroll_screenshot_service::scroll_screenshot_service::{
@@ -43,18 +44,15 @@ pub async fn scroll_screenshot_init(
 pub async fn scroll_screenshot_capture(
     window: tauri::Window,
     scroll_screenshot_image_service: tauri::State<'_, Mutex<ScrollScreenshotImageService>>,
+    scroll_screenshot_capture_service: tauri::State<'_, Mutex<ScrollScreenshotCaptureService>>,
     scroll_image_list: ScrollImageList,
-    monitor_x: i32,
-    monitor_y: i32,
-    min_x: u32,
-    min_y: u32,
-    max_x: u32,
-    max_y: u32,
+    min_x: i32,
+    min_y: i32,
+    max_x: i32,
+    max_y: i32,
 ) -> Result<(), String> {
     // 区域截图
     let image = {
-        let monitor = Monitor::from_point(monitor_x, monitor_y).unwrap();
-
         #[cfg(target_os = "macos")]
         let rect_scale;
         #[cfg(not(target_os = "macos"))]
@@ -71,18 +69,18 @@ pub async fn scroll_screenshot_capture(
         let max_x = max_x as f64 * rect_scale;
         let max_y = max_y as f64 * rect_scale;
 
-        match snow_shot_app_utils::capture_target_monitor(
-            &window,
-            &monitor,
-            Some((min_x, min_y, max_x, max_y)),
-        ) {
-            Some(image) => image,
-            None => {
-                return Err(format!(
-                    "[scroll_screenshot_capture] Failed to capture current monitor"
-                ));
-            }
-        }
+        let crop_region = ElementRect {
+            min_x: min_x.round() as i32,
+            min_y: min_y.round() as i32,
+            max_x: max_x.round() as i32,
+            max_y: max_y.round() as i32,
+        };
+        let mut monitor_list_service = scroll_screenshot_capture_service.lock().await;
+        monitor_list_service.init(crop_region);
+
+        let monitor_list = monitor_list_service.get();
+
+        monitor_list.capture_region(crop_region, Some(&window))
     };
 
     scroll_screenshot_image_service
@@ -239,10 +237,16 @@ where
 
 pub async fn scroll_screenshot_clear(
     scroll_screenshot_service: tauri::State<'_, Mutex<ScrollScreenshotService>>,
+    scroll_screenshot_image_service: tauri::State<'_, Mutex<ScrollScreenshotImageService>>,
+    scroll_screenshot_capture_service: tauri::State<'_, Mutex<ScrollScreenshotCaptureService>>,
 ) -> Result<(), ()> {
     let mut scroll_screenshot_service = scroll_screenshot_service.lock().await;
+    let mut scroll_screenshot_image_service = scroll_screenshot_image_service.lock().await;
+    let mut scroll_screenshot_capture_service = scroll_screenshot_capture_service.lock().await;
 
     scroll_screenshot_service.clear();
+    scroll_screenshot_image_service.clear();
+    scroll_screenshot_capture_service.clear();
 
     Ok(())
 }

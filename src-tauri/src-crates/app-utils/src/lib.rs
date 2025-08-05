@@ -4,6 +4,7 @@ use std::path::PathBuf;
 use device_query::{DeviceQuery, DeviceState, MouseState};
 use image::codecs::png::{CompressionType, FilterType, PngEncoder};
 use image::codecs::webp::WebPEncoder;
+use snow_shot_app_shared::ElementRect;
 use tauri::AppHandle;
 use xcap::Monitor;
 use zune_core::bit_depth::BitDepth;
@@ -118,18 +119,18 @@ pub fn get_window_id_from_ns_handle(ns_handle: *mut std::ffi::c_void) -> u32 {
 }
 
 pub fn capture_target_monitor(
-    #[allow(unused_variables)] window: &tauri::Window,
     monitor: &Monitor,
-    crop_area: Option<(f64, f64, f64, f64)>,
+    crop_area: Option<ElementRect>,
+    #[allow(unused_variables)] exclude_window: Option<&tauri::Window>,
 ) -> Option<image::DynamicImage> {
     #[cfg(not(target_os = "macos"))]
     {
-        let image = if let Some((min_x, min_y, max_x, max_y)) = crop_area {
+        let image = if let Some(crop_area) = crop_area {
             monitor.capture_region(
-                min_x as u32,
-                min_y as u32,
-                (max_x - min_x) as u32,
-                (max_y - min_y) as u32,
+                crop_area.min_x as u32,
+                crop_area.min_y as u32,
+                (crop_area.max_x - crop_area.min_x) as u32,
+                (crop_area.max_y - crop_area.min_y) as u32,
             )
         } else {
             monitor.capture_image()
@@ -183,19 +184,26 @@ pub fn capture_target_monitor(
             })),
             show_cursor: false,
             show_highlight: true,
-            excluded_targets: Some(vec![scap::Target::Window(scap::Window {
-                id: window_id,
-                title: "Snow Shot - Draw".to_string(),
-                raw_handle: window_id,
-            })]),
+            excluded_targets: if let Some(exclude_window) = exclude_window {
+                Some(vec![scap::Target::Window(scap::Window {
+                    id: exclude_window.ns_window().unwrap_or(0),
+                    title: "".to_string(),
+                    raw_handle: exclude_window.ns_window().unwrap_or(0),
+                })])
+            } else {
+                None
+            },
             output_type: scap::frame::FrameType::BGRAFrame,
             output_resolution: scap::capturer::Resolution::Captured,
-            crop_area: if let Some((min_x, min_y, max_x, max_y)) = crop_area {
+            crop_area: if let Some(crop_area) = crop_area {
                 Some(scap::capturer::Area {
-                    origin: scap::capturer::Point { x: min_x, y: min_y },
+                    origin: scap::capturer::Point {
+                        x: crop_area.min_x as f64,
+                        y: crop_area.min_y as f64,
+                    },
                     size: scap::capturer::Size {
-                        width: max_x - min_x,
-                        height: max_y - min_y,
+                        width: (crop_area.max_x - crop_area.min_x) as f64,
+                        height: (crop_area.max_y - crop_area.min_y) as f64,
                     },
                 })
             } else {
@@ -310,18 +318,4 @@ pub fn encode_image(image: &image::DynamicImage, encoder: ImageEncoder) -> Vec<u
     }
 
     return buf;
-}
-
-#[cfg(test)]
-mod tests {
-    use crate::monitor_info::MonitorList;
-
-    use super::*;
-
-    #[test]
-    fn test_encode_image() {
-        let image = MonitorList::get().capture();
-        let buf = encode_image(&image, ImageEncoder::Webp);
-        println!("buf.len: {}", buf.len());
-    }
 }

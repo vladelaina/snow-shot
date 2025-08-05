@@ -20,7 +20,6 @@ import {
 } from '@/components/icons';
 import { getButtonIconColorByState } from '@/app/draw/components/drawToolbar/extra';
 import { getCurrentWindow, PhysicalPosition, PhysicalSize } from '@tauri-apps/api/window';
-import { MonitorInfo } from '@/commands/core';
 import { ElementRect } from '@/commands';
 import { getVideoRecordParams, VideoRecordState } from '../extra';
 import {
@@ -53,6 +52,7 @@ import clipboard from 'tauri-plugin-clipboard-api';
 import { openPath } from '@tauri-apps/plugin-opener';
 import { createDir } from '@/commands/file';
 import { getPlatformValue } from '@/utils';
+import { getMonitorsBoundingBox } from '@/commands/core';
 
 dayjs.extend(duration);
 
@@ -60,7 +60,6 @@ export default function VideoRecordToolbar() {
     const { token } = theme.useToken();
     const intl = useIntl();
 
-    const monitorInfoRef = useRef<MonitorInfo | undefined>(undefined);
     const selectRectRef = useRef<ElementRect | undefined>(undefined);
 
     const { addListener, removeListener } = useContext(EventListenerContext);
@@ -68,8 +67,7 @@ export default function VideoRecordToolbar() {
     const toolbarRef = useRef<HTMLDivElement>(null);
     const durationFormatRef = useRef<HTMLDivElement>(null);
 
-    const init = useCallback((monitorInfo: MonitorInfo, selectRect: ElementRect) => {
-        monitorInfoRef.current = monitorInfo;
+    const init = useCallback(async (selectRect: ElementRect) => {
         selectRectRef.current = selectRect;
 
         const appWindow = getCurrentWindow();
@@ -81,59 +79,60 @@ export default function VideoRecordToolbar() {
         const physicalWidth = Math.round(toolbarWidth * scaleFactor);
         const physicalHeight = Math.round(toolbarHeight * scaleFactor);
 
-        const screenWidth = window.screen.width * scaleFactor;
+        const centerX = (selectRect.max_x - selectRect.min_x - physicalWidth) / 2;
 
-        const centerX = (screenWidth - physicalWidth) / 2;
+        const monitorBounds = await getMonitorsBoundingBox();
 
-        appWindow.setSize(new PhysicalSize(physicalWidth, physicalHeight));
-        appWindow.setPosition(
-            new PhysicalPosition(
-                Math.round(monitorInfo.monitor_x + centerX),
-                getPlatformValue(
-                    Math.round(
-                        monitorInfo.monitor_y +
-                            monitorInfo.monitor_height -
-                            physicalHeight -
-                            //  任务栏高度 48pt
-                            (48 + 24) * scaleFactor,
-                    ),
-                    Math.round(
-                        monitorInfo.monitor_y +
-                            monitorInfo.monitor_height -
-                            physicalHeight -
-                            // 任务栏高度大概为 72 pt
-                            (72 + 32) * scaleFactor,
-                    ),
-                ),
+        const limitMaxY = getPlatformValue(
+            Math.round(
+                monitorBounds.rect.max_y -
+                    physicalHeight -
+                    //  任务栏高度 48pt
+                    (48 + 24) * scaleFactor,
+            ),
+            Math.round(
+                monitorBounds.rect.max_y -
+                    physicalHeight -
+                    // 任务栏高度大概为 72 pt
+                    (72 + 32) * scaleFactor,
             ),
         );
+        const limitMinY = getPlatformValue(Math.round(monitorBounds.rect.min_y + physicalHeight));
+        const targetBottomY = selectRect.max_y + 24 * scaleFactor;
+        const targetTopY = selectRect.min_y - physicalHeight - 24 * scaleFactor;
+        let targetY = targetBottomY;
+        if (targetBottomY > limitMaxY) {
+            if (targetTopY > limitMinY) {
+                targetY = targetTopY;
+            } else {
+                targetY = limitMaxY;
+            }
+        }
+
+        await Promise.all([
+            appWindow.setSize(new PhysicalSize(physicalWidth, physicalHeight)),
+            appWindow.setPosition(
+                new PhysicalPosition(Math.round(selectRect.min_x + centerX), targetY),
+            ),
+        ]);
+
+        await appWindow.show();
     }, []);
 
     useEffect(() => {
-        const { monitorInfo, selectRect } = getVideoRecordParams();
+        const { selectRect } = getVideoRecordParams();
 
-        init(monitorInfo, selectRect);
+        init(selectRect);
 
         const listenerId = addListener('reload-video-record', (params) => {
             const windowInfo = (params as { payload: VideoRecordWindowInfo }).payload;
 
-            init(
-                {
-                    monitor_x: windowInfo.monitor_x,
-                    monitor_y: windowInfo.monitor_y,
-                    monitor_width: windowInfo.monitor_width,
-                    monitor_height: windowInfo.monitor_height,
-                    monitor_scale_factor: windowInfo.monitor_scale_factor,
-                    mouse_x: 0,
-                    mouse_y: 0,
-                },
-                {
-                    min_x: windowInfo.select_rect_min_x,
-                    min_y: windowInfo.select_rect_min_y,
-                    max_x: windowInfo.select_rect_max_x,
-                    max_y: windowInfo.select_rect_max_y,
-                },
-            );
+            init({
+                min_x: windowInfo.select_rect_min_x,
+                min_y: windowInfo.select_rect_min_y,
+                max_x: windowInfo.select_rect_max_x,
+                max_y: windowInfo.select_rect_max_y,
+            });
         });
 
         videoRecordKill();
@@ -270,14 +269,10 @@ export default function VideoRecordToolbar() {
                                     const appSettings = getAppSettings();
 
                                     videoRecordStart(
-                                        (monitorInfoRef.current?.monitor_x ?? 0) +
-                                            (selectRectRef.current?.min_x ?? 0),
-                                        (monitorInfoRef.current?.monitor_y ?? 0) +
-                                            (selectRectRef.current?.min_y ?? 0),
-                                        (monitorInfoRef.current?.monitor_x ?? 0) +
-                                            (selectRectRef.current?.max_x ?? 0),
-                                        (monitorInfoRef.current?.monitor_y ?? 0) +
-                                            (selectRectRef.current?.max_y ?? 0),
+                                        selectRectRef.current?.min_x ?? 0,
+                                        selectRectRef.current?.min_y ?? 0,
+                                        selectRectRef.current?.max_x ?? 0,
+                                        selectRectRef.current?.max_y ?? 0,
                                         await joinPath(
                                             await getVideoRecordSaveDirectory(appSettings),
                                             generateImageFileName(
