@@ -109,7 +109,10 @@ pub fn get_mouse_position(#[allow(unused_variables)] app: &AppHandle) -> (i32, i
     )
 }
 
-pub fn get_capture_monitor_list(app: &AppHandle, region: Option<ElementRect>) -> MonitorList {
+pub fn get_capture_monitor_list(
+    #[allow(unused_variables)] app: &AppHandle,
+    region: Option<ElementRect>,
+) -> MonitorList {
     if let Some(region) = region {
         return MonitorList::get_by_region(region);
     }
@@ -178,7 +181,11 @@ pub fn capture_target_monitor(
             return None;
         }
 
-        if monitor.name().unwrap_or("".to_string()).eq("DeskPad Display") {
+        if monitor
+            .name()
+            .unwrap_or("".to_string())
+            .eq("DeskPad Display")
+        {
             log::warn!("[capture_current_monitor_with_scap] skip DeskPad Display");
             return None;
         }

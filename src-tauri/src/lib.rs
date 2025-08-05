@@ -11,7 +11,6 @@ use tauri::Emitter;
 use tokio::sync::Mutex;
 
 use tauri::Manager;
-use tauri_plugin_log::{Target, TargetKind};
 
 use snow_shot_app_os::ui_automation::UIElements;
 use snow_shot_app_scroll_screenshot_service::scroll_screenshot_capture_service;
@@ -77,17 +76,20 @@ pub fn run() {
         .plugin(tauri_plugin_process::init())
         .setup(|app| {
             #[cfg(debug_assertions)]
-            app.handle().plugin(
-                tauri_plugin_log::Builder::default()
-                    .targets([
-                        Target::new(TargetKind::Stdout),
-                        Target::new(TargetKind::LogDir { file_name: None }),
-                        Target::new(TargetKind::Webview),
-                    ])
-                    .level(log::LevelFilter::Info)
-                    .build(),
-            )?;
+            {
+                use tauri_plugin_log::{Target, TargetKind};
 
+                app.handle().plugin(
+                    tauri_plugin_log::Builder::default()
+                        .targets([
+                            Target::new(TargetKind::Stdout),
+                            Target::new(TargetKind::LogDir { file_name: None }),
+                            Target::new(TargetKind::Webview),
+                        ])
+                        .level(log::LevelFilter::Info)
+                        .build(),
+                )?;
+            }
             let main_window = app
                 .get_webview_window("main")
                 .expect("[lib::setup] no main window");
