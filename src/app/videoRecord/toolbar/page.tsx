@@ -119,6 +119,12 @@ export default function VideoRecordToolbar() {
             appWindow.setPosition(
                 new PhysicalPosition(Math.round(selectRect.min_x + centerX), targetY),
             ),
+        ]);
+        await Promise.all([
+            appWindow.setSize(new PhysicalSize(physicalWidth, physicalHeight)),
+            appWindow.setPosition(
+                new PhysicalPosition(Math.round(selectRect.min_x + centerX), targetY),
+            ),
             setCurrentWindowAlwaysOnTop(true),
         ]);
 

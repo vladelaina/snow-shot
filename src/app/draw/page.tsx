@@ -81,7 +81,6 @@ import { listenKeyStart, listenKeyStop } from '@/commands/listenKey';
 import { sendErrorMessage } from '@/functions/sendMessage';
 import { useIntl } from 'react-intl';
 import Flatbush from 'flatbush';
-import { getPlatform } from '@/utils';
 
 const DrawCacheLayer = dynamic(
     async () => (await import('./components/drawCacheLayer')).DrawCacheLayer,
@@ -272,10 +271,8 @@ const DrawPageCore: React.FC = () => {
         async ({ min_x, min_y, max_x, max_y }: ElementRect) => {
             const appWindow = appWindowRef.current;
 
-            // macOS 设置两次位置才会正确显示
-            if (getPlatform() === 'macos') {
-                await appWindow.setPosition(new PhysicalPosition(min_x, min_y));
-            }
+            // 设置两次位置，防止窗口缩放变化
+            await appWindow.setPosition(new PhysicalPosition(min_x, min_y));
 
             await Promise.all([
                 appWindow.setAlwaysOnTop(true),
