@@ -107,7 +107,6 @@ pub async fn click_through(window: tauri::Window) -> Result<(), ()> {
 pub async fn create_fixed_content_window(app: tauri::AppHandle, scroll_screenshot: bool) {
     let (_, _, monitor) = get_target_monitor();
 
-    let monitor_scale_factor = monitor.scale_factor().unwrap() as f64;
     let monitor_x = monitor.x().unwrap() as f64;
     let monitor_y = monitor.y().unwrap() as f64;
 
@@ -120,6 +119,7 @@ pub async fn create_fixed_content_window(app: tauri::AppHandle, scroll_screensho
     }
     #[cfg(not(target_os = "macos"))]
     {
+        let monitor_scale_factor = monitor.scale_factor().unwrap() as f64;
         window_x = monitor_x / monitor_scale_factor;
         window_y = monitor_y / monitor_scale_factor;
     }
@@ -180,7 +180,6 @@ pub async fn create_full_screen_draw_window(app: tauri::AppHandle) {
     let monitor_y = monitor.y().unwrap() as f64;
     let monitor_width = monitor.width().unwrap() as f64;
     let monitor_height = monitor.height().unwrap() as f64;
-
 
     let window_x;
     let window_y;
@@ -310,8 +309,12 @@ pub struct MonitorsBoundingBox {
     monitor_rect_list: Vec<ElementRect>,
 }
 
-pub async fn get_monitors_bounding_box() -> Result<MonitorsBoundingBox, ()> {
-    let monitors = snow_shot_app_utils::monitor_info::MonitorList::all();
+pub async fn get_monitors_bounding_box(
+    app: &tauri::AppHandle,
+    region: Option<ElementRect>,
+) -> Result<MonitorsBoundingBox, ()> {
+    let monitors = snow_shot_app_utils::get_capture_monitor_list(app, region);
+
     let monitors_bounding_box = monitors.get_monitors_bounding_box();
 
     Ok(MonitorsBoundingBox {

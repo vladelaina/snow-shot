@@ -6,6 +6,7 @@ import { useCallback, useContext, useEffect, useRef, useState } from 'react';
 import { getVideoRecordParams, VideoRecordState } from './extra';
 import { EventListenerContext } from '@/components/eventListener';
 import { VideoRecordWindowInfo } from '@/functions/videoRecord';
+import { getPlatform } from '@/utils';
 
 const PENDING_STROKE_COLOR = '#4096ff';
 const RECORDING_STROKE_COLOR = '#f5222d';
@@ -67,6 +68,15 @@ export default function VideoRecordPage() {
                 selectRect.max_x - selectRect.min_x + BORDER_WIDTH + BORDER_PADDING * 2;
             const windowHeight =
                 selectRect.max_y - selectRect.min_y + BORDER_WIDTH + BORDER_PADDING * 2;
+
+            if (getPlatform() === 'macos') {
+                appWindow.setPosition(
+                    new PhysicalPosition(
+                        selectRect.min_x - BORDER_WIDTH / 2 - BORDER_PADDING,
+                        selectRect.min_y - BORDER_WIDTH / 2 - BORDER_PADDING,
+                    ),
+                );
+            }
 
             await Promise.all([
                 appWindow.setSize(new PhysicalSize(windowWidth, windowHeight)),

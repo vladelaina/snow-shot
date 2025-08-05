@@ -298,8 +298,6 @@ impl VideoRecordService {
                 None
             };
 
-            println!("audio_device: {:?}", audio_device);
-
             // 没有找到对应的显示器，回退到默认显示器
             let mut target_monitor_index = 0;
             for (monitor_index, monitor) in

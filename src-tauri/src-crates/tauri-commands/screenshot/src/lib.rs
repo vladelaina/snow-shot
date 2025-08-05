@@ -4,8 +4,8 @@ use snow_shot_app_os::ui_automation::UIElements;
 use snow_shot_app_shared::ElementRect;
 use std::path::PathBuf;
 use std::time::{SystemTime, UNIX_EPOCH};
-use tauri::Emitter;
 use tauri::ipc::Response;
+use tauri::{Emitter, Manager};
 use tokio::sync::Mutex;
 use xcap::Window;
 
@@ -38,10 +38,11 @@ pub async fn capture_current_monitor(
 }
 
 pub async fn capture_all_monitors(window: tauri::Window) -> Response {
-    let image = snow_shot_app_utils::monitor_info::MonitorList::all().capture(Some(&window));
+    let image = snow_shot_app_utils::get_capture_monitor_list(&window.app_handle(), None)
+        .capture(Some(&window));
 
     let image_buffer =
-        snow_shot_app_utils::encode_image(&image, snow_shot_app_utils::ImageEncoder::Webp);
+        snow_shot_app_utils::encode_image(&image, snow_shot_app_utils::ImageEncoder::Png);
 
     Response::new(image_buffer)
 }

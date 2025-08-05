@@ -112,10 +112,12 @@ export const setCurrentWindowAlwaysOnTop = async (allowInputMethodOverlay: boole
     return result;
 };
 
-export const getMonitorsBoundingBox = async () => {
+export const getMonitorsBoundingBox = async (region?: ElementRect) => {
     const result = await invoke<{
         rect: ElementRect;
         monitor_rect_list: ElementRect[];
-    }>('get_monitors_bounding_box');
+    }>('get_monitors_bounding_box', {
+        region,
+    });
     return result;
 };

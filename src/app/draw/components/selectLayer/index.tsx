@@ -265,6 +265,19 @@ const SelectLayerCore: React.FC<SelectLayerProps> = ({ actionRef }) => {
         const map = new Map<number, number>();
 
         const windowElements = await windowElementsPromise;
+
+        if (getPlatform() === 'macos') {
+            windowElements.push({
+                window_id: 0,
+                element_rect: {
+                    min_x: -Number.MAX_SAFE_INTEGER,
+                    min_y: -Number.MAX_SAFE_INTEGER,
+                    max_x: Number.MAX_SAFE_INTEGER,
+                    max_y: Number.MAX_SAFE_INTEGER,
+                },
+            });
+        }
+
         const rTree = new Flatbush(windowElements.length);
         windowElements.forEach((windowElement, index) => {
             const rect = windowElement.element_rect;

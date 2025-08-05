@@ -81,7 +81,12 @@ export default function VideoRecordToolbar() {
 
         const centerX = (selectRect.max_x - selectRect.min_x - physicalWidth) / 2;
 
-        const monitorBounds = await getMonitorsBoundingBox();
+        const monitorBounds = await getMonitorsBoundingBox({
+            min_x: selectRect.min_x,
+            min_y: selectRect.min_y,
+            max_x: selectRect.max_x,
+            max_y: selectRect.max_y,
+        });
 
         const limitMaxY = getPlatformValue(
             Math.round(

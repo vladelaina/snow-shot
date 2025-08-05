@@ -1,5 +1,6 @@
 use enigo::Enigo;
 use enigo::Settings;
+use serde::Deserialize;
 use serde::Serialize;
 
 pub struct EnigoManager {
@@ -19,7 +20,7 @@ pub struct ElementInfo {
     pub rect_list: Vec<ElementRect>,
 }
 
-#[derive(PartialEq, Eq, Serialize, Clone, Debug, Copy, Hash)]
+#[derive(PartialEq, Eq, Serialize, Clone, Debug, Copy, Hash, Deserialize)]
 pub struct ElementRect {
     pub min_x: i32,
     pub min_y: i32,

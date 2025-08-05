@@ -157,7 +157,12 @@ impl MonitorList {
 
             return match capture_image {
                 Some(capture_image) => capture_image,
-                None => return image::DynamicImage::new_rgba8(0, 0),
+                None => {
+                    return image::DynamicImage::new_rgba8(
+                        (first_monitor.rect.max_x - first_monitor.rect.min_x) as u32,
+                        (first_monitor.rect.max_y - first_monitor.rect.min_y) as u32,
+                    );
+                }
             };
         }
 
@@ -302,9 +307,9 @@ mod tests {
         let instance = std::time::Instant::now();
 
         let crop_region = ElementRect {
-            min_x: -1000,
+            min_x: 0,
             min_y: 0,
-            max_x: 0,
+            max_x: 1000,
             max_y: 1000,
         };
 

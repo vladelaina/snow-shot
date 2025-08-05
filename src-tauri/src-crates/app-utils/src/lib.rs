@@ -12,6 +12,8 @@ use zune_core::colorspace::ColorSpace;
 use zune_core::options::EncoderOptions;
 use zune_jpegxl::JxlSimpleEncoder;
 
+use crate::monitor_info::MonitorList;
+
 pub mod monitor_info;
 
 pub fn get_device_mouse_position() -> (i32, i32) {
@@ -107,6 +109,28 @@ pub fn get_mouse_position(#[allow(unused_variables)] app: &AppHandle) -> (i32, i
     )
 }
 
+pub fn get_capture_monitor_list(app: &AppHandle, region: Option<ElementRect>) -> MonitorList {
+    if let Some(region) = region {
+        return MonitorList::get_by_region(region);
+    }
+
+    #[cfg(target_os = "windows")]
+    {
+        MonitorList::all()
+    }
+
+    #[cfg(target_os = "macos")]
+    {
+        let (mouse_x, mouse_y) = get_mouse_position(app);
+        MonitorList::get_by_region(ElementRect {
+            min_x: mouse_x,
+            min_y: mouse_y,
+            max_x: mouse_x,
+            max_y: mouse_y,
+        })
+    }
+}
+
 #[cfg(target_os = "macos")]
 pub fn get_window_id_from_ns_handle(ns_handle: *mut std::ffi::c_void) -> u32 {
     use objc2::runtime::AnyObject;
@@ -144,8 +168,6 @@ pub fn capture_target_monitor(
 
     #[cfg(target_os = "macos")]
     {
-        let window = exclude_window.expect("[capture_target_monitor] exclude_window is required");
-
         if !scap::has_permission() {
             log::warn!("[capture_current_monitor_with_scap] failed tohas_permission");
             if !scap::request_permission() {
@@ -156,13 +178,10 @@ pub fn capture_target_monitor(
             return None;
         }
 
-        let ns_handle = match window.ns_window() {
-            Ok(ns_handle) => ns_handle,
-            Err(_) => {
-                log::error!("[capture_current_monitor_with_scap] failed to get ns_window");
-                return None;
-            }
-        };
+        if monitor.name().unwrap_or("".to_string()).eq("DeskPad Display") {
+            log::warn!("[capture_current_monitor_with_scap] skip DeskPad Display");
+            return None;
+        }
 
         let monitor_id = match monitor.id() {
             Ok(id) => id,
@@ -175,7 +194,17 @@ pub fn capture_target_monitor(
             }
         };
 
-        let window_id = get_window_id_from_ns_handle(ns_handle);
+        let mut window_id: Option<u32> = None;
+        if let Some(exclude_window) = exclude_window {
+            let ns_handle = match exclude_window.ns_window() {
+                Ok(ns_handle) => ns_handle,
+                Err(_) => {
+                    log::error!("[capture_current_monitor_with_scap] failed to get ns_window");
+                    return None;
+                }
+            };
+            window_id = Some(get_window_id_from_ns_handle(ns_handle));
+        }
 
         let options = scap::capturer::Options {
             fps: 1,
@@ -186,11 +215,15 @@ pub fn capture_target_monitor(
             })),
             show_cursor: false,
             show_highlight: true,
-            excluded_targets: Some(vec![scap::Target::Window(scap::Window {
-                id: window_id,
-                title: "Snow Shot - Draw".to_string(),
-                raw_handle: window_id,
-            })]),
+            excluded_targets: if let Some(window_id) = window_id {
+                Some(vec![scap::Target::Window(scap::Window {
+                    id: window_id,
+                    title: "Snow Shot - Draw".to_string(),
+                    raw_handle: window_id,
+                })])
+            } else {
+                None
+            },
             output_type: scap::frame::FrameType::BGRAFrame,
             output_resolution: scap::capturer::Resolution::Captured,
             crop_area: if let Some(crop_area) = crop_area {
