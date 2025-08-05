@@ -71,7 +71,7 @@ export default function VideoRecordToolbar() {
         selectRectRef.current = selectRect;
 
         const appWindow = getCurrentWindow();
-        const scaleFactor = window.devicePixelRatio;
+        const scaleFactor = await appWindow.scaleFactor();
 
         const toolbarWidth = (toolbarRef.current?.clientWidth ?? 0) + 3 * 2;
         const toolbarHeight = (toolbarRef.current?.clientHeight ?? 0) + 3 * 2;
