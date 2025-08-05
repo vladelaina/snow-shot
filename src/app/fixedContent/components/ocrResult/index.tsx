@@ -179,6 +179,8 @@ export const OcrResult: React.FC<{
                         Math.pow(rectLeftBottomY - rectLeftTopY, 2),
                 );
 
+                textContainerElement.style.opacity = '0';
+
                 const textElement = document.createElement('div');
                 textElement.innerText = block.text;
                 textElement.style.color = token.colorText;
@@ -222,7 +224,7 @@ export const OcrResult: React.FC<{
                 textContainerElement.appendChild(textBackgroundElement);
                 textContainerElement.appendChild(textWrapElement);
 
-                setTimeout(() => {
+                requestAnimationFrame(() => {
                     let textWidth = textElement.clientWidth;
                     let textHeight = textElement.clientHeight;
                     if (isVertical) {
@@ -235,7 +237,8 @@ export const OcrResult: React.FC<{
                     textElement.style.transform = `scale(${scale})`;
                     textBackgroundElement.style.transform =
                         textWrapElement.style.transform = `translate(${centerX - width * 0.5}px, ${centerY - height * 0.5}px) rotate(${rotationDeg}deg)`;
-                }, 0);
+                    textContainerElement.style.opacity = '1';
+                });
             });
         },
         [token.colorBgContainer, token.colorText],
