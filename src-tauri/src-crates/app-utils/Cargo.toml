@@ -16,6 +16,5 @@ snow-shot-app-shared = { workspace = true }
 
 [target.'cfg(any(target_os = "macos"))'.dependencies]
 scap = { workspace = true }
-
 objc2 = { workspace = true }
 core-graphics-helmer-fork = "0.24.0"

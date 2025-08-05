@@ -198,8 +198,6 @@ impl MonitorList {
                     None
                 };
 
-                #[cfg(debug_assertions)]
-
                 let capture_image = super::capture_target_monitor(&monitor.monitor, monitor_crop_region, exclude_window);
 
                 match capture_image {
