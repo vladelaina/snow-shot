@@ -11,7 +11,7 @@ const PENDING_STROKE_COLOR = '#4096ff';
 const RECORDING_STROKE_COLOR = '#f5222d';
 const PAUSED_STROKE_COLOR = '#faad14';
 const BORDER_WIDTH = 2;
-const BORDER_OFFSET = BORDER_WIDTH / 2;
+const BORDER_PADDING = 5;
 
 export default function VideoRecordPage() {
     const selectCanvasRef = useRef<HTMLCanvasElement>(null);
@@ -48,10 +48,10 @@ export default function VideoRecordPage() {
             ctx.lineWidth = BORDER_WIDTH;
 
             // 计算矩形位置和大小，边框位于选择区域外部
-            const x = BORDER_OFFSET;
-            const y = BORDER_OFFSET;
-            const width = rect.max_x - rect.min_x + BORDER_WIDTH * 2 + BORDER_OFFSET;
-            const height = rect.max_y - rect.min_y + BORDER_WIDTH * 2 + BORDER_OFFSET;
+            const x = BORDER_WIDTH / 2;
+            const y = BORDER_WIDTH / 2;
+            const width = canvas.width - BORDER_WIDTH;
+            const height = canvas.height - BORDER_WIDTH;
 
             ctx.strokeRect(x, y, width, height);
         }
@@ -63,17 +63,17 @@ export default function VideoRecordPage() {
 
             const appWindow = getCurrentWindow();
 
+            const windowWidth =
+                selectRect.max_x - selectRect.min_x + BORDER_WIDTH + BORDER_PADDING * 2;
+            const windowHeight =
+                selectRect.max_y - selectRect.min_y + BORDER_WIDTH + BORDER_PADDING * 2;
+
             await Promise.all([
-                appWindow.setSize(
-                    new PhysicalSize(
-                        selectRect.max_x - selectRect.min_x + BORDER_WIDTH * 2 + BORDER_OFFSET * 2,
-                        selectRect.max_y - selectRect.min_y + BORDER_WIDTH * 2 + BORDER_OFFSET * 2,
-                    ),
-                ),
+                appWindow.setSize(new PhysicalSize(windowWidth, windowHeight)),
                 appWindow.setPosition(
                     new PhysicalPosition(
-                        selectRect.min_x - BORDER_WIDTH * 2 - BORDER_OFFSET,
-                        selectRect.min_y - BORDER_WIDTH * 2 - BORDER_OFFSET,
+                        selectRect.min_x - BORDER_WIDTH / 2 - BORDER_PADDING,
+                        selectRect.min_y - BORDER_WIDTH / 2 - BORDER_PADDING,
                     ),
                 ),
             ]);
@@ -85,8 +85,8 @@ export default function VideoRecordPage() {
                 return;
             }
 
-            canvas.width = selectRect.max_x - selectRect.min_x + BORDER_WIDTH * 4;
-            canvas.height = selectRect.max_y - selectRect.min_y + BORDER_WIDTH * 4;
+            canvas.width = windowWidth;
+            canvas.height = windowHeight;
 
             setVideoRecordState(VideoRecordState.Idle);
             drawSelectRect(VideoRecordState.Idle);

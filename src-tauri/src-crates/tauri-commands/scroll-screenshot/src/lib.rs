@@ -61,7 +61,7 @@ pub async fn scroll_screenshot_capture(
         // macOS 下截图区域是基于逻辑像素
         #[cfg(target_os = "macos")]
         {
-            rect_scale = (1.0 / monitor.scale_factor().unwrap_or(1.0)) as f64;
+            rect_scale = (1.0 / window.scale_factor().unwrap_or(1.0)) as f64;
         }
 
         let min_x = min_x as f64 * rect_scale;

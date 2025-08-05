@@ -6,7 +6,6 @@ use std::mem;
 use atree::Arena;
 use atree::Token;
 use rtree_rs::{RTree, Rect};
-use snow_shot_app_utils::monitor_info::MonitorList;
 use std::thread::sleep;
 use std::time::Duration;
 use uiautomation::UIAutomation;
@@ -18,8 +17,10 @@ use windows::Win32::UI::WindowsAndMessaging::GetClassNameW;
 use windows::Win32::UI::WindowsAndMessaging::SetForegroundWindow;
 use xcap::Window;
 
+use snow_shot_app_utils::monitor_info::MonitorList;
+use snow_shot_app_shared::ElementRect;
+
 use super::ElementLevel;
-use super::ElementRect;
 use super::TryGetElementByFocus;
 use super::UIAutomationError;
 

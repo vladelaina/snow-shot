@@ -290,16 +290,15 @@ impl VideoRecordService {
             let device_info_list = self.get_device_info_list();
 
             let audio_device = if params.enable_microphone {
-                device_info_list
-                    .iter()
-                    .find(|d| {
-                        d.device_type == DeviceType::Audio
-                            && Self::format_device_name(d) == params.microphone_device_name
-                    })
-                    .or(device_info_list.first())
+                device_info_list.iter().find(|d| {
+                    d.device_type == DeviceType::Audio
+                        && Self::format_device_name(d) == params.microphone_device_name
+                })
             } else {
                 None
             };
+
+            println!("audio_device: {:?}", audio_device);
 
             // 没有找到对应的显示器，回退到默认显示器
             let mut target_monitor_index = 0;

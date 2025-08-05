@@ -1,5 +1,5 @@
-use crate::ElementRect;
-use crate::TryGetElementByFocus;
+use super::TryGetElementByFocus;
+use snow_shot_app_shared::ElementRect;
 
 pub struct UIElements {}
 
@@ -13,16 +13,11 @@ impl UIElements {
         Ok(())
     }
 
-    pub fn init_cache(
-        &mut self,
-        monitor_rect: ElementRect,
-        try_get_element_by_focus: TryGetElementByFocus,
-    ) -> Result<(), ()> {
+    pub fn init_cache(&mut self, try_get_element_by_focus: TryGetElementByFocus) -> Result<(), ()> {
         Ok(())
     }
 
-    pub fn recovery_window_z_order(&self) {
-    }
+    pub fn recovery_window_z_order(&self) {}
 
     pub fn get_element_from_point_walker<F>(
         &mut self,

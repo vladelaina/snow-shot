@@ -10,22 +10,36 @@ pub struct MonitorInfo {
 
 impl MonitorInfo {
     pub fn new(monitor: &Monitor) -> Self {
-        let monitor_rect = monitor.get_dev_mode_w().unwrap();
+        let monitor_rect: ElementRect;
+
+        #[cfg(target_os = "windows")]
+        {
+            let rect = monitor.get_dev_mode_w().unwrap();
+            monitor_rect = ElementRect {
+                min_x: unsafe { rect.Anonymous1.Anonymous2.dmPosition.x },
+                min_y: unsafe { rect.Anonymous1.Anonymous2.dmPosition.y },
+                max_x: unsafe { rect.Anonymous1.Anonymous2.dmPosition.x + rect.dmPelsWidth as i32 },
+                max_y: unsafe {
+                    rect.Anonymous1.Anonymous2.dmPosition.y + rect.dmPelsHeight as i32
+                },
+            }
+        }
+
+        #[cfg(target_os = "macos")]
+        {
+            let rect = monitor.bounds().unwrap();
+            let monitor_scale_factor = monitor.scale_factor().unwrap_or(1.0) as f64;
+            monitor_rect = ElementRect {
+                min_x: (rect.origin.x * monitor_scale_factor) as i32,
+                min_y: (rect.origin.y * monitor_scale_factor) as i32,
+                max_x: ((rect.origin.x + rect.size.width) * monitor_scale_factor) as i32,
+                max_y: ((rect.origin.y + rect.size.height) * monitor_scale_factor) as i32,
+            }
+        }
 
         MonitorInfo {
             monitor: monitor.clone(),
-            rect: ElementRect {
-                min_x: unsafe { monitor_rect.Anonymous1.Anonymous2.dmPosition.x },
-                min_y: unsafe { monitor_rect.Anonymous1.Anonymous2.dmPosition.y },
-                max_x: unsafe {
-                    monitor_rect.Anonymous1.Anonymous2.dmPosition.x
-                        + monitor_rect.dmPelsWidth as i32
-                },
-                max_y: unsafe {
-                    monitor_rect.Anonymous1.Anonymous2.dmPosition.y
-                        + monitor_rect.dmPelsHeight as i32
-                },
-            },
+            rect: monitor_rect,
         }
     }
 

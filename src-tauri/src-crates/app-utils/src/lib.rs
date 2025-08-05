@@ -144,6 +144,8 @@ pub fn capture_target_monitor(
 
     #[cfg(target_os = "macos")]
     {
+        let window = exclude_window.expect("[capture_target_monitor] exclude_window is required");
+
         if !scap::has_permission() {
             log::warn!("[capture_current_monitor_with_scap] failed tohas_permission");
             if !scap::request_permission() {
@@ -184,15 +186,11 @@ pub fn capture_target_monitor(
             })),
             show_cursor: false,
             show_highlight: true,
-            excluded_targets: if let Some(exclude_window) = exclude_window {
-                Some(vec![scap::Target::Window(scap::Window {
-                    id: exclude_window.ns_window().unwrap_or(0),
-                    title: "".to_string(),
-                    raw_handle: exclude_window.ns_window().unwrap_or(0),
-                })])
-            } else {
-                None
-            },
+            excluded_targets: Some(vec![scap::Target::Window(scap::Window {
+                id: window_id,
+                title: "Snow Shot - Draw".to_string(),
+                raw_handle: window_id,
+            })]),
             output_type: scap::frame::FrameType::BGRAFrame,
             output_resolution: scap::capturer::Resolution::Captured,
             crop_area: if let Some(crop_area) = crop_area {

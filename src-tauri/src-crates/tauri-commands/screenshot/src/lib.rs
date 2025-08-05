@@ -189,19 +189,21 @@ pub struct WindowElement {
     window_id: u32,
 }
 
-pub async fn get_window_elements() -> Result<Vec<WindowElement>, ()> {
+pub async fn get_window_elements(
+    #[allow(unused_variables)] window: tauri::Window,
+) -> Result<Vec<WindowElement>, ()> {
     // 获取所有窗口，简单筛选下需要的窗口，然后获取窗口所有元素
     let windows = Window::all().unwrap_or_default();
 
     #[cfg(target_os = "macos")]
-    let window_size_scale;
+    let window_size_scale: f32;
     #[cfg(not(target_os = "macos"))]
     let window_size_scale = 1.0f32;
 
     #[cfg(target_os = "macos")]
     {
         // macOS 下窗口基于逻辑像素，这里统一转为物理像素
-        window_size_scale = monitor.scale_factor().unwrap_or(1.0);
+        window_size_scale = window.scale_factor().unwrap_or(1.0) as f32;
     }
 
     let mut rect_list = Vec::new();
@@ -299,14 +301,7 @@ pub async fn get_window_elements() -> Result<Vec<WindowElement>, ()> {
 
         #[cfg(target_os = "macos")]
         {
-            if window_title.eq("Dock")
-                && window_rect.equals(
-                    monitor_rect.min_x,
-                    monitor_rect.min_y,
-                    monitor_rect.max_x,
-                    monitor_rect.max_y,
-                )
-            {
+            if window_title.eq("Dock") {
                 continue;
             }
         }

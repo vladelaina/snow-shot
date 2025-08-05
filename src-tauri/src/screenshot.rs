@@ -65,8 +65,8 @@ pub async fn recovery_window_z_order(
 }
 
 #[command]
-pub async fn get_window_elements() -> Result<Vec<WindowElement>, ()> {
-    snow_shot_tauri_commands_screenshot::get_window_elements().await
+pub async fn get_window_elements(window: tauri::Window) -> Result<Vec<WindowElement>, ()> {
+    snow_shot_tauri_commands_screenshot::get_window_elements(window).await
 }
 
 #[command]

@@ -10,8 +10,8 @@ tauri = { version = "^2.3" }
 serde = { version = "^1.0", features = ["derive"] }
 rtree_rs = "^0.1.4"
 atree = "^0.5.2"
-xcap = { git = "https://github.com/mg-chao/xcap", branch = "20250710_fix_macos" }
 thiserror = "2.0.12"
+xcap = { workspace = true }
 
 [target.'cfg(any(target_os = "windows"))'.dependencies]
 windows = { version = "0.61.1", features = [
@@ -28,5 +28,6 @@ windows = { version = "0.61.1", features = [
 ] }
 uiautomation = { workspace = true }
 snow-shot-app-utils = { workspace = true }
+snow-shot-app-shared = { workspace = true }
 
 [target.'cfg(any(target_os = "macos"))'.dependencies]
