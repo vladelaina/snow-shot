@@ -1,5 +1,4 @@
 import * as clipboard from '@tauri-apps/plugin-clipboard-manager';
-import { getPlatform } from '.';
 
 export const writeTextToClipboard = async (text: string) => {
     let isSuccess = false;
@@ -19,18 +18,11 @@ export const writeTextToClipboard = async (text: string) => {
 };
 
 export const writeImageToClipboard = async (image: Blob, format = 'image/png') => {
-    const currentPlatform = getPlatform();
-
     let isSuccess = false;
     try {
-        if (currentPlatform === 'macos') {
-            isSuccess = false;
-        } else {
-            await navigator.clipboard.write([new ClipboardItem({ [format]: image })]);
-            isSuccess = true;
-        }
+        await clipboard.writeImage(await image.arrayBuffer());
+        isSuccess = true;
     } catch (error) {
-        isSuccess = false;
         console.warn('[clipboard] writeImageToClipboard error', error);
     }
 
@@ -38,7 +30,7 @@ export const writeImageToClipboard = async (image: Blob, format = 'image/png') =
         return;
     }
 
-    await clipboard.writeImage(await image.arrayBuffer());
+    await navigator.clipboard.write([new ClipboardItem({ [format]: image })]);
 };
 
 export const writeHtmlToClipboard = async (html: string) => {
