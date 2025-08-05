@@ -3,14 +3,19 @@ use tauri::ipc::Response;
 use tauri_plugin_clipboard_manager::ClipboardExt;
 use tokio::sync::Mutex;
 
-use snow_shot_app_os::ElementRect;
 use snow_shot_app_os::TryGetElementByFocus;
 use snow_shot_app_os::ui_automation::UIElements;
+use snow_shot_app_shared::ElementRect;
 use snow_shot_tauri_commands_screenshot::WindowElement;
 
 #[command]
 pub async fn capture_current_monitor(window: tauri::Window, encoder: String) -> Response {
     snow_shot_tauri_commands_screenshot::capture_current_monitor(window, encoder).await
+}
+
+#[command]
+pub async fn capture_all_monitors(window: tauri::Window) -> Response {
+    snow_shot_tauri_commands_screenshot::capture_all_monitors(window).await
 }
 
 #[command]
@@ -60,8 +65,8 @@ pub async fn recovery_window_z_order(
 }
 
 #[command]
-pub async fn get_window_elements() -> Result<Vec<WindowElement>, ()> {
-    snow_shot_tauri_commands_screenshot::get_window_elements().await
+pub async fn get_window_elements(window: tauri::Window) -> Result<Vec<WindowElement>, ()> {
+    snow_shot_tauri_commands_screenshot::get_window_elements(window).await
 }
 
 #[command]

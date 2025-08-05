@@ -40,11 +40,13 @@ body {
 .excalidraw .App-menu_top .shapes-section,
 .excalidraw .App-menu_top .layer-ui__wrapper__top-right {
     opacity: 0 !important;
+    display: none !important;
     pointer-events: none !important;
 }
 
 .excalidraw .App-menu_bottom {
     opacity: 0 !important;
+    display: none !important;
     pointer-events: none !important;
 }
 

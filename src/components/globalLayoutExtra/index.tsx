@@ -1,7 +1,7 @@
 import { message, Modal } from 'antd';
 import { MessageInstance } from 'antd/es/message/interface';
 import { HookAPI } from 'antd/es/modal/useModal';
-import React, { useContext, useEffect } from 'react';
+import React, { useContext, useEffect, useMemo } from 'react';
 
 export type AntdContextType = {
     message: MessageInstance;
@@ -14,7 +14,14 @@ export const AntdContext = React.createContext<AntdContextType>({
 });
 
 export const AntdContextWrap: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-    const [messageApi, messageContextHolder] = message.useMessage();
+    const [messageApi, messageContextHolder] = message.useMessage(
+        useMemo(
+            () => ({
+                prefixCls: 'app-global-message',
+            }),
+            [],
+        ),
+    );
     const [modalApi, modalContextHolder] = Modal.useModal();
     return (
         <AntdContext.Provider value={{ message: messageApi, modal: modalApi }}>

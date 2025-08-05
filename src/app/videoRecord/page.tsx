@@ -1,21 +1,23 @@
 'use client';
 
 import { ElementRect } from '@/commands';
-import { MonitorInfo } from '@/commands/core';
 import { getCurrentWindow, PhysicalPosition, PhysicalSize } from '@tauri-apps/api/window';
 import { useCallback, useContext, useEffect, useRef, useState } from 'react';
 import { getVideoRecordParams, VideoRecordState } from './extra';
 import { EventListenerContext } from '@/components/eventListener';
 import { VideoRecordWindowInfo } from '@/functions/videoRecord';
+import { getPlatform } from '@/utils';
+import { setCurrentWindowAlwaysOnTop } from '@/commands/core';
 
 const PENDING_STROKE_COLOR = '#4096ff';
 const RECORDING_STROKE_COLOR = '#f5222d';
 const PAUSED_STROKE_COLOR = '#faad14';
+const BORDER_WIDTH = 2;
+const BORDER_PADDING = 5;
 
 export default function VideoRecordPage() {
     const selectCanvasRef = useRef<HTMLCanvasElement>(null);
 
-    const monitorInfoRef = useRef<MonitorInfo | undefined>(undefined);
     const selectRectRef = useRef<ElementRect | undefined>(undefined);
 
     const { addListener, removeListener } = useContext(EventListenerContext);
@@ -45,48 +47,58 @@ export default function VideoRecordPage() {
 
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             ctx.strokeStyle = strokeColor;
-            ctx.lineWidth = 2;
+            ctx.lineWidth = BORDER_WIDTH;
 
             // 计算矩形位置和大小，边框位于选择区域外部
-            const borderOffset = ctx.lineWidth / 2;
-            const x = rect.min_x - borderOffset;
-            const y = rect.min_y - borderOffset;
-            const width = rect.max_x - rect.min_x + ctx.lineWidth;
-            const height = rect.max_y - rect.min_y + ctx.lineWidth;
+            const x = BORDER_WIDTH / 2;
+            const y = BORDER_WIDTH / 2;
+            const width = canvas.width - BORDER_WIDTH;
+            const height = canvas.height - BORDER_WIDTH;
 
             ctx.strokeRect(x, y, width, height);
         }
     }, []);
 
     const init = useCallback(
-        async (monitorInfo: MonitorInfo, selectRect: ElementRect) => {
-            monitorInfoRef.current = monitorInfo;
+        async (selectRect: ElementRect) => {
             selectRectRef.current = selectRect;
 
             const appWindow = getCurrentWindow();
 
-            await Promise.all([
-                appWindow.setSize(
-                    new PhysicalSize(
-                        monitorInfoRef.current.monitor_width,
-                        monitorInfoRef.current.monitor_height,
-                    ),
-                ),
+            const windowWidth =
+                selectRect.max_x - selectRect.min_x + BORDER_WIDTH + BORDER_PADDING * 2;
+            const windowHeight =
+                selectRect.max_y - selectRect.min_y + BORDER_WIDTH + BORDER_PADDING * 2;
+
+            if (getPlatform() === 'macos') {
                 appWindow.setPosition(
                     new PhysicalPosition(
-                        monitorInfoRef.current.monitor_x,
-                        monitorInfoRef.current.monitor_y,
+                        selectRect.min_x - BORDER_WIDTH / 2 - BORDER_PADDING,
+                        selectRect.min_y - BORDER_WIDTH / 2 - BORDER_PADDING,
+                    ),
+                );
+            }
+
+            await Promise.all([
+                appWindow.setSize(new PhysicalSize(windowWidth, windowHeight)),
+                appWindow.setPosition(
+                    new PhysicalPosition(
+                        selectRect.min_x - BORDER_WIDTH / 2 - BORDER_PADDING,
+                        selectRect.min_y - BORDER_WIDTH / 2 - BORDER_PADDING,
                     ),
                 ),
+                setCurrentWindowAlwaysOnTop(true),
             ]);
+
+            await appWindow.show();
 
             const canvas = selectCanvasRef.current;
             if (!canvas) {
                 return;
             }
 
-            canvas.width = monitorInfoRef.current.monitor_width;
-            canvas.height = monitorInfoRef.current.monitor_height;
+            canvas.width = windowWidth;
+            canvas.height = windowHeight;
 
             setVideoRecordState(VideoRecordState.Idle);
             drawSelectRect(VideoRecordState.Idle);
@@ -101,29 +113,18 @@ export default function VideoRecordPage() {
     }, [drawSelectRect, videoRecordState]);
 
     useEffect(() => {
-        const { monitorInfo, selectRect } = getVideoRecordParams();
-        init(monitorInfo, selectRect);
+        const { selectRect } = getVideoRecordParams();
+        init(selectRect);
 
         const listenerId = addListener('reload-video-record', (params) => {
             const windowInfo = (params as { payload: VideoRecordWindowInfo }).payload;
 
-            init(
-                {
-                    monitor_x: windowInfo.monitor_x,
-                    monitor_y: windowInfo.monitor_y,
-                    monitor_width: windowInfo.monitor_width,
-                    monitor_height: windowInfo.monitor_height,
-                    monitor_scale_factor: windowInfo.monitor_scale_factor,
-                    mouse_x: 0,
-                    mouse_y: 0,
-                },
-                {
-                    min_x: windowInfo.select_rect_min_x,
-                    min_y: windowInfo.select_rect_min_y,
-                    max_x: windowInfo.select_rect_max_x,
-                    max_y: windowInfo.select_rect_max_y,
-                },
-            );
+            init({
+                min_x: windowInfo.select_rect_min_x,
+                min_y: windowInfo.select_rect_min_y,
+                max_x: windowInfo.select_rect_max_x,
+                max_y: windowInfo.select_rect_max_y,
+            });
         });
 
         const closeVideoRecordWindowListenerId = addListener('close-video-record-window', () => {

@@ -5,8 +5,8 @@ use std::{
     path::PathBuf,
     time::{SystemTime, UNIX_EPOCH},
 };
-use tauri::Emitter;
 use tauri::Manager;
+use tauri::{Emitter, PhysicalPosition};
 use tokio::{sync::Mutex, time::Duration};
 
 use snow_shot_app_os::notification;
@@ -14,7 +14,7 @@ use snow_shot_app_services::{
     device_event_handler_service::DeviceEventHandlerService,
     free_drag_window_service::FreeDragWindowService,
 };
-use snow_shot_app_shared::EnigoManager;
+use snow_shot_app_shared::{ElementRect, EnigoManager};
 use snow_shot_app_utils::get_target_monitor;
 
 pub async fn exit_app(window: tauri::Window, handle: tauri::AppHandle) {
@@ -110,6 +110,20 @@ pub async fn create_fixed_content_window(app: tauri::AppHandle, scroll_screensho
     let monitor_x = monitor.x().unwrap() as f64;
     let monitor_y = monitor.y().unwrap() as f64;
 
+    let window_x;
+    let window_y;
+    #[cfg(target_os = "macos")]
+    {
+        window_x = monitor_x;
+        window_y = monitor_y;
+    }
+    #[cfg(not(target_os = "macos"))]
+    {
+        let monitor_scale_factor = monitor.scale_factor().unwrap() as f64;
+        window_x = monitor_x / monitor_scale_factor;
+        window_y = monitor_y / monitor_scale_factor;
+    }
+
     let window = tauri::WebviewWindowBuilder::new(
         &app,
         format!(
@@ -130,7 +144,7 @@ pub async fn create_fixed_content_window(app: tauri::AppHandle, scroll_screensho
     .minimizable(false)
     .fullscreen(false)
     .title("Snow Shot - Fixed Content")
-    .position(monitor_x, monitor_y)
+    .position(window_x, window_y)
     .decorations(false)
     .shadow(false)
     .transparent(false)
@@ -148,6 +162,7 @@ pub async fn create_fixed_content_window(app: tauri::AppHandle, scroll_screensho
 pub async fn create_full_screen_draw_window(app: tauri::AppHandle) {
     let window_label = "full-screen-draw";
 
+    // 首先先查询是否存在窗口
     let window = app.get_webview_window(window_label);
 
     if let Some(window) = window {
@@ -159,8 +174,6 @@ pub async fn create_full_screen_draw_window(app: tauri::AppHandle) {
         return;
     }
 
-    // 首先先查询是否存在窗口
-
     let (_, _, monitor) = get_target_monitor();
 
     let monitor_x = monitor.x().unwrap() as f64;
@@ -168,17 +181,23 @@ pub async fn create_full_screen_draw_window(app: tauri::AppHandle) {
     let monitor_width = monitor.width().unwrap() as f64;
     let monitor_height = monitor.height().unwrap() as f64;
 
+    let window_x;
+    let window_y;
     let window_width;
     let window_height;
 
     #[cfg(target_os = "macos")]
     {
+        window_x = monitor_x;
+        window_y = monitor_y;
         window_width = monitor_width;
         window_height = monitor_height;
     }
     #[cfg(not(target_os = "macos"))]
     {
         let monitor_scale_factor = monitor.scale_factor().unwrap() as f64;
+        window_x = monitor_x / monitor_scale_factor;
+        window_y = monitor_y / monitor_scale_factor;
         window_width = monitor_width / monitor_scale_factor;
         window_height = monitor_height / monitor_scale_factor;
     }
@@ -193,7 +212,7 @@ pub async fn create_full_screen_draw_window(app: tauri::AppHandle) {
     .maximizable(false)
     .minimizable(false)
     .title("Snow Shot - Full Screen Draw")
-    .position(monitor_x, monitor_y)
+    .position(window_x, window_y)
     .inner_size(window_width, window_height)
     .decorations(false)
     .shadow(false)
@@ -219,7 +238,7 @@ pub async fn create_full_screen_draw_window(app: tauri::AppHandle) {
     .maximizable(false)
     .minimizable(false)
     .title("Snow Shot - Full Screen Draw - Switch Mouse Through")
-    .position(monitor_x, monitor_y)
+    .position(window_x, window_y)
     .inner_size(1.0, 1.0)
     .decorations(false)
     .shadow(false)
@@ -284,17 +303,32 @@ pub async fn get_current_monitor_info() -> Result<MonitorInfo, ()> {
     Ok(monitor_info)
 }
 
+#[derive(Serialize, Clone)]
+pub struct MonitorsBoundingBox {
+    rect: ElementRect,
+    monitor_rect_list: Vec<ElementRect>,
+}
+
+pub async fn get_monitors_bounding_box(
+    app: &tauri::AppHandle,
+    region: Option<ElementRect>,
+) -> Result<MonitorsBoundingBox, ()> {
+    let monitors = snow_shot_app_utils::get_capture_monitor_list(app, region);
+
+    let monitors_bounding_box = monitors.get_monitors_bounding_box();
+
+    Ok(MonitorsBoundingBox {
+        rect: monitors_bounding_box,
+        monitor_rect_list: monitors.monitor_rect_list(),
+    })
+}
+
 pub async fn send_new_version_notification(title: String, body: String) {
     notification::send_new_version_notification(title, body);
 }
 
 #[derive(Serialize, Clone, Copy)]
 struct VideoRecordWindowInfo {
-    monitor_x: f64,
-    monitor_y: f64,
-    monitor_width: f64,
-    monitor_height: f64,
-    monitor_scale_factor: f64,
     select_rect_min_x: i32,
     select_rect_min_y: i32,
     select_rect_max_x: i32,
@@ -304,11 +338,6 @@ struct VideoRecordWindowInfo {
 /// 创建屏幕录制窗口
 pub async fn create_video_record_window(
     app: tauri::AppHandle,
-    monitor_x: f64,
-    monitor_y: f64,
-    monitor_width: f64,
-    monitor_height: f64,
-    monitor_scale_factor: f64,
     select_rect_min_x: i32,
     select_rect_min_y: i32,
     select_rect_max_x: i32,
@@ -323,11 +352,6 @@ pub async fn create_video_record_window(
             .emit(
                 "reload-video-record",
                 VideoRecordWindowInfo {
-                    monitor_x,
-                    monitor_y,
-                    monitor_width,
-                    monitor_height,
-                    monitor_scale_factor,
                     select_rect_min_x,
                     select_rect_min_y,
                     select_rect_max_x,
@@ -339,30 +363,11 @@ pub async fn create_video_record_window(
         return;
     }
 
-    let window_width;
-    let window_height;
-
-    #[cfg(target_os = "macos")]
-    {
-        window_width = monitor_width;
-        window_height = monitor_height;
-    }
-    #[cfg(not(target_os = "macos"))]
-    {
-        window_width = monitor_width / monitor_scale_factor;
-        window_height = monitor_height / monitor_scale_factor;
-    }
-
-    tauri::WebviewWindowBuilder::new(
+    let video_record_window = tauri::WebviewWindowBuilder::new(
         &app,
         window_label,
         tauri::WebviewUrl::App(PathBuf::from(format!(
-            "/videoRecord?monitor_x={}&monitor_y={}&monitor_width={}&monitor_height={}&monitor_scale_factor={}&select_rect_min_x={}&select_rect_min_y={}&select_rect_max_x={}&select_rect_max_y={}",
-            monitor_x,
-            monitor_y,
-            monitor_width,
-            monitor_height,
-            monitor_scale_factor,
+            "/videoRecord?select_rect_min_x={}&select_rect_min_y={}&select_rect_max_x={}&select_rect_max_y={}",
             select_rect_min_x,
             select_rect_min_y,
             select_rect_max_x,
@@ -374,15 +379,21 @@ pub async fn create_video_record_window(
     .maximizable(false)
     .minimizable(false)
     .title("Snow Shot - Video Record")
-    .position(monitor_x, monitor_y)
-    .inner_size(window_width, window_height)
+    .position(0.0, 0.0)
+    .inner_size(1.0, 1.0)
     .decorations(false)
     .shadow(false)
     .transparent(true)
     .skip_taskbar(true)
     .resizable(false)
+    .visible(false)
     .build()
     .unwrap();
+
+    video_record_window
+        .set_position(PhysicalPosition::new(select_rect_min_x, select_rect_min_y))
+        .unwrap();
+    video_record_window.show().unwrap();
 
     let window_label = "video-recording-toolbar";
 
@@ -392,16 +403,11 @@ pub async fn create_video_record_window(
         window.destroy().unwrap();
     }
 
-    tauri::WebviewWindowBuilder::new(
+    let video_record_toolbar_window = tauri::WebviewWindowBuilder::new(
         &app,
         window_label,
         tauri::WebviewUrl::App(PathBuf::from(format!(
-            "/videoRecord/toolbar?monitor_x={}&monitor_y={}&monitor_width={}&monitor_height={}&monitor_scale_factor={}&select_rect_min_x={}&select_rect_min_y={}&select_rect_max_x={}&select_rect_max_y={}",
-            monitor_x,
-            monitor_y,
-            monitor_width,
-            monitor_height,
-            monitor_scale_factor,
+            "/videoRecord/toolbar?select_rect_min_x={}&select_rect_min_y={}&select_rect_max_x={}&select_rect_max_y={}",
             select_rect_min_x,
             select_rect_min_y,
             select_rect_max_x,
@@ -413,15 +419,21 @@ pub async fn create_video_record_window(
     .maximizable(false)
     .minimizable(false)
     .title("Snow Shot - Video Record - Toolbar")
-    .position(monitor_x, monitor_y)
+    .position(0.0, 0.0)
     .inner_size(1.0, 1.0)
     .decorations(false)
     .shadow(false)
     .transparent(true)
     .skip_taskbar(true)
     .resizable(false)
+    .visible(false)
     .build()
     .unwrap();
+
+    video_record_toolbar_window
+        .set_position(PhysicalPosition::new(select_rect_min_x, select_rect_min_y))
+        .unwrap();
+    video_record_toolbar_window.show().unwrap();
 }
 
 pub async fn start_free_drag(

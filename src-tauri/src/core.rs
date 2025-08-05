@@ -1,4 +1,5 @@
-use snow_shot_app_shared::EnigoManager;
+use snow_shot_app_shared::{ElementRect, EnigoManager};
+use snow_shot_tauri_commands_core::MonitorsBoundingBox;
 use tauri::{Manager, command, ipc::Response};
 use tokio::sync::Mutex;
 
@@ -70,6 +71,14 @@ pub async fn get_current_monitor_info() -> Result<snow_shot_tauri_commands_core:
 }
 
 #[command]
+pub async fn get_monitors_bounding_box(
+    app: tauri::AppHandle,
+    region: Option<ElementRect>,
+) -> Result<MonitorsBoundingBox, ()> {
+    snow_shot_tauri_commands_core::get_monitors_bounding_box(&app, region).await
+}
+
+#[command]
 pub async fn send_new_version_notification(title: String, body: String) {
     snow_shot_tauri_commands_core::send_new_version_notification(title, body).await;
 }
@@ -78,11 +87,6 @@ pub async fn send_new_version_notification(title: String, body: String) {
 #[command]
 pub async fn create_video_record_window(
     app: tauri::AppHandle,
-    monitor_x: f64,
-    monitor_y: f64,
-    monitor_width: f64,
-    monitor_height: f64,
-    monitor_scale_factor: f64,
     select_rect_min_x: i32,
     select_rect_min_y: i32,
     select_rect_max_x: i32,
@@ -90,11 +94,6 @@ pub async fn create_video_record_window(
 ) {
     snow_shot_tauri_commands_core::create_video_record_window(
         app,
-        monitor_x,
-        monitor_y,
-        monitor_width,
-        monitor_height,
-        monitor_scale_factor,
         select_rect_min_x,
         select_rect_min_y,
         select_rect_max_x,

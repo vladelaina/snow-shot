@@ -23,7 +23,7 @@ export const ExtraTool: React.FC<{
 }> = ({ finishCapture }) => {
     const intl = useIntl();
 
-    const { monitorInfoRef, selectLayerActionRef } = useContext(DrawContext);
+    const { captureBoundingBoxInfoRef, selectLayerActionRef } = useContext(DrawContext);
 
     const [activeTool, setActiveTool] = useState<ExtraToolList | undefined>(undefined);
     const [enabled, setEnabled] = useState(false);
@@ -67,32 +67,20 @@ export const ExtraTool: React.FC<{
                         type={getButtonTypeByState(activeTool === ExtraToolList.VideoRecord)}
                         key="videoRecord"
                         onClick={() => {
-                            const monitorInfo = monitorInfoRef.current;
+                            const captureBoundingBoxInfo = captureBoundingBoxInfoRef.current;
                             const selectRect = selectLayerActionRef.current?.getSelectRect();
-                            if (!monitorInfo || !selectRect) {
+                            if (!captureBoundingBoxInfo || !selectRect) {
                                 return;
                             }
 
-                            let rectWidth = selectRect.max_x - selectRect.min_x;
-                            let rectHeight = selectRect.max_y - selectRect.min_y;
-
-                            if (rectWidth % 2 === 1) {
-                                rectWidth--;
-                            }
-                            if (rectHeight % 2 === 1) {
-                                rectHeight--;
-                            }
+                            const monitorRect =
+                                captureBoundingBoxInfo.transformWindowRect(selectRect);
 
                             createVideoRecordWindow(
-                                monitorInfo.monitor_x,
-                                monitorInfo.monitor_y,
-                                monitorInfo.monitor_width,
-                                monitorInfo.monitor_height,
-                                monitorInfo.monitor_scale_factor,
-                                selectRect.min_x,
-                                selectRect.min_y,
-                                selectRect.min_x + rectWidth,
-                                selectRect.min_y + rectHeight,
+                                monitorRect.min_x,
+                                monitorRect.min_y,
+                                monitorRect.max_x,
+                                monitorRect.max_y,
                             );
 
                             finishCapture();

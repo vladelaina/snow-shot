@@ -1,13 +1,11 @@
-use image::codecs::png::{CompressionType, FilterType, PngEncoder};
-use image::codecs::webp::WebPEncoder;
 use serde::Serialize;
-use snow_shot_app_os::ElementRect;
 use snow_shot_app_os::TryGetElementByFocus;
 use snow_shot_app_os::ui_automation::UIElements;
+use snow_shot_app_shared::ElementRect;
 use std::path::PathBuf;
 use std::time::{SystemTime, UNIX_EPOCH};
-use tauri::Emitter;
 use tauri::ipc::Response;
+use tauri::{Emitter, Manager};
 use tokio::sync::Mutex;
 use xcap::Window;
 
@@ -18,55 +16,35 @@ pub async fn capture_current_monitor(
     // 获取当前鼠标的位置
     let (_, _, monitor) = snow_shot_app_utils::get_target_monitor();
 
-    let image_buffer: Option<image::DynamicImage>;
-    #[cfg(target_os = "windows")]
-    {
-        image_buffer = match monitor.capture_image() {
-            Ok(image) => Some(image::DynamicImage::ImageRgba8(image)),
-            Err(_) => None,
+    let image_buffer =
+        match snow_shot_app_utils::capture_target_monitor(&monitor, None, Some(&window)) {
+            Some(image) => image,
+            None => {
+                log::error!("Failed to capture current monitor");
+                return Response::new(Vec::new());
+            }
         };
-    }
-    #[cfg(target_os = "macos")]
-    {
-        image_buffer =
-            match snow_shot_app_utils::capture_current_monitor_with_scap(&window, &monitor, None) {
-                Some(image) => Some(image),
-                None => None,
-            };
-    }
 
-    let image_buffer = match image_buffer {
-        Some(image) => image,
-        None => {
-            log::error!("Failed to capture current monitor");
-            return Response::new(Vec::new());
-        }
-    };
+    let image_buffer = snow_shot_app_utils::encode_image(
+        &image_buffer,
+        match encoder.as_str() {
+            "webp" => snow_shot_app_utils::ImageEncoder::Webp,
+            "png" => snow_shot_app_utils::ImageEncoder::Png,
+            _ => snow_shot_app_utils::ImageEncoder::Webp,
+        },
+    );
 
-    // 前端处理渲染图片的方式有两种
-    // 1. 接受 RGBA 数据通过 canvas 转为 base64 后显示
-    // 2. 直接接受 png、jpg 文件格式的二进制数据
-    // 所以无需将原始的 RGBA 数据返回给前端，直接在 rust 编码为指定格式返回前端
-    // 前端也无需再转为 base64 显示
+    Response::new(image_buffer)
+}
 
-    // 编码为指定格式
-    let mut buf = Vec::with_capacity(image_buffer.as_bytes().len() / 8);
+pub async fn capture_all_monitors(window: tauri::Window) -> Response {
+    let image = snow_shot_app_utils::get_capture_monitor_list(&window.app_handle(), None)
+        .capture(Some(&window));
 
-    if encoder == "webp" {
-        image_buffer
-            .write_with_encoder(WebPEncoder::new_lossless(&mut buf))
-            .unwrap();
-    } else {
-        image_buffer
-            .write_with_encoder(PngEncoder::new_with_quality(
-                &mut buf,
-                CompressionType::Fast,
-                FilterType::Adaptive,
-            ))
-            .unwrap();
-    }
+    let image_buffer =
+        snow_shot_app_utils::encode_image(&image, snow_shot_app_utils::ImageEncoder::Png);
 
-    return Response::new(buf);
+    Response::new(image_buffer)
 }
 
 pub async fn capture_focused_window<F>(
@@ -188,23 +166,7 @@ pub async fn init_ui_elements_cache(
 ) -> Result<(), ()> {
     let mut ui_elements = ui_elements.lock().await;
 
-    // 多显示器时会获取错误
-    // 临时用显示器坐标做个转换，后面兼容跨屏截图时取消
-    let (_, _, monitor) = snow_shot_app_utils::get_target_monitor();
-    let monitor_x = monitor.x().unwrap_or(0);
-    let monitor_y = monitor.y().unwrap_or(0);
-    let monitor_width = monitor.width().unwrap_or(0) as i32;
-    let monitor_height = monitor.height().unwrap_or(0) as i32;
-
-    match ui_elements.init_cache(
-        ElementRect {
-            min_x: monitor_x,
-            min_y: monitor_y,
-            max_x: monitor_x + monitor_width,
-            max_y: monitor_y + monitor_height,
-        },
-        try_get_element_by_focus,
-    ) {
+    match ui_elements.init_cache(try_get_element_by_focus) {
         Ok(_) => (),
         Err(_) => return Err(()),
     }
@@ -228,33 +190,21 @@ pub struct WindowElement {
     window_id: u32,
 }
 
-pub async fn get_window_elements() -> Result<Vec<WindowElement>, ()> {
-    let (_, _, monitor) = snow_shot_app_utils::get_target_monitor();
-
-    // 注意 macOS 下的 monitor 是基于逻辑像素
-    let monitor_min_x = monitor.x().unwrap_or(0);
-    let monitor_min_y = monitor.y().unwrap_or(0);
-    let monitor_max_x = monitor_min_x + monitor.width().unwrap_or(0) as i32;
-    let monitor_max_y = monitor_min_y + monitor.height().unwrap_or(0) as i32;
+pub async fn get_window_elements(
+    #[allow(unused_variables)] window: tauri::Window,
+) -> Result<Vec<WindowElement>, ()> {
     // 获取所有窗口，简单筛选下需要的窗口，然后获取窗口所有元素
     let windows = Window::all().unwrap_or_default();
 
-    let monitor_rect = ElementRect {
-        min_x: 0,
-        min_y: 0,
-        max_x: monitor_max_x - monitor_min_x,
-        max_y: monitor_max_y - monitor_min_y,
-    };
-
     #[cfg(target_os = "macos")]
-    let window_size_scale;
+    let window_size_scale: f32;
     #[cfg(not(target_os = "macos"))]
     let window_size_scale = 1.0f32;
 
     #[cfg(target_os = "macos")]
     {
         // macOS 下窗口基于逻辑像素，这里统一转为物理像素
-        window_size_scale = monitor.scale_factor().unwrap_or(1.0);
+        window_size_scale = window.scale_factor().unwrap_or(1.0) as f32;
     }
 
     let mut rect_list = Vec::new();
@@ -344,29 +294,17 @@ pub async fn get_window_elements() -> Result<Vec<WindowElement>, ()> {
         };
 
         window_rect = ElementRect {
-            min_x: x - monitor_min_x,
-            min_y: y - monitor_min_y,
-            max_x: x + width - monitor_min_x,
-            max_y: y + height - monitor_min_y,
+            min_x: x,
+            min_y: y,
+            max_x: x + width,
+            max_y: y + height,
         };
 
         #[cfg(target_os = "macos")]
         {
-            if window_title.eq("Dock")
-                && window_rect.equals(
-                    monitor_rect.min_x,
-                    monitor_rect.min_y,
-                    monitor_rect.max_x,
-                    monitor_rect.max_y,
-                )
-            {
+            if window_title.eq("Dock") {
                 continue;
             }
-        }
-
-        // 保留在屏幕内的窗口
-        if !monitor_rect.overlaps(&window_rect) {
-            continue;
         }
 
         rect_list.push(WindowElement {
@@ -374,12 +312,6 @@ pub async fn get_window_elements() -> Result<Vec<WindowElement>, ()> {
             window_id,
         });
     }
-
-    // 把显示器的窗口也推入到 rect_list 中
-    rect_list.push(WindowElement {
-        element_rect: monitor_rect.scale(window_size_scale),
-        window_id: 0,
-    });
 
     Ok(rect_list)
 }

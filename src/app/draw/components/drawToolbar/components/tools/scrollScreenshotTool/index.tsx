@@ -55,7 +55,7 @@ export const ScrollScreenshot: React.FC<{
     const [, setDrawEvent] = useStateSubscriber(DrawEventPublisher, undefined);
 
     const [loading, setLoading] = useState(false);
-    const { selectLayerActionRef, monitorInfoRef } = useContext(DrawContext);
+    const { selectLayerActionRef, captureBoundingBoxInfoRef } = useContext(DrawContext);
     const [positionRect, setPositionRect, positionRectRef] = useStateRef<ElementRect | undefined>(
         undefined,
     );
@@ -124,12 +124,12 @@ export const ScrollScreenshot: React.FC<{
                 positionScale =
                     THUMBNAIL_WIDTH /
                     ((positionRectRef.current!.max_y - positionRectRef.current!.min_y) *
-                        monitorInfoRef.current!.monitor_scale_factor);
+                        window.devicePixelRatio);
             } else {
                 positionScale =
                     THUMBNAIL_WIDTH /
                     ((positionRectRef.current!.max_x - positionRectRef.current!.min_x) *
-                        monitorInfoRef.current!.monitor_scale_factor);
+                        window.devicePixelRatio);
             }
             const thumbnailHeight =
                 scrollDirectionRef.current === ScrollDirection.Horizontal
@@ -176,14 +176,7 @@ export const ScrollScreenshot: React.FC<{
             }
             prevScrollSizeRef.current = currentScrollSize;
         },
-        [
-            monitorInfoRef,
-            positionRectRef,
-            scrollDirectionRef,
-            scrollTo,
-            setBottomImageUrlList,
-            setTopImageUrlList,
-        ],
+        [positionRectRef, scrollDirectionRef, scrollTo, setBottomImageUrlList, setTopImageUrlList],
     );
 
     const lastCaptureMissHideRef = useRef<MessageType | undefined>(undefined);
@@ -216,7 +209,7 @@ export const ScrollScreenshot: React.FC<{
 
         try {
             captureResult = await scrollScreenshotHandleImage(
-                Math.round(THUMBNAIL_WIDTH * monitorInfoRef.current!.monitor_scale_factor),
+                Math.round(THUMBNAIL_WIDTH * window.devicePixelRatio),
             );
         } catch (error) {
             console.error(error);
@@ -243,7 +236,7 @@ export const ScrollScreenshot: React.FC<{
         updateImageUrlList(captureResult);
 
         return needContinue;
-    }, [setLoading, updateImageUrlList, monitorInfoRef, message, intl, showCaptureMissMessage]);
+    }, [setLoading, updateImageUrlList, message, intl, showCaptureMissMessage]);
 
     const pendingCaptureImageListRef = useRef<boolean>(false);
     const handleCaptureImageList = useCallback(async () => {
@@ -272,7 +265,9 @@ export const ScrollScreenshot: React.FC<{
     const pendingCaptureRef = useRef<boolean>(false);
     const captureImageCore = useCallback(
         async (scrollImageList: ScrollImageList) => {
-            const rect = selectLayerActionRef.current!.getSelectRect()!;
+            const rect = captureBoundingBoxInfoRef.current!.transformWindowRect(
+                selectLayerActionRef.current!.getSelectRect()!,
+            );
 
             if (pendingCaptureRef.current) {
                 return;
@@ -289,10 +284,10 @@ export const ScrollScreenshot: React.FC<{
 
             pendingCaptureRef.current = true;
 
+            console.log(rect);
+
             await scrollScreenshotCapture(
                 scrollImageList,
-                monitorInfoRef.current!.monitor_x,
-                monitorInfoRef.current!.monitor_y,
                 rect.min_x,
                 rect.min_y,
                 rect.max_x,
@@ -303,7 +298,12 @@ export const ScrollScreenshot: React.FC<{
 
             handleCaptureImageListDebounce();
         },
-        [selectLayerActionRef, setDrawEvent, monitorInfoRef, handleCaptureImageListDebounce],
+        [
+            captureBoundingBoxInfoRef,
+            selectLayerActionRef,
+            setDrawEvent,
+            handleCaptureImageListDebounce,
+        ],
     );
 
     const captureImageDebounce = useMemo(() => {
@@ -321,7 +321,7 @@ export const ScrollScreenshot: React.FC<{
     const [showTip, setShowTip] = useState(false);
     const init = useCallback(
         async (rect: ElementRect, direction: ScrollDirection) => {
-            const scale = 1 / monitorInfoRef.current!.monitor_scale_factor;
+            const scale = 1 / window.devicePixelRatio;
             setPositionRect({
                 min_x: rect.min_x * scale,
                 min_y: rect.min_y * scale,
@@ -359,15 +359,7 @@ export const ScrollScreenshot: React.FC<{
             // 初始化成功后，自动截取第一个片段
             captureImage(ScrollImageList.Bottom);
         },
-        [
-            monitorInfoRef,
-            setPositionRect,
-            getAppSettings,
-            captureImage,
-            scrollDirectionRef,
-            message,
-            intl,
-        ],
+        [setPositionRect, getAppSettings, captureImage, scrollDirectionRef, message, intl],
     );
 
     const pendingScrollThroughRef = useRef<boolean>(false);

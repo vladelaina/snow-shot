@@ -18,7 +18,7 @@ import { DrawContext } from '../../types';
 import { ElementRect } from '@/commands';
 import { theme } from 'antd';
 import { useStateSubscriber } from '@/hooks/useStateSubscriber';
-import { NormalizedZoomValue } from '@mg-chao/excalidraw/types';
+import { ExcalidrawPropsCustomOptions, NormalizedZoomValue } from '@mg-chao/excalidraw/types';
 
 const DrawCacheLayerCore: React.FC<{
     actionRef: React.RefObject<DrawCacheLayerActionType | undefined>;
@@ -117,14 +117,14 @@ const DrawCacheLayerCore: React.FC<{
         [finishDraw, history, setExcalidrawEvent],
     );
 
-    const { selectLayerActionRef, monitorInfoRef } = useContext(DrawContext);
+    const { selectLayerActionRef } = useContext(DrawContext);
     const drawCoreContextValue = useMemo<DrawCoreContextValue>(() => {
         return {
             getLimitRect: () => {
                 return selectLayerActionRef.current?.getSelectRect();
             },
             getDevicePixelRatio: () => {
-                return monitorInfoRef.current?.monitor_scale_factor ?? window.devicePixelRatio;
+                return window.devicePixelRatio;
             },
             getBaseOffset: (limitRect: ElementRect, devicePixelRatio: number) => {
                 return {
@@ -139,7 +139,42 @@ const DrawCacheLayerCore: React.FC<{
                 return mousePositionRef.current;
             },
         };
-    }, [selectLayerActionRef, monitorInfoRef, token.marginXXS, mousePositionRef]);
+    }, [selectLayerActionRef, token.marginXXS, mousePositionRef]);
+
+    const excalidrawCustomOptions = useMemo<NonNullable<ExcalidrawPropsCustomOptions>>(() => {
+        return {
+            getReferenceSnapPoints: (defaultFn) => {
+                return (...params: Parameters<typeof defaultFn>) => {
+                    const appState = params[2];
+                    const selectRect = selectLayerActionRef.current?.getSelectRect();
+
+                    const innerPadding = 3 * window.devicePixelRatio;
+
+                    const selectRectPoints: [number, number][] = selectRect
+                        ? [
+                              [selectRect.min_x + innerPadding, selectRect.min_y + innerPadding],
+                              [selectRect.max_x - innerPadding, selectRect.min_y + innerPadding],
+                              [selectRect.max_x - innerPadding, selectRect.max_y - innerPadding],
+                              [selectRect.min_x + innerPadding, selectRect.max_y - innerPadding],
+                          ].map(([x, y]) => {
+                              const canvasX =
+                                  x / appState.zoom.value / window.devicePixelRatio -
+                                  appState.scrollX;
+                              const canvasY =
+                                  y / appState.zoom.value / window.devicePixelRatio -
+                                  appState.scrollY;
+
+                              return [canvasX, canvasY];
+                          })
+                        : [];
+
+                    return defaultFn(...params).concat(
+                        selectRectPoints as ReturnType<typeof defaultFn>,
+                    );
+                };
+            },
+        };
+    }, [selectLayerActionRef]);
 
     return (
         <DrawCoreContext.Provider value={drawCoreContextValue}>
@@ -147,6 +182,7 @@ const DrawCacheLayerCore: React.FC<{
                 actionRef={drawCoreActionRef}
                 zIndex={zIndexs.Draw_DrawCacheLayer}
                 layoutMenuZIndex={zIndexs.Draw_ExcalidrawToolbar}
+                excalidrawCustomOptions={excalidrawCustomOptions}
             />
         </DrawCoreContext.Provider>
     );

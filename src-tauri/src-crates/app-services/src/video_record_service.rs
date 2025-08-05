@@ -1,6 +1,8 @@
 use ffmpeg_sidecar::{child::FfmpegChild, command::FfmpegCommand, event::FfmpegEvent};
 use regex::Regex;
 use serde::{Deserialize, Serialize};
+#[cfg(target_os = "macos")]
+use snow_shot_app_utils::monitor_info::MonitorList;
 use std::{io::Result, path::PathBuf};
 use tauri::{Manager, path::BaseDirectory};
 
@@ -284,41 +286,35 @@ impl VideoRecordService {
             }
         }
 
+        #[cfg(target_os = "macos")]
+        let monitor_list = MonitorList::all();
+        #[cfg(target_os = "macos")]
+        let mut target_monitor_index = 0;
+
         // macOS 音频输入处理
         #[cfg(target_os = "macos")]
         {
             let device_info_list = self.get_device_info_list();
 
             let audio_device = if params.enable_microphone {
-                device_info_list
-                    .iter()
-                    .find(|d| {
-                        d.device_type == DeviceType::Audio
-                            && Self::format_device_name(d) == params.microphone_device_name
-                    })
-                    .or(device_info_list.first())
+                device_info_list.iter().find(|d| {
+                    d.device_type == DeviceType::Audio
+                        && Self::format_device_name(d) == params.microphone_device_name
+                })
             } else {
                 None
             };
 
             // 没有找到对应的显示器，回退到默认显示器
-            let mut target_monitor_index = 0;
-            for (monitor_index, monitor) in
-                xcap::Monitor::all().unwrap_or_default().iter().enumerate()
-            {
-                let scale_factor = monitor.scale_factor().unwrap_or_default();
-                let monitor_min_x = monitor.x().unwrap_or_default() as f32 * scale_factor;
-                let monitor_min_y = monitor.y().unwrap_or_default() as f32 * scale_factor;
-                let monitor_max_x =
-                    (monitor_min_x + monitor.width().unwrap_or_default() as f32) * scale_factor;
-                let monitor_max_y =
-                    (monitor_min_y + monitor.height().unwrap_or_default() as f32) * scale_factor;
+            for (monitor_index, monitor) in monitor_list.iter().enumerate() {
+                use snow_shot_app_shared::ElementRect;
 
-                if monitor_min_x <= params.min_x as f32
-                    && monitor_min_y <= params.min_y as f32
-                    && monitor_max_x >= params.min_x as f32
-                    && monitor_max_y >= params.min_y as f32
-                {
+                if monitor.rect.overlaps(&ElementRect {
+                    min_x: params.min_x,
+                    min_y: params.min_y,
+                    max_x: params.max_x,
+                    max_y: params.max_y,
+                }) {
                     target_monitor_index = monitor_index;
                     break;
                 }
@@ -412,9 +408,24 @@ impl VideoRecordService {
 
                 #[cfg(target_os = "macos")]
                 {
+                    let target_monitor_rect =
+                        if let Some(monitor) = monitor_list.iter().nth(target_monitor_index) {
+                            monitor.rect
+                        } else {
+                            snow_shot_app_shared::ElementRect {
+                                min_x: 0,
+                                min_y: 0,
+                                max_x: 0,
+                                max_y: 0,
+                            }
+                        };
+
                     let crop_filter = format!(
                         "crop={}:{}:{}:{}",
-                        width, height, params.min_x, params.min_y
+                        width,
+                        height,
+                        params.min_x - target_monitor_rect.min_x,
+                        params.min_y - target_monitor_rect.min_y
                     );
                     command.arg("-vf").arg(crop_filter);
                     command.arg("-crf").arg("23").arg("-pix_fmt").arg("uyvy422"); // 添加像素格式，确保兼容性

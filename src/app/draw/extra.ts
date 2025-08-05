@@ -6,6 +6,10 @@ import { BaseLayerEventActionType } from './components/baseLayer';
 import { ScreenshotType } from '@/functions/screenshot';
 import { OcrDetectResult } from '@/commands/ocr';
 import { MonitorInfo } from '@/commands/core';
+import { ElementRect } from '@/commands';
+import { MousePosition } from '@/utils/mousePosition';
+import Flatbush from 'flatbush';
+import { last } from 'es-toolkit';
 
 export const switchLayer = (
     layer: CanvasLayer | undefined,
@@ -71,6 +75,8 @@ export enum DrawEvent {
     OcrDetect = 0,
     ScrollScreenshot = 1,
     MoveCursor = 2,
+    /** 选区所在的 monitor 发生变化，可能相同值重复触发 */
+    ChangeMonitor = 3,
 }
 
 export type DrawEventParams =
@@ -91,6 +97,89 @@ export type DrawEventParams =
               y: number;
           };
       }
+    | {
+          event: DrawEvent.ChangeMonitor;
+          params: {
+              monitorRect: ElementRect;
+          };
+      }
     | undefined;
 
 export const DrawEventPublisher = createPublisher<DrawEventParams>(undefined, true);
+
+export class CaptureBoundingBoxInfo {
+    rect: ElementRect;
+    width: number;
+    height: number;
+    mousePosition: MousePosition;
+    monitorRectList: ElementRect[];
+    monitorRTree: Flatbush;
+
+    constructor(rect: ElementRect, monitorRectList: ElementRect[], mousePosition: MousePosition) {
+        this.rect = rect;
+        this.width = rect.max_x - rect.min_x;
+        this.height = rect.max_y - rect.min_y;
+        // 将显示器的鼠标位置转为相对截图窗口的鼠标位置
+        this.mousePosition = new MousePosition(
+            mousePosition.mouseX - rect.min_x,
+            mousePosition.mouseY - rect.min_y,
+        );
+        this.monitorRectList = monitorRectList;
+        this.monitorRTree = new Flatbush(monitorRectList.length);
+        monitorRectList.forEach((rect) => {
+            this.monitorRTree.add(rect.min_x, rect.min_y, rect.max_x, rect.max_y);
+        });
+        this.monitorRTree.finish();
+    }
+
+    /**
+     * 将相对显示器的选区转换为相对于截图窗口的选区
+     * @param rect 选区
+     * @returns 相对于截图窗口的选区
+     */
+    transformMonitorRect(rect: ElementRect) {
+        return {
+            min_x: rect.min_x - this.rect.min_x,
+            min_y: rect.min_y - this.rect.min_y,
+            max_x: rect.max_x - this.rect.min_x,
+            max_y: rect.max_y - this.rect.min_y,
+        };
+    }
+
+    /**
+     * 将相对于截图窗口的选区转换为相对于显示器的选区
+     * @param rect 选区
+     * @returns 相对于显示器的选区
+     */
+    transformWindowRect(rect: ElementRect) {
+        return {
+            min_x: rect.min_x + this.rect.min_x,
+            min_y: rect.min_y + this.rect.min_y,
+            max_x: rect.max_x + this.rect.min_x,
+            max_y: rect.max_y + this.rect.min_y,
+        };
+    }
+
+    getActiveMonitorRect(selectedRect: ElementRect) {
+        const monitorRectIndex = last(
+            this.monitorRTree.search(
+                selectedRect.min_x,
+                selectedRect.min_y,
+                selectedRect.max_x,
+                selectedRect.max_y,
+            ),
+        );
+
+        const monitorRect =
+            monitorRectIndex !== undefined
+                ? this.monitorRectList[monitorRectIndex]
+                : {
+                      min_x: selectedRect.min_x,
+                      min_y: selectedRect.min_y,
+                      max_x: selectedRect.max_x,
+                      max_y: selectedRect.max_y,
+                  };
+
+        return monitorRect;
+    }
+}

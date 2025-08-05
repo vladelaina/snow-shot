@@ -9,6 +9,8 @@ tauri = { workspace = true }
 device_query = { workspace = true }
 regex = { workspace = true }
 log = { workspace = true }
+snow-shot-app-utils = { workspace = true }
+snow-shot-app-shared = { workspace = true }
 
 ffmpeg-sidecar = "^2.0.6"
 

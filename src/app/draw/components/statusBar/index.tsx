@@ -10,6 +10,9 @@ import { zIndexs } from '@/utils/zIndex';
 import {
     CaptureLoadingPublisher,
     CaptureStepPublisher,
+    DrawEvent,
+    DrawEventParams,
+    DrawEventPublisher,
     ScreenshotTypePublisher,
 } from '../../extra';
 import { useStateSubscriber } from '@/hooks/useStateSubscriber';
@@ -21,17 +24,23 @@ import { ScreenshotType } from '@/functions/screenshot';
 import { DrawState, DrawStatePublisher } from '@/app/fullScreenDraw/components/drawCore/extra';
 import { useAppSettingsLoad } from '@/hooks/useAppSettingsLoad';
 import { getPlatformValue } from '@/utils';
+import { ElementRect } from '@/commands';
+import { formatKey } from '@/utils/format';
 
 const KeyLabel: React.FC<{
     messageId?: string;
     hotKey?: string;
     icon?: React.ReactNode;
 }> = ({ messageId, hotKey, icon }) => {
+    const formatHotKey = useMemo(() => {
+        return formatKey(hotKey);
+    }, [hotKey]);
+
     return (
         <div className="descriptions-item-btn-label">
             <div className="descriptions-item-btn-label-icon">{icon ?? <KeyboardIcon />}</div>
             {messageId && <FormattedMessage id={messageId} />}
-            {hotKey}
+            {formatHotKey}
         </div>
     );
 };
@@ -52,7 +61,7 @@ const StatusBar: React.FC = () => {
     const [getAppSettings] = useStateSubscriber(AppSettingsPublisher, undefined);
 
     const statusBarRef = useRef<HTMLDivElement>(null);
-    const { selectLayerActionRef, monitorInfoRef } = useContext(DrawContext);
+    const { selectLayerActionRef } = useContext(DrawContext);
     const [getCaptureStep] = useStateSubscriber(CaptureStepPublisher, undefined);
     const [getDrawState] = useStateSubscriber(DrawStatePublisher, undefined);
     const [isHover, setIsHover] = useState(false);
@@ -204,12 +213,8 @@ const StatusBar: React.FC = () => {
                 return;
             }
 
-            if (!monitorInfoRef.current) {
-                return;
-            }
-
             const statusBarMaxX = statusBar.clientWidth + statusBar.offsetLeft;
-            const statusBarMinY = statusBar.offsetTop;
+            const statusBarMinY = statusBar.offsetTop - statusBar.clientHeight;
 
             if (mousePosition.mouseX < statusBarMaxX && mousePosition.mouseY > statusBarMinY) {
                 setIsHover(true);
@@ -221,8 +226,8 @@ const StatusBar: React.FC = () => {
                 setIsHover(false);
                 return;
             }
-            const minX = selectRect.min_x / monitorInfoRef.current.monitor_scale_factor;
-            const maxY = selectRect.max_y / monitorInfoRef.current.monitor_scale_factor;
+            const minX = selectRect.min_x / window.devicePixelRatio;
+            const maxY = selectRect.max_y / window.devicePixelRatio;
             // 矩形现在是正的了，只判断左下角即可
             if (minX < statusBarMaxX && maxY > statusBarMinY) {
                 setIsHover(true);
@@ -231,7 +236,7 @@ const StatusBar: React.FC = () => {
 
             setIsHover(false);
         },
-        [monitorInfoRef, selectLayerActionRef],
+        [selectLayerActionRef],
     );
     const onMouseMoveRender = useCallbackRender(onMouseMove);
 
@@ -251,6 +256,26 @@ const StatusBar: React.FC = () => {
         };
     }, [getCaptureLoading, onMouseMoveRender, selectLayerActionRef]);
 
+    const [monitorRect, setMonitorRect] = useState<ElementRect>({
+        min_x: 0,
+        min_y: 0,
+        max_x: 0,
+        max_y: 0,
+    });
+    useStateSubscriber(
+        DrawEventPublisher,
+        useCallback((event: DrawEventParams) => {
+            if (event?.event === DrawEvent.ChangeMonitor) {
+                setMonitorRect({
+                    min_x: event.params.monitorRect.min_x / window.devicePixelRatio,
+                    min_y: event.params.monitorRect.min_y / window.devicePixelRatio,
+                    max_x: event.params.monitorRect.max_x / window.devicePixelRatio,
+                    max_y: event.params.monitorRect.max_y / window.devicePixelRatio,
+                });
+            }
+        }, []),
+    );
+
     return (
         <div
             className="status-bar"
@@ -264,10 +289,19 @@ const StatusBar: React.FC = () => {
             </div>
 
             <style jsx>{`
+                {/* 在这里处理下 antd message 的样式*/}
+                :global(.app-global-message) {
+                    top: ${monitorRect.min_y}px !important;
+                    left: ${monitorRect.min_x}px !important;
+                    width: ${monitorRect.max_x - monitorRect.min_x}px !important;
+                    transform: unset !important;
+                }
+
                 .status-bar {
                     position: fixed;
-                    bottom: 0px;
-                    left: 0px;
+                    top: ${monitorRect.max_y}px;
+                    left: ${monitorRect.min_x}px;
+                    transform: translate(0, -100%);
                     padding: ${token.paddingLG}px ${token.paddingLG}px ${token.padding}px
                         ${token.padding}px;
                     transition: opacity ${token.motionDurationMid} ${token.motionEaseInOut};

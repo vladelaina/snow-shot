@@ -51,8 +51,6 @@ export const SCROLL_SCREENSHOT_CAPTURE_RESULT_EXTRA_DATA_SIZE = 4;
 
 export const scrollScreenshotCapture = async (
     scrollImageList: ScrollImageList,
-    monitorX: number,
-    monitorY: number,
     minX: number,
     minY: number,
     maxX: number,
@@ -60,8 +58,6 @@ export const scrollScreenshotCapture = async (
 ) => {
     const result = await invoke<ArrayBuffer>('scroll_screenshot_capture', {
         scrollImageList,
-        monitorX,
-        monitorY,
         minX,
         minY,
         maxX,

@@ -1,5 +1,6 @@
 import { invoke } from '@tauri-apps/api/core';
 import * as tauriOs from '@tauri-apps/plugin-os';
+import { ElementRect } from '.';
 
 export const getSelectedText = async () => {
     const result = await invoke<string>('get_selected_text');
@@ -82,22 +83,12 @@ export const sendNewVersionNotification = async (title: string, body: string) =>
 };
 
 export const createVideoRecordWindow = async (
-    monitorX: number,
-    monitorY: number,
-    monitorWidth: number,
-    monitorHeight: number,
-    monitorScaleFactor: number,
     selectRectMinX: number,
     selectRectMinY: number,
     selectRectMaxX: number,
     selectRectMaxY: number,
 ) => {
     const result = await invoke<void>('create_video_record_window', {
-        monitorX,
-        monitorY,
-        monitorWidth,
-        monitorHeight,
-        monitorScaleFactor,
         selectRectMinX,
         selectRectMinY,
         selectRectMaxX,
@@ -117,6 +108,16 @@ export const setCurrentWindowAlwaysOnTop = async (allowInputMethodOverlay: boole
 
     const result = await invoke<void>('set_current_window_always_on_top', {
         allowInputMethodOverlay,
+    });
+    return result;
+};
+
+export const getMonitorsBoundingBox = async (region?: ElementRect) => {
+    const result = await invoke<{
+        rect: ElementRect;
+        monitor_rect_list: ElementRect[];
+    }>('get_monitors_bounding_box', {
+        region,
     });
     return result;
 };

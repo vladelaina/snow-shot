@@ -45,4 +45,8 @@ impl ScrollScreenshotImageService {
     pub fn image_count(&self) -> usize {
         self.image_queue.len()
     }
+
+    pub fn clear(&mut self) {
+        self.image_queue.clear();
+    }
 }
