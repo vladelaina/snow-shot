@@ -269,7 +269,10 @@ const DrawPageCore: React.FC = () => {
         async ({ min_x, min_y, max_x, max_y }: ElementRect) => {
             const appWindow = appWindowRef.current;
 
-            await setWindowRect(appWindow, { min_x, min_y, max_x, max_y });
+            await Promise.all([
+                setWindowRect(appWindow, { min_x, min_y, max_x, max_y }),
+                appWindow.setAlwaysOnTop(true),
+            ]);
             await showCurrentWindow();
             if (
                 process.env.NODE_ENV === 'development' &&
