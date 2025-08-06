@@ -3,7 +3,8 @@
 import { EventListenerContext } from '@/components/eventListener';
 import { MouseThroughIcon } from '@/components/icons';
 import { fullScreenDrawChangeMouseThrough } from '@/functions/fullScreenDraw';
-import { getCurrentWindow, PhysicalSize, PhysicalPosition } from '@tauri-apps/api/window';
+import { setWindowRect } from '@/utils/window';
+import { getCurrentWindow } from '@tauri-apps/api/window';
 import { Button, theme } from 'antd';
 import { useContext, useEffect, useState } from 'react';
 import { FormattedMessage } from 'react-intl';
@@ -30,8 +31,12 @@ export default function MouseThroughPage() {
 
         const centerX = (screenWidth - physicalWidth) / 2;
 
-        appWindow.setSize(new PhysicalSize(physicalWidth, physicalHeight));
-        appWindow.setPosition(new PhysicalPosition(monitor_x + centerX, monitor_y));
+        setWindowRect(appWindow, {
+            min_x: monitor_x + centerX,
+            min_y: monitor_y,
+            max_x: monitor_x + centerX + physicalWidth,
+            max_y: monitor_y + physicalHeight,
+        });
     }, []);
 
     useEffect(() => {

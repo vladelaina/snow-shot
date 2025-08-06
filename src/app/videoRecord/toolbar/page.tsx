@@ -19,7 +19,7 @@ import {
     StopRecordIcon,
 } from '@/components/icons';
 import { getButtonIconColorByState } from '@/app/draw/components/drawToolbar/extra';
-import { getCurrentWindow, PhysicalPosition, PhysicalSize } from '@tauri-apps/api/window';
+import { getCurrentWindow } from '@tauri-apps/api/window';
 import { ElementRect } from '@/commands';
 import { getVideoRecordParams, VideoRecordState } from '../extra';
 import {
@@ -53,6 +53,7 @@ import { openPath } from '@tauri-apps/plugin-opener';
 import { createDir } from '@/commands/file';
 import { getPlatformValue } from '@/utils';
 import { getMonitorsBoundingBox, setCurrentWindowAlwaysOnTop } from '@/commands/core';
+import { setWindowRect } from '@/utils/window';
 
 dayjs.extend(duration);
 
@@ -114,11 +115,15 @@ export default function VideoRecordToolbar() {
             }
         }
 
+        const targetX = Math.round(selectRect.min_x + centerX);
+
         await Promise.all([
-            appWindow.setSize(new PhysicalSize(physicalWidth, physicalHeight)),
-            appWindow.setPosition(
-                new PhysicalPosition(Math.round(selectRect.min_x + centerX), targetY),
-            ),
+            setWindowRect(appWindow, {
+                min_x: targetX,
+                min_y: targetY,
+                max_x: targetX + physicalWidth,
+                max_y: targetY + physicalHeight,
+            }),
             setCurrentWindowAlwaysOnTop(true),
         ]);
 

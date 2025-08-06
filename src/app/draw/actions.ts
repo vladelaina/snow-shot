@@ -2,7 +2,7 @@ import { DrawLayerActionType } from './components/drawLayer';
 import { SelectLayerActionType } from './components/selectLayer';
 import { DrawCacheLayerActionType } from './components/drawCacheLayer/extra';
 import { createDrawWindow, ElementRect, saveFile } from '@/commands';
-import { Window as AppWindow, PhysicalPosition, PhysicalSize } from '@tauri-apps/api/window';
+import { Window as AppWindow } from '@tauri-apps/api/window';
 import { CaptureStep } from './types';
 import { FixedContentActionType } from '../fixedContent/components/fixedContentCore';
 import { OcrBlocksActionType } from './components/ocrBlocks';
@@ -11,6 +11,7 @@ import { AppSettingsData } from '../contextWrap';
 import { writeImageToClipboard } from '@/utils/clipboard';
 import { AppOcrResult } from '../fixedContent/components/ocrResult';
 import { CaptureBoundingBoxInfo } from './extra';
+import { setWindowRect } from '@/utils/window';
 
 export const getCanvas = async (
     selectRect: ElementRect,
@@ -137,24 +138,7 @@ export const fixedToScreen = async (
     await new Promise((resolve) => {
         setTimeout(resolve, 17);
     });
-    // 设置两次窗口位置，tauri 应该是根据窗口位置做了一些坐标转换处理，所以窗口位置得先设定好
-    // 窗口位置也提前设置好
-    await Promise.all([
-        appWindow.setPosition(
-            new PhysicalPosition(
-                selectRect.min_x + captureBoundingBoxInfo.rect.min_x,
-                selectRect.min_y + captureBoundingBoxInfo.rect.min_y,
-            ),
-        ),
-        appWindow.setSize(
-            new PhysicalSize(
-                selectRect.max_x - selectRect.min_x,
-                selectRect.max_y - selectRect.min_y,
-            ),
-        ),
-        appWindow.hide(),
-        appWindow.setTitle('Snow Shot - Fixed Content'),
-    ]);
+    await Promise.all([appWindow.hide(), appWindow.setTitle('Snow Shot - Fixed Content')]);
 
     const imageCanvas = await imageCanvasPromise;
 
@@ -166,18 +150,7 @@ export const fixedToScreen = async (
         appWindow.show(),
         appWindow.setAlwaysOnTop(true),
         fixedContentAction.init({ canvas: imageCanvas, captureBoundingBoxInfo, ocrResult }),
-        appWindow.setPosition(
-            new PhysicalPosition(
-                selectRect.min_x + captureBoundingBoxInfo.rect.min_x,
-                selectRect.min_y + captureBoundingBoxInfo.rect.min_y,
-            ),
-        ),
-        appWindow.setSize(
-            new PhysicalSize(
-                selectRect.max_x - selectRect.min_x,
-                selectRect.max_y - selectRect.min_y,
-            ),
-        ),
+        setWindowRect(appWindow, captureBoundingBoxInfo.transformWindowRect(selectRect)),
     ]);
 
     // 简单加个过渡效果

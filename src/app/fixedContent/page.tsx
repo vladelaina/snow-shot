@@ -4,8 +4,8 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { FixedContentCore, FixedContentActionType } from './components/fixedContentCore';
 import extraClipboard from 'tauri-plugin-clipboard-api';
 import * as clipboard from '@tauri-apps/plugin-clipboard-manager';
-import { showWindow } from '@/utils/window';
-import { getCurrentWindow, PhysicalPosition, PhysicalSize } from '@tauri-apps/api/window';
+import { setWindowRect, showWindow } from '@/utils/window';
+import { getCurrentWindow } from '@tauri-apps/api/window';
 import { setDrawWindowStyle } from '@/commands/screenshot';
 import { getCurrentMonitorInfo, MonitorInfo, readImageFromClipboard } from '@/commands/core';
 import { scrollScreenshotClear, scrollScreenshotGetImageData } from '@/commands/scrollScreenshot';
@@ -165,15 +165,14 @@ export default function FixedContentPage() {
                     targetY = monitorInfo.monitor_y + monitorInfo.monitor_height / 2;
                 }
 
-                await Promise.all([
-                    appWindow.setSize(new PhysicalSize(windowWidth, windowHeight)),
-                    appWindow.setPosition(
-                        new PhysicalPosition(
-                            Math.round(targetX - windowWidth / 2),
-                            Math.round(targetY - windowHeight / 2),
-                        ),
-                    ),
-                ]);
+                const windowX = targetX - windowWidth / 2;
+                const windowY = targetY - windowHeight / 2;
+                await setWindowRect(appWindow, {
+                    min_x: windowX,
+                    min_y: windowY,
+                    max_x: windowX + windowWidth,
+                    max_y: windowY + windowHeight,
+                });
                 showWindow();
                 setDrawWindowStyle();
             } else {

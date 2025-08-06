@@ -5,8 +5,8 @@ use std::{
     path::PathBuf,
     time::{SystemTime, UNIX_EPOCH},
 };
+use tauri::Emitter;
 use tauri::Manager;
-use tauri::{Emitter, PhysicalPosition};
 use tokio::{sync::Mutex, time::Duration};
 
 use snow_shot_app_os::notification;
@@ -363,7 +363,7 @@ pub async fn create_video_record_window(
         return;
     }
 
-    let video_record_window = tauri::WebviewWindowBuilder::new(
+    tauri::WebviewWindowBuilder::new(
         &app,
         window_label,
         tauri::WebviewUrl::App(PathBuf::from(format!(
@@ -390,11 +390,6 @@ pub async fn create_video_record_window(
     .build()
     .unwrap();
 
-    video_record_window
-        .set_position(PhysicalPosition::new(select_rect_min_x, select_rect_min_y))
-        .unwrap();
-    video_record_window.show().unwrap();
-
     let window_label = "video-recording-toolbar";
 
     let window = app.get_webview_window(window_label);
@@ -403,7 +398,7 @@ pub async fn create_video_record_window(
         window.destroy().unwrap();
     }
 
-    let video_record_toolbar_window = tauri::WebviewWindowBuilder::new(
+    tauri::WebviewWindowBuilder::new(
         &app,
         window_label,
         tauri::WebviewUrl::App(PathBuf::from(format!(
@@ -429,11 +424,6 @@ pub async fn create_video_record_window(
     .visible(false)
     .build()
     .unwrap();
-
-    video_record_toolbar_window
-        .set_position(PhysicalPosition::new(select_rect_min_x, select_rect_min_y))
-        .unwrap();
-    video_record_toolbar_window.show().unwrap();
 }
 
 pub async fn start_free_drag(

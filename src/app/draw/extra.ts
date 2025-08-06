@@ -160,26 +160,27 @@ export class CaptureBoundingBoxInfo {
         };
     }
 
-    getActiveMonitorRect(selectedRect: ElementRect) {
-        const monitorRectIndex = last(
-            this.monitorRTree.search(
-                selectedRect.min_x,
-                selectedRect.min_y,
-                selectedRect.max_x,
-                selectedRect.max_y,
-            ),
+    getActiveMonitorRectList(selectedRect: ElementRect): ElementRect[] {
+        const monitorRectIndexList = this.monitorRTree.search(
+            selectedRect.min_x,
+            selectedRect.min_y,
+            selectedRect.max_x,
+            selectedRect.max_y,
         );
 
-        const monitorRect =
-            monitorRectIndex !== undefined
-                ? this.monitorRectList[monitorRectIndex]
-                : {
-                      min_x: selectedRect.min_x,
-                      min_y: selectedRect.min_y,
-                      max_x: selectedRect.max_x,
-                      max_y: selectedRect.max_y,
-                  };
+        return monitorRectIndexList.map((index) => this.monitorRectList[index]);
+    }
 
-        return monitorRect;
+    getActiveMonitorRect(selectedRect: ElementRect) {
+        const activeMonitorRectList = this.getActiveMonitorRectList(selectedRect);
+
+        return (
+            last(activeMonitorRectList) ?? {
+                min_x: 0,
+                min_y: 0,
+                max_x: this.width,
+                max_y: this.height,
+            }
+        );
     }
 }

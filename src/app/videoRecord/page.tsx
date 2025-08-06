@@ -1,22 +1,22 @@
 'use client';
 
 import { ElementRect } from '@/commands';
-import { getCurrentWindow, PhysicalPosition, PhysicalSize } from '@tauri-apps/api/window';
+import { getCurrentWindow } from '@tauri-apps/api/window';
 import { useCallback, useContext, useEffect, useRef, useState } from 'react';
 import { getVideoRecordParams, VideoRecordState } from './extra';
 import { EventListenerContext } from '@/components/eventListener';
 import { VideoRecordWindowInfo } from '@/functions/videoRecord';
-import { getPlatform } from '@/utils';
 import { setCurrentWindowAlwaysOnTop } from '@/commands/core';
+import { setWindowRect } from '@/utils/window';
 
 const PENDING_STROKE_COLOR = '#4096ff';
 const RECORDING_STROKE_COLOR = '#f5222d';
 const PAUSED_STROKE_COLOR = '#faad14';
 const BORDER_WIDTH = 2;
-const BORDER_PADDING = 5;
+const BORDER_PADDING = 8;
 
 export default function VideoRecordPage() {
-    const selectCanvasRef = useRef<HTMLCanvasElement>(null);
+    const selectCanvasRef = useRef<HTMLDivElement>(null);
 
     const selectRectRef = useRef<ElementRect | undefined>(undefined);
 
@@ -30,11 +30,6 @@ export default function VideoRecordPage() {
             return;
         }
 
-        const ctx = canvas.getContext('2d');
-        if (!ctx) {
-            return;
-        }
-
         // 绘制选择区域的矩形边框
         const rect = selectRectRef.current;
         if (rect) {
@@ -45,17 +40,7 @@ export default function VideoRecordPage() {
                 strokeColor = PAUSED_STROKE_COLOR;
             }
 
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            ctx.strokeStyle = strokeColor;
-            ctx.lineWidth = BORDER_WIDTH;
-
-            // 计算矩形位置和大小，边框位于选择区域外部
-            const x = BORDER_WIDTH / 2;
-            const y = BORDER_WIDTH / 2;
-            const width = canvas.width - BORDER_WIDTH;
-            const height = canvas.height - BORDER_WIDTH;
-
-            ctx.strokeRect(x, y, width, height);
+            canvas.style.borderColor = strokeColor;
         }
     }, []);
 
@@ -69,36 +54,20 @@ export default function VideoRecordPage() {
                 selectRect.max_x - selectRect.min_x + BORDER_WIDTH + BORDER_PADDING * 2;
             const windowHeight =
                 selectRect.max_y - selectRect.min_y + BORDER_WIDTH + BORDER_PADDING * 2;
-
-            if (getPlatform() === 'macos') {
-                appWindow.setPosition(
-                    new PhysicalPosition(
-                        selectRect.min_x - BORDER_WIDTH / 2 - BORDER_PADDING,
-                        selectRect.min_y - BORDER_WIDTH / 2 - BORDER_PADDING,
-                    ),
-                );
-            }
+            const windowX = selectRect.min_x - BORDER_WIDTH / 2 - BORDER_PADDING;
+            const windowY = selectRect.min_y - BORDER_WIDTH / 2 - BORDER_PADDING;
 
             await Promise.all([
-                appWindow.setSize(new PhysicalSize(windowWidth, windowHeight)),
-                appWindow.setPosition(
-                    new PhysicalPosition(
-                        selectRect.min_x - BORDER_WIDTH / 2 - BORDER_PADDING,
-                        selectRect.min_y - BORDER_WIDTH / 2 - BORDER_PADDING,
-                    ),
-                ),
+                setWindowRect(appWindow, {
+                    min_x: windowX,
+                    min_y: windowY,
+                    max_x: windowX + windowWidth,
+                    max_y: windowY + windowHeight,
+                }),
                 setCurrentWindowAlwaysOnTop(true),
             ]);
 
             await appWindow.show();
-
-            const canvas = selectCanvasRef.current;
-            if (!canvas) {
-                return;
-            }
-
-            canvas.width = windowWidth;
-            canvas.height = windowHeight;
 
             setVideoRecordState(VideoRecordState.Idle);
             drawSelectRect(VideoRecordState.Idle);
@@ -149,21 +118,24 @@ export default function VideoRecordPage() {
 
     return (
         <div className="container" onContextMenu={(e) => e.preventDefault()}>
-            <canvas ref={selectCanvasRef} className="select-canvas" />
+            <div ref={selectCanvasRef} className="select-canvas" />
 
             <style jsx>{`
                 .container {
                     width: 100vw;
                     height: 100vh;
                     overflow: hidden;
+                    padding: ${BORDER_WIDTH}px;
+                    box-sizing: border-box;
                 }
 
                 .select-canvas {
                     position: absolute;
-                    top: 0;
-                    left: 0;
-                    width: 100%;
-                    height: 100%;
+                    box-sizing: border-box;
+                    border-width: ${BORDER_WIDTH}px;
+                    border-style: solid;
+                    width: calc(100% - ${BORDER_WIDTH * 2}px);
+                    height: calc(100% - ${BORDER_WIDTH * 2}px);
                 }
             `}</style>
         </div>
