@@ -4,7 +4,6 @@ import { createDrawWindow, ElementRect, getMousePosition, ImageBuffer } from '@/
 import { EventListenerContext } from '@/components/eventListener';
 import React, { useMemo, useState } from 'react';
 import { useCallback, useContext, useEffect, useRef } from 'react';
-import { PhysicalPosition, PhysicalSize } from '@tauri-apps/api/dpi';
 import * as PIXI from 'pixi.js';
 import { CanvasLayer, CaptureStep, DrawContext, DrawContextType } from './types';
 import SelectLayer, { SelectLayerActionType } from './components/selectLayer';
@@ -47,10 +46,9 @@ import {
     releaseDrawPage,
     ScreenshotType,
 } from '@/functions/screenshot';
-import { showWindow as showCurrentWindow } from '@/utils/window';
+import { setWindowRect, showWindow as showCurrentWindow } from '@/utils/window';
 import { captureAllMonitors, setDrawWindowStyle, switchAlwaysOnTop } from '@/commands/screenshot';
 import { debounce } from 'es-toolkit';
-import { Webview } from '@tauri-apps/api/webview';
 import {
     scrollScreenshotClear,
     scrollScreenshotSaveToClipboard,
@@ -271,17 +269,7 @@ const DrawPageCore: React.FC = () => {
         async ({ min_x, min_y, max_x, max_y }: ElementRect) => {
             const appWindow = appWindowRef.current;
 
-            // 设置两次位置，防止窗口缩放变化
-            await appWindow.setPosition(new PhysicalPosition(min_x, min_y));
-
-            await Promise.all([
-                appWindow.setAlwaysOnTop(true),
-                appWindow.setPosition(new PhysicalPosition(min_x, min_y)),
-                appWindow.setSize(new PhysicalSize(max_x - min_x, max_y - min_y)),
-                Webview.getCurrent().setSize(new PhysicalSize(max_x - min_x, max_y - min_y)),
-                Webview.getCurrent().setZoom(1),
-            ]);
-
+            await setWindowRect(appWindow, { min_x, min_y, max_x, max_y });
             await showCurrentWindow();
             if (
                 process.env.NODE_ENV === 'development' &&

@@ -1,4 +1,4 @@
-import { Button } from 'antd';
+import { Button, message } from 'antd';
 import { SubTools } from '../../subTools';
 
 import { useIntl } from 'react-intl';
@@ -12,6 +12,7 @@ import { getButtonTypeByState } from '../../../extra';
 import { VideoRecordIcon } from '@/components/icons';
 import { createVideoRecordWindow } from '@/commands/core';
 import { DrawContext } from '@/app/draw/types';
+import { getPlatform } from '@/utils';
 
 export enum ExtraToolList {
     ScanQrcode = 0,
@@ -75,6 +76,19 @@ export const ExtraTool: React.FC<{
 
                             const monitorRect =
                                 captureBoundingBoxInfo.transformWindowRect(selectRect);
+
+                            if (
+                                getPlatform() === 'macos' &&
+                                captureBoundingBoxInfo.getActiveMonitorRectList(monitorRect)
+                                    .length > 1
+                            ) {
+                                message.warning(
+                                    intl.formatMessage({
+                                        id: 'draw.extraTool.videoRecord.multiMonitor',
+                                    }),
+                                );
+                                return;
+                            }
 
                             createVideoRecordWindow(
                                 monitorRect.min_x,

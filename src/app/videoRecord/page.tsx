@@ -1,18 +1,19 @@
 'use client';
 
 import { ElementRect } from '@/commands';
-import { getCurrentWindow, PhysicalPosition, PhysicalSize } from '@tauri-apps/api/window';
+import { getCurrentWindow } from '@tauri-apps/api/window';
 import { useCallback, useContext, useEffect, useRef, useState } from 'react';
 import { getVideoRecordParams, VideoRecordState } from './extra';
 import { EventListenerContext } from '@/components/eventListener';
 import { VideoRecordWindowInfo } from '@/functions/videoRecord';
 import { setCurrentWindowAlwaysOnTop } from '@/commands/core';
+import { setWindowRect } from '@/utils/window';
 
 const PENDING_STROKE_COLOR = '#4096ff';
 const RECORDING_STROKE_COLOR = '#f5222d';
 const PAUSED_STROKE_COLOR = '#faad14';
 const BORDER_WIDTH = 2;
-const BORDER_PADDING = 5;
+const BORDER_PADDING = 20;
 
 export default function VideoRecordPage() {
     const selectCanvasRef = useRef<HTMLDivElement>(null);
@@ -57,12 +58,12 @@ export default function VideoRecordPage() {
             const windowY = selectRect.min_y - BORDER_WIDTH / 2 - BORDER_PADDING;
 
             await Promise.all([
-                appWindow.setSize(new PhysicalSize(windowWidth, windowHeight)),
-                appWindow.setPosition(new PhysicalPosition(windowX, windowY)),
-            ]);
-            await Promise.all([
-                appWindow.setSize(new PhysicalSize(windowWidth, windowHeight)),
-                appWindow.setPosition(new PhysicalPosition(windowX, windowY)),
+                setWindowRect(appWindow, {
+                    min_x: windowX,
+                    min_y: windowY,
+                    max_x: windowX + windowWidth,
+                    max_y: windowY + windowHeight,
+                }),
                 setCurrentWindowAlwaysOnTop(true),
             ]);
 

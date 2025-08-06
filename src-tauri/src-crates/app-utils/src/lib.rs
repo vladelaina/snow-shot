@@ -124,13 +124,21 @@ pub fn get_capture_monitor_list(
 
     #[cfg(target_os = "macos")]
     {
-        let (mouse_x, mouse_y) = get_mouse_position(app);
-        MonitorList::get_by_region(ElementRect {
-            min_x: mouse_x,
-            min_y: mouse_y,
-            max_x: mouse_x,
-            max_y: mouse_y,
-        })
+        // 检查所有显示器的 scale_factor 是否一致
+        let (all_same_scale, _) = check_monitor_scale_factors_consistent();
+
+        // 此时支持跨屏截图，如果 scale_factor 不一致，则需要根据鼠标位置获取单个显示器进行截图
+        if all_same_scale {
+            MonitorList::all()
+        } else {
+            let (mouse_x, mouse_y) = get_mouse_position(app);
+            MonitorList::get_by_region(ElementRect {
+                min_x: mouse_x,
+                min_y: mouse_y,
+                max_x: mouse_x + 1,
+                max_y: mouse_y + 1,
+            })
+        }
     }
 }
 
@@ -143,6 +151,30 @@ pub fn get_window_id_from_ns_handle(ns_handle: *mut std::ffi::c_void) -> u32 {
         let window_id: u32 = objc2::msg_send![ns_window, windowNumber];
         window_id
     }
+}
+
+/// 检查所有显示器的 scale_factor 是否一致
+///
+/// 返回一个元组：(是否一致, 所有 scale_factor 的列表)
+/// 如果只有一个显示器，则认为是一致的
+#[cfg(target_os = "macos")]
+pub fn check_monitor_scale_factors_consistent() -> (bool, Vec<f32>) {
+    let scale_factors: Vec<f32> = xcap::Monitor::all()
+        .unwrap_or_default()
+        .iter()
+        .map(|monitor| monitor.scale_factor().unwrap_or(1.0))
+        .collect();
+
+    let all_same_scale = if scale_factors.len() > 1 {
+        let first_scale = scale_factors[0];
+        scale_factors
+            .iter()
+            .all(|&scale| (scale - first_scale).abs() < f32::EPSILON)
+    } else {
+        true // 只有一个显示器时认为是一致的
+    };
+
+    (all_same_scale, scale_factors)
 }
 
 pub fn capture_target_monitor(
