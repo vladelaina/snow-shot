@@ -13,7 +13,7 @@ const PENDING_STROKE_COLOR = '#4096ff';
 const RECORDING_STROKE_COLOR = '#f5222d';
 const PAUSED_STROKE_COLOR = '#faad14';
 const BORDER_WIDTH = 2;
-const BORDER_PADDING = 20;
+const BORDER_PADDING = 8;
 
 export default function VideoRecordPage() {
     const selectCanvasRef = useRef<HTMLDivElement>(null);
