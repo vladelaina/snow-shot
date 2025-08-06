@@ -5,8 +5,8 @@ use std::{
     path::PathBuf,
     time::{SystemTime, UNIX_EPOCH},
 };
+use tauri::Emitter;
 use tauri::Manager;
-use tauri::{Emitter, PhysicalPosition};
 use tokio::{sync::Mutex, time::Duration};
 
 use snow_shot_app_os::notification;
