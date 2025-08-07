@@ -105,12 +105,10 @@ pub async fn scroll_screenshot_save_to_clipboard(
 ) -> Result<(), String> {
     snow_shot_tauri_commands_scroll_screenshot::scroll_screenshot_save_to_clipboard(
         |image| {
-            let rgba_image = image.to_rgba8();
-
             match app.clipboard().write_image(&tauri::image::Image::new(
-                rgba_image.as_raw(),
-                rgba_image.width(),
-                rgba_image.height(),
+                image.as_bytes(),
+                image.width(),
+                image.height(),
             )) {
                 Ok(_) => Ok(()),
                 Err(e) => Err(format!(

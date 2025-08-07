@@ -1,7 +1,7 @@
 use tauri::command;
 
 #[command]
-pub async fn save_file(request: tauri::ipc::Request<'_>) -> Result<(), ()> {
+pub async fn save_file(request: tauri::ipc::Request<'_>) -> Result<(), String> {
     snow_shot_tauri_commands_file::save_file(request).await
 }
 

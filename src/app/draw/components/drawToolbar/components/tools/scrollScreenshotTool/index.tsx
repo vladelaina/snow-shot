@@ -284,8 +284,6 @@ export const ScrollScreenshot: React.FC<{
 
             pendingCaptureRef.current = true;
 
-            console.log(rect);
-
             await scrollScreenshotCapture(
                 scrollImageList,
                 rect.min_x,

@@ -161,10 +161,10 @@ export type AppSettingsData = {
         findChildrenElements: boolean;
         /** 截图快捷键提示 */
         shortcutCanleTip: boolean;
-        /** 增强保存文件功能 */
-        enhanceSaveFile: boolean;
         /** 复制后自动保存文件 */
         autoSaveOnCopy: boolean;
+        /** 截图当前具有焦点的窗口时复制到剪贴板 */
+        focusedWindowCopyToClipboard: boolean;
         /** 快速保存文件 */
         fastSave: boolean;
         /** 保存文件路径 */
@@ -300,8 +300,8 @@ export const defaultAppSettingsData: AppSettingsData = {
     [AppSettingsGroup.FunctionScreenshot]: {
         findChildrenElements: true,
         shortcutCanleTip: true,
-        enhanceSaveFile: false,
-        autoSaveOnCopy: true,
+        autoSaveOnCopy: false,
+        focusedWindowCopyToClipboard: true,
         fastSave: false,
         saveFileDirectory: '',
         saveFileFormat: ImageFormat.PNG,
@@ -944,10 +944,6 @@ const ContextWrapCore: React.FC<{ children: React.ReactNode }> = ({ children }) 
                         typeof newSettings?.saveFileDirectory === 'string'
                             ? newSettings.saveFileDirectory
                             : (prevSettings?.saveFileDirectory ?? ''),
-                    enhanceSaveFile:
-                        typeof newSettings?.enhanceSaveFile === 'boolean'
-                            ? newSettings.enhanceSaveFile
-                            : (prevSettings?.enhanceSaveFile ?? false),
                     saveFileFormat:
                         typeof newSettings?.saveFileFormat === 'string'
                             ? newSettings.saveFileFormat
@@ -964,6 +960,10 @@ const ContextWrapCore: React.FC<{ children: React.ReactNode }> = ({ children }) 
                         typeof newSettings?.lockDrawTool === 'boolean'
                             ? newSettings.lockDrawTool
                             : (prevSettings?.lockDrawTool ?? true),
+                    focusedWindowCopyToClipboard:
+                        typeof newSettings?.focusedWindowCopyToClipboard === 'boolean'
+                            ? newSettings.focusedWindowCopyToClipboard
+                            : (prevSettings?.focusedWindowCopyToClipboard ?? true),
                 };
             } else if (group === AppSettingsGroup.FunctionOutput) {
                 newSettings = newSettings as AppSettingsData[typeof group];

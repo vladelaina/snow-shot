@@ -546,7 +546,7 @@ impl ScrollScreenshotService {
             self.add_index(image, gray_image, image_corners, edge_position, delta_size);
 
         if is_bottom {
-            self.bottom_image_list.push(cropped_image.clone());
+            self.bottom_image_list.push(cropped_image);
             self.bottom_image_size += delta_size;
             self.bottom_image_index_size += index_delta_size;
 
@@ -859,7 +859,7 @@ impl ScrollScreenshotService {
         };
 
         // 创建最终大小的图片
-        let mut final_image = image::DynamicImage::new_rgb8(total_width, total_height);
+        let mut final_image = image::DynamicImage::new_rgba8(total_width, total_height);
 
         // 当前位置偏移量
         let mut offset_x = 0;

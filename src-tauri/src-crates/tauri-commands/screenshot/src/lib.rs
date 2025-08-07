@@ -3,6 +3,7 @@ use snow_shot_app_os::TryGetElementByFocus;
 use snow_shot_app_os::ui_automation::UIElements;
 use snow_shot_app_shared::ElementRect;
 use std::path::PathBuf;
+use std::sync::Arc;
 use std::time::{SystemTime, UNIX_EPOCH};
 use tauri::ipc::Response;
 use tauri::{Emitter, Manager};
@@ -49,10 +50,11 @@ pub async fn capture_all_monitors(window: tauri::Window) -> Response {
 
 pub async fn capture_focused_window<F>(
     write_image_to_clipboard: F,
-    file_path: Option<String>,
+    file_path: String,
+    copy_to_clipboard: bool,
 ) -> Result<(), String>
 where
-    F: Fn(&image::DynamicImage) -> Result<(), String>,
+    F: Fn(&image::DynamicImage) -> Result<(), String> + Send + 'static,
 {
     let image;
 
@@ -134,18 +136,36 @@ where
         };
     }
 
-    let image = image::DynamicImage::ImageRgba8(image);
+    let image = Arc::new(image::DynamicImage::ImageRgba8(image));
 
-    // 写入到剪贴板
-    match write_image_to_clipboard(&image) {
-        Ok(_) => (),
-        Err(e) => {
-            return Err(e);
-        }
-    }
+    // 并行执行保存文件和写入剪贴板
+    let save_file_future =
+        snow_shot_app_utils::save_image_to_file(&image, PathBuf::from(file_path));
+    let clipboard_future = if copy_to_clipboard {
+        let image_clone = Arc::clone(&image);
+        Some(tokio::task::spawn_blocking(
+            move || match write_image_to_clipboard(&image_clone) {
+                Ok(_) => Ok(()),
+                Err(e) => {
+                    log::error!(
+                        "[capture_focused_window] Failed to write image to clipboard: {}",
+                        e
+                    );
 
-    if let Some(file_path) = file_path {
-        snow_shot_app_utils::save_image_to_file(&image, PathBuf::from(file_path))?;
+                    Err(e)
+                }
+            },
+        ))
+    } else {
+        None
+    };
+
+    if let Some(clipboard_handle) = clipboard_future {
+        let (save_result, clipboard_result) = tokio::join!(save_file_future, clipboard_handle);
+        save_result?;
+        clipboard_result.unwrap()?;
+    } else {
+        save_file_future.await?;
     }
 
     Ok(())

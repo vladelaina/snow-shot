@@ -1,7 +1,9 @@
+use std::ffi::OsStr;
 use std::fs;
 use std::path::PathBuf;
 
 use device_query::{DeviceQuery, DeviceState, MouseState};
+use image::DynamicImage;
 use image::codecs::png::{CompressionType, FilterType, PngEncoder};
 use image::codecs::webp::WebPEncoder;
 use snow_shot_app_shared::ElementRect;
@@ -44,8 +46,20 @@ pub fn get_target_monitor() -> (i32, i32, Monitor) {
     (mouse_x, mouse_y, monitor)
 }
 
-pub fn save_image_to_file(image: &image::DynamicImage, file_path: PathBuf) -> Result<(), String> {
-    if file_path.ends_with(".jxl") {
+pub async fn save_image_to_file(
+    image: &image::DynamicImage,
+    file_path: PathBuf,
+) -> Result<(), String> {
+    let extension = match file_path.extension() {
+        Some(extension) => extension,
+        None => {
+            log::warn!("[save_image_to_file] No extension found, using default extension");
+
+            OsStr::new("")
+        }
+    };
+
+    if extension == "jxl" {
         let image_data = image.to_rgb8();
         let encoder = JxlSimpleEncoder::new(
             image_data.as_raw(),
@@ -68,17 +82,29 @@ pub fn save_image_to_file(image: &image::DynamicImage, file_path: PathBuf) -> Re
 
         return match fs::write(file_path.clone(), encoder_result) {
             Ok(_) => Ok(()),
-            Err(_) => Err(format!(
-                "[save_image_to_file] Failed to save image to file: {}",
-                file_path.display()
+            Err(e) => Err(format!(
+                "[save_image_to_file] Failed to save image to file: {} {}",
+                e,
+                file_path.display(),
             )),
         };
     } else {
-        if image.save(file_path.clone()).is_err() {
-            return Err(format!(
-                "[save_image_to_file] Failed to save image to file: {}",
-                file_path.display()
-            ));
+        // jpg 是 RGB 格式，所以需要转换为 RGB 格式
+        let image = if image.color().has_alpha() && extension == "jpg" {
+            &DynamicImage::ImageRgb8(image.to_rgb8())
+        } else {
+            image
+        };
+
+        match image.save(file_path.clone()) {
+            Ok(_) => (),
+            Err(e) => {
+                return Err(format!(
+                    "[save_image_to_file] Failed to save image to file: {} {}",
+                    e,
+                    file_path.display(),
+                ));
+            }
         }
     }
 

@@ -165,8 +165,8 @@ export default function FixedContentPage() {
                     targetY = monitorInfo.monitor_y + monitorInfo.monitor_height / 2;
                 }
 
-                const windowX = targetX - windowWidth / 2;
-                const windowY = targetY - windowHeight / 2;
+                const windowX = Math.round(targetX - windowWidth / 2);
+                const windowY = Math.round(targetY - windowHeight / 2);
                 await setWindowRect(appWindow, {
                     min_x: windowX,
                     min_y: windowY,

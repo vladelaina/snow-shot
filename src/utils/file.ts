@@ -109,7 +109,7 @@ export const getImagePathFromSettings = async (
     const screenshotSettings = appSettings[AppSettingsGroup.FunctionScreenshot];
     const outputSettings = appSettings[AppSettingsGroup.FunctionOutput];
 
-    if (!screenshotSettings || !outputSettings || !screenshotSettings.enhanceSaveFile) {
+    if (!screenshotSettings || !outputSettings) {
         return undefined;
     }
 
