@@ -8,5 +8,6 @@ image = { workspace = true }
 zune-core = { workspace = true }
 zune-jpegxl = { workspace = true }
 tauri = { workspace = true }
+log = { workspace = true }
 
 base64 = "^0.22"

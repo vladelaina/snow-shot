@@ -132,10 +132,7 @@ const DrawToolbarCore: React.FC<DrawToolbarProps> = ({
         useCallback(
             (settings: AppSettingsData) => {
                 setShortcutCanleTip(settings[AppSettingsGroup.FunctionScreenshot].shortcutCanleTip);
-                setEnableFastSave(
-                    settings[AppSettingsGroup.FunctionScreenshot].enhanceSaveFile &&
-                        settings[AppSettingsGroup.FunctionScreenshot].fastSave,
-                );
+                setEnableFastSave(settings[AppSettingsGroup.FunctionScreenshot].fastSave);
                 // 不显示锁定绘制工具
                 setShowLockDrawTool(!settings[AppSettingsGroup.FunctionScreenshot].lockDrawTool);
                 // 是否启用锁定绘制工具

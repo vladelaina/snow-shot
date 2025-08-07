@@ -615,9 +615,7 @@ const DrawPageCore: React.FC = () => {
     const onCopyToClipboard = useCallback(async () => {
         saveCurrentSelectRect();
 
-        const enableAutoSave =
-            getAppSettings()[AppSettingsGroup.FunctionScreenshot].enhanceSaveFile &&
-            getAppSettings()[AppSettingsGroup.FunctionScreenshot].autoSaveOnCopy;
+        const enableAutoSave = getAppSettings()[AppSettingsGroup.FunctionScreenshot].autoSaveOnCopy;
 
         if (getDrawState() === DrawState.ScrollScreenshot) {
             const filePath = (await getImagePathFromSettings(getAppSettings(), 'auto'))?.filePath;

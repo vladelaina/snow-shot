@@ -13,9 +13,10 @@ export const setDrawWindowStyle = async () => {
     return result;
 };
 
-export const captureFocusedWindow = async (filePath: string | null) => {
+export const captureFocusedWindow = async (filePath: string, copyToClipboard: boolean) => {
     const result = await invoke('capture_focused_window', {
         filePath,
+        copyToClipboard,
     });
     return result;
 };

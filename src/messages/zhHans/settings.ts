@@ -104,6 +104,8 @@ export const settings = {
     'settings.functionSettings.screenshotSettings.ocrAfterAction.copyTextAndCloseWindow':
         '复制文本并关闭窗口',
     'settings.functionSettings.screenshotSettings.ocrCopyText': 'OCR 复制时复制文本',
+    'settings.functionSettings.screenshotSettings.focusedWindowCopyToClipboard':
+        '截图当前具有焦点的窗口时复制到剪贴板',
     'settings.functionSettings.screenshotSettings.autoSaveFileMode': '保存文件增强',
     'settings.functionSettings.screenshotSettings.autoSaveFileMode.saveMode': '保存方式',
     'settings.functionSettings.screenshotSettings.autoSaveFileMode.autoSave': '复制后自动保存',

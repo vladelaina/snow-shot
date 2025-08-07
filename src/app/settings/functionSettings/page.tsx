@@ -320,103 +320,94 @@ export default function SystemSettings() {
                         </Col>
                     </Row>
 
+                    <Row>
+                        <ProFormSwitch
+                            name="focusedWindowCopyToClipboard"
+                            layout="horizontal"
+                            label={
+                                <FormattedMessage id="settings.functionSettings.screenshotSettings.focusedWindowCopyToClipboard" />
+                            }
+                        />
+                    </Row>
+
                     <Row gutter={token.padding}>
-                        <Col span={24}>
+                        <Col span={12}>
                             <ProFormSwitch
-                                name="enhanceSaveFile"
+                                name="autoSaveOnCopy"
                                 layout="horizontal"
                                 label={
-                                    <FormattedMessage id="settings.functionSettings.screenshotSettings.autoSaveFileMode" />
+                                    <FormattedMessage id="settings.functionSettings.screenshotSettings.autoSaveFileMode.autoSave" />
                                 }
                             />
                         </Col>
+                        <Col span={12}>
+                            <ProFormSwitch
+                                name="fastSave"
+                                layout="horizontal"
+                                label={
+                                    <IconLabel
+                                        label={
+                                            <FormattedMessage id="settings.functionSettings.screenshotSettings.autoSaveFileMode.fastSave" />
+                                        }
+                                        tooltipTitle={
+                                            <FormattedMessage id="settings.functionSettings.screenshotSettings.autoSaveFileMode.fastSave.tip" />
+                                        }
+                                    />
+                                }
+                            />
+                        </Col>
+                    </Row>
 
-                        <ProFormDependency<{ enhanceSaveFile: boolean }> name={['enhanceSaveFile']}>
-                            {({ enhanceSaveFile }) => {
-                                return (
-                                    <>
-                                        <Col span={12}>
-                                            <ProFormSwitch
-                                                name="autoSaveOnCopy"
-                                                layout="horizontal"
-                                                label={
-                                                    <FormattedMessage id="settings.functionSettings.screenshotSettings.autoSaveFileMode.autoSave" />
-                                                }
-                                                disabled={!enhanceSaveFile}
-                                            />
-                                        </Col>
-                                        <Col span={12}>
-                                            <ProFormSwitch
-                                                name="fastSave"
-                                                layout="horizontal"
-                                                label={
-                                                    <IconLabel
-                                                        label={
-                                                            <FormattedMessage id="settings.functionSettings.screenshotSettings.autoSaveFileMode.fastSave" />
-                                                        }
-                                                        tooltipTitle={
-                                                            <FormattedMessage id="settings.functionSettings.screenshotSettings.autoSaveFileMode.fastSave.tip" />
-                                                        }
-                                                    />
-                                                }
-                                                disabled={!enhanceSaveFile}
-                                            />
-                                        </Col>
+                    <Row>
+                        <Col span={12}>
+                            <ProForm.Item
+                                name="saveFileDirectory"
+                                label={
+                                    <IconLabel
+                                        label={
+                                            <FormattedMessage id="settings.functionSettings.screenshotSettings.autoSaveFileMode.directory" />
+                                        }
+                                    />
+                                }
+                                required={false}
+                            >
+                                <DirectoryInput />
+                            </ProForm.Item>
+                        </Col>
 
-                                        <Col span={12}>
-                                            <ProForm.Item
-                                                name="saveFileDirectory"
-                                                label={
-                                                    <IconLabel
-                                                        label={
-                                                            <FormattedMessage id="settings.functionSettings.screenshotSettings.autoSaveFileMode.directory" />
-                                                        }
-                                                    />
-                                                }
-                                                required={false}
-                                            >
-                                                <DirectoryInput disabled={!enhanceSaveFile} />
-                                            </ProForm.Item>
-                                        </Col>
-
-                                        <Col span={12}>
-                                            <ProForm.Item
-                                                name="saveFileFormat"
-                                                label={
-                                                    <FormattedMessage id="settings.functionSettings.screenshotSettings.autoSaveFileMode.saveFileFormat" />
-                                                }
-                                            >
-                                                <Select
-                                                    options={[
-                                                        {
-                                                            label: 'PNG(*.png)',
-                                                            value: ImageFormat.PNG,
-                                                        },
-                                                        {
-                                                            label: 'JPEG(*.jpg)',
-                                                            value: ImageFormat.JPEG,
-                                                        },
-                                                        {
-                                                            label: 'WEBP(*.webp)',
-                                                            value: ImageFormat.WEBP,
-                                                        },
-                                                        {
-                                                            label: 'AVIF(*.avif)',
-                                                            value: ImageFormat.AVIF,
-                                                        },
-                                                        {
-                                                            label: 'JPEG XL(*.jxl)',
-                                                            value: ImageFormat.JPEG_XL,
-                                                        },
-                                                    ]}
-                                                    disabled={!enhanceSaveFile}
-                                                />
-                                            </ProForm.Item>
-                                        </Col>
-                                    </>
-                                );
-                            }}
-                        </ProFormDependency>
+                        <Col span={12}>
+                            <ProForm.Item
+                                name="saveFileFormat"
+                                label={
+                                    <FormattedMessage id="settings.functionSettings.screenshotSettings.autoSaveFileMode.saveFileFormat" />
+                                }
+                            >
+                                <Select
+                                    options={[
+                                        {
+                                            label: 'PNG(*.png)',
+                                            value: ImageFormat.PNG,
+                                        },
+                                        {
+                                            label: 'JPEG(*.jpg)',
+                                            value: ImageFormat.JPEG,
+                                        },
+                                        {
+                                            label: 'WEBP(*.webp)',
+                                            value: ImageFormat.WEBP,
+                                        },
+                                        {
+                                            label: 'AVIF(*.avif)',
+                                            value: ImageFormat.AVIF,
+                                        },
+                                        {
+                                            label: 'JPEG XL(*.jxl)',
+                                            value: ImageFormat.JPEG_XL,
+                                        },
+                                    ]}
+                                />
+                            </ProForm.Item>
+                        </Col>
                     </Row>
                 </ProForm>
             </Spin>

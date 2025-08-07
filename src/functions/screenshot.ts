@@ -3,6 +3,7 @@ import { captureFocusedWindow } from '@/commands/screenshot';
 import { getImagePathFromSettings } from '@/utils/file';
 import { playSound } from '@/utils/audio';
 import { emit } from '@tauri-apps/api/event';
+import * as tauriLog from '@tauri-apps/plugin-log';
 
 export enum ScreenshotType {
     Default = 'default',
@@ -19,14 +20,17 @@ export const executeScreenshot = async (type: ScreenshotType = ScreenshotType.De
 };
 
 export const executeScreenshotFocusedWindow = async (appSettings: AppSettingsData) => {
-    const enableAutoSave =
-        appSettings[AppSettingsGroup.FunctionScreenshot].enhanceSaveFile &&
-        appSettings[AppSettingsGroup.FunctionScreenshot].autoSaveOnCopy;
+    const imagePath = await getImagePathFromSettings(appSettings, 'focused-window');
+    if (!imagePath) {
+        tauriLog.error('[executeScreenshotFocusedWindow] Failed to get image path from settings');
 
-    const imagePath = enableAutoSave
-        ? await getImagePathFromSettings(appSettings, 'focused-window')
-        : null;
-    captureFocusedWindow(imagePath?.filePath ?? null);
+        return;
+    }
+
+    captureFocusedWindow(
+        imagePath.filePath,
+        appSettings[AppSettingsGroup.FunctionScreenshot].focusedWindowCopyToClipboard,
+    );
     // 播放相机快门音效
     playSound('/audios/camera_shutter.mp3');
 };

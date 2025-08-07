@@ -21,21 +21,25 @@ pub async fn capture_all_monitors(window: tauri::Window) -> Response {
 #[command]
 pub async fn capture_focused_window(
     app: tauri::AppHandle,
-    file_path: Option<String>,
+    file_path: String,
+    copy_to_clipboard: bool,
 ) -> Result<(), String> {
     snow_shot_tauri_commands_screenshot::capture_focused_window(
-        |image| match app.clipboard().write_image(&tauri::image::Image::new(
-            image.as_bytes(),
-            image.width(),
-            image.height(),
-        )) {
-            Ok(_) => Ok(()),
-            Err(e) => Err(format!(
-                "[capture_focused_window] Failed to write image to clipboard: {}",
-                e
-            )),
+        move |image| {
+            match app.clipboard().write_image(&tauri::image::Image::new(
+                image.as_bytes(),
+                image.width(),
+                image.height(),
+            )) {
+                Ok(_) => Ok(()),
+                Err(e) => Err(format!(
+                    "[capture_focused_window] Failed to write image to clipboard: {}",
+                    e
+                )),
+            }
         },
         file_path,
+        copy_to_clipboard,
     )
     .await
 }

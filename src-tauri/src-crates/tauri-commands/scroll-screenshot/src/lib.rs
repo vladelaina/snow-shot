@@ -203,7 +203,7 @@ pub async fn scroll_screenshot_save_to_file(
         }
     };
 
-    save_image_to_file(&image, PathBuf::from(file_path))?;
+    save_image_to_file(&image, PathBuf::from(file_path)).await?;
 
     Ok(())
 }
