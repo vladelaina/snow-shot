@@ -325,7 +325,8 @@ const ColorPickerCore: React.FC<{
     const { isDisableMouseMove, enableMouseMove, disableMouseMove } = useMoveCursor();
     const updateImageDataPutImage = useCallback(
         (ctx: CanvasRenderingContext2D, x: number, y: number, imageData: ImageData) => {
-            ctx.clearRect(0, 0, previewCanvasSize, previewCanvasSize);
+            ctx.clearRect(0, 0, previewPickerSize, previewPickerSize);
+
             ctx.putImageData(imageData, -x, -y, x, y, previewPickerSize, previewPickerSize);
         },
         [],
@@ -358,27 +359,33 @@ const ColorPickerCore: React.FC<{
             // );
 
             mouseX = physicalX ?? Math.floor(mouseX * window.devicePixelRatio);
-            mouseY = physicalY ?? Math.floor(mouseY * window.devicePixelRatio);
+            mouseY = Math.min(
+                Math.floor(mouseY * window.devicePixelRatio),
+                captureBoundingBoxInfo.height - 1,
+            );
 
             const ctx = previewCanvasCtxRef.current!;
             const halfPickerSize = Math.floor(previewPickerSize / 2);
             // 将数据绘制到预览画布
-            const x = Math.floor(mouseX - halfPickerSize);
-            const y = Math.floor(mouseY - halfPickerSize);
-            const pickerX = x + halfPickerSize;
-            const pickerY = y + halfPickerSize;
-            updatePickerPosition(pickerX, pickerY);
-            const baseIndex = (pickerY * captureBoundingBoxInfo.width + pickerX) * 4;
+            updatePickerPosition(mouseX, mouseY);
+
+            const pickerY = captureBoundingBoxInfoRef.current!.height - mouseY - 1;
+            const baseIndex = (pickerY * captureBoundingBoxInfo.width + mouseX) * 4;
 
             // 更新颜色
             updateColor(
-                imageData.data[baseIndex],
-                imageData.data[baseIndex + 1],
-                imageData.data[baseIndex + 2],
+                imageData.data[baseIndex] ?? 0,
+                imageData.data[baseIndex + 1] ?? 0,
+                imageData.data[baseIndex + 2] ?? 0,
             );
 
             // 计算和绘制错开 1 帧率
-            updateImageDataPutImageRender(ctx, x, y, imageData);
+            updateImageDataPutImageRender(
+                ctx,
+                mouseX - halfPickerSize,
+                pickerY - halfPickerSize,
+                imageData,
+            );
         },
         [
             enableMouseMove,
@@ -435,10 +442,10 @@ const ColorPickerCore: React.FC<{
         }
 
         previewCanvasCtxRef.current = ctx;
-        previewCanvas.width = previewCanvasSize;
-        previewCanvas.height = previewCanvasSize;
+        previewCanvas.width = previewPickerSize;
+        previewCanvas.height = previewPickerSize;
     }, []);
-    const initImageData = useCallback(() => {
+    const initImageData = useCallback(async () => {
         const canvasApp = drawLayerActionRef.current?.getCanvasApp();
         if (!canvasApp) {
             return;
@@ -450,23 +457,30 @@ const ColorPickerCore: React.FC<{
             captureBoundingBoxInfoRef.current!.mousePosition.mouseY,
         );
 
-        requestAnimationFrame(() => {
-            currentCanvasImageDataRef.current = canvasApp.renderer.extract
-                .canvas(canvasApp.stage)
-                .getContext('2d')
-                ?.getImageData(
-                    0,
-                    0,
-                    captureBoundingBoxInfoRef.current!.width,
-                    captureBoundingBoxInfoRef.current!.height,
-                    {
-                        colorSpace: 'srgb',
-                    },
-                );
+        const canvasCtx =
+            canvasApp.renderer.canvas.getContext('webgl') ?? canvasApp.canvas.getContext('webgl2');
 
-            update(mousePositionRef.current.mouseX, mousePositionRef.current.mouseY);
-        });
+        if (!canvasCtx) {
+            return;
+        }
+
+        const width = captureBoundingBoxInfoRef.current!.width;
+        const height = captureBoundingBoxInfoRef.current!.height;
+
+        const canvasPixels = new Uint8ClampedArray(width * height * 4);
+        canvasCtx.readPixels(
+            0,
+            0,
+            width,
+            height,
+            canvasCtx.RGBA,
+            canvasCtx.UNSIGNED_BYTE,
+            canvasPixels,
+        );
+        currentCanvasImageDataRef.current = new ImageData(canvasPixels, width, height);
+        update(mousePositionRef.current.mouseX, mousePositionRef.current.mouseY);
     }, [captureBoundingBoxInfoRef, drawLayerActionRef, mousePositionRef, update]);
+
     const onCaptureLoad = useCallback(
         (captureLoading: boolean) => {
             setEnableKeyEvent(!captureLoading);
@@ -712,9 +726,10 @@ const ColorPickerCore: React.FC<{
                     }
 
                     .preview-canvas {
-                        width: ${previewCanvasSize * previewScale}px;
-                        height: ${previewCanvasSize * previewScale}px;
+                        width: ${previewCanvasSize}px;
+                        height: ${previewCanvasSize}px;
                         image-rendering: pixelated;
+                        transform: scaleY(-1);
                     }
 
                     .color-picker-content {
