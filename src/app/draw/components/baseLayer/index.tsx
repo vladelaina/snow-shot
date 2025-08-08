@@ -239,6 +239,7 @@ export const BaseLayerCore: React.FC<
                 },
                 autoStart: false,
                 antialias,
+                preference: 'webgl',
             });
             canvasApp.ticker.maxFPS = 60;
             canvasApp.ticker.minFPS = 0;
@@ -330,6 +331,7 @@ export const BaseLayerCore: React.FC<
             if (!canvasApp) {
                 return;
             }
+
             return canvasApp.renderer.extract
                 .canvas(canvasApp.stage)
                 .getContext('2d')

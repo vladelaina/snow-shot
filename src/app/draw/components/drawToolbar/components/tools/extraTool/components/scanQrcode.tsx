@@ -1,4 +1,4 @@
-import { useContext, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { Spin, theme, Typography } from 'antd';
 import { DrawContext } from '@/app/draw/types';
 import { zIndexs } from '@/utils/zIndex';
@@ -21,14 +21,7 @@ export const ScanQrcodeTool: React.FC<{
     const [containerStyle, setContainerStyle] = useState<React.CSSProperties>({});
     const [qrCode, setQrCode] = useState<string | undefined>(undefined);
 
-    const inited = useRef(false);
-    useEffect(() => {
-        if (inited.current) {
-            return;
-        }
-
-        inited.current = true;
-
+    const init = useCallback(async () => {
         const selectRect = selectLayerActionRef.current?.getSelectRect();
         if (!selectRect) {
             return;
@@ -47,16 +40,7 @@ export const ScanQrcodeTool: React.FC<{
             return;
         }
 
-        const imageData = drawLayerActionRef.current
-            ?.getCanvasApp()
-            ?.renderer.extract.canvas(canvasApp.stage)
-            .getContext('2d')
-            ?.getImageData(
-                selectRect.min_x,
-                selectRect.min_y,
-                selectRect.max_x - selectRect.min_x,
-                selectRect.max_y - selectRect.min_y,
-            );
+        const imageData = await drawLayerActionRef.current?.getImageData(selectRect);
         if (!imageData) {
             return;
         }
@@ -85,7 +69,18 @@ export const ScanQrcodeTool: React.FC<{
                     }),
                 );
             });
-    }, [drawLayerActionRef, intl, message, selectLayerActionRef]);
+    }, [intl, message, drawLayerActionRef, selectLayerActionRef]);
+
+    const inited = useRef(false);
+    useEffect(() => {
+        if (inited.current) {
+            return;
+        }
+
+        inited.current = true;
+
+        init();
+    }, [init]);
 
     useHotkeysApp(
         getPlatformValue('Ctrl+A', 'Meta+A'),
