@@ -44,6 +44,8 @@ import { writeTextToClipboard } from '@/utils/clipboard';
 import { useMoveCursor } from './extra';
 import { getPlatform } from '@/utils';
 import { getExcalidrawCanvas } from '@/utils/excalidraw';
+import { ImageBuffer } from '@/commands';
+import { getPixels } from './workers/getPixels';
 
 const previewScale = 12;
 const previewPickerSize = 10 + 1;
@@ -107,12 +109,7 @@ const ColorPickerCore: React.FC<{
 
     const { token } = theme.useToken();
 
-    const {
-        captureBoundingBoxInfoRef,
-        drawLayerActionRef,
-        mousePositionRef,
-        selectLayerActionRef,
-    } = useContext(DrawContext);
+    const { captureBoundingBoxInfoRef, selectLayerActionRef } = useContext(DrawContext);
 
     const updateOpacity = useCallback(() => {
         if (!colorPickerRef.current) {
@@ -124,11 +121,15 @@ const ColorPickerCore: React.FC<{
             return;
         }
 
+        if (!currentCanvasImageDataRef.current) {
+            return;
+        }
+
         let opacity = '1';
 
         if (enableRef.current) {
-            const mouseX = mousePositionRef.current.mouseX * window.devicePixelRatio;
-            const mouseY = mousePositionRef.current.mouseY * window.devicePixelRatio;
+            const mouseX = pickerPositionRef.current.mouseX;
+            const mouseY = pickerPositionRef.current.mouseY;
             if (
                 getAppSettings()[AppSettingsGroup.Screenshot].colorPickerShowMode ===
                 ColorPickerShowMode.BeyondSelectRect
@@ -183,13 +184,7 @@ const ColorPickerCore: React.FC<{
         }
 
         colorPickerRef.current.style.opacity = opacity;
-    }, [
-        captureBoundingBoxInfoRef,
-        getAppSettings,
-        mousePositionRef,
-        selectLayerActionRef,
-        token.marginXXS,
-    ]);
+    }, [captureBoundingBoxInfoRef, getAppSettings, selectLayerActionRef, token.marginXXS]);
 
     const appWindowRef = useRef<AppWindow | undefined>(undefined);
     useEffect(() => {
@@ -334,11 +329,6 @@ const ColorPickerCore: React.FC<{
     const updateImageDataPutImageRender = useCallbackRender(updateImageDataPutImage);
     const updateImageData = useCallback(
         async (mouseX: number, mouseY: number, physicalX?: number, physicalY?: number) => {
-            const imageData = currentCanvasImageDataRef.current;
-            if (!imageData) {
-                return;
-            }
-
             const captureBoundingBoxInfo = captureBoundingBoxInfoRef.current;
             if (!captureBoundingBoxInfo) {
                 return;
@@ -358,9 +348,12 @@ const ColorPickerCore: React.FC<{
             //     imageBufferRef.current!.monitorHeight,
             // );
 
-            mouseX = physicalX ?? Math.floor(mouseX * window.devicePixelRatio);
+            mouseX = Math.min(
+                Math.max(0, physicalX ?? Math.floor(mouseX * window.devicePixelRatio)),
+                captureBoundingBoxInfo.width - 1,
+            );
             mouseY = Math.min(
-                Math.floor(mouseY * window.devicePixelRatio),
+                Math.max(0, physicalY ?? Math.floor(mouseY * window.devicePixelRatio)),
                 captureBoundingBoxInfo.height - 1,
             );
 
@@ -369,27 +362,29 @@ const ColorPickerCore: React.FC<{
             // 将数据绘制到预览画布
             updatePickerPosition(mouseX, mouseY);
 
-            const pickerY = captureBoundingBoxInfoRef.current!.height - mouseY - 1;
-            const baseIndex = (pickerY * captureBoundingBoxInfo.width + mouseX) * 4;
+            const imageData = currentCanvasImageDataRef.current;
+            if (imageData) {
+                const baseIndex = (mouseY * captureBoundingBoxInfo.width + mouseX) * 4;
 
-            // 更新颜色
-            updateColor(
-                imageData.data[baseIndex] ?? 0,
-                imageData.data[baseIndex + 1] ?? 0,
-                imageData.data[baseIndex + 2] ?? 0,
-            );
+                // 更新颜色
+                updateColor(
+                    imageData.data[baseIndex] ?? 0,
+                    imageData.data[baseIndex + 1] ?? 0,
+                    imageData.data[baseIndex + 2] ?? 0,
+                );
 
-            // 计算和绘制错开 1 帧率
-            updateImageDataPutImageRender(
-                ctx,
-                mouseX - halfPickerSize,
-                pickerY - halfPickerSize,
-                imageData,
-            );
+                // 计算和绘制错开 1 帧率
+                updateImageDataPutImageRender(
+                    ctx,
+                    mouseX - halfPickerSize,
+                    mouseY - halfPickerSize,
+                    imageData,
+                );
+            }
         },
         [
-            enableMouseMove,
             captureBoundingBoxInfoRef,
+            enableMouseMove,
             updateColor,
             updateImageDataPutImageRender,
             updatePickerPosition,
@@ -445,64 +440,54 @@ const ColorPickerCore: React.FC<{
         previewCanvas.width = previewPickerSize;
         previewCanvas.height = previewPickerSize;
     }, []);
-    const initImageData = useCallback(async () => {
-        const canvasApp = drawLayerActionRef.current?.getCanvasApp();
-        if (!canvasApp) {
-            return;
-        }
+    const initImageData = useCallback(
+        async (imageBuffer: ArrayBuffer) => {
+            // 这里用 wasm 解码图片来获取像素点，如果通过读取 canvas 的上下文获取会阻塞主线程
+            getPixels(
+                imageBuffer,
+                captureBoundingBoxInfoRef.current!.width,
+                captureBoundingBoxInfoRef.current!.height,
+            ).then((pixels) => {
+                currentCanvasImageDataRef.current = pixels;
+                update(
+                    Math.floor(pickerPositionRef.current.mouseX / window.devicePixelRatio),
+                    Math.floor(pickerPositionRef.current.mouseY / window.devicePixelRatio),
+                    pickerPositionRef.current.mouseX,
+                    pickerPositionRef.current.mouseY,
+                );
+            });
+        },
+        [captureBoundingBoxInfoRef, update],
+    );
 
-        // 用截图的鼠标位置作为 picker 的初始位置
-        pickerPositionRef.current = new MousePosition(
-            captureBoundingBoxInfoRef.current!.mousePosition.mouseX,
-            captureBoundingBoxInfoRef.current!.mousePosition.mouseY,
-        );
-
-        const canvasCtx =
-            canvasApp.renderer.canvas.getContext('webgl') ?? canvasApp.canvas.getContext('webgl2');
-
-        if (!canvasCtx) {
-            return;
-        }
-
-        const width = captureBoundingBoxInfoRef.current!.width;
-        const height = captureBoundingBoxInfoRef.current!.height;
-
-        const canvasPixels = new Uint8ClampedArray(width * height * 4);
-        canvasCtx.readPixels(
-            0,
-            0,
-            width,
-            height,
-            canvasCtx.RGBA,
-            canvasCtx.UNSIGNED_BYTE,
-            canvasPixels,
-        );
-        currentCanvasImageDataRef.current = new ImageData(canvasPixels, width, height);
-        update(mousePositionRef.current.mouseX, mousePositionRef.current.mouseY);
-    }, [captureBoundingBoxInfoRef, drawLayerActionRef, mousePositionRef, update]);
-
+    const onCaptureReady = useCallback(
+        async (imageBuffer: ImageBuffer) => {
+            initPreviewCanvas();
+            initImageData(imageBuffer.buffer);
+        },
+        [initImageData, initPreviewCanvas],
+    );
+    const [, setDrawEvent] = useStateSubscriber(DrawEventPublisher, undefined);
     const onCaptureLoad = useCallback(
         (captureLoading: boolean) => {
             setEnableKeyEvent(!captureLoading);
-            if (captureLoading) {
-                return;
-            }
-
-            initPreviewCanvas();
-            initImageData();
         },
-        [initImageData, initPreviewCanvas, setEnableKeyEvent],
+        [setEnableKeyEvent],
     );
     useStateSubscriber(CaptureLoadingPublisher, onCaptureLoad);
-    const [, setDrawEvent] = useStateSubscriber(DrawEventPublisher, undefined);
 
     useStateSubscriber(
         CaptureEventPublisher,
-        useCallback((captureEvent: CaptureEventParams | undefined) => {
-            if (captureEvent?.event === CaptureEvent.onCaptureFinish) {
-                currentCanvasImageDataRef.current = undefined;
-            }
-        }, []),
+        useCallback(
+            (captureEvent: CaptureEventParams | undefined) => {
+                if (captureEvent?.event === CaptureEvent.onCaptureFinish) {
+                    currentCanvasImageDataRef.current = undefined;
+                } else if (captureEvent?.event === CaptureEvent.onCaptureImageBufferReady) {
+                    onCaptureReady(captureEvent.params.imageBuffer);
+                }
+            },
+            [onCaptureReady],
+        ),
     );
 
     useEffect(() => {
@@ -729,7 +714,6 @@ const ColorPickerCore: React.FC<{
                         width: ${previewCanvasSize}px;
                         height: ${previewCanvasSize}px;
                         image-rendering: pixelated;
-                        transform: scaleY(-1);
                     }
 
                     .color-picker-content {

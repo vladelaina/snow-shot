@@ -227,6 +227,13 @@ const DrawPageCore: React.FC = () => {
         async (imageBuffer: ImageBuffer, captureBoundingBoxInfo: CaptureBoundingBoxInfo) => {
             setCaptureLoading(true);
 
+            setCaptureEvent({
+                event: CaptureEvent.onCaptureImageBufferReady,
+                params: {
+                    imageBuffer,
+                },
+            });
+
             if (imageBlobUrlRef.current) {
                 const tempUrl = imageBlobUrlRef.current;
                 // 延迟释放 URL，提速
@@ -238,7 +245,7 @@ const DrawPageCore: React.FC = () => {
             imageBlobUrlRef.current = URL.createObjectURL(new Blob([imageBuffer.data]));
             const imageTexture = await PIXI.Assets.load<PIXI.Texture>({
                 src: imageBlobUrlRef.current,
-                loadParser: 'loadTextures',
+                parser: 'texture',
             });
             mousePositionRef.current = new MousePosition(
                 Math.floor(captureBoundingBoxInfo.mousePosition.mouseX / window.devicePixelRatio),
@@ -307,7 +314,7 @@ const DrawPageCore: React.FC = () => {
             setTimeout(() => {
                 appWindowRef.current.close();
             }, 1000 * 8);
-        }, 1000 * 16);
+        }, 1000 * 24);
     }, []);
 
     const finishCapture = useCallback<DrawContextType['finishCapture']>(

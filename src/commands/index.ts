@@ -10,6 +10,7 @@ export enum ImageEncoder {
 export type ImageBuffer = {
     encoder: ImageEncoder;
     data: Blob;
+    buffer: ArrayBuffer;
 };
 
 /**
@@ -29,6 +30,7 @@ export const captureCurrentMonitor = async (
     return {
         encoder,
         data: new Blob([result]),
+        buffer: result,
     };
 };
 

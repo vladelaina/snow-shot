@@ -6,7 +6,7 @@ import { BaseLayerEventActionType } from './components/baseLayer';
 import { ScreenshotType } from '@/functions/screenshot';
 import { OcrDetectResult } from '@/commands/ocr';
 import { MonitorInfo } from '@/commands/core';
-import { ElementRect } from '@/commands';
+import { ElementRect, ImageBuffer } from '@/commands';
 import { MousePosition } from '@/utils/mousePosition';
 import Flatbush from 'flatbush';
 import { last } from 'es-toolkit';
@@ -45,6 +45,7 @@ export const getMonitorRect = (monitorInfo: MonitorInfo | undefined) => {
 
 export enum CaptureEvent {
     onExecuteScreenshot = 'onExecuteScreenshot',
+    onCaptureImageBufferReady = 'onCaptureImageBufferReady',
     onCaptureReady = 'onCaptureReady',
     onCaptureLoad = 'onCaptureLoad',
     onCaptureFinish = 'onCaptureFinish',
@@ -53,6 +54,12 @@ export enum CaptureEvent {
 export type CaptureEventParams =
     | {
           event: CaptureEvent.onExecuteScreenshot;
+      }
+    | {
+          event: CaptureEvent.onCaptureImageBufferReady;
+          params: {
+              imageBuffer: ImageBuffer;
+          };
       }
     | {
           event: CaptureEvent.onCaptureLoad;
