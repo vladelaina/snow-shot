@@ -45,13 +45,17 @@ const generateSerialNumber = (
     let textHeight = 20 * sizeScale;
     const fontSize = appState.currentItemFontSize;
     if (fontSize <= 16) {
-        textHeight = 20;
+        textHeight = 21;
     } else if (fontSize <= 20) {
-        textHeight = 25;
+        textHeight = 26;
     } else if (fontSize <= 28) {
-        textHeight = 35;
+        textHeight = 36;
     } else if (fontSize <= 36) {
-        textHeight = 45;
+        textHeight = 46;
+    }
+
+    if (appState.currentItemFontFamily === 6) {
+        textHeight += 3;
     }
 
     const res: ExcalidrawElement[] = [];
