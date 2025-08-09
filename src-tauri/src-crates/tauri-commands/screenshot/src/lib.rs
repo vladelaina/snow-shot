@@ -43,7 +43,7 @@ pub async fn capture_all_monitors(window: tauri::Window) -> Response {
         .capture(Some(&window));
 
     let image_buffer =
-        snow_shot_app_utils::encode_image(&image, snow_shot_app_utils::ImageEncoder::Png);
+        snow_shot_app_utils::encode_image(&image, snow_shot_app_utils::ImageEncoder::Webp);
 
     Response::new(image_buffer)
 }

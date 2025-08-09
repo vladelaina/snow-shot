@@ -31,5 +31,6 @@ export const captureAllMonitors = async (): Promise<ImageBuffer | undefined> => 
     return {
         encoder: ImageEncoder.WebP,
         data: new Blob([result]),
+        buffer: result,
     };
 };
