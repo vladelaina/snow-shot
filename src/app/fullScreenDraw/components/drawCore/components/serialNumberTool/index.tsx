@@ -54,7 +54,6 @@ const generateSerialNumber = (
         textHeight = 46;
     }
 
-    console.log(appState.currentItemFontFamily);
     if (appState.currentItemFontFamily === 6) {
         textHeight += 3;
     }
