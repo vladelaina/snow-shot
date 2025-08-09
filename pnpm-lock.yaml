@@ -147,8 +147,8 @@ importers:
         specifier: ^2.1.11
         version: 2.1.11(typescript@5.8.3)
       turbo-webp:
-        specifier: file:..\turbo-webp\pkg
-        version: file:../turbo-webp/pkg
+        specifier: 0.1.2
+        version: 0.1.2
       upng-js:
         specifier: ^2.1.0
         version: 2.1.0
@@ -4174,8 +4174,8 @@ packages:
   tunnel-rat@0.1.2:
     resolution: {integrity: sha512-lR5VHmkPhzdhrM092lI2nACsLO4QubF0/yoOhzX7c+wIpbN1GjHNzCc91QlpxBi+cnx8vVJ+Ur6vL5cEoQPFpQ==}
 
-  turbo-webp@file:../turbo-webp/pkg:
-    resolution: {directory: ../turbo-webp/pkg, type: directory}
+  turbo-webp@0.1.2:
+    resolution: {integrity: sha512-wD0XfukdBuLMQQgxgc0spay5xAxREOjrVngidovmPZuo12wl5WWOEgHDxOGmh07TJICWtoI1IVHkoaiC0NJxDw==}
 
   type-check@0.4.0:
     resolution: {integrity: sha512-XleUoc9uwGXqjWwXaUTZAmzMcFZ5858QA2vvx1Ur5xIcixXIP+8LnFDgRplU30us6teqdlskFfu+ae4K79Ooew==}
@@ -9239,7 +9239,7 @@ snapshots:
       - immer
       - react
 
-  turbo-webp@file:../turbo-webp/pkg: {}
+  turbo-webp@0.1.2: {}
 
   type-check@0.4.0:
     dependencies:
