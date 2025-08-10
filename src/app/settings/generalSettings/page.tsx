@@ -292,6 +292,15 @@ export default function GeneralSettings() {
                             </ProForm.Item>
                         </Col>
                     </Row>
+
+                    <Row>
+                        <Col span={12}>
+                            <ProFormSwitch
+                                name="showOcrTranslate"
+                                label={<FormattedMessage id="settings.showOcrTranslate" />}
+                            />
+                        </Col>
+                    </Row>
                 </Spin>
             </ProForm>
 

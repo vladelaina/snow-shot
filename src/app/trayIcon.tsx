@@ -161,10 +161,28 @@ const TrayIconLoaderComponent = () => {
                             },
                         },
                         {
+                            id: `${appWindow.label}-screenshot-ocr-translate`,
+                            text: intl.formatMessage(
+                                { id: 'home.screenshotAfter' },
+                                {
+                                    text: intl.formatMessage({ id: 'draw.ocrTranslateTool' }),
+                                },
+                            ),
+                            accelerator: disableShortcut
+                                ? undefined
+                                : shortcutKeys[AppFunction.ScreenshotOcrTranslate].shortcutKey,
+                            action: async () => {
+                                executeScreenshot(ScreenshotType.OcrTranslate);
+                            },
+                        },
+                        {
                             id: `${appWindow.label}-screenshot-copy`,
                             text: intl.formatMessage({
                                 id: 'home.screenshotFunction.screenshotCopy',
                             }),
+                            accelerator: disableShortcut
+                                ? undefined
+                                : shortcutKeys[AppFunction.ScreenshotCopy].shortcutKey,
                             action: async () => {
                                 executeScreenshot(ScreenshotType.Copy);
                             },
@@ -258,6 +276,9 @@ const TrayIconLoaderComponent = () => {
                         {
                             id: `${appWindow.label}-screenshot-fullScreenDraw`,
                             text: intl.formatMessage({ id: 'home.fullScreenDraw' }),
+                            accelerator: disableShortcut
+                                ? undefined
+                                : shortcutKeys[AppFunction.FullScreenDraw].shortcutKey,
                             action: async () => {
                                 createFullScreenDrawWindow();
                             },

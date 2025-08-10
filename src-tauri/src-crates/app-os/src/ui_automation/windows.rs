@@ -17,8 +17,8 @@ use windows::Win32::UI::WindowsAndMessaging::GetClassNameW;
 use windows::Win32::UI::WindowsAndMessaging::SetForegroundWindow;
 use xcap::Window;
 
-use snow_shot_app_utils::monitor_info::MonitorList;
 use snow_shot_app_shared::ElementRect;
+use snow_shot_app_utils::monitor_info::MonitorList;
 
 use super::ElementLevel;
 use super::TryGetElementByFocus;
@@ -234,7 +234,7 @@ impl UIElements {
                                     || window_title.ends_with("Microsoft​ Edge")
                                     || window_title.ends_with("Microsoft Edge")
                                     || window_title.ends_with("Google Chrome")
-                                    || window_title.starts_with("Snow Shot")
+                                    || window_title.eq("Snow Shot")
                                 {
                                     disable_focus = false;
                                 } else {

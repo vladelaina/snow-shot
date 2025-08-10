@@ -296,6 +296,15 @@ const StatusBar: React.FC = () => {
                     width: ${monitorRect.max_x - monitorRect.min_x}px !important;
                     transform: unset !important;
                 }
+                :global(.ant-modal-wrap),
+                :global(.ant-modal-mask) {
+                    top: ${monitorRect.min_y}px !important;
+                    left: ${monitorRect.min_x}px !important;
+                    right: unset !important;
+                    bottom: unset !important;
+                    width: ${monitorRect.max_x - monitorRect.min_x}px !important;
+                    height: ${monitorRect.max_y - monitorRect.min_y}px !important;
+                }
 
                 .status-bar {
                     position: fixed;

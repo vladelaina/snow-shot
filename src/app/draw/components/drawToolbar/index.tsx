@@ -24,6 +24,7 @@ import {
     FixedIcon,
     MosaicIcon,
     OcrDetectIcon,
+    OcrTranslateIcon,
     PenIcon,
     RectIcon,
     SaveIcon,
@@ -119,6 +120,7 @@ const DrawToolbarCore: React.FC<DrawToolbarProps> = ({
     const [showLockDrawTool, setShowLockDrawTool, showLockDrawToolRef] = useStateRef(false);
     const [enableLockDrawTool, setEnableLockDrawTool, enableLockDrawToolRef] = useStateRef(false);
     const [enableFastSave, setEnableFastSave] = useState(false);
+    const [enableOcrTranslate, setEnableOcrTranslate] = useState(true);
     const [enableScrollScreenshot, setEnableScrollScreenshot] = useState(false);
     const [shortcutCanleTip, setShortcutCanleTip] = useState(false);
     const drawToolarContainerRef = useRef<HTMLDivElement | null>(null);
@@ -137,8 +139,9 @@ const DrawToolbarCore: React.FC<DrawToolbarProps> = ({
                 setShowLockDrawTool(!settings[AppSettingsGroup.FunctionScreenshot].lockDrawTool);
                 // 是否启用锁定绘制工具
                 setEnableLockDrawTool(settings[AppSettingsGroup.Cache].enableLockDrawTool);
+                setEnableOcrTranslate(settings[AppSettingsGroup.Screenshot].showOcrTranslate);
             },
-            [setEnableLockDrawTool, setShowLockDrawTool],
+            [setEnableLockDrawTool, setShowLockDrawTool, setEnableOcrTranslate],
         ),
     );
     const draggingRef = useRef(false);
@@ -328,6 +331,13 @@ const DrawToolbarCore: React.FC<DrawToolbarProps> = ({
                     });
                     onOcrDetect();
                     break;
+                case DrawState.OcrTranslate:
+                    drawCacheLayerActionRef.current?.setEnable(false);
+                    drawCacheLayerActionRef.current?.setActiveTool({
+                        type: 'hand',
+                    });
+                    onOcrDetect();
+                    break;
                 case DrawState.ExtraTools:
                     drawCacheLayerActionRef.current?.setEnable(false);
                     drawCacheLayerActionRef.current?.setActiveTool({
@@ -437,6 +447,9 @@ const DrawToolbarCore: React.FC<DrawToolbarProps> = ({
                         break;
                     case ScreenshotType.OcrDetect:
                         onToolClick(DrawState.OcrDetect);
+                        break;
+                    case ScreenshotType.OcrTranslate:
+                        onToolClick(DrawState.OcrTranslate);
                         break;
                     case ScreenshotType.Copy:
                         onCopyToClipboard();
@@ -716,6 +729,19 @@ const DrawToolbarCore: React.FC<DrawToolbarProps> = ({
                                     onToolClick(DrawState.OcrDetect);
                                 }}
                             />
+
+                            {/* OCR 翻译 */}
+                            {enableOcrTranslate && (
+                                <ToolButton
+                                    componentKey={KeyEventKey.OcrTranslateTool}
+                                    icon={<OcrTranslateIcon style={{ fontSize: '0.98em' }} />}
+                                    drawState={DrawState.OcrTranslate}
+                                    disable={disableNormalScreenshotTool}
+                                    onClick={() => {
+                                        onToolClick(DrawState.OcrTranslate);
+                                    }}
+                                />
+                            )}
 
                             {/* 滚动截图 */}
                             <ToolButton

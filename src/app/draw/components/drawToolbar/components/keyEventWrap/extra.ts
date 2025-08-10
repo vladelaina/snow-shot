@@ -36,6 +36,7 @@ export enum KeyEventKey {
     CopyTool = 'copyTool',
     FixedTool = 'fixedTool',
     OcrDetectTool = 'ocrDetectTool',
+    OcrTranslateTool = 'ocrTranslateTool',
     ColorPickerMoveUp = 'colorPickerMoveUp',
     ColorPickerMoveDown = 'colorPickerMoveDown',
     ColorPickerMoveLeft = 'colorPickerMoveLeft',
@@ -122,6 +123,10 @@ export const defaultDrawToolbarKeyEventSettings: Record<KeyEventKey, KeyEventVal
     },
     [KeyEventKey.OcrDetectTool]: {
         hotKey: getPlatformValue('Ctrl+D', 'Meta+D'),
+        unique: true,
+    },
+    [KeyEventKey.OcrTranslateTool]: {
+        hotKey: getPlatformValue('Ctrl+T', 'Meta+T'),
         unique: true,
     },
     [KeyEventKey.ScrollScreenshotTool]: {

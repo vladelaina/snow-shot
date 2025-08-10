@@ -101,6 +101,8 @@ export type AppSettingsData = {
         fullScreenAuxiliaryLineColor: string;
         /** 禁用动画 */
         disableAnimation: boolean;
+        /** 是否显示 OCR 翻译 */
+        showOcrTranslate: boolean;
     };
     [AppSettingsGroup.FixedContent]: {
         /** 边框颜色 */
@@ -244,6 +246,7 @@ export const defaultAppSettingsData: AppSettingsData = {
         beyondSelectRectElementOpacity: 100,
         fullScreenAuxiliaryLineColor: '#00000000',
         hotKeyTipOpacity: 100,
+        showOcrTranslate: true,
     },
     [AppSettingsGroup.FixedContent]: {
         borderColor: '#dbdbdb',
@@ -631,6 +634,10 @@ const ContextWrapCore: React.FC<{ children: React.ReactNode }> = ({ children }) 
                         typeof newSettings?.fullScreenAuxiliaryLineColor === 'string'
                             ? newSettings.fullScreenAuxiliaryLineColor
                             : (prevSettings?.fullScreenAuxiliaryLineColor ?? '#00000'),
+                    showOcrTranslate:
+                        typeof newSettings?.showOcrTranslate === 'boolean'
+                            ? newSettings.showOcrTranslate
+                            : (prevSettings?.showOcrTranslate ?? true),
                 };
             } else if (group === AppSettingsGroup.FixedContent) {
                 newSettings = newSettings as AppSettingsData[typeof group];

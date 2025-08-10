@@ -162,6 +162,8 @@ export enum DrawState {
     Copy = 107,
     // OCR
     OcrDetect = 108,
+    // OCR 翻译
+    OcrTranslate = 108001,
     // 滚动截图
     ScrollScreenshot = 109,
     // 额外工具

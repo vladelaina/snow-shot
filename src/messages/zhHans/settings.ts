@@ -10,6 +10,7 @@ export const settings = {
     'settings.fixedContentSettings': '固定到屏幕',
     'settings.fixedContentSettings.borderColor': '边框颜色',
     'settings.fullScreenAuxiliaryLineColor': '全屏辅助线颜色',
+    'settings.showOcrTranslate': '启用文字识别翻译工具',
     'settings.enableQrcodeScan': '启用二维码识别',
     'settings.findChildrenElements': '查找窗口子元素',
     'settings.performanceMode': '性能优先',

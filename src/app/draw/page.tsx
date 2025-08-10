@@ -79,6 +79,7 @@ import { listenKeyStart, listenKeyStop } from '@/commands/listenKey';
 import { sendErrorMessage } from '@/functions/sendMessage';
 import { useIntl } from 'react-intl';
 import Flatbush from 'flatbush';
+import { isOcrTool } from './components/drawToolbar/components/tools/ocrTool';
 
 const DrawCacheLayer = dynamic(
     async () => (await import('./components/drawCacheLayer')).DrawCacheLayer,
@@ -581,7 +582,7 @@ const DrawPageCore: React.FC = () => {
             fixedContentActionRef.current,
             setCaptureStep,
             // 如果当前是 OCR 识别状态，则使用已有的 OCR 结果
-            getDrawState() === DrawState.OcrDetect
+            isOcrTool(getDrawState())
                 ? ocrBlocksActionRef.current?.getOcrResultAction()?.getOcrResult()
                 : undefined,
         );
@@ -642,13 +643,13 @@ const DrawPageCore: React.FC = () => {
 
         if (
             selectedText &&
-            (getDrawState() === DrawState.OcrDetect || getDrawState() === DrawState.ScanQrcode)
+            (isOcrTool(getDrawState()) || getDrawState() === DrawState.ScanQrcode)
         ) {
             writeTextToClipboard(selectedText);
             finishCapture();
             return;
         } else if (
-            getDrawState() === DrawState.OcrDetect &&
+            isOcrTool(getDrawState()) &&
             getAppSettings()[AppSettingsGroup.FunctionScreenshot].ocrCopyText
         ) {
             const ocrResult = ocrBlocksActionRef.current?.getOcrResultAction()?.getOcrResult();
@@ -822,7 +823,7 @@ const DrawPageCore: React.FC = () => {
 
     useEffect(() => {
         document.oncopy = function () {
-            if (getCaptureStep() === CaptureStep.Fixed || getDrawState() === DrawState.OcrDetect) {
+            if (getCaptureStep() === CaptureStep.Fixed || isOcrTool(getDrawState())) {
                 return true;
             }
 
