@@ -7,7 +7,7 @@ import { DrawState, DrawStatePublisher } from '@/app/fullScreenDraw/components/d
 import { useIntl } from 'react-intl';
 import { getCurrentWindow } from '@tauri-apps/api/window';
 import { Menu } from '@tauri-apps/api/menu';
-import OcrTool from '../drawToolbar/components/tools/ocrTool';
+import OcrTool, { isOcrTool } from '../drawToolbar/components/tools/ocrTool';
 import {
     AppOcrResult,
     OcrResult,
@@ -38,7 +38,7 @@ export const OcrBlocks: React.FC<{
     useStateSubscriber(
         DrawStatePublisher,
         useCallback((drawState: DrawState) => {
-            ocrResultActionRef.current?.setEnable(drawState === DrawState.OcrDetect);
+            ocrResultActionRef.current?.setEnable(isOcrTool(drawState));
             ocrResultActionRef.current?.clear();
         }, []),
     );

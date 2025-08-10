@@ -11,6 +11,7 @@ import {
     FocusedWindowIcon,
     FullScreenDrawIcon,
     OcrDetectIcon,
+    OcrTranslateIcon,
     ScreenshotIcon,
     SelectTextIcon,
     TopWindowIcon,
@@ -107,6 +108,18 @@ export default function Home() {
                         );
                         buttonIcon = <OcrDetectIcon />;
                         buttonOnClick = () => executeScreenshot(ScreenshotType.OcrDetect);
+                        break;
+                    case AppFunction.ScreenshotOcrTranslate:
+                        buttonTitle = (
+                            <FormattedMessage
+                                id="home.screenshotAfter"
+                                values={{
+                                    text: <FormattedMessage id="draw.ocrTranslateTool" />,
+                                }}
+                            />
+                        );
+                        buttonIcon = <OcrTranslateIcon style={{ fontSize: '1.1em' }} />;
+                        buttonOnClick = () => executeScreenshot(ScreenshotType.OcrTranslate);
                         break;
                     case AppFunction.ScreenshotFocusedWindow:
                         buttonTitle = (

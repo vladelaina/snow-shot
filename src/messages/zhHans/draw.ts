@@ -56,6 +56,7 @@ export const draw = {
     'draw.fastSaveTool': '快速保存',
     'draw.close': '关闭',
     'draw.ocrDetectTool': '文字识别',
+    'draw.ocrTranslateTool': '文字识别翻译',
     'draw.showOrHideOcrResult': '显示/隐藏 OCR 结果',
     'draw.fixedTool': '固定到屏幕',
     'draw.extraToolsTool': '额外工具',

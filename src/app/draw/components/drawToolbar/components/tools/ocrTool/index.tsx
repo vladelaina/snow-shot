@@ -9,6 +9,10 @@ import { OcrTranslateIcon } from '@/components/icons';
 import { useIntl } from 'react-intl';
 import { ModalTranslator, ModalTranslatorActionType } from './components/modalTranslator';
 
+export const isOcrTool = (drawState: DrawState) => {
+    return drawState === DrawState.OcrDetect || drawState === DrawState.OcrTranslate;
+};
+
 const OcrTool: React.FC<{
     onReplace: (result: OcrDetectResult, ignoreScale?: boolean) => void;
 }> = ({ onReplace }) => {
@@ -19,10 +23,11 @@ const OcrTool: React.FC<{
     const [enabled, setEnabled] = useState(false);
     const [ocrResult, setOcrResult] = useState<OcrDetectResult>();
 
+    const [getDrawState] = useStateSubscriber(DrawStatePublisher, undefined);
     useStateSubscriber(
         DrawStatePublisher,
         useCallback((drawState: DrawState) => {
-            if (drawState === DrawState.OcrDetect) {
+            if (isOcrTool(drawState)) {
                 setEnabled(true);
             } else {
                 setEnabled(false);
@@ -32,11 +37,21 @@ const OcrTool: React.FC<{
     );
     useStateSubscriber(
         DrawEventPublisher,
-        useCallback((drawEvent: DrawEventParams) => {
-            if (drawEvent?.event === DrawEvent.OcrDetect) {
-                setOcrResult(drawEvent.params.result);
-            }
-        }, []),
+        useCallback(
+            (drawEvent: DrawEventParams) => {
+                if (drawEvent?.event === DrawEvent.OcrDetect) {
+                    setOcrResult(drawEvent.params.result);
+
+                    // 自动进行翻译
+                    if (getDrawState() === DrawState.OcrTranslate) {
+                        setTimeout(() => {
+                            modalTranslatorActionRef.current?.startTranslate();
+                        }, 0);
+                    }
+                }
+            },
+            [getDrawState],
+        ),
     );
 
     if (!enabled) {
