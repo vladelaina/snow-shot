@@ -342,7 +342,7 @@ export const defaultAppSettingsData: AppSettingsData = {
     },
     [AppSettingsGroup.SystemScreenshot]: {
         tryGetElementByFocus: TryGetElementByFocus.WhiteList,
-        ocrModel: OcrModel.RapidOcrV4,
+        ocrModel: OcrModel.RapidOcrV5,
         ocrDetectAngle: false,
     },
 };
