@@ -103,7 +103,13 @@ export const FixedContentCore: React.FC<{
 
     const [getAppSettings] = useStateSubscriber(AppSettingsPublisher, undefined);
     const ocrResultActionRef = useRef<OcrResultActionType>(undefined);
-    const [style, setStyle, styleRef] = useStateRef<React.CSSProperties>({});
+    const [windowSize, setWindowSize, windowSizeRef] = useStateRef<{
+        width: number;
+        height: number;
+    }>({
+        width: 0,
+        height: 0,
+    });
     const canvasPropsRef = useRef<{
         width: number;
         height: number;
@@ -244,9 +250,9 @@ export const FixedContentCore: React.FC<{
                     onTextLoad?.(textContentContainerRef.current);
 
                     if (textContentContainerRef.current) {
-                        setStyle({
-                            width: `${textContentContainerRef.current.clientWidth}px`,
-                            height: `${textContentContainerRef.current.clientHeight}px`,
+                        setWindowSize({
+                            width: textContentContainerRef.current.clientWidth,
+                            height: textContentContainerRef.current.clientHeight,
                         });
                         canvasPropsRef.current = {
                             width:
@@ -261,7 +267,7 @@ export const FixedContentCore: React.FC<{
                 }, timeout);
             }, 17);
         },
-        [onTextLoad, setStyle, setTextContent],
+        [onTextLoad, setWindowSize, setTextContent],
     );
 
     const initOcrParams = useRef<{
@@ -311,9 +317,9 @@ export const FixedContentCore: React.FC<{
             }
 
             const scaleFactor = await getCurrentWindow().scaleFactor();
-            setStyle({
-                width: `${canvas.width / scaleFactor}px`,
-                height: `${canvas.height / scaleFactor}px`,
+            setWindowSize({
+                width: canvas.width / scaleFactor,
+                height: canvas.height / scaleFactor,
             });
             canvasPropsRef.current = {
                 width: canvas.width,
@@ -354,7 +360,7 @@ export const FixedContentCore: React.FC<{
                 });
             }
         },
-        [getAppSettings, setStyle],
+        [getAppSettings, setWindowSize],
     );
 
     useImperativeHandle(
@@ -728,7 +734,7 @@ export const FixedContentCore: React.FC<{
                 return;
             }
 
-            if (!styleRef.current.width) {
+            if (!windowSizeRef.current.width) {
                 return;
             }
 
@@ -803,7 +809,14 @@ export const FixedContentCore: React.FC<{
             ocrResultActionRef.current?.setScale(targetScale);
             showScaleInfoTemporary();
         },
-        [getAppSettings, scaleRef, setScale, showScaleInfoTemporary, styleRef, switchThumbnail],
+        [
+            getAppSettings,
+            scaleRef,
+            setScale,
+            showScaleInfoTemporary,
+            switchThumbnail,
+            windowSizeRef,
+        ],
     );
     const scaleWindowRender = useCallbackRender(scaleWindow);
 
@@ -853,9 +866,9 @@ export const FixedContentCore: React.FC<{
                     height: height * window.devicePixelRatio,
                 });
 
-                setStyle({
-                    width: `${width}px`,
-                    height: `${height}px`,
+                setWindowSize({
+                    width: width,
+                    height: height,
                 });
                 canvasPropsRef.current = {
                     width: width * window.devicePixelRatio,
@@ -882,7 +895,7 @@ export const FixedContentCore: React.FC<{
         return () => {
             window.removeEventListener('message', handleMessage);
         };
-    }, [onHtmlLoad, setStyle, handleContextMenu, onWheel]);
+    }, [onHtmlLoad, setWindowSize, handleContextMenu, onWheel]);
 
     useHotkeys(hotkeys?.[KeyEventKey.FixedContentSwitchThumbnail]?.hotKey ?? '', switchThumbnail, {
         keyup: false,
@@ -909,6 +922,7 @@ export const FixedContentCore: React.FC<{
 
     const onDragRegionMouseDown = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
         dragRegionMouseDownMousePositionRef.current = undefined;
+
         if (e.button === 0) {
             dragRegionMouseDownMousePositionRef.current = new MousePosition(e.clientX, e.clientY);
         }
@@ -935,11 +949,13 @@ export const FixedContentCore: React.FC<{
             className="fixed-image-container"
             style={{
                 position: 'absolute',
-                ...style,
+                width: `${windowSize.width}px`,
+                height: `${windowSize.height}px`,
                 zIndex: zIndexs.Draw_FixedImage,
                 pointerEvents:
                     canvasImageUrl || htmlBlobUrl || textContent || imageUrl ? 'auto' : 'none',
                 opacity: isThumbnail ? 0.72 : 1,
+                userSelect: isThumbnail ? 'none' : undefined,
             }}
             onContextMenu={handleContextMenu}
             onDoubleClick={onDoubleClick}
@@ -959,8 +975,8 @@ export const FixedContentCore: React.FC<{
                         ref={imageUrl ? imageRef : undefined}
                         style={{
                             objectFit: 'contain',
-                            width: '100vw',
-                            height: '100vh',
+                            width: `${(windowSize.width * scale.x) / 100}px`,
+                            height: `${(windowSize.height * scale.y) / 100}px`,
                         }}
                         alt="fixed-canvas-image"
                         onLoad={async (event) => {
@@ -974,9 +990,9 @@ export const FixedContentCore: React.FC<{
                                 const imageHeight =
                                     image.naturalHeight / monitorInfo.monitor_scale_factor;
 
-                                setStyle({
-                                    width: `${imageWidth}px`,
-                                    height: `${imageHeight}px`,
+                                setWindowSize({
+                                    width: imageWidth,
+                                    height: imageHeight,
                                 });
                                 canvasPropsRef.current = {
                                     width: image.naturalWidth,
