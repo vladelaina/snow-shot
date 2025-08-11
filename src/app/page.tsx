@@ -16,6 +16,7 @@ import {
     SelectTextIcon,
     TopWindowIcon,
     TranslationIcon,
+    VideoRecordIcon,
 } from '@/components/icons';
 import { FunctionButton } from '@/components/functionButton';
 import {
@@ -181,8 +182,13 @@ export default function Home() {
                         break;
                     case AppFunction.FullScreenDraw:
                         buttonTitle = <FormattedMessage id="home.fullScreenDraw" />;
-                        buttonIcon = <FullScreenDrawIcon style={{ fontSize: '1.1em' }} />;
+                        buttonIcon = <FullScreenDrawIcon style={{ fontSize: '1.2em' }} />;
                         buttonOnClick = () => createFullScreenDrawWindow();
+                        break;
+                    case AppFunction.VideoRecord:
+                        buttonTitle = <FormattedMessage id="draw.extraTool.videoRecord" />;
+                        buttonIcon = <VideoRecordIcon style={{ fontSize: '1.1em' }} />;
+                        buttonOnClick = () => executeScreenshot(ScreenshotType.VideoRecord);
                         break;
                     case AppFunction.Screenshot:
                     default:
@@ -206,7 +212,6 @@ export default function Home() {
                     icon: buttonIcon,
                     onClick,
                     onKeyChange: async (value: string, prevValue: string) => {
-                        console.log(value, prevValue);
                         if (prevValue) {
                             if (await isRegistered(prevValue)) {
                                 await unregister(prevValue);

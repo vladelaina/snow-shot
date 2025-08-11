@@ -12,6 +12,7 @@ export enum ScreenshotType {
     OcrTranslate = 'ocr-translate',
     TopWindow = 'top-window',
     Copy = 'copy',
+    VideoRecord = 'video-record',
 }
 
 export const executeScreenshot = async (type: ScreenshotType = ScreenshotType.Default) => {

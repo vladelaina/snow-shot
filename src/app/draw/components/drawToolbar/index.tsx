@@ -338,6 +338,7 @@ const DrawToolbarCore: React.FC<DrawToolbarProps> = ({
                     });
                     onOcrDetect();
                     break;
+                case DrawState.VideoRecord:
                 case DrawState.ExtraTools:
                     drawCacheLayerActionRef.current?.setEnable(false);
                     drawCacheLayerActionRef.current?.setActiveTool({
@@ -453,6 +454,9 @@ const DrawToolbarCore: React.FC<DrawToolbarProps> = ({
                         break;
                     case ScreenshotType.Copy:
                         onCopyToClipboard();
+                        break;
+                    case ScreenshotType.VideoRecord:
+                        onToolClick(DrawState.VideoRecord);
                         break;
                     case ScreenshotType.TopWindow:
                         onTopWindow();
@@ -694,7 +698,7 @@ const DrawToolbarCore: React.FC<DrawToolbarProps> = ({
                                 componentKey={KeyEventKey.ExtraToolsTool}
                                 icon={<AppstoreOutlined />}
                                 drawState={DrawState.ExtraTools}
-                                extraDrawState={[DrawState.ScanQrcode]}
+                                extraDrawState={[DrawState.ScanQrcode, DrawState.VideoRecord]}
                                 disable={enableScrollScreenshot}
                                 onClick={() => {
                                     onToolClick(DrawState.ExtraTools);
