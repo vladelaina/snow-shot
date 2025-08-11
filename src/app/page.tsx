@@ -206,6 +206,7 @@ export default function Home() {
                     icon: buttonIcon,
                     onClick,
                     onKeyChange: async (value: string, prevValue: string) => {
+                        console.log(value, prevValue);
                         if (prevValue) {
                             if (await isRegistered(prevValue)) {
                                 await unregister(prevValue);

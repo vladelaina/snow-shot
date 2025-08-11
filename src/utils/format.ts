@@ -17,6 +17,6 @@ export const formatKey = (key: string | undefined | null) => {
                 .replace('Alt', 'Option')
                 .replace('Ctrl', 'Control');
         default:
-            return key;
+            return key.replace('Super', 'Win');
     }
 };
