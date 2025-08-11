@@ -1,4 +1,4 @@
-import { Descriptions, theme } from 'antd';
+import { Descriptions, Space, theme } from 'antd';
 import { CaptureStep, DrawContext } from '../../types';
 import Color from 'color';
 import { FormattedMessage } from 'react-intl';
@@ -92,6 +92,8 @@ const StatusBar: React.FC = () => {
             switchColorFormat: { hotKey: switchColorFormatHotKey },
             serialNumberDisableArrow: { hotKey: serialNumberDisableArrowHotKey },
             selectPrevRectTool: { hotKey: selectPrevRectToolHotKey },
+            previousCapture: { hotKey: previousCaptureHotKey },
+            nextCapture: { hotKey: nextCaptureHotKey },
         } = getAppSettings()[AppSettingsGroup.DrawToolbarKeyEvent];
 
         const items: DescriptionsItemType[] = [
@@ -141,6 +143,16 @@ const StatusBar: React.FC = () => {
                     key: 'selectPrevRectTool',
                     label: <FormattedMessage id="draw.selectPrevRectTool" />,
                     children: <KeyLabel hotKey={selectPrevRectToolHotKey} />,
+                },
+                {
+                    key: 'switchCapture',
+                    label: <FormattedMessage id="draw.switchCapture" />,
+                    children: (
+                        <Space>
+                            <KeyLabel hotKey={previousCaptureHotKey} />
+                            <KeyLabel hotKey={nextCaptureHotKey} />
+                        </Space>
+                    ),
                 },
                 {
                     key: 'colorPickerCopy',

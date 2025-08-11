@@ -10,13 +10,17 @@ export const formatKey = (key: string | undefined | null) => {
         return '';
     }
 
+    let result = key;
     switch (getPlatform()) {
         case 'macos':
-            return key
+            result = result
                 .replace('Meta', 'Command')
                 .replace('Alt', 'Option')
-                .replace('Ctrl', 'Control');
+                .replace('Ctrl', 'Control')
+                .replace('Super', 'Win');
         default:
-            return key.replace('Super', 'Win');
+            result = result.replace('Super', 'Win');
     }
+
+    return result.replace('Period', '.').replace('Comma', ',');
 };

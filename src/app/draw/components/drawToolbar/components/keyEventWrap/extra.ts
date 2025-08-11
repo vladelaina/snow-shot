@@ -49,6 +49,8 @@ export enum KeyEventKey {
     SwitchColorFormat = 'switchColorFormat',
     ExtraToolsTool = 'extraToolsTool',
     SelectPrevRectTool = 'selectPrevRectTool',
+    PreviousCapture = 'previousCapture',
+    NextCapture = 'nextCapture',
     LaserPointerTool = 'laserPointerTool',
 }
 
@@ -170,6 +172,14 @@ export const defaultDrawToolbarKeyEventSettings: Record<KeyEventKey, KeyEventVal
     },
     [KeyEventKey.SelectPrevRectTool]: {
         hotKey: 'R',
+        unique: true,
+    },
+    [KeyEventKey.PreviousCapture]: {
+        hotKey: 'Comma',
+        unique: true,
+    },
+    [KeyEventKey.NextCapture]: {
+        hotKey: 'Period',
         unique: true,
     },
     [KeyEventKey.ColorPickerMoveUp]: {

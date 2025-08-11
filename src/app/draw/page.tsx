@@ -80,6 +80,7 @@ import { sendErrorMessage } from '@/functions/sendMessage';
 import { useIntl } from 'react-intl';
 import Flatbush from 'flatbush';
 import { isOcrTool } from './components/drawToolbar/components/tools/ocrTool';
+import { CaptureHistoryActionType, CaptureHistoryController } from './components/captureHistory';
 
 const DrawCacheLayer = dynamic(
     async () => (await import('./components/drawCacheLayer')).DrawCacheLayer,
@@ -121,6 +122,7 @@ const DrawPageCore: React.FC = () => {
     const selectLayerActionRef = useRef<SelectLayerActionType | undefined>(undefined);
     const drawToolbarActionRef = useRef<DrawToolbarActionType | undefined>(undefined);
     const colorPickerActionRef = useRef<ColorPickerActionType | undefined>(undefined);
+    const captureHistoryActionRef = useRef<CaptureHistoryActionType | undefined>(undefined);
     const [isFixed, setIsFixed] = useState(false);
     const fixedContentActionRef = useRef<FixedContentActionType | undefined>(undefined);
     const ocrBlocksActionRef = useRef<OcrBlocksActionType | undefined>(undefined);
@@ -470,7 +472,7 @@ const DrawPageCore: React.FC = () => {
         ],
     );
 
-    const saveCurrentSelectRect = useCallback(() => {
+    const saveCaptureHistory = useCallback(async () => {
         updateAppSettings(
             AppSettingsGroup.Cache,
             {
@@ -482,11 +484,13 @@ const DrawPageCore: React.FC = () => {
             true,
             false,
         );
+
+        await captureHistoryActionRef.current?.saveCurrentCapture();
     }, [updateAppSettings]);
 
     const onSave = useCallback(
         async (fastSave: boolean = false) => {
-            saveCurrentSelectRect();
+            saveCaptureHistory();
 
             if (getDrawState() === DrawState.ScrollScreenshot) {
                 const imagePath =
@@ -554,7 +558,7 @@ const DrawPageCore: React.FC = () => {
                 fastSave ? await getImagePathFromSettings(getAppSettings(), 'fast') : undefined,
             );
         },
-        [finishCapture, getAppSettings, getDrawState, saveCurrentSelectRect, updateAppSettings],
+        [finishCapture, getAppSettings, getDrawState, saveCaptureHistory, updateAppSettings],
     );
 
     const onFixed = useCallback(async () => {
@@ -579,7 +583,7 @@ const DrawPageCore: React.FC = () => {
             return;
         }
 
-        saveCurrentSelectRect();
+        saveCaptureHistory();
 
         await fixedToScreen(
             captureBoundingBoxInfoRef.current,
@@ -597,7 +601,7 @@ const DrawPageCore: React.FC = () => {
         );
 
         switchLayer(undefined, drawLayerActionRef.current, selectLayerActionRef.current);
-    }, [finishCapture, getDrawState, saveCurrentSelectRect, setCaptureStep]);
+    }, [finishCapture, getDrawState, saveCaptureHistory, setCaptureStep]);
 
     const onTopWindow = useCallback(async () => {
         const windowId = selectLayerActionRef.current?.getWindowId();
@@ -630,7 +634,7 @@ const DrawPageCore: React.FC = () => {
     }, []);
 
     const onCopyToClipboard = useCallback(async () => {
-        saveCurrentSelectRect();
+        saveCaptureHistory();
 
         const enableAutoSave = getAppSettings()[AppSettingsGroup.FunctionScreenshot].autoSaveOnCopy;
 
@@ -699,7 +703,7 @@ const DrawPageCore: React.FC = () => {
                 await getImagePathFromSettings(getAppSettings(), 'auto'),
             );
         }
-    }, [finishCapture, getAppSettings, getDrawState, saveCurrentSelectRect]);
+    }, [finishCapture, getAppSettings, getDrawState, saveCaptureHistory]);
 
     const releaseExecuteScreenshotTimerRef = useRef<
         | {
@@ -811,6 +815,7 @@ const DrawPageCore: React.FC = () => {
             fixedContentActionRef,
             colorPickerActionRef,
             captureBoundingBoxInfoRef,
+            captureHistoryActionRef,
         };
     }, [finishCapture]);
 
@@ -916,6 +921,8 @@ const DrawPageCore: React.FC = () => {
 
                 {!isFixed && (
                     <>
+                        <CaptureHistoryController actionRef={captureHistoryActionRef} />
+
                         <ExtraTool finishCapture={finishCapture} />
 
                         <OcrBlocks actionRef={ocrBlocksActionRef} finishCapture={finishCapture} />

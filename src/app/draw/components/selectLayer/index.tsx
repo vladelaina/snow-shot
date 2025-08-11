@@ -52,6 +52,7 @@ import { useMoveCursor } from '../colorPicker/extra';
 
 export type SelectLayerActionType = {
     getSelectRect: () => ElementRect | undefined;
+    setSelectRect: (selectRect: ElementRect | undefined) => void;
     getSelectState: () => SelectState;
     getWindowId: () => number | undefined;
     setEnable: (enable: boolean) => void;
@@ -1040,6 +1041,27 @@ const SelectLayerCore: React.FC<SelectLayerProps> = ({ actionRef }) => {
         updateLayerPointerEvents,
     ]);
 
+    const setPrevSelectRect = useCallback(
+        (prevSelectRect: ElementRect) => {
+            const actualPrevSelectRect = limitRect(prevSelectRect, {
+                min_x: 0,
+                min_y: 0,
+                max_x: captureBoundingBoxInfoRef.current!.width,
+                max_y: captureBoundingBoxInfoRef.current!.height,
+            });
+
+            if (
+                actualPrevSelectRect.min_x < actualPrevSelectRect.max_x &&
+                actualPrevSelectRect.min_y < actualPrevSelectRect.max_y
+            ) {
+                setSelectState(SelectState.Drag);
+                setSelectRect(actualPrevSelectRect);
+                setSelectState(SelectState.Selected);
+            }
+        },
+        [setSelectRect, setSelectState],
+    );
+
     useImperativeHandle(
         actionRef,
         () => ({
@@ -1055,6 +1077,15 @@ const SelectLayerCore: React.FC<SelectLayerProps> = ({ actionRef }) => {
                 setIsEnable(enable);
             },
             getSelectState: () => selectStateRef.current,
+            setSelectRect: (selectRect: ElementRect | undefined) => {
+                if (!selectRect) {
+                    setSelectState(SelectState.Auto);
+                    refreshMouseMove();
+                    return;
+                }
+
+                setPrevSelectRect(selectRect);
+            },
         }),
         [
             getSelectRect,
@@ -1062,6 +1093,8 @@ const SelectLayerCore: React.FC<SelectLayerProps> = ({ actionRef }) => {
             onCaptureFinish,
             onExecuteScreenshot,
             refreshMouseMove,
+            setPrevSelectRect,
+            setSelectState,
         ],
     );
 
@@ -1078,6 +1111,7 @@ const SelectLayerCore: React.FC<SelectLayerProps> = ({ actionRef }) => {
             if (isHotkeyPressed('Tab')) {
                 setTabFindChildrenElements((prev) => !prev);
                 e.preventDefault();
+                return;
             }
 
             if (
@@ -1092,6 +1126,7 @@ const SelectLayerCore: React.FC<SelectLayerProps> = ({ actionRef }) => {
                 recoveryWindowZOrder();
 
                 e.preventDefault();
+                return;
             }
 
             if (
@@ -1106,17 +1141,11 @@ const SelectLayerCore: React.FC<SelectLayerProps> = ({ actionRef }) => {
                     prevSelectRect.min_x < prevSelectRect.max_x &&
                     prevSelectRect.min_y < prevSelectRect.max_y
                 ) {
-                    setSelectRect(
-                        limitRect(prevSelectRect, {
-                            min_x: 0,
-                            min_y: 0,
-                            max_x: captureBoundingBoxInfoRef.current!.width,
-                            max_y: captureBoundingBoxInfoRef.current!.height,
-                        }),
-                        false,
-                    );
-                    setSelectState(SelectState.Selected);
+                    setPrevSelectRect(prevSelectRect);
                 }
+
+                e.preventDefault();
+                return;
             }
         };
 
@@ -1130,6 +1159,7 @@ const SelectLayerCore: React.FC<SelectLayerProps> = ({ actionRef }) => {
         getAppSettings,
         getSelectRect,
         isEnable,
+        setPrevSelectRect,
         setSelectRect,
         setSelectState,
         setTabFindChildrenElements,

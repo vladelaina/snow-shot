@@ -1,6 +1,9 @@
+import { ElementRect } from '@/commands';
 import { BubbleDataType } from '@ant-design/x/es/bubble/BubbleList';
 import { Conversation } from '@ant-design/x/es/conversations';
 import { MessageInfo } from '@ant-design/x/es/use-x-chat';
+import { Ordered } from '@mg-chao/excalidraw/element/types';
+import { NonDeletedExcalidrawElement } from '@mg-chao/excalidraw/element/types';
 import { AppState } from '@mg-chao/excalidraw/types';
 import { load, Store } from '@tauri-apps/plugin-store';
 
@@ -100,6 +103,20 @@ export type ChatWorkflowConfig = {
 export class ChatWorkflowConfigStore extends BaseStore<ChatWorkflowConfig> {
     constructor() {
         super('chat-workflow-config', 0);
+    }
+}
+
+export type CaptureHistoryItem = {
+    id: string;
+    selected_rect: ElementRect;
+    file_name: string;
+    excalidraw_elements: readonly Ordered<NonDeletedExcalidrawElement>[] | undefined;
+    create_ts: number;
+};
+
+export class CaptureHistoryStore extends BaseStore<CaptureHistoryItem> {
+    constructor() {
+        super('capture-history', 0);
     }
 }
 

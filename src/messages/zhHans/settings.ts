@@ -229,4 +229,9 @@ export const settings = {
     'settings.systemSettings.screenshotSettings.ocrModel.rapidOcrV4': 'Rapid OCR V4',
     'settings.systemSettings.screenshotSettings.ocrModel.rapidOcrV5': 'Rapid OCR V5',
     'settings.systemSettings.screenshotSettings.ocrDetectAngle': 'OCR 检测角度',
+    'settings.systemSettings.screenshotSettings.historyValidDuration': '截图历史有效时长',
+    'settings.systemSettings.screenshotSettings.historyValidDuration.day': '1 天',
+    'settings.systemSettings.screenshotSettings.historyValidDuration.week': '7 天',
+    'settings.systemSettings.screenshotSettings.historyValidDuration.month': '30 天',
+    'settings.systemSettings.screenshotSettings.historyValidDuration.forever': '永久保留',
 };
