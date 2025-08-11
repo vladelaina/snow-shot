@@ -281,6 +281,15 @@ const DrawPageCore: React.FC = () => {
                 setWindowRect(appWindow, { min_x, min_y, max_x, max_y }),
                 appWindow.setAlwaysOnTop(true),
             ]);
+
+            if (layerContainerRef.current) {
+                const documentWidth = (max_x - min_x) / window.devicePixelRatio;
+                const documentHeight = (max_y - min_y) / window.devicePixelRatio;
+
+                layerContainerRef.current.style.width = `${documentWidth}px`;
+                layerContainerRef.current.style.height = `${documentHeight}px`;
+            }
+
             await showCurrentWindow();
             if (
                 process.env.NODE_ENV === 'development' &&

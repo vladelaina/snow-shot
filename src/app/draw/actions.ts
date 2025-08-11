@@ -134,6 +134,8 @@ export const fixedToScreen = async (
     createDrawWindow();
 
     layerContainerElement.style.opacity = '0';
+    layerContainerElement.style.width = '100%';
+    layerContainerElement.style.height = '100%';
     // 等待窗口内容被隐藏，防止窗口闪烁
     await new Promise((resolve) => {
         setTimeout(resolve, 17);
