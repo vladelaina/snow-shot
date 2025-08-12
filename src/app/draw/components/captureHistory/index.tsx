@@ -119,7 +119,12 @@ const CaptureHistoryControllerCore: React.FC<{
 
             if (currentIndexRef.current === captureHistoryListRef.current.length) {
                 const switchCaptureHistoryPromise = Promise.all([
-                    drawLayerActionRef.current?.switchCaptureHistory(undefined),
+                    drawLayerActionRef.current?.switchCaptureHistory(undefined).then(() => {
+                        drawCacheLayerActionRef.current?.updateScene({
+                            elements: currentCaptureExcalidrawElementsRef.current ?? [],
+                            captureUpdate: 'NEVER',
+                        });
+                    }),
                     colorPickerActionRef.current?.switchCaptureHistory(undefined),
                 ]);
 
@@ -127,10 +132,6 @@ const CaptureHistoryControllerCore: React.FC<{
 
                 // 恢复绘制的内容
                 if (currentCaptureExcalidrawElementsRef.current) {
-                    drawCacheLayerActionRef.current?.updateScene({
-                        elements: currentCaptureExcalidrawElementsRef.current ?? [],
-                        captureUpdate: 'NEVER',
-                    });
                     drawCacheLayerActionRef.current?.clearHistory();
                     currentCaptureExcalidrawElementsRef.current = undefined;
                 }
@@ -138,31 +139,38 @@ const CaptureHistoryControllerCore: React.FC<{
                 await switchCaptureHistoryPromise;
             } else {
                 const switchCaptureHistoryPromise = Promise.all([
-                    drawLayerActionRef.current?.switchCaptureHistory(
-                        captureHistoryListRef.current[currentIndexRef.current],
-                    ),
+                    drawLayerActionRef.current
+                        ?.switchCaptureHistory(
+                            captureHistoryListRef.current[currentIndexRef.current],
+                        )
+                        .then(() => {
+                            // 等待切换完成后，再更新绘制内容
+                            // 避免模糊工具更新时取得错误数据
+
+                            // 保存当前绘制的内容
+                            if (currentCaptureExcalidrawElementsRef.current === undefined) {
+                                currentCaptureExcalidrawElementsRef.current =
+                                    drawCacheLayerActionRef.current
+                                        ?.getExcalidrawAPI()
+                                        ?.getSceneElements();
+                            }
+
+                            drawCacheLayerActionRef.current?.updateScene({
+                                elements:
+                                    captureHistoryListRef.current[currentIndexRef.current]
+                                        .excalidraw_elements ?? [],
+                                captureUpdate: 'NEVER',
+                            });
+                        }),
                     colorPickerActionRef.current?.switchCaptureHistory(
                         captureHistoryListRef.current[currentIndexRef.current],
                     ),
                 ]);
 
-                // 保存当前绘制的内容
-                if (currentCaptureExcalidrawElementsRef.current === undefined) {
-                    currentCaptureExcalidrawElementsRef.current = drawCacheLayerActionRef.current
-                        ?.getExcalidrawAPI()
-                        ?.getSceneElements();
-                }
-
                 selectLayerActionRef.current?.setSelectRect(
                     captureHistoryListRef.current[currentIndexRef.current].selected_rect,
                 );
 
-                drawCacheLayerActionRef.current?.updateScene({
-                    elements:
-                        captureHistoryListRef.current[currentIndexRef.current]
-                            .excalidraw_elements ?? [],
-                    captureUpdate: 'NEVER',
-                });
                 drawCacheLayerActionRef.current?.clearHistory();
 
                 await switchCaptureHistoryPromise;

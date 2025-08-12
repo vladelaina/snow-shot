@@ -47,7 +47,6 @@ const isEqualBlurSpriteProps = (
 
 const BlurToolCore: React.FC = () => {
     const { drawLayerActionRef, drawCacheLayerActionRef } = useContext(DrawContext);
-    const imageTextureRef = useRef<PIXI.Texture | undefined>(undefined);
     const captureBoundingBoxInfoRef = useRef<CaptureBoundingBoxInfo | undefined>(undefined);
     const blurSpriteMapRef = useRef<
         Map<
@@ -61,7 +60,6 @@ const BlurToolCore: React.FC = () => {
         >
     >(new Map());
     const clear = useCallback(() => {
-        imageTextureRef.current = undefined;
         captureBoundingBoxInfoRef.current = undefined;
         blurSpriteMapRef.current.clear();
     }, []);
@@ -71,13 +69,6 @@ const BlurToolCore: React.FC = () => {
                 return;
             }
 
-            const blurContainer = drawLayerActionRef.current.getBlurContainer();
-            if (!blurContainer) {
-                return;
-            }
-
-            drawLayerActionRef.current.addChildToTopContainer(blurContainer);
-            imageTextureRef.current = imageTexture;
             captureBoundingBoxInfoRef.current = captureBoundingBoxInfo;
         },
         [drawLayerActionRef],
@@ -108,12 +99,13 @@ const BlurToolCore: React.FC = () => {
             }
 
             const blurContainer = drawLayerActionRef.current?.getBlurContainer();
+            const imageTexture = drawLayerActionRef.current?.getImageTexture();
 
             if (
                 !drawLayerActionRef.current ||
                 !blurContainer ||
                 !captureBoundingBoxInfoRef.current ||
-                !imageTextureRef.current
+                !imageTexture
             ) {
                 return;
             }
@@ -155,7 +147,7 @@ const BlurToolCore: React.FC = () => {
                 let blurSprite = blurSpriteMapRef.current.get(element.id);
                 if (!blurSprite) {
                     blurSprite = {
-                        sprite: new PIXI.Sprite(imageTextureRef.current),
+                        sprite: new PIXI.Sprite(imageTexture),
                         spriteBlurFliter: new PIXI.BlurFilter(),
                         spriteMask: new PIXI.Graphics(),
                         props: {
@@ -166,8 +158,8 @@ const BlurToolCore: React.FC = () => {
                     blurSprite.sprite.filters = [blurSprite.spriteBlurFliter];
                     blurSprite.sprite.x = 0;
                     blurSprite.sprite.y = 0;
-                    blurSprite.sprite.width = imageTextureRef.current.width;
-                    blurSprite.sprite.height = imageTextureRef.current.height;
+                    blurSprite.sprite.width = imageTexture.width;
+                    blurSprite.sprite.height = imageTexture.height;
                     blurSprite.sprite.setMask({
                         mask: blurSprite.spriteMask,
                     });

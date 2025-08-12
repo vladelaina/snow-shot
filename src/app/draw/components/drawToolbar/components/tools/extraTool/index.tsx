@@ -62,7 +62,10 @@ export const ExtraTool: React.FC<{
             monitorRect.max_y,
         );
 
-        finishCapture();
+        // 快捷执行时立刻 finish 可能窗口很多数据还没初始化好，所以延迟执行
+        setTimeout(() => {
+            finishCapture();
+        }, 0);
     }, [captureBoundingBoxInfoRef, finishCapture, intl, selectLayerActionRef]);
 
     useStateSubscriber(

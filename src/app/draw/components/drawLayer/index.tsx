@@ -17,6 +17,7 @@ import { getCaptureHistoryImageAbsPath } from '@/utils/captureHistory';
 
 export type DrawLayerActionType = BaseLayerActionType & {
     getBlurContainer: () => PIXI.Container | undefined;
+    getImageTexture: () => PIXI.Texture | undefined;
     getDrawContainer: () => PIXI.Container | undefined;
     switchCaptureHistory: (item: CaptureHistoryItem | undefined) => Promise<void>;
 };
@@ -31,6 +32,7 @@ const DrawLayerCore: React.FC<DrawLayerProps> = ({ actionRef }) => {
 
     const imageContainerRef = useRef<PIXI.Container | undefined>(undefined);
     const imageTextureRef = useRef<PIXI.Texture | undefined>(undefined);
+    const captureHistoryImageTextureRef = useRef<PIXI.Texture | undefined>(undefined);
     const imageSpriteRef = useRef<PIXI.Sprite | undefined>(undefined);
     const captureHistoryImageSpriteRef = useRef<PIXI.Sprite | undefined>(undefined);
     const blurContainerRef = useRef<PIXI.Container | undefined>(undefined);
@@ -47,6 +49,7 @@ const DrawLayerCore: React.FC<DrawLayerProps> = ({ actionRef }) => {
             imageSpriteRef.current = imageSprite;
 
             imageTextureRef.current = texture;
+            captureHistoryImageTextureRef.current = undefined;
 
             // 模糊层和和绘制层独立处理
             blurContainerRef.current = createNewCanvasContainer();
@@ -68,6 +71,8 @@ const DrawLayerCore: React.FC<DrawLayerProps> = ({ actionRef }) => {
             imageSpriteRef.current?.removeFromParent(); // 移除当前截图
 
             if (!item) {
+                captureHistoryImageTextureRef.current = undefined;
+
                 if (imageContainerRef.current && imageSpriteRef.current) {
                     imageContainerRef.current.addChild(imageSpriteRef.current);
                 }
@@ -90,6 +95,7 @@ const DrawLayerCore: React.FC<DrawLayerProps> = ({ actionRef }) => {
                 }
 
                 if (imageTexture) {
+                    captureHistoryImageTextureRef.current = imageTexture;
                     const imageSprite = new PIXI.Sprite(imageTexture);
                     captureHistoryImageSpriteRef.current = imageSprite;
 
@@ -110,6 +116,7 @@ const DrawLayerCore: React.FC<DrawLayerProps> = ({ actionRef }) => {
             onCaptureFinish,
             getBlurContainer: () => blurContainerRef.current,
             getDrawContainer: () => drawContainerRef.current,
+            getImageTexture: () => captureHistoryImageTextureRef.current ?? imageTextureRef.current,
             switchCaptureHistory,
         }),
         [onCaptureFinish, onCaptureReady, switchCaptureHistory],
