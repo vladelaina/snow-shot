@@ -1,16 +1,29 @@
 'use client';
 
-import { AppSettingsGroup } from '@/app/contextWrap';
+import { AppSettingsData, AppSettingsGroup } from '@/app/contextWrap';
 import { ocrInit } from '@/commands/ocr';
 import { videoRecordInit } from '@/commands/videoRecord';
 import { useAppSettingsLoad } from '@/hooks/useAppSettingsLoad';
+import { CaptureHistory } from '@/utils/captureHistory';
 import { useCallback, useEffect } from 'react';
 
 export const InitService = () => {
+    // 清除无效的截图历史
+    const clearCaptureHistory = useCallback(async (appSettings: AppSettingsData) => {
+        const captureHistory = new CaptureHistory();
+        await captureHistory.init();
+        await captureHistory.clearExpired(appSettings);
+    }, []);
+
     useAppSettingsLoad(
-        useCallback((appSettings) => {
-            ocrInit(appSettings[AppSettingsGroup.SystemScreenshot].ocrModel);
-        }, []),
+        useCallback(
+            (appSettings) => {
+                ocrInit(appSettings[AppSettingsGroup.SystemScreenshot].ocrModel);
+
+                clearCaptureHistory(appSettings);
+            },
+            [clearCaptureHistory],
+        ),
         true,
     );
 

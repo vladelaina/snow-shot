@@ -1,10 +1,10 @@
 let wasmModuleArrayBuffer: ArrayBuffer;
 
-export async function getPixels(
-    imageBuffer: ArrayBuffer,
-    width: number,
-    height: number,
-): Promise<ImageData> {
+export async function getPixels(imageBuffer: ArrayBuffer): Promise<{
+    data: ImageData;
+    width: number;
+    height: number;
+}> {
     return new Promise(async (resolve, reject) => {
         const worker = new Worker(new URL('./getPixelsWorker.ts', import.meta.url));
 
@@ -24,6 +24,6 @@ export async function getPixels(
             );
             wasmModuleArrayBuffer = await wasmModuleResponse.arrayBuffer();
         }
-        worker.postMessage({ imageBuffer, width, height, wasmModuleArrayBuffer });
+        worker.postMessage({ imageBuffer, wasmModuleArrayBuffer });
     });
 }

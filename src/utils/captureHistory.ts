@@ -5,7 +5,6 @@ import { BaseDirectory, copyFile, mkdir, remove, writeFile } from '@tauri-apps/p
 import { appConfigDir } from '@tauri-apps/api/path';
 import { join as joinPath } from '@tauri-apps/api/path';
 import path from 'path';
-import { AppState } from '@mg-chao/excalidraw/types';
 import { NonDeletedExcalidrawElement, Ordered } from '@mg-chao/excalidraw/element/types';
 
 const captureHistoryImagesDir = 'captureHistoryImages';
@@ -20,6 +19,8 @@ export const getCaptureHistoryImageAbsPath = async (fileName: string) => {
 
 const dayDuration = 24 * 60 * 60 * 1000;
 export enum HistoryValidDuration {
+    /** 用于测试，不对外暴露 */
+    Test = 1,
     Day = dayDuration,
     Week = 7 * dayDuration,
     Month = 30 * dayDuration,
@@ -113,7 +114,11 @@ export class CaptureHistory {
 
     async getList(appSettings: AppSettingsData): Promise<CaptureHistoryItem[]> {
         const now = Date.now();
-        const validTime = now - appSettings[AppSettingsGroup.SystemScreenshot].historyValidDuration;
+        const validTime =
+            appSettings[AppSettingsGroup.SystemScreenshot].historyValidDuration ===
+            HistoryValidDuration.Forever
+                ? 0
+                : now - appSettings[AppSettingsGroup.SystemScreenshot].historyValidDuration;
 
         const historyList = await this.store.entries().then((entries) => {
             return entries.filter(([, item]) => {
@@ -149,10 +154,18 @@ export class CaptureHistory {
                     return;
                 }
 
-                await remove(getCaptureImageFilePath(item.file_name), {
-                    baseDir: BaseDirectory.AppConfig,
-                });
-                await this.store.delete(id);
+                try {
+                    await this.store.delete(id);
+                } catch (error) {
+                    console.warn('[CaptureHistory] delete captureHistoryItem failed', error);
+                }
+                try {
+                    await remove(getCaptureImageFilePath(item.file_name), {
+                        baseDir: BaseDirectory.AppConfig,
+                    });
+                } catch (error) {
+                    console.warn('[CaptureHistory] remove captureHistoryItem image failed', error);
+                }
             }),
         );
     }

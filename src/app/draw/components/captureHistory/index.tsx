@@ -29,8 +29,13 @@ const CaptureHistoryControllerCore: React.FC<{
     const captureHistoryRef = useRef<CaptureHistory | undefined>(undefined);
     const isImageLoadingRef = useRef<boolean>(false);
     const [, setEnableKeyEvent] = useStateSubscriber(EnableKeyEventPublisher, undefined);
-    const { imageBufferRef, selectLayerActionRef, drawLayerActionRef, drawCacheLayerActionRef } =
-        useContext(DrawContext);
+    const {
+        imageBufferRef,
+        selectLayerActionRef,
+        drawLayerActionRef,
+        drawCacheLayerActionRef,
+        colorPickerActionRef,
+    } = useContext(DrawContext);
 
     const resetCurrentIndex = useCallback(() => {
         currentIndexRef.current = captureHistoryListRef.current.length;
@@ -113,8 +118,12 @@ const CaptureHistoryControllerCore: React.FC<{
             });
 
             if (currentIndexRef.current === captureHistoryListRef.current.length) {
+                const switchCaptureHistoryPromise = Promise.all([
+                    drawLayerActionRef.current?.switchCaptureHistory(undefined),
+                    colorPickerActionRef.current?.switchCaptureHistory(undefined),
+                ]);
+
                 selectLayerActionRef.current?.setSelectRect(undefined);
-                drawLayerActionRef.current?.switchCaptureHistory(undefined);
 
                 // 恢复绘制的内容
                 if (currentCaptureExcalidrawElementsRef.current) {
@@ -125,7 +134,18 @@ const CaptureHistoryControllerCore: React.FC<{
                     drawCacheLayerActionRef.current?.clearHistory();
                     currentCaptureExcalidrawElementsRef.current = undefined;
                 }
+
+                await switchCaptureHistoryPromise;
             } else {
+                const switchCaptureHistoryPromise = Promise.all([
+                    drawLayerActionRef.current?.switchCaptureHistory(
+                        captureHistoryListRef.current[currentIndexRef.current],
+                    ),
+                    colorPickerActionRef.current?.switchCaptureHistory(
+                        captureHistoryListRef.current[currentIndexRef.current],
+                    ),
+                ]);
+
                 // 保存当前绘制的内容
                 if (currentCaptureExcalidrawElementsRef.current === undefined) {
                     currentCaptureExcalidrawElementsRef.current = drawCacheLayerActionRef.current
@@ -137,10 +157,6 @@ const CaptureHistoryControllerCore: React.FC<{
                     captureHistoryListRef.current[currentIndexRef.current].selected_rect,
                 );
 
-                await drawLayerActionRef.current?.switchCaptureHistory(
-                    captureHistoryListRef.current[currentIndexRef.current],
-                );
-
                 drawCacheLayerActionRef.current?.updateScene({
                     elements:
                         captureHistoryListRef.current[currentIndexRef.current]
@@ -148,13 +164,21 @@ const CaptureHistoryControllerCore: React.FC<{
                     captureUpdate: 'NEVER',
                 });
                 drawCacheLayerActionRef.current?.clearHistory();
+
+                await switchCaptureHistoryPromise;
             }
 
             isImageLoadingRef.current = false;
 
             hideLoading();
         },
-        [drawCacheLayerActionRef, drawLayerActionRef, message, selectLayerActionRef],
+        [
+            colorPickerActionRef,
+            drawCacheLayerActionRef,
+            drawLayerActionRef,
+            message,
+            selectLayerActionRef,
+        ],
     );
 
     const saveCurrentCapture = useCallback(async () => {

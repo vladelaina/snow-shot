@@ -118,7 +118,7 @@ export default function SystemSettings() {
     }, []);
 
     const historyValidDurationOptions = useMemo(() => {
-        return [
+        const options = [
             {
                 label: intl.formatMessage({
                     id: 'settings.systemSettings.screenshotSettings.historyValidDuration.day',
@@ -144,6 +144,17 @@ export default function SystemSettings() {
                 value: HistoryValidDuration.Forever,
             },
         ];
+
+        if (process.env.NODE_ENV === 'development') {
+            options.push({
+                label: intl.formatMessage({
+                    id: 'settings.systemSettings.screenshotSettings.historyValidDuration.test',
+                }),
+                value: HistoryValidDuration.Test,
+            });
+        }
+
+        return options;
     }, [intl]);
 
     const tryGetElementByFocusOptions = useMemo(() => {

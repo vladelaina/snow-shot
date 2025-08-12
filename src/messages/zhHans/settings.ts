@@ -234,4 +234,5 @@ export const settings = {
     'settings.systemSettings.screenshotSettings.historyValidDuration.week': '7 天',
     'settings.systemSettings.screenshotSettings.historyValidDuration.month': '30 天',
     'settings.systemSettings.screenshotSettings.historyValidDuration.forever': '永久保留',
+    'settings.systemSettings.screenshotSettings.historyValidDuration.test': '测试（立即清除）',
 };

@@ -46,6 +46,9 @@ import { getPlatform } from '@/utils';
 import { getExcalidrawCanvas } from '@/utils/excalidraw';
 import { ImageBuffer } from '@/commands';
 import { getPixels } from './workers/getPixels';
+import { CaptureHistoryItem } from '@/utils/appStore';
+import { convertFileSrc } from '@tauri-apps/api/core';
+import { getCaptureHistoryImageAbsPath } from '@/utils/captureHistory';
 
 const previewScale = 12;
 const previewPickerSize = 10 + 1;
@@ -79,6 +82,7 @@ export const isEnableColorPicker = (
 
 export type ColorPickerActionType = {
     getCurrentImageData: () => ImageData | undefined;
+    switchCaptureHistory: (item: CaptureHistoryItem | undefined) => Promise<void>;
 };
 
 export enum ColorPickerColorFormat {
@@ -260,6 +264,13 @@ const ColorPickerCore: React.FC<{
     useStateSubscriber(DrawToolbarStatePublisher, updateEnableDebounce);
 
     const currentCanvasImageDataRef = useRef<ImageData | undefined>(undefined);
+    const captureHistoryImageDataRef = useRef<ImageData | undefined>(undefined);
+    const getCurrentImageData = useCallback(() => {
+        if (captureHistoryImageDataRef.current) {
+            return captureHistoryImageDataRef.current;
+        }
+        return currentCanvasImageDataRef.current;
+    }, []);
 
     const colorRef = useRef({
         red: 0,
@@ -362,7 +373,7 @@ const ColorPickerCore: React.FC<{
             // 将数据绘制到预览画布
             updatePickerPosition(mouseX, mouseY);
 
-            const imageData = currentCanvasImageDataRef.current;
+            const imageData = getCurrentImageData();
             if (imageData) {
                 const baseIndex = (mouseY * captureBoundingBoxInfo.width + mouseX) * 4;
 
@@ -385,6 +396,7 @@ const ColorPickerCore: React.FC<{
         [
             captureBoundingBoxInfoRef,
             enableMouseMove,
+            getCurrentImageData,
             updateColor,
             updateImageDataPutImageRender,
             updatePickerPosition,
@@ -440,24 +452,25 @@ const ColorPickerCore: React.FC<{
         previewCanvas.width = previewPickerSize;
         previewCanvas.height = previewPickerSize;
     }, []);
+
+    const refreshMouseMove = useCallback(() => {
+        update(
+            Math.floor(pickerPositionRef.current.mouseX / window.devicePixelRatio),
+            Math.floor(pickerPositionRef.current.mouseY / window.devicePixelRatio),
+            pickerPositionRef.current.mouseX,
+            pickerPositionRef.current.mouseY,
+        );
+    }, [update]);
+
     const initImageData = useCallback(
         async (imageBuffer: ArrayBuffer) => {
             // 这里用 wasm 解码图片来获取像素点，如果通过读取 canvas 的上下文获取会阻塞主线程
-            getPixels(
-                imageBuffer,
-                captureBoundingBoxInfoRef.current!.width,
-                captureBoundingBoxInfoRef.current!.height,
-            ).then((pixels) => {
-                currentCanvasImageDataRef.current = pixels;
-                update(
-                    Math.floor(pickerPositionRef.current.mouseX / window.devicePixelRatio),
-                    Math.floor(pickerPositionRef.current.mouseY / window.devicePixelRatio),
-                    pickerPositionRef.current.mouseX,
-                    pickerPositionRef.current.mouseY,
-                );
+            getPixels(imageBuffer).then((pixels) => {
+                currentCanvasImageDataRef.current = pixels.data;
+                refreshMouseMove();
             });
         },
-        [captureBoundingBoxInfoRef, update],
+        [refreshMouseMove],
     );
 
     const onCaptureReady = useCallback(
@@ -562,12 +575,31 @@ const ColorPickerCore: React.FC<{
         [captureBoundingBoxInfoRef, disableMouseMove, setDrawEvent, update],
     );
 
+    const switchCaptureHistory = useCallback(
+        async (item: CaptureHistoryItem | undefined) => {
+            if (!item) {
+                captureHistoryImageDataRef.current = undefined;
+                refreshMouseMove();
+                return;
+            }
+
+            const fileUri = convertFileSrc(await getCaptureHistoryImageAbsPath(item.file_name));
+            const fileBuffer = await fetch(fileUri).then((res) => res.arrayBuffer());
+
+            const pixels = await getPixels(fileBuffer);
+            captureHistoryImageDataRef.current = pixels.data;
+            refreshMouseMove();
+        },
+        [refreshMouseMove],
+    );
+
     useImperativeHandle(
         actionRef,
         () => ({
-            getCurrentImageData: () => currentCanvasImageDataRef.current,
+            getCurrentImageData,
+            switchCaptureHistory,
         }),
-        [],
+        [getCurrentImageData, switchCaptureHistory],
     );
 
     return (
