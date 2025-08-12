@@ -10,7 +10,7 @@ export const formatKey = (key: string | undefined | null) => {
         return '';
     }
 
-    let result = key;
+    let result = key.replace('Period', '.').replace('Comma', ',');
     switch (getPlatform()) {
         case 'macos':
             result = result
@@ -22,5 +22,5 @@ export const formatKey = (key: string | undefined | null) => {
             result = result.replace('Super', 'Win');
     }
 
-    return result.replace('Period', '.').replace('Comma', ',');
+    return result;
 };
