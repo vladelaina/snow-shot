@@ -229,10 +229,6 @@ const CaptureHistoryControllerCore: React.FC<{
             <KeyEventWrap
                 componentKey={KeyEventKey.PreviousCapture}
                 onKeyDown={() => {
-                    console.log(
-                        '[CaptureHistoryController] onKeyDown',
-                        KeyEventKey.PreviousCapture,
-                    );
                     changeCurrentIndex(-1);
                 }}
             >
