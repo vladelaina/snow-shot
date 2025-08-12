@@ -73,6 +73,9 @@ export const draw = {
     'draw.enableStraightLinePicker': '切换直线绘制',
     'draw.resizeFromCenterPicker': '从中心缩放',
     'draw.serialNumberDisableArrow': '序列号禁用/启用箭头',
+    'draw.previousCapture': '截图历史的上一个记录',
+    'draw.nextCapture': '截图历史的下一个记录',
+    'draw.switchCapture': '切换截图历史',
     'draw.serialNumberDisableArrow2': '禁用/启用箭头',
     'draw.maintainAspectRatioPicker': '保持宽高比例',
     'draw.rotateWithDiscreteAnglePicker': '固定角度旋转',
@@ -103,4 +106,5 @@ export const draw = {
     'draw.selectText': '选取文本/拖拽窗口',
     'draw.switchThumbnail': '切换缩略图',
     'draw.captureError': '截图失败，请检查是否开启“录屏与系统录音”权限',
+    'draw.loadingCaptureHistory': '加载截图历史中',
 };

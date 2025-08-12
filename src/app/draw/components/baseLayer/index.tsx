@@ -35,6 +35,10 @@ export type BaseLayerContextType = {
     layerContainerElementRef: React.RefObject<HTMLDivElement | null>;
     /** 获取画布上下文 */
     getCanvasApp: () => PIXI.Application | undefined;
+    /**
+     * 获取最上层的容器
+     */
+    getTopContainer: () => PIXI.Container<PIXI.ContainerChild> | undefined;
 };
 
 export const BaseLayerContext = React.createContext<BaseLayerContextType>({
@@ -51,6 +55,7 @@ export const BaseLayerContext = React.createContext<BaseLayerContextType>({
     layerContainerElementRef: { current: null },
     /** 获取画布上下文 */
     getCanvasApp: () => undefined,
+    getTopContainer: () => undefined,
 });
 
 export type BaseLayerEventActionType = {
@@ -123,6 +128,10 @@ export type BaseLayerEventActionType = {
      * 获取画布
      */
     getCanvas: () => PIXI.ICanvas | undefined;
+    /**
+     * 获取最上层的容器
+     */
+    getTopContainer: () => PIXI.Container<PIXI.ContainerChild> | undefined;
 };
 
 export type BaseLayerActionType = {
@@ -148,6 +157,7 @@ export const defaultBaseLayerActions: BaseLayerActionType = {
     getCanvasApp: () => null,
     getLayerContainerElement: () => null,
     addChildToTopContainer: () => {},
+    getTopContainer: () => undefined,
     changeCursor: () => 'auto',
     createNewCanvasContainer: () => undefined,
     addChildToContainer: () => {},
@@ -165,6 +175,7 @@ type BaseLayerCoreActionType = {
     getCanvasApp: () => PIXI.Application | undefined;
     getLayerContainerElement: () => HTMLDivElement | null;
     addChildToTopContainer: (children: PIXI.Container<PIXI.ContainerChild>) => void;
+    getTopContainer: () => PIXI.Container<PIXI.ContainerChild> | undefined;
     addChildToContainer: (
         container: PIXI.Container<PIXI.ContainerChild>,
         children: PIXI.Container<PIXI.ContainerChild>,
@@ -377,6 +388,7 @@ export const BaseLayerCore: React.FC<
             getImageData,
             getCanvas,
             initCanvas,
+            getTopContainer,
         }),
         [
             resizeCanvas,
@@ -390,6 +402,7 @@ export const BaseLayerCore: React.FC<
             getImageData,
             getCanvas,
             initCanvas,
+            getTopContainer,
         ],
     );
 
@@ -411,6 +424,7 @@ export const BaseLayerCore: React.FC<
             changeCursor,
             layerContainerElementRef,
             getCanvasApp,
+            getTopContainer,
         };
     }, [
         resizeCanvas,
@@ -420,6 +434,7 @@ export const BaseLayerCore: React.FC<
         enable,
         changeCursor,
         getCanvasApp,
+        getTopContainer,
     ]);
 
     return (

@@ -9,6 +9,7 @@ import { OcrBlocksActionType } from './components/ocrBlocks';
 import { ColorPickerActionType } from './components/colorPicker';
 import { FixedContentActionType } from '../fixedContent/components/fixedContentCore';
 import { CaptureBoundingBoxInfo } from './extra';
+import { CaptureHistoryActionType } from './components/captureHistory';
 
 export enum CaptureStep {
     // 选择阶段
@@ -37,6 +38,7 @@ export type DrawContextType = {
     fixedContentActionRef: React.RefObject<FixedContentActionType | undefined>;
     colorPickerActionRef: React.RefObject<ColorPickerActionType | undefined>;
     captureBoundingBoxInfoRef: React.RefObject<CaptureBoundingBoxInfo | undefined>;
+    captureHistoryActionRef: React.RefObject<CaptureHistoryActionType | undefined>;
 };
 
 export const DrawContext = React.createContext<DrawContextType>({
@@ -52,4 +54,5 @@ export const DrawContext = React.createContext<DrawContextType>({
     fixedContentActionRef: { current: undefined },
     colorPickerActionRef: { current: undefined },
     captureBoundingBoxInfoRef: { current: undefined },
+    captureHistoryActionRef: { current: undefined },
 });

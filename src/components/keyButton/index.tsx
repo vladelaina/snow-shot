@@ -7,6 +7,7 @@ import { useRecordHotkeys } from 'react-hotkeys-hook';
 import { trim } from 'es-toolkit';
 import { formatKey } from '@/utils/format';
 import { listenKeyStart, listenKeyStop } from '@/commands/listenKey';
+import { getPlatform } from '@/utils';
 
 type KeyConfig = {
     recordKeys: string;
@@ -40,7 +41,12 @@ const convertKeyConfigToString = (keys: Set<string>, spicalRecordKeys?: Record<s
         text = result.join('+');
     }
 
-    return formatKey(text);
+    const platform = getPlatform();
+    if (platform === 'windows') {
+        return text.replace('Meta', 'Super');
+    } else {
+        return text;
+    }
 };
 
 export const KeyButton: React.FC<{
@@ -221,9 +227,11 @@ export const KeyButton: React.FC<{
                                             <>
                                                 {recordKeys.size > 0 ||
                                                 Object.keys(spicalRecordKeys).length > 0 ? (
-                                                    convertKeyConfigToString(
-                                                        recordKeys,
-                                                        spicalRecordKeys,
+                                                    formatKey(
+                                                        convertKeyConfigToString(
+                                                            recordKeys,
+                                                            spicalRecordKeys,
+                                                        ),
                                                     )
                                                 ) : (
                                                     <FormattedMessage id="settings.pleasePressTheKey" />

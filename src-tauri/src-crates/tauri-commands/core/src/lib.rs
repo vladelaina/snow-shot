@@ -181,28 +181,7 @@ pub async fn create_full_screen_draw_window(app: tauri::AppHandle) {
     let monitor_width = monitor.width().unwrap() as f64;
     let monitor_height = monitor.height().unwrap() as f64;
 
-    let window_x;
-    let window_y;
-    let window_width;
-    let window_height;
-
-    #[cfg(target_os = "macos")]
-    {
-        window_x = monitor_x;
-        window_y = monitor_y;
-        window_width = monitor_width;
-        window_height = monitor_height;
-    }
-    #[cfg(not(target_os = "macos"))]
-    {
-        let monitor_scale_factor = monitor.scale_factor().unwrap() as f64;
-        window_x = monitor_x / monitor_scale_factor;
-        window_y = monitor_y / monitor_scale_factor;
-        window_width = monitor_width / monitor_scale_factor;
-        window_height = monitor_height / monitor_scale_factor;
-    }
-
-    tauri::WebviewWindowBuilder::new(
+    let main_window = tauri::WebviewWindowBuilder::new(
         &app,
         window_label,
         tauri::WebviewUrl::App(PathBuf::from(format!("/fullScreenDraw"))),
@@ -212,8 +191,8 @@ pub async fn create_full_screen_draw_window(app: tauri::AppHandle) {
     .maximizable(false)
     .minimizable(false)
     .title("Snow Shot - Full Screen Draw")
-    .position(window_x, window_y)
-    .inner_size(window_width, window_height)
+    .position(0.0, 0.0)
+    .inner_size(1.0, 1.0)
     .decorations(false)
     .shadow(false)
     .transparent(true)
@@ -238,7 +217,7 @@ pub async fn create_full_screen_draw_window(app: tauri::AppHandle) {
     .maximizable(false)
     .minimizable(false)
     .title("Snow Shot - Full Screen Draw - Switch Mouse Through")
-    .position(window_x, window_y)
+    .position(0.0, 0.0)
     .inner_size(1.0, 1.0)
     .decorations(false)
     .shadow(false)
@@ -247,6 +226,22 @@ pub async fn create_full_screen_draw_window(app: tauri::AppHandle) {
     .resizable(false)
     .build()
     .unwrap();
+
+    #[cfg(target_os = "macos")]
+    {
+        main_window.set_position(tauri::LogicalPosition::new(monitor_x, monitor_y));
+        main_window.set_size(tauri::LogicalSize::new(monitor_width, monitor_height));
+    }
+
+    #[cfg(not(target_os = "macos"))]
+    {
+        main_window
+            .set_position(tauri::PhysicalPosition::new(monitor_x, monitor_y))
+            .unwrap();
+        main_window
+            .set_size(tauri::PhysicalSize::new(monitor_width, monitor_height))
+            .unwrap();
+    }
 }
 
 #[derive(Serialize, Clone, Copy)]

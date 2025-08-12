@@ -1,14 +1,7 @@
 'use client';
 
 import { createContext, RefObject, useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import {
-    BaseDirectory,
-    exists,
-    mkdir,
-    readTextFile,
-    writeTextFile,
-    remove,
-} from '@tauri-apps/plugin-fs';
+import { BaseDirectory, mkdir, readTextFile, writeTextFile, remove } from '@tauri-apps/plugin-fs';
 import { ConfigProvider, theme } from 'antd';
 import { debounce, isEqual, trim } from 'es-toolkit';
 import zhCN from 'antd/es/locale/zh_CN';
@@ -40,6 +33,7 @@ import { appConfigDir, join as joinPath } from '@tauri-apps/api/path';
 import { DrawState } from './fullScreenDraw/components/drawCore/extra';
 import { OcrDetectAfterAction } from './fixedContent/components/ocrResult';
 import { OcrModel } from '@/commands/ocr';
+import { HistoryValidDuration } from '@/utils/captureHistory';
 
 export enum AppSettingsGroup {
     Common = 'common',
@@ -219,9 +213,10 @@ export type AppSettingsData = {
         encoderPreset: string;
     };
     [AppSettingsGroup.SystemScreenshot]: {
-        tryGetElementByFocus: TryGetElementByFocus;
+        historyValidDuration: HistoryValidDuration;
         ocrModel: OcrModel;
         ocrDetectAngle: boolean;
+        tryGetElementByFocus: TryGetElementByFocus;
     };
     [AppSettingsGroup.SystemScrollScreenshot]: {
         tryRollback: boolean;
@@ -347,6 +342,7 @@ export const defaultAppSettingsData: AppSettingsData = {
         tryGetElementByFocus: TryGetElementByFocus.WhiteList,
         ocrModel: OcrModel.RapidOcrV4,
         ocrDetectAngle: false,
+        historyValidDuration: HistoryValidDuration.Week,
     },
 };
 
@@ -1140,6 +1136,11 @@ const ContextWrapCore: React.FC<{ children: React.ReactNode }> = ({ children }) 
                             ? newSettings.ocrDetectAngle
                             : (prevSettings?.ocrDetectAngle ??
                               defaultAppSettingsData[group].ocrDetectAngle),
+                    historyValidDuration:
+                        typeof newSettings?.historyValidDuration === 'number'
+                            ? (newSettings.historyValidDuration as HistoryValidDuration)
+                            : (prevSettings?.historyValidDuration ??
+                              defaultAppSettingsData[group].historyValidDuration),
                 };
             } else {
                 return defaultAppSettingsData[group];
@@ -1176,29 +1177,21 @@ const ContextWrapCore: React.FC<{ children: React.ReactNode }> = ({ children }) 
 
         const settings: AppSettingsData = {} as AppSettingsData;
 
-        // 启动时验证下目录是否存在
-        let isDirExists = await exists('', {
-            baseDir: BaseDirectory.AppConfig,
-        });
-        if (!isDirExists) {
-            await mkdir('', {
-                baseDir: BaseDirectory.AppConfig,
-            });
-        }
-
-        isDirExists = await exists(configDir, {
-            baseDir: BaseDirectory.AppConfig,
-        });
-        if (!isDirExists) {
+        try {
             await mkdir(configDir, {
                 baseDir: BaseDirectory.AppConfig,
+                recursive: true,
             });
+        } catch (error) {
+            // 一般是提示目录已存在
+            console.warn('[reloadAppSettings] mkdir configDir failed', error);
         }
 
         await Promise.all(
             (groups as AppSettingsGroup[]).map(async (group) => {
                 let fileContent = '';
                 try {
+                    // 创建文件夹成功的话，文件不存在，则不读取
                     fileContent = await readTextFile(getFileName(group), {
                         baseDir: BaseDirectory.AppConfig,
                     });

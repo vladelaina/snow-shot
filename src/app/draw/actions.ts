@@ -148,11 +148,11 @@ export const fixedToScreen = async (
         return;
     }
 
+    await setWindowRect(appWindow, captureBoundingBoxInfo.transformWindowRect(selectRect));
     await Promise.all([
         appWindow.show(),
         appWindow.setAlwaysOnTop(true),
         fixedContentAction.init({ canvas: imageCanvas, captureBoundingBoxInfo, ocrResult }),
-        setWindowRect(appWindow, captureBoundingBoxInfo.transformWindowRect(selectRect)),
     ]);
 
     // 简单加个过渡效果

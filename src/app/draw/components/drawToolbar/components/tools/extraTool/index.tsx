@@ -29,20 +29,68 @@ export const ExtraTool: React.FC<{
     const [activeTool, setActiveTool] = useState<ExtraToolList | undefined>(undefined);
     const [enabled, setEnabled] = useState(false);
     const [, setDrawState] = useStateSubscriber(DrawStatePublisher, undefined);
+
+    const executeScanQrcode = useCallback(() => {
+        setActiveTool(ExtraToolList.ScanQrcode);
+    }, []);
+
+    const executeVideoRecord = useCallback(() => {
+        const captureBoundingBoxInfo = captureBoundingBoxInfoRef.current;
+        const selectRect = selectLayerActionRef.current?.getSelectRect();
+        if (!captureBoundingBoxInfo || !selectRect) {
+            return;
+        }
+
+        const monitorRect = captureBoundingBoxInfo.transformWindowRect(selectRect);
+
+        if (
+            getPlatform() === 'macos' &&
+            captureBoundingBoxInfo.getActiveMonitorRectList(monitorRect).length > 1
+        ) {
+            message.warning(
+                intl.formatMessage({
+                    id: 'draw.extraTool.videoRecord.multiMonitor',
+                }),
+            );
+            return;
+        }
+
+        createVideoRecordWindow(
+            monitorRect.min_x,
+            monitorRect.min_y,
+            monitorRect.max_x,
+            monitorRect.max_y,
+        );
+
+        // 快捷执行时立刻 finish 可能窗口很多数据还没初始化好，所以延迟执行
+        setTimeout(() => {
+            finishCapture();
+        }, 0);
+    }, [captureBoundingBoxInfoRef, finishCapture, intl, selectLayerActionRef]);
+
     useStateSubscriber(
         DrawStatePublisher,
-        useCallback((drawState: DrawState) => {
-            if (drawState === DrawState.ExtraTools || drawState === DrawState.ScanQrcode) {
-                if (drawState === DrawState.ScanQrcode) {
-                    setActiveTool(ExtraToolList.ScanQrcode);
-                }
+        useCallback(
+            (drawState: DrawState) => {
+                if (
+                    drawState === DrawState.ExtraTools ||
+                    drawState === DrawState.ScanQrcode ||
+                    drawState === DrawState.VideoRecord
+                ) {
+                    if (drawState === DrawState.ScanQrcode) {
+                        executeScanQrcode();
+                    } else if (drawState === DrawState.VideoRecord) {
+                        executeVideoRecord();
+                    }
 
-                setEnabled(true);
-            } else {
-                setActiveTool(undefined);
-                setEnabled(false);
-            }
-        }, []),
+                    setEnabled(true);
+                } else {
+                    setActiveTool(undefined);
+                    setEnabled(false);
+                }
+            },
+            [executeScanQrcode, executeVideoRecord],
+        ),
     );
 
     if (!enabled) {
@@ -68,36 +116,7 @@ export const ExtraTool: React.FC<{
                         type={getButtonTypeByState(activeTool === ExtraToolList.VideoRecord)}
                         key="videoRecord"
                         onClick={() => {
-                            const captureBoundingBoxInfo = captureBoundingBoxInfoRef.current;
-                            const selectRect = selectLayerActionRef.current?.getSelectRect();
-                            if (!captureBoundingBoxInfo || !selectRect) {
-                                return;
-                            }
-
-                            const monitorRect =
-                                captureBoundingBoxInfo.transformWindowRect(selectRect);
-
-                            if (
-                                getPlatform() === 'macos' &&
-                                captureBoundingBoxInfo.getActiveMonitorRectList(monitorRect)
-                                    .length > 1
-                            ) {
-                                message.warning(
-                                    intl.formatMessage({
-                                        id: 'draw.extraTool.videoRecord.multiMonitor',
-                                    }),
-                                );
-                                return;
-                            }
-
-                            createVideoRecordWindow(
-                                monitorRect.min_x,
-                                monitorRect.min_y,
-                                monitorRect.max_x,
-                                monitorRect.max_y,
-                            );
-
-                            finishCapture();
+                            setDrawState(DrawState.VideoRecord);
                         }}
                     />,
                 ]}

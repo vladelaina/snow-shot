@@ -21,9 +21,9 @@ import {
     clearAllConfig,
     getConfigDirPath,
 } from '../../contextWrap';
-import { useCallback, useContext, useEffect, useState } from 'react';
+import { useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { useAppSettingsLoad } from '@/hooks/useAppSettingsLoad';
-import { FormattedMessage } from 'react-intl';
+import { FormattedMessage, useIntl } from 'react-intl';
 import { ContentWrap } from '@/components/contentWrap';
 import { IconLabel } from '@/components/iconLable';
 import { ResetSettingsButton } from '@/components/resetSettingsButton';
@@ -34,8 +34,10 @@ import { clearAllAppStore } from '@/utils/appStore';
 import { relaunch } from '@tauri-apps/plugin-process';
 import { TryGetElementByFocus } from '@/commands';
 import { OcrModel } from '@/commands/ocr';
+import { CaptureHistory, HistoryValidDuration } from '@/utils/captureHistory';
 
 export default function SystemSettings() {
+    const intl = useIntl();
     const { token } = theme.useToken();
     const { modal, message } = useContext(AntdContext);
 
@@ -114,6 +116,91 @@ export default function SystemSettings() {
             setConfigDirPath(path);
         });
     }, []);
+
+    const historyValidDurationOptions = useMemo(() => {
+        const options = [
+            {
+                label: intl.formatMessage({
+                    id: 'settings.systemSettings.screenshotSettings.historyValidDuration.day',
+                }),
+                value: HistoryValidDuration.Day,
+            },
+            {
+                label: intl.formatMessage({
+                    id: 'settings.systemSettings.screenshotSettings.historyValidDuration.week',
+                }),
+                value: HistoryValidDuration.Week,
+            },
+            {
+                label: intl.formatMessage({
+                    id: 'settings.systemSettings.screenshotSettings.historyValidDuration.month',
+                }),
+                value: HistoryValidDuration.Month,
+            },
+            {
+                label: intl.formatMessage({
+                    id: 'settings.systemSettings.screenshotSettings.historyValidDuration.forever',
+                }),
+                value: HistoryValidDuration.Forever,
+            },
+        ];
+
+        if (process.env.NODE_ENV === 'development') {
+            options.push({
+                label: intl.formatMessage({
+                    id: 'settings.systemSettings.screenshotSettings.historyValidDuration.test',
+                }),
+                value: HistoryValidDuration.Test,
+            });
+        }
+
+        return options;
+    }, [intl]);
+
+    const tryGetElementByFocusOptions = useMemo(() => {
+        return [
+            {
+                label: intl.formatMessage({
+                    id: 'settings.systemSettings.screenshotSettings.tryGetElementByFocus.never',
+                }),
+                value: TryGetElementByFocus.Never,
+            },
+            {
+                label: intl.formatMessage({
+                    id: 'settings.systemSettings.screenshotSettings.tryGetElementByFocus.firefox',
+                }),
+                value: TryGetElementByFocus.Firefox,
+            },
+            {
+                label: intl.formatMessage({
+                    id: 'settings.systemSettings.screenshotSettings.tryGetElementByFocus.whiteList',
+                }),
+                value: TryGetElementByFocus.WhiteList,
+            },
+            {
+                label: intl.formatMessage({
+                    id: 'settings.systemSettings.screenshotSettings.tryGetElementByFocus.always',
+                }),
+                value: TryGetElementByFocus.Always,
+            },
+        ];
+    }, [intl]);
+    const ocrModelOptions = useMemo(() => {
+        return [
+            {
+                label: intl.formatMessage({
+                    id: 'settings.systemSettings.screenshotSettings.ocrModel.rapidOcrV4',
+                }),
+                value: OcrModel.RapidOcrV4,
+            },
+            {
+                label: intl.formatMessage({
+                    id: 'settings.systemSettings.screenshotSettings.ocrModel.rapidOcrV5',
+                }),
+                value: OcrModel.RapidOcrV5,
+            },
+        ];
+    }, [intl]);
 
     return (
         <ContentWrap>
@@ -217,6 +304,21 @@ export default function SystemSettings() {
                                 label={
                                     <IconLabel
                                         label={
+                                            <FormattedMessage id="settings.systemSettings.screenshotSettings.historyValidDuration" />
+                                        }
+                                    />
+                                }
+                                name="historyValidDuration"
+                                options={historyValidDurationOptions}
+                            />
+                        </Col>
+                    </Row>
+                    <Row gutter={token.margin}>
+                        <Col span={12}>
+                            <ProFormSelect
+                                label={
+                                    <IconLabel
+                                        label={
                                             <FormattedMessage id="settings.systemSettings.screenshotSettings.tryGetElementByFocus" />
                                         }
                                         tooltipTitle={
@@ -231,32 +333,7 @@ export default function SystemSettings() {
                                     />
                                 }
                                 name="tryGetElementByFocus"
-                                options={[
-                                    {
-                                        label: (
-                                            <FormattedMessage id="settings.systemSettings.screenshotSettings.tryGetElementByFocus.never" />
-                                        ),
-                                        value: TryGetElementByFocus.Never,
-                                    },
-                                    {
-                                        label: (
-                                            <FormattedMessage id="settings.systemSettings.screenshotSettings.tryGetElementByFocus.firefox" />
-                                        ),
-                                        value: TryGetElementByFocus.Firefox,
-                                    },
-                                    {
-                                        label: (
-                                            <FormattedMessage id="settings.systemSettings.screenshotSettings.tryGetElementByFocus.whiteList" />
-                                        ),
-                                        value: TryGetElementByFocus.WhiteList,
-                                    },
-                                    {
-                                        label: (
-                                            <FormattedMessage id="settings.systemSettings.screenshotSettings.tryGetElementByFocus.always" />
-                                        ),
-                                        value: TryGetElementByFocus.Always,
-                                    },
-                                ]}
+                                options={tryGetElementByFocusOptions}
                             />
                         </Col>
                     </Row>
@@ -272,20 +349,7 @@ export default function SystemSettings() {
                                     />
                                 }
                                 name="ocrModel"
-                                options={[
-                                    {
-                                        label: (
-                                            <FormattedMessage id="settings.systemSettings.screenshotSettings.ocrModel.rapidOcrV4" />
-                                        ),
-                                        value: OcrModel.RapidOcrV4,
-                                    },
-                                    {
-                                        label: (
-                                            <FormattedMessage id="settings.systemSettings.screenshotSettings.ocrModel.rapidOcrV5" />
-                                        ),
-                                        value: OcrModel.RapidOcrV5,
-                                    },
-                                ]}
+                                options={ocrModelOptions}
                             />
                         </Col>
 
@@ -722,6 +786,11 @@ export default function SystemSettings() {
                                                 await Promise.all([
                                                     clearAllAppStore(),
                                                     clearAllConfig(),
+                                                    (async () => {
+                                                        const captureHistory = new CaptureHistory();
+                                                        await captureHistory.init();
+                                                        await captureHistory.clearAll();
+                                                    })(),
                                                 ]);
                                                 relaunch();
                                             },

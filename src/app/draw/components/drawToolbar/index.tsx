@@ -31,6 +31,7 @@ import {
     ScrollScreenshotIcon,
     SerialNumberIcon,
     TextIcon,
+    ToolIcon,
 } from '@/components/icons';
 import {
     CaptureEvent,
@@ -338,6 +339,7 @@ const DrawToolbarCore: React.FC<DrawToolbarProps> = ({
                     });
                     onOcrDetect();
                     break;
+                case DrawState.VideoRecord:
                 case DrawState.ExtraTools:
                     drawCacheLayerActionRef.current?.setEnable(false);
                     drawCacheLayerActionRef.current?.setActiveTool({
@@ -453,6 +455,9 @@ const DrawToolbarCore: React.FC<DrawToolbarProps> = ({
                         break;
                     case ScreenshotType.Copy:
                         onCopyToClipboard();
+                        break;
+                    case ScreenshotType.VideoRecord:
+                        onToolClick(DrawState.VideoRecord);
                         break;
                     case ScreenshotType.TopWindow:
                         onTopWindow();
@@ -692,9 +697,9 @@ const DrawToolbarCore: React.FC<DrawToolbarProps> = ({
                             {/* 额外工具 */}
                             <ToolButton
                                 componentKey={KeyEventKey.ExtraToolsTool}
-                                icon={<AppstoreOutlined />}
+                                icon={<ToolIcon style={{ fontSize: '0.95em' }} />}
                                 drawState={DrawState.ExtraTools}
-                                extraDrawState={[DrawState.ScanQrcode]}
+                                extraDrawState={[DrawState.ScanQrcode, DrawState.VideoRecord]}
                                 disable={enableScrollScreenshot}
                                 onClick={() => {
                                     onToolClick(DrawState.ExtraTools);
@@ -707,7 +712,7 @@ const DrawToolbarCore: React.FC<DrawToolbarProps> = ({
                                 icon={
                                     <FixedIcon
                                         style={{
-                                            fontSize: '1.1em',
+                                            fontSize: '1.15em',
                                             position: 'relative',
                                             bottom: '0.02em',
                                         }}
@@ -734,7 +739,7 @@ const DrawToolbarCore: React.FC<DrawToolbarProps> = ({
                             {enableOcrTranslate && (
                                 <ToolButton
                                     componentKey={KeyEventKey.OcrTranslateTool}
-                                    icon={<OcrTranslateIcon style={{ fontSize: '0.98em' }} />}
+                                    icon={<OcrTranslateIcon style={{ fontSize: '1em' }} />}
                                     drawState={DrawState.OcrTranslate}
                                     disable={disableNormalScreenshotTool}
                                     onClick={() => {

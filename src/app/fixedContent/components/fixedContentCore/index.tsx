@@ -405,7 +405,7 @@ export const FixedContentCore: React.FC<{
         };
     }, [htmlBlobUrl]);
 
-    const [isThumbnail, setIsThumbnail] = useState(false);
+    const [isThumbnail, setIsThumbnail, isThumbnailRef] = useStateRef(false);
     const originWindowSizeAndPositionRef = useRef<
         | {
               size: PhysicalSize;
@@ -927,19 +927,23 @@ export const FixedContentCore: React.FC<{
             dragRegionMouseDownMousePositionRef.current = new MousePosition(e.clientX, e.clientY);
         }
     }, []);
-    const onDragRegionMouseMove = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
-        if (!dragRegionMouseDownMousePositionRef.current) {
-            return;
-        }
+    const onDragRegionMouseMove = useCallback(
+        (e: React.MouseEvent<HTMLDivElement>) => {
+            if (!dragRegionMouseDownMousePositionRef.current) {
+                return;
+            }
 
-        const distance = dragRegionMouseDownMousePositionRef.current.getDistance(
-            new MousePosition(e.clientX, e.clientY),
-        );
-        if (distance > 6) {
-            dragRegionMouseDownMousePositionRef.current = undefined;
-            startFreeDrag();
-        }
-    }, []);
+            const distance = dragRegionMouseDownMousePositionRef.current.getDistance(
+                new MousePosition(e.clientX, e.clientY),
+            );
+            // 缩略模式降低拖拽阈值
+            if (distance > 6 || (isThumbnailRef.current && distance > 2)) {
+                dragRegionMouseDownMousePositionRef.current = undefined;
+                startFreeDrag();
+            }
+        },
+        [isThumbnailRef],
+    );
     const onDragRegionMouseUp = useCallback(() => {
         dragRegionMouseDownMousePositionRef.current = undefined;
     }, []);
@@ -1142,6 +1146,21 @@ export const FixedContentCore: React.FC<{
 
                 .fixed-html-content > :global(div):first-child {
                     padding: ${token.padding}px;
+                }
+
+                /* 
+                 * 窗口过小的情况下隐藏关闭按钮
+                 */
+                @media screen and (max-width: 128px) {
+                    .fixed-image-container :global(.fixed-image-close-button) {
+                        display: none !important;
+                    }
+                }
+
+                @media screen and (max-height: 64px) {
+                    .fixed-image-container :global(.fixed-image-close-button) {
+                        display: none !important;
+                    }
                 }
             `}</style>
         </div>

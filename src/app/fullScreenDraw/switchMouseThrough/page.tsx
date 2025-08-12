@@ -6,7 +6,7 @@ import { fullScreenDrawChangeMouseThrough } from '@/functions/fullScreenDraw';
 import { setWindowRect } from '@/utils/window';
 import { getCurrentWindow } from '@tauri-apps/api/window';
 import { Button, theme } from 'antd';
-import { useContext, useEffect, useState } from 'react';
+import { useCallback, useContext, useEffect, useState } from 'react';
 import { FormattedMessage } from 'react-intl';
 
 const PAGE_WIDTH = 256;
@@ -17,13 +17,17 @@ export default function MouseThroughPage() {
 
     const [enable, setEnable] = useState(false);
 
-    useEffect(() => {
+    const [initScaleFactor, setInitScaleFactor] = useState(1);
+
+    const init = useCallback(async () => {
         const urlParams = new URLSearchParams(window.location.search);
         const monitor_x = parseInt(urlParams.get('monitor_x') ?? '0');
         const monitor_y = parseInt(urlParams.get('monitor_y') ?? '0');
 
         const appWindow = getCurrentWindow();
-        const scaleFactor = window.devicePixelRatio;
+        const scaleFactor = await appWindow.scaleFactor();
+        setInitScaleFactor(scaleFactor);
+
         const physicalWidth = PAGE_WIDTH * scaleFactor;
         const physicalHeight = PAGE_HEIGHT * scaleFactor;
 
@@ -38,6 +42,10 @@ export default function MouseThroughPage() {
             max_y: monitor_y + physicalHeight,
         });
     }, []);
+
+    useEffect(() => {
+        init();
+    }, [init]);
 
     useEffect(() => {
         const appWindow = getCurrentWindow();
@@ -86,7 +94,11 @@ export default function MouseThroughPage() {
                     cursor: pointer;
                     padding: 0 3px 3px 3px;
                     transition: opacity ${token.motionDurationMid} ${token.motionEaseInOut};
-
+                    transform: scale(
+                        ${initScaleFactor /
+                        (typeof window !== 'undefined' ? window.devicePixelRatio : 1)}
+                    );
+                    transform-origin: top left;
                     ${enable ? 'opacity: 0.42;' : 'opacity: 0 !important;'}
                 }
 

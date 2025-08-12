@@ -15,8 +15,9 @@ export enum AppFunction {
     ChatSelectText = 'chatSelectText',
     Translation = 'translation',
     TranslationSelectText = 'translationSelectText',
-    TopWindow = 'topWindow',
     FixedContent = 'fixedContent',
+    VideoRecord = 'videoRecord',
+    TopWindow = 'topWindow',
     FullScreenDraw = 'fullScreenDraw',
 }
 
@@ -82,14 +83,19 @@ export const defaultAppFunctionConfigs: Record<AppFunction, AppFunctionConfig> =
         shortcutKey: '',
         group: AppFunctionGroup.Translation,
     },
-    [AppFunction.TopWindow]: {
-        shortcutKey: '',
-        group: AppFunctionGroup.Other,
-    },
     [AppFunction.FixedContent]: {
         shortcutKey: '',
         group: AppFunctionGroup.Other,
     },
+    [AppFunction.VideoRecord]: {
+        shortcutKey: '',
+        group: AppFunctionGroup.Other,
+    },
+    [AppFunction.TopWindow]: {
+        shortcutKey: '',
+        group: AppFunctionGroup.Other,
+    },
+
     [AppFunction.FullScreenDraw]: {
         shortcutKey: '',
         group: AppFunctionGroup.Other,

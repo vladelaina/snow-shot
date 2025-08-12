@@ -187,18 +187,23 @@ const TrayIconLoaderComponent = () => {
                                 executeScreenshot(ScreenshotType.Copy);
                             },
                         },
-                        {
-                            id: `${appWindow.label}-screenshot-focused-window`,
-                            text: intl.formatMessage({
-                                id: 'home.screenshotFunction.screenshotFocusedWindow',
-                            }),
-                            accelerator: disableShortcut
-                                ? undefined
-                                : shortcutKeys[AppFunction.ScreenshotFocusedWindow].shortcutKey,
-                            action: async () => {
-                                executeScreenshotFocusedWindow(getAppSettings());
-                            },
-                        },
+                        ...(shortcutKeys[AppFunction.ScreenshotFocusedWindow].shortcutKey
+                            ? [
+                                  {
+                                      id: `${appWindow.label}-screenshot-focused-window`,
+                                      text: intl.formatMessage({
+                                          id: 'home.screenshotFunction.screenshotFocusedWindow',
+                                      }),
+                                      accelerator: disableShortcut
+                                          ? undefined
+                                          : shortcutKeys[AppFunction.ScreenshotFocusedWindow]
+                                                .shortcutKey,
+                                      action: async () => {
+                                          executeScreenshotFocusedWindow(getAppSettings());
+                                      },
+                                  },
+                              ]
+                            : []),
                         {
                             item: 'Separator',
                         },
@@ -212,16 +217,20 @@ const TrayIconLoaderComponent = () => {
                                 executeChat();
                             },
                         },
-                        {
-                            id: `${appWindow.label}-chat-selectText`,
-                            text: intl.formatMessage({ id: 'home.chatSelectText' }),
-                            accelerator: disableShortcut
-                                ? undefined
-                                : shortcutKeys[AppFunction.ChatSelectText].shortcutKey,
-                            action: async () => {
-                                executeChatSelectedText();
-                            },
-                        },
+                        ...(shortcutKeys[AppFunction.ChatSelectText].shortcutKey
+                            ? [
+                                  {
+                                      id: `${appWindow.label}-chat-selectText`,
+                                      text: intl.formatMessage({ id: 'home.chatSelectText' }),
+                                      accelerator: disableShortcut
+                                          ? undefined
+                                          : shortcutKeys[AppFunction.ChatSelectText].shortcutKey,
+                                      action: async () => {
+                                          executeChatSelectedText();
+                                      },
+                                  },
+                              ]
+                            : []),
                         {
                             item: 'Separator',
                         },
@@ -235,18 +244,45 @@ const TrayIconLoaderComponent = () => {
                                 executeTranslate();
                             },
                         },
+                        ...(shortcutKeys[AppFunction.TranslationSelectText].shortcutKey
+                            ? [
+                                  {
+                                      id: `${appWindow.label}-translation-selectText`,
+                                      text: intl.formatMessage({
+                                          id: 'home.translationSelectText',
+                                      }),
+                                      accelerator: disableShortcut
+                                          ? undefined
+                                          : shortcutKeys[AppFunction.TranslationSelectText]
+                                                .shortcutKey,
+                                      action: async () => {
+                                          executeTranslateSelectedText();
+                                      },
+                                  },
+                              ]
+                            : []),
                         {
-                            id: `${appWindow.label}-translation-selectText`,
-                            text: intl.formatMessage({ id: 'home.translationSelectText' }),
+                            item: 'Separator',
+                        },
+                        {
+                            id: `${appWindow.label}-screenshot-fixedContent`,
+                            text: intl.formatMessage({ id: 'home.fixedContent' }),
                             accelerator: disableShortcut
                                 ? undefined
-                                : shortcutKeys[AppFunction.TranslationSelectText].shortcutKey,
+                                : shortcutKeys[AppFunction.FixedContent].shortcutKey,
                             action: async () => {
-                                executeTranslateSelectedText();
+                                createFixedContentWindow();
                             },
                         },
                         {
-                            item: 'Separator',
+                            id: `${appWindow.label}-screenshot-videoRecord`,
+                            text: intl.formatMessage({ id: 'draw.extraTool.videoRecord' }),
+                            accelerator: disableShortcut
+                                ? undefined
+                                : shortcutKeys[AppFunction.VideoRecord].shortcutKey,
+                            action: async () => {
+                                executeScreenshot(ScreenshotType.VideoRecord);
+                            },
                         },
                         ...getPlatformValue(
                             [
@@ -263,16 +299,6 @@ const TrayIconLoaderComponent = () => {
                             ],
                             [],
                         ),
-                        {
-                            id: `${appWindow.label}-screenshot-fixedContent`,
-                            text: intl.formatMessage({ id: 'home.fixedContent' }),
-                            accelerator: disableShortcut
-                                ? undefined
-                                : shortcutKeys[AppFunction.FixedContent].shortcutKey,
-                            action: async () => {
-                                createFixedContentWindow();
-                            },
-                        },
                         {
                             id: `${appWindow.label}-screenshot-fullScreenDraw`,
                             text: intl.formatMessage({ id: 'home.fullScreenDraw' }),
@@ -296,9 +322,6 @@ const TrayIconLoaderComponent = () => {
                                     disableShortcut: !disableShortcut,
                                 });
                             },
-                        },
-                        {
-                            item: 'Separator',
                         },
                         {
                             id: `${appWindow.label}-show-main-window`,

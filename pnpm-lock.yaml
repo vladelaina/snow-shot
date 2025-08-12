@@ -144,8 +144,8 @@ importers:
         specifier: ^2.1.11
         version: 2.1.11(typescript@5.8.3)
       turbo-webp:
-        specifier: 0.1.2
-        version: 0.1.2
+        specifier: 0.2.0
+        version: 0.2.0
     devDependencies:
       '@eslint/eslintrc':
         specifier: ^3.3.1
@@ -4153,8 +4153,8 @@ packages:
   tunnel-rat@0.1.2:
     resolution: {integrity: sha512-lR5VHmkPhzdhrM092lI2nACsLO4QubF0/yoOhzX7c+wIpbN1GjHNzCc91QlpxBi+cnx8vVJ+Ur6vL5cEoQPFpQ==}
 
-  turbo-webp@0.1.2:
-    resolution: {integrity: sha512-wD0XfukdBuLMQQgxgc0spay5xAxREOjrVngidovmPZuo12wl5WWOEgHDxOGmh07TJICWtoI1IVHkoaiC0NJxDw==}
+  turbo-webp@0.2.0:
+    resolution: {integrity: sha512-1LIjR5xbHR/rnyuAfgbVK4wTO2dU02+gOsA0AWwqtIcrdRCAEfjrtNsezk2RgNQR3n7lhjyDxNt9XRzkpOALvQ==}
 
   type-check@0.4.0:
     resolution: {integrity: sha512-XleUoc9uwGXqjWwXaUTZAmzMcFZ5858QA2vvx1Ur5xIcixXIP+8LnFDgRplU30us6teqdlskFfu+ae4K79Ooew==}
@@ -9201,7 +9201,7 @@ snapshots:
       - immer
       - react
 
-  turbo-webp@0.1.2: {}
+  turbo-webp@0.2.0: {}
 
   type-check@0.4.0:
     dependencies:

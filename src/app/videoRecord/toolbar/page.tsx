@@ -68,11 +68,14 @@ export default function VideoRecordToolbar() {
     const toolbarRef = useRef<HTMLDivElement>(null);
     const durationFormatRef = useRef<HTMLDivElement>(null);
 
+    const [initScaleFactor, setInitScaleFactor] = useState(1);
+
     const init = useCallback(async (selectRect: ElementRect) => {
         selectRectRef.current = selectRect;
 
         const appWindow = getCurrentWindow();
         const scaleFactor = await appWindow.scaleFactor();
+        setInitScaleFactor(scaleFactor);
 
         const toolbarWidth = (toolbarRef.current?.clientWidth ?? 0) + 3 * 2;
         const toolbarHeight = (toolbarRef.current?.clientHeight ?? 0) + 3 * 2;
@@ -558,6 +561,11 @@ export default function VideoRecordToolbar() {
                     z-index: ${zIndexs.VideoRecord_Toolbar};
                     padding: 3px;
                     user-select: none;
+                    transform: scale(
+                        ${initScaleFactor /
+                        (typeof window !== 'undefined' ? window.devicePixelRatio : 1)}
+                    );
+                    transform-origin: top left;
                 }
 
                 .toolbar-drag-region {
