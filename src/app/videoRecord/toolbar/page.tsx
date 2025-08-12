@@ -561,7 +561,10 @@ export default function VideoRecordToolbar() {
                     z-index: ${zIndexs.VideoRecord_Toolbar};
                     padding: 3px;
                     user-select: none;
-                    transform: scale(${initScaleFactor / window.devicePixelRatio});
+                    transform: scale(
+                        ${initScaleFactor /
+                        (typeof window !== 'undefined' ? window.devicePixelRatio : 1)}
+                    );
                     transform-origin: top left;
                 }
 
