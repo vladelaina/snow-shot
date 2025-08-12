@@ -72,15 +72,29 @@ const DrawLayerCore: React.FC<DrawLayerProps> = ({ actionRef }) => {
                     imageContainerRef.current.addChild(imageSpriteRef.current);
                 }
             } else {
-                const fileUri = convertFileSrc(await getCaptureHistoryImageAbsPath(item.file_name));
-                const imageTexture = await PIXI.Assets.load<PIXI.Texture>({
-                    src: fileUri,
-                    parser: 'texture',
-                });
-                const imageSprite = new PIXI.Sprite(imageTexture);
-                captureHistoryImageSpriteRef.current = imageSprite;
+                let imageTexture: PIXI.Texture | undefined = undefined;
+                try {
+                    const fileUri = convertFileSrc(
+                        await getCaptureHistoryImageAbsPath(item.file_name),
+                    );
 
-                imageContainerRef.current?.addChild(imageSprite);
+                    imageTexture = await PIXI.Assets.load<PIXI.Texture>({
+                        src: fileUri,
+                        parser: 'texture',
+                    });
+                } catch (error) {
+                    // 如果读取失败，则使用当前截图
+                    imageTexture = imageTextureRef.current;
+
+                    console.warn('[switchCaptureHistory] failed read image file', error);
+                }
+
+                if (imageTexture) {
+                    const imageSprite = new PIXI.Sprite(imageTexture);
+                    captureHistoryImageSpriteRef.current = imageSprite;
+
+                    imageContainerRef.current?.addChild(imageSprite);
+                }
             }
 
             getCanvasApp()!.render();

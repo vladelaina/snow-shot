@@ -106,4 +106,5 @@ export const draw = {
     'draw.selectText': '选取文本/拖拽窗口',
     'draw.switchThumbnail': '切换缩略图',
     'draw.captureError': '截图失败，请检查是否开启“录屏与系统录音”权限',
+    'draw.loadingCaptureHistory': '加载截图历史中',
 };

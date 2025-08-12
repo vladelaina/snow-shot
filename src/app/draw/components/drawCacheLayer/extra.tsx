@@ -16,4 +16,5 @@ export type DrawCacheLayerActionType = {
     getDrawCacheLayerElement: () => HTMLDivElement | null | undefined;
     getExcalidrawAPI: () => ExcalidrawImperativeAPI | undefined;
     finishDraw: () => void;
+    clearHistory: () => void;
 };

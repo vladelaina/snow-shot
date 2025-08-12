@@ -46,6 +46,11 @@ const DrawCacheLayerCore: React.FC<{
         });
     }, []);
 
+    const clearHistory = useCallback(() => {
+        drawCoreActionRef.current?.getExcalidrawAPI()?.history.clear();
+        history.clear();
+    }, [history]);
+
     useImperativeHandle(
         actionRef,
         () => ({
@@ -92,8 +97,7 @@ const DrawCacheLayerCore: React.FC<{
                     },
                     captureUpdate: 'IMMEDIATELY',
                 });
-                drawCoreActionRef.current?.getExcalidrawAPI()?.history.clear();
-                history.clear();
+                clearHistory();
             },
             getAppState: () => {
                 return drawCoreActionRef.current?.getAppState();
@@ -113,8 +117,9 @@ const DrawCacheLayerCore: React.FC<{
             getExcalidrawAPI: () => {
                 return drawCoreActionRef.current?.getExcalidrawAPI();
             },
+            clearHistory,
         }),
-        [finishDraw, history, setExcalidrawEvent],
+        [clearHistory, finishDraw, setExcalidrawEvent],
     );
 
     const { selectLayerActionRef } = useContext(DrawContext);

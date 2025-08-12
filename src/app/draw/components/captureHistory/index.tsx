@@ -14,6 +14,8 @@ import { DrawState, DrawStatePublisher } from '@/app/fullScreenDraw/components/d
 import { CaptureEvent, CaptureEventParams, CaptureEventPublisher } from '../../extra';
 import { Ordered } from '@mg-chao/excalidraw/element/types';
 import { NonDeletedExcalidrawElement } from '@mg-chao/excalidraw/element/types';
+import { AntdContext } from '@/components/globalLayoutExtra';
+import { FormattedMessage } from 'react-intl';
 
 export type CaptureHistoryActionType = {
     saveCurrentCapture: () => Promise<void>;
@@ -80,6 +82,10 @@ const CaptureHistoryControllerCore: React.FC<{
         true,
     );
 
+    const { message } = useContext(AntdContext);
+
+    const currentCaptureExcalidrawElementsRef =
+        useRef<readonly Ordered<NonDeletedExcalidrawElement>[]>(undefined);
     const changeCurrentIndex = useCallback(
         async (delta: number) => {
             if (captureHistoryListRef.current.length === 0) {
@@ -90,34 +96,65 @@ const CaptureHistoryControllerCore: React.FC<{
                 return;
             }
 
-            isImageLoadingRef.current = true;
-
-            currentIndexRef.current = Math.max(
+            const newIndex = Math.max(
                 0,
                 Math.min(currentIndexRef.current + delta, captureHistoryListRef.current.length),
             );
 
+            if (newIndex === currentIndexRef.current) {
+                return;
+            }
+            currentIndexRef.current = newIndex;
+
+            isImageLoadingRef.current = true;
+
+            const hideLoading = message.loading({
+                content: <FormattedMessage id="draw.loadingCaptureHistory" />,
+            });
+
             if (currentIndexRef.current === captureHistoryListRef.current.length) {
                 selectLayerActionRef.current?.setSelectRect(undefined);
                 drawLayerActionRef.current?.switchCaptureHistory(undefined);
+
+                // 恢复绘制的内容
+                if (currentCaptureExcalidrawElementsRef.current) {
+                    drawCacheLayerActionRef.current?.updateScene({
+                        elements: currentCaptureExcalidrawElementsRef.current ?? [],
+                        captureUpdate: 'NEVER',
+                    });
+                    drawCacheLayerActionRef.current?.clearHistory();
+                    currentCaptureExcalidrawElementsRef.current = undefined;
+                }
             } else {
+                // 保存当前绘制的内容
+                if (currentCaptureExcalidrawElementsRef.current === undefined) {
+                    currentCaptureExcalidrawElementsRef.current = drawCacheLayerActionRef.current
+                        ?.getExcalidrawAPI()
+                        ?.getSceneElements();
+                }
+
                 selectLayerActionRef.current?.setSelectRect(
                     captureHistoryListRef.current[currentIndexRef.current].selected_rect,
                 );
+
+                await drawLayerActionRef.current?.switchCaptureHistory(
+                    captureHistoryListRef.current[currentIndexRef.current],
+                );
+
                 drawCacheLayerActionRef.current?.updateScene({
                     elements:
                         captureHistoryListRef.current[currentIndexRef.current]
                             .excalidraw_elements ?? [],
                     captureUpdate: 'NEVER',
                 });
-                await drawLayerActionRef.current?.switchCaptureHistory(
-                    captureHistoryListRef.current[currentIndexRef.current],
-                );
+                drawCacheLayerActionRef.current?.clearHistory();
             }
 
             isImageLoadingRef.current = false;
+
+            hideLoading();
         },
-        [drawCacheLayerActionRef, drawLayerActionRef, selectLayerActionRef],
+        [drawCacheLayerActionRef, drawLayerActionRef, message, selectLayerActionRef],
     );
 
     const saveCurrentCapture = useCallback(async () => {
