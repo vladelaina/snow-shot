@@ -229,8 +229,12 @@ pub async fn create_full_screen_draw_window(app: tauri::AppHandle) {
 
     #[cfg(target_os = "macos")]
     {
-        main_window.set_position(tauri::LogicalPosition::new(monitor_x, monitor_y));
-        main_window.set_size(tauri::LogicalSize::new(monitor_width, monitor_height));
+        main_window
+            .set_position(tauri::LogicalPosition::new(monitor_x, monitor_y))
+            .unwrap();
+        main_window
+            .set_size(tauri::LogicalSize::new(monitor_width, monitor_height))
+            .unwrap();
     }
 
     #[cfg(not(target_os = "macos"))]
