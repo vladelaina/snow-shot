@@ -197,11 +197,6 @@ const EventListenerCore: React.FC<{ children: React.ReactNode }> = ({ children }
             callback: listenKeyCallback(LISTEN_KEY_SERVICE_KEY_UP_EMIT_KEY),
         });
 
-        defaultListener.push({
-            event: TauriEvent.WINDOW_SCALE_FACTOR_CHANGED,
-            callback: async () => {},
-        });
-
         if (mainWindow) {
             defaultListener.push({
                 event: 'log-message',
