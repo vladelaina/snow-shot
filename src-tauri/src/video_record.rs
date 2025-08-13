@@ -32,6 +32,8 @@ pub async fn video_record_start(
     hwaccel: bool,
     encoder: String,
     encoder_preset: String,
+    video_max_width: i32,
+    video_max_height: i32,
 ) -> Result<(), String> {
     println!(
         "Starting video recording: area=({},{}) to ({},{}), output={}",
@@ -54,6 +56,8 @@ pub async fn video_record_start(
         hwaccel,
         encoder,
         encoder_preset,
+        video_max_width,
+        video_max_height,
     ) {
         Ok(_) => {
             println!("Video recording started successfully");

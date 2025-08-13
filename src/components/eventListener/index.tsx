@@ -1,6 +1,6 @@
 'use client';
 
-import { EventCallback, listen, TauriEvent, UnlistenFn } from '@tauri-apps/api/event';
+import { EventCallback, listen, UnlistenFn } from '@tauri-apps/api/event';
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef } from 'react';
 import { attachConsole } from '@tauri-apps/plugin-log';
 import { appLog, LogMessageEvent } from '@/utils/appLog';

@@ -35,6 +35,7 @@ import { OcrDetectAfterAction } from './fixedContent/components/ocrResult';
 import { OcrModel } from '@/commands/ocr';
 import { HistoryValidDuration } from '@/utils/captureHistory';
 import { getPlatformValue } from '@/utils';
+import { VideoMaxSize } from '@/commands/videoRecord';
 
 export enum AppSettingsGroup {
     Common = 'common',
@@ -212,6 +213,8 @@ export type AppSettingsData = {
         encoder: string;
         /** 编码器预设 */
         encoderPreset: string;
+        /** 视频最大尺寸 */
+        videoMaxSize: VideoMaxSize;
     };
     [AppSettingsGroup.SystemScreenshot]: {
         historyValidDuration: HistoryValidDuration;
@@ -334,11 +337,12 @@ export const defaultAppSettingsData: AppSettingsData = {
     },
     [AppSettingsGroup.FunctionVideoRecord]: {
         saveDirectory: '',
-        frameRate: 30,
+        frameRate: 24,
         microphoneDeviceName: '',
         hwaccel: true,
         encoder: 'libx264',
         encoderPreset: 'ultrafast',
+        videoMaxSize: VideoMaxSize.P1080,
     },
     [AppSettingsGroup.SystemScreenshot]: {
         tryGetElementByFocus: TryGetElementByFocus.WhiteList,
@@ -1095,6 +1099,11 @@ const ContextWrapCore: React.FC<{ children: React.ReactNode }> = ({ children }) 
                             ? newSettings.encoderPreset
                             : (prevSettings?.encoderPreset ??
                               defaultAppSettingsData[group].encoderPreset),
+                    videoMaxSize:
+                        typeof newSettings?.videoMaxSize === 'string'
+                            ? (newSettings.videoMaxSize as VideoMaxSize)
+                            : (prevSettings?.videoMaxSize ??
+                              defaultAppSettingsData[group].videoMaxSize),
                 };
             } else if (group === AppSettingsGroup.FunctionFixedContent) {
                 newSettings = newSettings as AppSettingsData[typeof group];

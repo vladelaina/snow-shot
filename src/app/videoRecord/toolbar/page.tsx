@@ -24,6 +24,7 @@ import { ElementRect } from '@/commands';
 import { getVideoRecordParams, VideoRecordState } from '../extra';
 import {
     VideoFormat,
+    VideoMaxSize,
     videoRecordKill,
     videoRecordPause,
     videoRecordResume,
@@ -299,6 +300,34 @@ export default function VideoRecordToolbar() {
 
                                     const appSettings = getAppSettings();
 
+                                    let videoMaxWidth = 1920;
+                                    let videoMaxHeight = 1080;
+                                    switch (
+                                        appSettings[AppSettingsGroup.FunctionVideoRecord]
+                                            .videoMaxSize
+                                    ) {
+                                        case VideoMaxSize.P2160:
+                                            videoMaxWidth = 3840;
+                                            videoMaxHeight = 2160;
+                                            break;
+                                        case VideoMaxSize.P1440:
+                                            videoMaxWidth = 2560;
+                                            videoMaxHeight = 1440;
+                                            break;
+                                        case VideoMaxSize.P1080:
+                                            videoMaxWidth = 1920;
+                                            videoMaxHeight = 1080;
+                                            break;
+                                        case VideoMaxSize.P720:
+                                            videoMaxWidth = 1280;
+                                            videoMaxHeight = 720;
+                                            break;
+                                        case VideoMaxSize.P480:
+                                            videoMaxWidth = 640;
+                                            videoMaxHeight = 480;
+                                            break;
+                                    }
+
                                     videoRecordStart(
                                         selectRectRef.current?.min_x ?? 0,
                                         selectRectRef.current?.min_y ?? 0,
@@ -321,6 +350,8 @@ export default function VideoRecordToolbar() {
                                         appSettings[AppSettingsGroup.FunctionVideoRecord].encoder,
                                         appSettings[AppSettingsGroup.FunctionVideoRecord]
                                             .encoderPreset,
+                                        videoMaxWidth,
+                                        videoMaxHeight,
                                     )
                                         .then(() => {
                                             setVideoRecordState(VideoRecordState.Recording);

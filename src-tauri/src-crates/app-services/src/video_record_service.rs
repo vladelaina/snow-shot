@@ -45,6 +45,8 @@ struct RecordingParams {
     hwaccel: bool,
     encoder: String,
     encoder_preset: String,
+    video_max_width: i32,
+    video_max_height: i32,
 }
 
 pub struct VideoRecordService {
@@ -150,6 +152,8 @@ impl VideoRecordService {
         hwaccel: bool,
         encoder: String,
         encoder_preset: String,
+        video_max_width: i32,
+        video_max_height: i32,
     ) -> Result<()> {
         if self.state == VideoRecordState::Recording {
             return Err(std::io::Error::new(
@@ -173,6 +177,8 @@ impl VideoRecordService {
             hwaccel,
             encoder,
             encoder_preset,
+            video_max_width,
+            video_max_height,
         });
 
         // 重置片段相关状态
@@ -359,6 +365,38 @@ impl VideoRecordService {
                     format!("Failed to create output directory: {}", e),
                 ));
             }
+        }
+
+        let mut video_filter = String::new();
+        if width > params.video_max_width || height > params.video_max_height {
+            // 计算保持宽高比的最大尺寸
+            let max_width = params.video_max_width;
+            let max_height = params.video_max_height;
+
+            let scale_x = max_width as f64 / width as f64;
+            let scale_y = max_height as f64 / height as f64;
+
+            let scale = scale_x.min(scale_y);
+
+            let mut target_width = (width as f64 * scale) as i32;
+            let mut target_height = (height as f64 * scale) as i32;
+
+            if target_width % 2 == 1 {
+                target_width -= 1;
+            }
+            if target_height % 2 == 1 {
+                target_height -= 1;
+            }
+
+            video_filter = format!("scale={}:{}:flags=lanczos", target_width, target_height);
+            println!(
+                "Scaling video from {}x{} to {}x{}",
+                width, height, target_width, target_height
+            );
+        }
+
+        if !video_filter.is_empty() {
+            command.arg("-vf").arg(&video_filter);
         }
 
         // 根据格式设置不同的参数
@@ -836,11 +874,14 @@ impl VideoRecordService {
 
         // 构建FFmpeg命令进行MP4到GIF的转换
         let mut command = self.get_ffmpeg_command();
+
         command
             .arg("-i")
             .arg(mp4_filename)
             .arg("-vf")
-            .arg("fps=12,scale=480:-1:flags=lanczos,split[s0][s1];[s0]palettegen[p];[s1][p]paletteuse")
+            .arg(format!(
+                "fps=12,scale=-1:-1:flags=lanczos,split[s0][s1];[s0]palettegen[p];[s1][p]paletteuse",
+            ))
             .arg("-loop")
             .arg("0")
             .arg("-y")
