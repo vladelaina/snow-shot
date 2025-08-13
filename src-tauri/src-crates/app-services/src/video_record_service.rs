@@ -368,7 +368,6 @@ impl VideoRecordService {
         }
 
         let mut video_filter = String::new();
-        let mut target_size_scale = 1.0;
         if width > params.video_max_width || height > params.video_max_height {
             // 计算保持宽高比的最大尺寸
             let max_width = params.video_max_width;
@@ -377,7 +376,7 @@ impl VideoRecordService {
             let scale_x = max_width as f64 / width as f64;
             let scale_y = max_height as f64 / height as f64;
 
-            target_size_scale = scale_x.min(scale_y);
+            let target_size_scale = scale_x.min(scale_y);
 
             let mut target_width = (width as f64 * target_size_scale) as i32;
             let mut target_height = (height as f64 * target_size_scale) as i32;
