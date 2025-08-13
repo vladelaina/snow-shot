@@ -52,8 +52,10 @@ import clipboard from 'tauri-plugin-clipboard-api';
 import { openPath } from '@tauri-apps/plugin-opener';
 import { createDir } from '@/commands/file';
 import { getPlatformValue } from '@/utils';
-import { getMonitorsBoundingBox, setCurrentWindowAlwaysOnTop } from '@/commands/core';
+import { getMonitorsBoundingBox, MonitorBoundingBox } from '@/commands/core';
 import { setWindowRect } from '@/utils/window';
+import { Window as AppWindow } from '@tauri-apps/api/window';
+import { useStateRef } from '@/hooks/useStateRef';
 
 dayjs.extend(duration);
 
@@ -67,71 +69,87 @@ export default function VideoRecordToolbar() {
 
     const toolbarRef = useRef<HTMLDivElement>(null);
     const durationFormatRef = useRef<HTMLDivElement>(null);
+    const [videoRecordState, setVideoRecordState, videoRecordStateRef] = useStateRef(
+        VideoRecordState.Idle,
+    );
 
-    const [initScaleFactor, setInitScaleFactor] = useState(1);
+    const initWindowRect = useCallback(
+        async (
+            appWindow: AppWindow,
+            selectRect: ElementRect,
+            monitorBounds: MonitorBoundingBox,
+        ) => {
+            const scaleFactor = window.devicePixelRatio;
 
-    const init = useCallback(async (selectRect: ElementRect) => {
-        selectRectRef.current = selectRect;
+            const toolbarWidth = (toolbarRef.current?.clientWidth ?? 0) + 3 * 2;
+            const toolbarHeight = (toolbarRef.current?.clientHeight ?? 0) + 3 * 2;
 
-        const appWindow = getCurrentWindow();
-        const scaleFactor = await appWindow.scaleFactor();
-        setInitScaleFactor(scaleFactor);
+            const physicalWidth = Math.round(toolbarWidth * scaleFactor);
+            const physicalHeight = Math.round(toolbarHeight * scaleFactor);
 
-        const toolbarWidth = (toolbarRef.current?.clientWidth ?? 0) + 3 * 2;
-        const toolbarHeight = (toolbarRef.current?.clientHeight ?? 0) + 3 * 2;
+            const centerX = (selectRect.max_x - selectRect.min_x - physicalWidth) / 2;
 
-        const physicalWidth = Math.round(toolbarWidth * scaleFactor);
-        const physicalHeight = Math.round(toolbarHeight * scaleFactor);
-
-        const centerX = (selectRect.max_x - selectRect.min_x - physicalWidth) / 2;
-
-        const monitorBounds = await getMonitorsBoundingBox({
-            min_x: selectRect.min_x,
-            min_y: selectRect.min_y,
-            max_x: selectRect.max_x,
-            max_y: selectRect.max_y,
-        });
-
-        const limitMaxY = getPlatformValue(
-            Math.round(
-                monitorBounds.rect.max_y -
-                    physicalHeight -
-                    //  任务栏高度 48pt
-                    (48 + 24) * scaleFactor,
-            ),
-            Math.round(
-                monitorBounds.rect.max_y -
-                    physicalHeight -
-                    // 任务栏高度大概为 72 pt
-                    (72 + 32) * scaleFactor,
-            ),
-        );
-        const limitMinY = getPlatformValue(Math.round(monitorBounds.rect.min_y + physicalHeight));
-        const targetBottomY = selectRect.max_y + 24 * scaleFactor;
-        const targetTopY = selectRect.min_y - physicalHeight - 24 * scaleFactor;
-        let targetY = targetBottomY;
-        if (targetBottomY > limitMaxY) {
-            if (targetTopY > limitMinY) {
-                targetY = targetTopY;
-            } else {
-                targetY = limitMaxY;
+            const limitMaxY = getPlatformValue(
+                Math.round(
+                    monitorBounds.rect.max_y -
+                        physicalHeight -
+                        //  任务栏高度 48pt
+                        (48 + 24) * scaleFactor,
+                ),
+                Math.round(
+                    monitorBounds.rect.max_y -
+                        physicalHeight -
+                        // 任务栏高度大概为 72 pt
+                        (72 + 32) * scaleFactor,
+                ),
+            );
+            const limitMinY = getPlatformValue(
+                Math.round(monitorBounds.rect.min_y + physicalHeight),
+            );
+            const targetBottomY = selectRect.max_y + 24 * scaleFactor;
+            const targetTopY = selectRect.min_y - physicalHeight - 24 * scaleFactor;
+            let targetY = targetBottomY;
+            if (targetBottomY > limitMaxY) {
+                if (targetTopY > limitMinY) {
+                    targetY = targetTopY;
+                } else {
+                    targetY = limitMaxY;
+                }
             }
-        }
 
-        const targetX = Math.round(selectRect.min_x + centerX);
+            const targetX = Math.round(selectRect.min_x + centerX);
+            targetY = Math.round(targetY);
 
-        await Promise.all([
-            setWindowRect(appWindow, {
+            await setWindowRect(appWindow, {
                 min_x: targetX,
                 min_y: targetY,
                 max_x: targetX + physicalWidth,
                 max_y: targetY + physicalHeight,
-            }),
-            setCurrentWindowAlwaysOnTop(true),
-        ]);
+            });
+        },
+        [],
+    );
 
-        await appWindow.show();
-    }, []);
+    const init = useCallback(
+        async (selectRect: ElementRect) => {
+            if (videoRecordStateRef.current !== VideoRecordState.Idle) {
+                return;
+            }
+
+            selectRectRef.current = selectRect;
+
+            const appWindow = getCurrentWindow();
+
+            const monitorBounds = await getMonitorsBoundingBox(selectRect);
+
+            await initWindowRect(appWindow, selectRect, monitorBounds);
+            // 初始化两次，防止窗口位置不正确
+            await initWindowRect(appWindow, selectRect, monitorBounds);
+
+            await Promise.all([appWindow.show(), appWindow.setAlwaysOnTop(true)]);
+        },
+        [initWindowRect, videoRecordStateRef],
+    );
 
     useEffect(() => {
         const { selectRect } = getVideoRecordParams();
@@ -171,7 +189,6 @@ export default function VideoRecordToolbar() {
     const [enableMicrophone, setEnableMicrophone] = useState(false);
     // const [enableSystemAudio, setEnableSystemAudio] = useState(true);
     const durationRef = useRef(0);
-    const [videoRecordState, setVideoRecordState] = useState(VideoRecordState.Idle);
 
     const durationTimer = useRef<NodeJS.Timeout | null>(null);
 
@@ -246,7 +263,7 @@ export default function VideoRecordToolbar() {
 
             return outputFile;
         },
-        [updateDurationFormat, stopDurationTimer],
+        [setVideoRecordState, stopDurationTimer, updateDurationFormat],
     );
 
     const enableStopRecord =
@@ -561,11 +578,6 @@ export default function VideoRecordToolbar() {
                     z-index: ${zIndexs.VideoRecord_Toolbar};
                     padding: 3px;
                     user-select: none;
-                    transform: scale(
-                        ${initScaleFactor /
-                        (typeof window !== 'undefined' ? window.devicePixelRatio : 1)}
-                    );
-                    transform-origin: top left;
                 }
 
                 .toolbar-drag-region {
