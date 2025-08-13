@@ -248,6 +248,10 @@ export default function VideoRecordToolbar() {
         async (convertToGif: boolean): Promise<string | null | undefined> => {
             setStopRecordLoading(true);
 
+            // 进度改为编码的耗时
+            durationRef.current = 0;
+            updateDurationFormat();
+
             let outputFile: string | null | undefined = undefined;
             try {
                 outputFile = await videoRecordStop(convertToGif);
