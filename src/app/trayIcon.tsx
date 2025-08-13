@@ -331,6 +331,9 @@ const TrayIconLoaderComponent = () => {
                             },
                         },
                         {
+                            item: 'Separator',
+                        },
+                        {
                             id: `${appWindow.label}-exit`,
                             text: intl.formatMessage({ id: 'home.exit' }),
                             action: async () => {

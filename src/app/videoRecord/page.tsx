@@ -2,12 +2,13 @@
 
 import { ElementRect } from '@/commands';
 import { getCurrentWindow } from '@tauri-apps/api/window';
-import { useCallback, useContext, useEffect, useRef, useState } from 'react';
+import { useCallback, useContext, useEffect, useRef } from 'react';
 import { getVideoRecordParams, VideoRecordState } from './extra';
 import { EventListenerContext } from '@/components/eventListener';
 import { VideoRecordWindowInfo } from '@/functions/videoRecord';
 import { setCurrentWindowAlwaysOnTop } from '@/commands/core';
 import { setWindowRect } from '@/utils/window';
+import { useStateRef } from '@/hooks/useStateRef';
 
 const PENDING_STROKE_COLOR = '#4096ff';
 const RECORDING_STROKE_COLOR = '#f5222d';
@@ -22,7 +23,9 @@ export default function VideoRecordPage() {
 
     const { addListener, removeListener } = useContext(EventListenerContext);
 
-    const [videoRecordState, setVideoRecordState] = useState(VideoRecordState.Idle);
+    const [videoRecordState, setVideoRecordState, videoRecordStateRef] = useStateRef(
+        VideoRecordState.Idle,
+    );
 
     const drawSelectRect = useCallback((videoRecordState: VideoRecordState) => {
         const canvas = selectCanvasRef.current;
@@ -46,6 +49,10 @@ export default function VideoRecordPage() {
 
     const init = useCallback(
         async (selectRect: ElementRect) => {
+            if (videoRecordStateRef.current !== VideoRecordState.Idle) {
+                return;
+            }
+
             selectRectRef.current = selectRect;
 
             const appWindow = getCurrentWindow();
@@ -74,7 +81,7 @@ export default function VideoRecordPage() {
 
             appWindow.setIgnoreCursorEvents(true);
         },
-        [drawSelectRect],
+        [drawSelectRect, setVideoRecordState, videoRecordStateRef],
     );
 
     useEffect(() => {
@@ -114,7 +121,7 @@ export default function VideoRecordPage() {
             removeListener(closeVideoRecordWindowListenerId);
             removeListener(changeVideoRecordStateListenerId);
         };
-    }, [addListener, init, removeListener]);
+    }, [addListener, init, removeListener, setVideoRecordState]);
 
     return (
         <div className="container" onContextMenu={(e) => e.preventDefault()}>

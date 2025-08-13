@@ -96,6 +96,9 @@ const StatusBar: React.FC = () => {
             nextCapture: { hotKey: nextCaptureHotKey },
         } = getAppSettings()[AppSettingsGroup.DrawToolbarKeyEvent];
 
+        const findChildrenElements =
+            getAppSettings()[AppSettingsGroup.FunctionScreenshot].findChildrenElements;
+
         const items: DescriptionsItemType[] = [
             {
                 key: 'colorPickerMoveUp',
@@ -124,16 +127,18 @@ const StatusBar: React.FC = () => {
 
         if (captureStep === CaptureStep.Select) {
             [
-                ...getPlatformValue(
-                    [
-                        {
-                            key: 'selectWindowOrElement',
-                            label: <FormattedMessage id="draw.selectWindowOrElement" />,
-                            children: <KeyLabel messageId="draw.tabKey" />,
-                        },
-                    ],
-                    [],
-                ),
+                ...(findChildrenElements
+                    ? getPlatformValue(
+                          [
+                              {
+                                  key: 'selectWindowOrElement',
+                                  label: <FormattedMessage id="draw.selectWindowOrElement" />,
+                                  children: <KeyLabel messageId="draw.tabKey" />,
+                              },
+                          ],
+                          [],
+                      )
+                    : []),
                 {
                     key: 'changeSelectLevel',
                     label: <FormattedMessage id="draw.changeSelectLevel" />,

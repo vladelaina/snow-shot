@@ -17,23 +17,20 @@ export default function MouseThroughPage() {
 
     const [enable, setEnable] = useState(false);
 
-    const [initScaleFactor, setInitScaleFactor] = useState(1);
-
     const init = useCallback(async () => {
         const urlParams = new URLSearchParams(window.location.search);
         const monitor_x = parseInt(urlParams.get('monitor_x') ?? '0');
         const monitor_y = parseInt(urlParams.get('monitor_y') ?? '0');
 
         const appWindow = getCurrentWindow();
-        const scaleFactor = await appWindow.scaleFactor();
-        setInitScaleFactor(scaleFactor);
+        const scaleFactor = window.devicePixelRatio;
 
-        const physicalWidth = PAGE_WIDTH * scaleFactor;
-        const physicalHeight = PAGE_HEIGHT * scaleFactor;
+        const physicalWidth = Math.round(PAGE_WIDTH * scaleFactor);
+        const physicalHeight = Math.round(PAGE_HEIGHT * scaleFactor);
 
-        const screenWidth = window.screen.width * scaleFactor;
+        const screenWidth = Math.round(window.screen.width * scaleFactor);
 
-        const centerX = (screenWidth - physicalWidth) / 2;
+        const centerX = Math.round((screenWidth - physicalWidth) / 2);
 
         setWindowRect(appWindow, {
             min_x: monitor_x + centerX,
@@ -93,13 +90,8 @@ export default function MouseThroughPage() {
                     align-items: center;
                     cursor: pointer;
                     padding: 0 3px 3px 3px;
-                    transition: opacity ${token.motionDurationMid} ${token.motionEaseInOut};
-                    transform: scale(
-                        ${initScaleFactor /
-                        (typeof window !== 'undefined' ? window.devicePixelRatio : 1)}
-                    );
-                    transform-origin: top left;
                     ${enable ? 'opacity: 0.42;' : 'opacity: 0 !important;'}
+                    transition: opacity ${token.motionDurationMid} ${token.motionEaseInOut};
                 }
 
                 .container:hover {
