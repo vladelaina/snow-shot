@@ -5,6 +5,14 @@ export enum VideoFormat {
     Gif = 'Gif',
 }
 
+export enum VideoMaxSize {
+    P2160 = '2160p',
+    P1440 = '1440p',
+    P1080 = '1080p',
+    P720 = '720p',
+    P480 = '480p',
+}
+
 export const videoRecordStart = async (
     minX: number,
     minY: number,
@@ -19,6 +27,8 @@ export const videoRecordStart = async (
     hwaccel: boolean,
     encoder: string,
     encoderPreset: string,
+    videoMaxWidth: number,
+    videoMaxHeight: number,
 ) => {
     const result = await invoke('video_record_start', {
         minX,
@@ -34,6 +44,8 @@ export const videoRecordStart = async (
         hwaccel,
         encoder,
         encoderPreset,
+        videoMaxWidth,
+        videoMaxHeight,
     });
     return result;
 };

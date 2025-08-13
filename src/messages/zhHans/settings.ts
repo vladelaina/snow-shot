@@ -152,6 +152,14 @@ export const settings = {
         '编码速率越快，计算资源消耗越低，但视频文件越大',
     'settings.functionSettings.videoRecordSettings.hwaccel': '启用硬件加速',
     'settings.functionSettings.videoRecordSettings.saveDirectory': '保存目录',
+    'settings.functionSettings.videoRecordSettings.videoMaxSize': '视频清晰度',
+    'settings.functionSettings.videoRecordSettings.videoMaxSize.tip':
+        '视频录制时，视频的最大尺寸，如果超出该尺寸，将进行等比例缩放',
+    'settings.functionSettings.videoRecordSettings.videoMaxSize.p2160': '4K',
+    'settings.functionSettings.videoRecordSettings.videoMaxSize.p1440': '2K',
+    'settings.functionSettings.videoRecordSettings.videoMaxSize.p1080': '1080P',
+    'settings.functionSettings.videoRecordSettings.videoMaxSize.p720': '720P',
+    'settings.functionSettings.videoRecordSettings.videoMaxSize.p480': '480P',
     'settings.systemSettings.scrollScreenshotSettings': '滚动截图',
     'settings.systemSettings.scrollScreenshotSettings.tryRollback': '匹配两侧图片',
     'settings.systemSettings.scrollScreenshotSettings.tryRollback.tip':

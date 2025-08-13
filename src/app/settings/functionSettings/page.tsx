@@ -20,7 +20,7 @@ import {
     AppSettingsFixedContentInitialPosition,
     AppSettingsGroup,
 } from '../../contextWrap';
-import { useCallback, useContext, useEffect, useState } from 'react';
+import { useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { useAppSettingsLoad } from '@/hooks/useAppSettingsLoad';
 import { FormattedMessage, useIntl } from 'react-intl';
 import { ContentWrap } from '@/components/contentWrap';
@@ -49,7 +49,7 @@ import {
 import { TranslationApiType } from './extra';
 import { TestChat } from './components/testChat';
 import { DrawState } from '@/app/fullScreenDraw/components/drawCore/extra';
-import { videoRecordGetMicrophoneDeviceNames } from '@/commands/videoRecord';
+import { VideoMaxSize, videoRecordGetMicrophoneDeviceNames } from '@/commands/videoRecord';
 import { OcrDetectAfterAction } from '@/app/fixedContent/components/ocrResult';
 import { usePlatform } from '@/hooks/usePlatform';
 
@@ -210,6 +210,41 @@ export default function SystemSettings() {
                 setMicrophoneDeviceNameOptions(options);
             });
     }, [formatMicrophoneDeviceName, intl]);
+
+    const videoMaxSizeOptions = useMemo(() => {
+        return [
+            {
+                label: intl.formatMessage({
+                    id: 'settings.functionSettings.videoRecordSettings.videoMaxSize.p2160',
+                }),
+                value: VideoMaxSize.P2160,
+            },
+            {
+                label: intl.formatMessage({
+                    id: 'settings.functionSettings.videoRecordSettings.videoMaxSize.p1440',
+                }),
+                value: VideoMaxSize.P1440,
+            },
+            {
+                label: intl.formatMessage({
+                    id: 'settings.functionSettings.videoRecordSettings.videoMaxSize.p1080',
+                }),
+                value: VideoMaxSize.P1080,
+            },
+            {
+                label: intl.formatMessage({
+                    id: 'settings.functionSettings.videoRecordSettings.videoMaxSize.p720',
+                }),
+                value: VideoMaxSize.P720,
+            },
+            {
+                label: intl.formatMessage({
+                    id: 'settings.functionSettings.videoRecordSettings.videoMaxSize.p480',
+                }),
+                value: VideoMaxSize.P480,
+            },
+        ];
+    }, [intl]);
 
     return (
         <ContentWrap>
@@ -1008,6 +1043,17 @@ export default function SystemSettings() {
                     layout="horizontal"
                 >
                     <Row gutter={token.padding}>
+                        <Col span={12}>
+                            <ProFormSelect
+                                name="videoMaxSize"
+                                layout="horizontal"
+                                label={
+                                    <FormattedMessage id="settings.functionSettings.videoRecordSettings.videoMaxSize" />
+                                }
+                                options={videoMaxSizeOptions}
+                            />
+                        </Col>
+
                         <Col span={12}>
                             <ProFormSelect
                                 name="frameRate"
