@@ -34,6 +34,7 @@ import { DrawState } from './fullScreenDraw/components/drawCore/extra';
 import { OcrDetectAfterAction } from './fixedContent/components/ocrResult';
 import { OcrModel } from '@/commands/ocr';
 import { HistoryValidDuration } from '@/utils/captureHistory';
+import { getPlatformValue } from '@/utils';
 
 export enum AppSettingsGroup {
     Common = 'common',
@@ -236,7 +237,8 @@ export const defaultAppSettingsData: AppSettingsData = {
     },
     [AppSettingsGroup.Screenshot]: {
         controlNode: AppSettingsControlNode.Circle,
-        disableAnimation: false,
+        // 在 Mac 上禁用动画
+        disableAnimation: getPlatformValue(false, true),
         colorPickerShowMode: ColorPickerShowMode.BeyondSelectRect,
         beyondSelectRectElementOpacity: 100,
         fullScreenAuxiliaryLineColor: '#00000000',

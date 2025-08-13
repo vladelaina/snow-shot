@@ -1,6 +1,6 @@
 'use client';
 
-import { EventCallback, listen, UnlistenFn } from '@tauri-apps/api/event';
+import { EventCallback, listen, TauriEvent, UnlistenFn } from '@tauri-apps/api/event';
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef } from 'react';
 import { attachConsole } from '@tauri-apps/plugin-log';
 import { appLog, LogMessageEvent } from '@/utils/appLog';
@@ -195,6 +195,11 @@ const EventListenerCore: React.FC<{ children: React.ReactNode }> = ({ children }
         defaultListener.push({
             event: LISTEN_KEY_SERVICE_KEY_UP_EMIT_KEY,
             callback: listenKeyCallback(LISTEN_KEY_SERVICE_KEY_UP_EMIT_KEY),
+        });
+
+        defaultListener.push({
+            event: TauriEvent.WINDOW_SCALE_FACTOR_CHANGED,
+            callback: async () => {},
         });
 
         if (mainWindow) {

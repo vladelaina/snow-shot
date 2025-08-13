@@ -10,6 +10,7 @@ import {
     initUiElements,
     initUiElementsCache,
     recoveryWindowZOrder,
+    TryGetElementByFocus,
 } from '@/commands';
 import { AppSettingsData, AppSettingsGroup, AppSettingsPublisher } from '@/app/contextWrap';
 import Flatbush from 'flatbush';
@@ -51,6 +52,7 @@ import { getCurrentWindow } from '@tauri-apps/api/window';
 import { getPlatform } from '@/utils';
 import { useMoveCursor } from '../colorPicker/extra';
 import { CaptureHistoryItem } from '@/utils/appStore';
+import { useStateRef } from '@/hooks/useStateRef';
 
 export type SelectLayerActionType = {
     getSelectRect: () => ElementRect | undefined;
@@ -100,25 +102,21 @@ const SelectLayerCore: React.FC<SelectLayerProps> = ({ actionRef }) => {
         }, []),
     );
     const [getScreenshotType] = useStateSubscriber(ScreenshotTypePublisher, undefined);
-    const tabFindChildrenElementsRef = useRef<boolean>(false); // 是否查找子元素
-    const [tabFindChildrenElements, _setTabFindChildrenElements] = useState<boolean>(false); // Tab 键的切换查找子元素
-    const setTabFindChildrenElements = useCallback(
-        (value: boolean | ((prev: boolean) => boolean)) => {
-            tabFindChildrenElementsRef.current =
-                typeof value === 'function' ? value(tabFindChildrenElementsRef.current) : value;
-            _setTabFindChildrenElements(value);
-        },
-        [],
-    );
+    const [tabFindChildrenElements, setTabFindChildrenElements, tabFindChildrenElementsRef] =
+        useStateRef<boolean>(false); // Tab 键的切换查找子元素
     const isEnableFindChildrenElements = useCallback(() => {
         if (getPlatform() === 'macos') {
+            return false;
+        }
+
+        if (!findChildrenElements) {
             return false;
         }
 
         return (
             tabFindChildrenElementsRef.current && getScreenshotType() !== ScreenshotType.TopWindow
         );
-    }, [getScreenshotType]);
+    }, [findChildrenElements, getScreenshotType, tabFindChildrenElementsRef]);
 
     const changeCursor = useCallback((cursor: string) => {
         if (layerContainerElementRef.current) {
@@ -271,7 +269,9 @@ const SelectLayerCore: React.FC<SelectLayerProps> = ({ actionRef }) => {
 
         const rectList: ElementRect[] = [];
         const initUiElementsCachePromise = initUiElementsCache(
-            getAppSettings()[AppSettingsGroup.SystemScreenshot].tryGetElementByFocus,
+            // todo: 暂时禁用，发现效果不佳
+            // getAppSettings()[AppSettingsGroup.SystemScreenshot].tryGetElementByFocus,
+            TryGetElementByFocus.Never,
         );
         const map = new Map<number, number>();
 
@@ -305,7 +305,7 @@ const SelectLayerCore: React.FC<SelectLayerProps> = ({ actionRef }) => {
 
         await initUiElementsCachePromise;
         selectWindowElementLoadingRef.current = false;
-    }, [getAppSettings]);
+    }, []);
 
     /**
      * 通过鼠标坐标获取候选框
