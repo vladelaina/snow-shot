@@ -728,6 +728,14 @@ export const FixedContentCore: React.FC<{
         }, 1000);
     }, []);
 
+    const textScaleFactor = useTextScaleFactor();
+    const contentScaleFactor = useMemo(() => {
+        if (canvasImageUrl || imageUrl) {
+            return textScaleFactor;
+        }
+        return 1;
+    }, [canvasImageUrl, imageUrl, textScaleFactor]);
+
     const scaleWindow = useCallback(
         async (scaleDelta: number) => {
             const appWindow = appWindowRef.current;
@@ -764,11 +772,13 @@ export const FixedContentCore: React.FC<{
             // 计算新的窗口尺寸
             const newWidth = Math.round(
                 ((canvasPropsRef.current.width * targetScale) / 100) *
-                    (window.devicePixelRatio / canvasPropsRef.current.scaleFactor),
+                    (window.devicePixelRatio /
+                        (canvasPropsRef.current.scaleFactor * textScaleFactor)),
             );
             const newHeight = Math.round(
                 ((canvasPropsRef.current.height * targetScale) / 100) *
-                    (window.devicePixelRatio / canvasPropsRef.current.scaleFactor),
+                    (window.devicePixelRatio /
+                        (canvasPropsRef.current.scaleFactor * textScaleFactor)),
             );
 
             if (zoomWithMouse) {
@@ -816,6 +826,7 @@ export const FixedContentCore: React.FC<{
             setScale,
             showScaleInfoTemporary,
             switchThumbnail,
+            textScaleFactor,
             windowSizeRef,
         ],
     );
@@ -949,15 +960,6 @@ export const FixedContentCore: React.FC<{
         dragRegionMouseDownMousePositionRef.current = undefined;
     }, []);
 
-    const textScaleFactor = useTextScaleFactor();
-    const contentScaleFactor = useMemo(() => {
-        if (canvasImageUrl || imageUrl) {
-            return textScaleFactor;
-        }
-        return 1;
-    }, [canvasImageUrl, imageUrl, textScaleFactor]);
-
-    console.log(contentScaleFactor);
     return (
         <div
             className="fixed-image-container"
