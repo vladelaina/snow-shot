@@ -368,6 +368,7 @@ impl VideoRecordService {
         }
 
         let mut video_filter = String::new();
+        let mut target_size_scale = 1.0;
         if width > params.video_max_width || height > params.video_max_height {
             // 计算保持宽高比的最大尺寸
             let max_width = params.video_max_width;
@@ -376,10 +377,10 @@ impl VideoRecordService {
             let scale_x = max_width as f64 / width as f64;
             let scale_y = max_height as f64 / height as f64;
 
-            let scale = scale_x.min(scale_y);
+            target_size_scale = scale_x.min(scale_y);
 
-            let mut target_width = (width as f64 * scale) as i32;
-            let mut target_height = (height as f64 * scale) as i32;
+            let mut target_width = (width as f64 * target_size_scale) as i32;
+            let mut target_height = (height as f64 * target_size_scale) as i32;
 
             if target_width % 2 == 1 {
                 target_width -= 1;
@@ -393,10 +394,6 @@ impl VideoRecordService {
                 "Scaling video from {}x{} to {}x{}",
                 width, height, target_width, target_height
             );
-        }
-
-        if !video_filter.is_empty() {
-            command.arg("-vf").arg(&video_filter);
         }
 
         // 根据格式设置不同的参数
@@ -441,6 +438,10 @@ impl VideoRecordService {
 
                 #[cfg(target_os = "windows")]
                 {
+                    if !video_filter.is_empty() {
+                        command.arg("-vf").arg(&video_filter);
+                    }
+
                     command.arg("-crf").arg("23").arg("-pix_fmt").arg("yuv420p"); // 添加像素格式，确保兼容性
                 }
 
@@ -462,10 +463,18 @@ impl VideoRecordService {
                         "crop={}:{}:{}:{}",
                         width,
                         height,
-                        params.min_x - target_monitor_rect.min_x,
-                        params.min_y - target_monitor_rect.min_y
+                        (params.min_x - target_monitor_rect.min_x),
+                        (params.min_y - target_monitor_rect.min_y)
                     );
-                    command.arg("-vf").arg(crop_filter);
+
+                    // 组合 video_filter 和 crop_filter
+                    let final_filter = if !video_filter.is_empty() {
+                        format!("{},{}", crop_filter, video_filter)
+                    } else {
+                        crop_filter
+                    };
+
+                    command.arg("-vf").arg(final_filter);
                     command.arg("-crf").arg("23").arg("-pix_fmt").arg("uyvy422"); // 添加像素格式，确保兼容性
                 }
 
@@ -880,7 +889,7 @@ impl VideoRecordService {
             .arg(mp4_filename)
             .arg("-vf")
             .arg(format!(
-                "fps=12,scale=-1:-1:flags=lanczos,split[s0][s1];[s0]palettegen[p];[s1][p]paletteuse",
+                "fps=10,scale=-1:-1:flags=lanczos,split[s0][s1];[s0]palettegen[p];[s1][p]paletteuse",
             ))
             .arg("-loop")
             .arg("0")
