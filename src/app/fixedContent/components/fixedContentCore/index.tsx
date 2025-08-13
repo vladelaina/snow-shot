@@ -6,7 +6,7 @@ import { LogicalPosition, PhysicalSize, PhysicalPosition } from '@tauri-apps/api
 import { Menu, MenuItemOptions } from '@tauri-apps/api/menu';
 import { getCurrentWindow, Window as AppWindow } from '@tauri-apps/api/window';
 import { Button, theme } from 'antd';
-import { useCallback, useEffect, useImperativeHandle, useRef, useState } from 'react';
+import { useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react';
 import { useIntl } from 'react-intl';
 import * as dialog from '@tauri-apps/plugin-dialog';
 import { generateImageFileName, ImageFormat } from '@/utils/file';
@@ -36,6 +36,7 @@ import { TweenAnimation } from '@/utils/tweenAnimation';
 import * as TWEEN from '@tweenjs/tween.js';
 import { MousePosition } from '@/utils/mousePosition';
 import { CaptureBoundingBoxInfo } from '@/app/draw/extra';
+import { useTextScaleFactor } from '@/hooks/useTextScaleFactor';
 
 export type FixedContentInitDrawParams = {
     captureBoundingBoxInfo: CaptureBoundingBoxInfo;
@@ -948,13 +949,22 @@ export const FixedContentCore: React.FC<{
         dragRegionMouseDownMousePositionRef.current = undefined;
     }, []);
 
+    const textScaleFactor = useTextScaleFactor();
+    const contentScaleFactor = useMemo(() => {
+        if (canvasImageUrl || imageUrl) {
+            return textScaleFactor;
+        }
+        return 1;
+    }, [canvasImageUrl, imageUrl, textScaleFactor]);
+
+    console.log(contentScaleFactor);
     return (
         <div
             className="fixed-image-container"
             style={{
                 position: 'absolute',
-                width: `${windowSize.width}px`,
-                height: `${windowSize.height}px`,
+                width: `${windowSize.width / contentScaleFactor}px`,
+                height: `${windowSize.height / contentScaleFactor}px`,
                 zIndex: zIndexs.Draw_FixedImage,
                 pointerEvents:
                     canvasImageUrl || htmlBlobUrl || textContent || imageUrl ? 'auto' : 'none',
@@ -979,8 +989,8 @@ export const FixedContentCore: React.FC<{
                         ref={imageUrl ? imageRef : undefined}
                         style={{
                             objectFit: 'contain',
-                            width: `${(windowSize.width * scale.x) / 100}px`,
-                            height: `${(windowSize.height * scale.y) / 100}px`,
+                            width: `${(windowSize.width * scale.x) / 100 / contentScaleFactor}px`,
+                            height: `${(windowSize.height * scale.y) / 100 / contentScaleFactor}px`,
                         }}
                         alt="fixed-canvas-image"
                         onLoad={async (event) => {
@@ -1015,7 +1025,7 @@ export const FixedContentCore: React.FC<{
                 <iframe
                     style={{
                         transformOrigin: 'top left',
-                        transform: `scale(${scale.x / 100}, ${scale.y / 100})`,
+                        transform: `scale(${scale.x / 100 / contentScaleFactor}, ${scale.y / 100 / contentScaleFactor})`,
                     }}
                     ref={htmlContentContainerRef}
                     src={htmlBlobUrl}
@@ -1027,7 +1037,7 @@ export const FixedContentCore: React.FC<{
                 <div
                     style={{
                         transformOrigin: 'top left',
-                        transform: `scale(${scale.x / 100}, ${scale.y / 100})`,
+                        transform: `scale(${scale.x / 100 / contentScaleFactor}, ${scale.y / 100 / contentScaleFactor})`,
                     }}
                 >
                     <div ref={textContentContainerRef} className="fixed-text-content">
