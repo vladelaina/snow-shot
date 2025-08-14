@@ -10,7 +10,12 @@ import { useIntl } from 'react-intl';
 import { exitApp } from '@/commands';
 import { showWindow } from '@/utils/window';
 import { useStateSubscriber } from '@/hooks/useStateSubscriber';
-import { AppSettingsData, AppSettingsGroup, AppSettingsPublisher } from './contextWrap';
+import {
+    AppSettingsData,
+    AppSettingsGroup,
+    AppSettingsPublisher,
+    TrayIconClickAction,
+} from './contextWrap';
 import { isEqual } from 'es-toolkit';
 import { AppFunction, AppFunctionConfig } from './extra';
 import {
@@ -113,7 +118,17 @@ const TrayIconLoaderComponent = () => {
                     switch (event.type) {
                         case 'Click':
                             if (event.button === 'Left') {
-                                executeScreenshot();
+                                if (
+                                    getAppSettings()[AppSettingsGroup.FunctionTrayIcon]
+                                        .iconClickAction === TrayIconClickAction.Screenshot
+                                ) {
+                                    executeScreenshot();
+                                } else if (
+                                    getAppSettings()[AppSettingsGroup.FunctionTrayIcon]
+                                        .iconClickAction === TrayIconClickAction.ShowMainWindow
+                                ) {
+                                    showWindow();
+                                }
                             }
                             break;
                     }

@@ -547,6 +547,12 @@ const MenuLayoutCore: React.FC<{ children: React.ReactNode }> = ({ children }) =
                                 }),
                             },
                             {
+                                key: 'trayIconSettings',
+                                label: intl.formatMessage({
+                                    id: 'settings.functionSettings.trayIconSettings',
+                                }),
+                            },
+                            {
                                 key: 'outputSettings',
                                 label: intl.formatMessage({
                                     id: 'settings.functionSettings.outputSettings',

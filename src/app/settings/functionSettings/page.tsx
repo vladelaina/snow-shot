@@ -19,6 +19,7 @@ import {
     AppSettingsData,
     AppSettingsFixedContentInitialPosition,
     AppSettingsGroup,
+    TrayIconClickAction,
 } from '../../contextWrap';
 import { useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { useAppSettingsLoad } from '@/hooks/useAppSettingsLoad';
@@ -59,6 +60,7 @@ export default function SystemSettings() {
 
     const { updateAppSettings } = useContext(AppSettingsActionContext);
     const [functionForm] = Form.useForm<AppSettingsData[AppSettingsGroup.FunctionChat]>();
+    const [trayIconForm] = Form.useForm<AppSettingsData[AppSettingsGroup.FunctionTrayIcon]>();
     const [translationForm] = Form.useForm<AppSettingsData[AppSettingsGroup.FunctionTranslation]>();
     const [screenshotForm] = Form.useForm<AppSettingsData[AppSettingsGroup.FunctionScreenshot]>();
     const [outputForm] = Form.useForm<AppSettingsData[AppSettingsGroup.FunctionOutput]>();
@@ -148,6 +150,14 @@ export default function SystemSettings() {
                         });
                     }
                 }
+
+                if (
+                    preSettings === undefined ||
+                    preSettings[AppSettingsGroup.FunctionTrayIcon] !==
+                        settings[AppSettingsGroup.FunctionTrayIcon]
+                ) {
+                    trayIconForm.setFieldsValue(settings[AppSettingsGroup.FunctionTrayIcon]);
+                }
             },
             [
                 translationForm,
@@ -157,6 +167,7 @@ export default function SystemSettings() {
                 fixedContentForm,
                 fullScreenDrawForm,
                 videoRecordForm,
+                trayIconForm,
             ],
         ),
         true,
@@ -242,6 +253,23 @@ export default function SystemSettings() {
                     id: 'settings.functionSettings.videoRecordSettings.videoMaxSize.p480',
                 }),
                 value: VideoMaxSize.P480,
+            },
+        ];
+    }, [intl]);
+
+    const trayIconClickActionOptions = useMemo(() => {
+        return [
+            {
+                label: intl.formatMessage({
+                    id: 'settings.functionSettings.trayIconSettings.iconClickAction.screenshot',
+                }),
+                value: TrayIconClickAction.Screenshot,
+            },
+            {
+                label: intl.formatMessage({
+                    id: 'settings.functionSettings.trayIconSettings.iconClickAction.showMainWindow',
+                }),
+                value: TrayIconClickAction.ShowMainWindow,
             },
         ];
     }, [intl]);
@@ -1224,6 +1252,51 @@ export default function SystemSettings() {
                             >
                                 <DirectoryInput />
                             </ProForm.Item>
+                        </Col>
+                    </Row>
+                </ProForm>
+            </Spin>
+
+            <Divider />
+
+            <GroupTitle
+                id="trayIconSettings"
+                extra={
+                    <ResetSettingsButton
+                        title={<FormattedMessage id="settings.functionSettings.trayIconSettings" />}
+                        appSettingsGroup={AppSettingsGroup.FunctionTrayIcon}
+                    />
+                }
+            >
+                <FormattedMessage id="settings.functionSettings.trayIconSettings" />
+            </GroupTitle>
+
+            <Spin spinning={appSettingsLoading}>
+                <ProForm
+                    form={trayIconForm}
+                    onValuesChange={(_, values) => {
+                        updateAppSettings(
+                            AppSettingsGroup.FunctionTrayIcon,
+                            values,
+                            true,
+                            true,
+                            false,
+                            true,
+                            false,
+                        );
+                    }}
+                    submitter={false}
+                    layout="horizontal"
+                >
+                    <Row gutter={token.margin}>
+                        <Col span={12}>
+                            <ProFormSelect
+                                name="iconClickAction"
+                                label={
+                                    <FormattedMessage id="settings.functionSettings.trayIconSettings.iconClickAction" />
+                                }
+                                options={trayIconClickActionOptions}
+                            />
                         </Col>
                     </Row>
                 </ProForm>
