@@ -252,8 +252,6 @@ export const BaseLayerCore: React.FC<
                 antialias,
                 preference: 'webgl',
             });
-            canvasApp.ticker.maxFPS = 60;
-            canvasApp.ticker.minFPS = 0;
             canvasAppRef.current = canvasApp;
             layerContainerElementRef.current?.appendChild(canvasApp.canvas);
 

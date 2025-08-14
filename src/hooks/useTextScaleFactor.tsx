@@ -23,7 +23,6 @@ export const useTextScaleFactor = () => {
 
     const initTextScaleFactor = async (devicePixelRatio: number) => {
         const scaleFactor = await getCurrentWindow().scaleFactor();
-        console.log(devicePixelRatio, scaleFactor);
         setTextScaleFactor(devicePixelRatio / scaleFactor);
     };
 

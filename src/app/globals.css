@@ -36,6 +36,16 @@ body {
     width: 100%;
 }
 
+.excalidraw .Island.App-toolbar {
+    display: none;
+}
+
+.excalidraw .selected-shape-actions fieldset {
+    margin: 0;
+    padding: 0;
+    border: none;
+}
+
 .excalidraw .App-menu_top .App-menu_top__left .dropdown-menu-button,
 .excalidraw .App-menu_top .shapes-section,
 .excalidraw .App-menu_top .layer-ui__wrapper__top-right {
