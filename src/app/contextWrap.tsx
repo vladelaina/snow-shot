@@ -233,12 +233,14 @@ export type AppSettingsData = {
 };
 
 export const CanHiddenToolSet: Set<DrawState> = new Set([
+    DrawState.Select,
     DrawState.Ellipse,
     DrawState.Arrow,
     DrawState.Pen,
     DrawState.Text,
     DrawState.SerialNumber,
     DrawState.Blur,
+    DrawState.Eraser,
     DrawState.Redo,
     DrawState.Fixed,
     DrawState.OcrDetect,
@@ -261,12 +263,14 @@ export const defaultAppSettingsData: AppSettingsData = {
         fullScreenAuxiliaryLineColor: '#00000000',
         hotKeyTipOpacity: 100,
         customToolbarToolList: [
+            DrawState.Select,
             DrawState.Ellipse,
             DrawState.Arrow,
             DrawState.Pen,
             DrawState.Text,
             DrawState.SerialNumber,
             DrawState.Blur,
+            DrawState.Eraser,
             /** 特殊值，如果禁用则不显示撤销和重做 */
             DrawState.Redo,
             DrawState.Fixed,

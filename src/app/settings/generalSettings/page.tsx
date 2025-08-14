@@ -84,6 +84,10 @@ export default function GeneralSettings() {
     const customToolbarToolListOptions = useMemo(() => {
         return [
             {
+                label: intl.formatMessage({ id: 'draw.selectTool' }),
+                value: DrawState.Select,
+            },
+            {
                 label: intl.formatMessage({ id: 'draw.ellipseTool' }),
                 value: DrawState.Ellipse,
             },
@@ -106,6 +110,10 @@ export default function GeneralSettings() {
             {
                 label: intl.formatMessage({ id: 'draw.blurTool' }),
                 value: DrawState.Blur,
+            },
+            {
+                label: intl.formatMessage({ id: 'draw.eraserTool' }),
+                value: DrawState.Eraser,
             },
             {
                 label: intl.formatMessage({ id: 'draw.redoUndoTool' }),
