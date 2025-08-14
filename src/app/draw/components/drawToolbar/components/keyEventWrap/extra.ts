@@ -116,7 +116,7 @@ export const defaultDrawToolbarKeyEventSettings: Record<KeyEventKey, KeyEventVal
         unique: true,
     },
     [KeyEventKey.CopyTool]: {
-        hotKey: getPlatformValue('Ctrl+C', 'Meta+C'),
+        hotKey: getPlatformValue('Ctrl+C, Enter', 'Meta+C, Enter'),
         unique: true,
     },
     [KeyEventKey.ExtraToolsTool]: {
