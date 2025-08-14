@@ -1,7 +1,8 @@
 import { GroupTitle } from '@/components/groupTitle';
 import { ResetIcon } from '@/components/icons';
 import { useStateRef } from '@/hooks/useStateRef';
-import { Button, List } from 'antd';
+import { openUrl } from '@tauri-apps/plugin-opener';
+import { Alert, Button, List, theme } from 'antd';
 import { useCallback, useEffect, useState } from 'react';
 import { FormattedMessage } from 'react-intl';
 import {
@@ -58,6 +59,8 @@ const PermissionListItem: React.FC<{
 };
 
 export const MacOSPermissionsSettings: React.FC = () => {
+    const { token } = theme.useToken();
+
     const [permissionsState, setPermissionsState, permissionsStateRef] = useStateRef<{
         enableRecordScreen: boolean;
         enableAccessibility: boolean;
@@ -76,7 +79,7 @@ export const MacOSPermissionsSettings: React.FC = () => {
         ]);
 
         setPermissionsState({ enableRecordScreen, enableAccessibility, enableMicrophone });
-    }, []);
+    }, [setPermissionsState]);
 
     useEffect(() => {
         reloadPermissionsState();
@@ -121,6 +124,36 @@ export const MacOSPermissionsSettings: React.FC = () => {
             >
                 <FormattedMessage id="settings.systemSettings.macosPermissionsSettings" />
             </GroupTitle>
+
+            <Alert
+                message={
+                    <FormattedMessage
+                        id="settings.systemSettings.macosPermissionsSettings.request.tip"
+                        values={{
+                            link: (
+                                <a
+                                    type="link"
+                                    onClick={(e) => {
+                                        e.preventDefault();
+                                        e.stopPropagation();
+
+                                        openUrl(
+                                            'https://github.com/mg-chao/snow-shot/blob/main/docs/macos-permissions.md',
+                                        );
+                                    }}
+                                >
+                                    <FormattedMessage id="settings.systemSettings.macosPermissionsSettings.request.tip.link" />
+                                </a>
+                            ),
+                        }}
+                    />
+                }
+                type="info"
+                showIcon
+                style={{
+                    marginBottom: token.marginSM,
+                }}
+            />
 
             <List itemLayout="horizontal">
                 <PermissionListItem
