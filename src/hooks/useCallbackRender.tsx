@@ -3,19 +3,31 @@ import { useCallback, useRef } from 'react';
 export function useCallbackRender<
     T extends (...args: Parameters<T>) => ReturnType<T> | Promise<ReturnType<T>>,
 >(action: T) {
-    const renderedRef = useRef(true);
-    const lastArgsRef = useRef<Parameters<T>>(undefined as unknown as Parameters<T>);
+    const renderingRef = useRef(false);
+    const callbackContextRef = useRef<{
+        params: Parameters<T>;
+    }>(undefined);
 
     const callback = useCallback(
         (...args: Parameters<T>) => {
-            lastArgsRef.current = args;
-            if (!renderedRef.current) return;
+            (async () => {
+                callbackContextRef.current = {
+                    params: args,
+                };
+                if (renderingRef.current) {
+                    return;
+                }
+                renderingRef.current = true;
 
-            renderedRef.current = false;
-            requestAnimationFrame(async () => {
-                await action(...lastArgsRef.current);
-                renderedRef.current = true;
-            });
+                const params = callbackContextRef.current.params;
+                callbackContextRef.current = undefined;
+                await Promise.all([
+                    action(...params),
+                    new Promise((resolve) => requestAnimationFrame(resolve)),
+                ]);
+
+                renderingRef.current = false;
+            })();
         },
         [action],
     );
@@ -26,21 +38,32 @@ export function useCallbackRender<
 export function useCallbackRenderSlow<
     T extends (...args: Parameters<T>) => ReturnType<T> | Promise<ReturnType<T>>,
 >(action: T) {
-    const renderedRef = useRef(true);
-    const lastArgsRef = useRef<Parameters<T>>(undefined as unknown as Parameters<T>);
+    const renderingRef = useRef(false);
+    const callbackContextRef = useRef<{
+        params: Parameters<T>;
+    }>(undefined);
 
     const callback = useCallback(
         (...args: Parameters<T>) => {
-            lastArgsRef.current = args;
-            if (!renderedRef.current) return;
+            (async () => {
+                callbackContextRef.current = {
+                    params: args,
+                };
+                if (renderingRef.current) {
+                    return;
+                }
+                renderingRef.current = true;
 
-            renderedRef.current = false;
-            requestAnimationFrame(() => {
-                requestAnimationFrame(async () => {
-                    await action(...lastArgsRef.current);
-                    renderedRef.current = true;
-                });
-            });
+                const params = callbackContextRef.current.params;
+                callbackContextRef.current = undefined;
+                await Promise.all([
+                    action(...params),
+                    new Promise((resolve) =>
+                        requestAnimationFrame(() => requestAnimationFrame(resolve)),
+                    ),
+                ]);
+                renderingRef.current = false;
+            })();
         },
         [action],
     );
