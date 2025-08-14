@@ -6,7 +6,10 @@ import { DrawState } from '@/app/fullScreenDraw/components/drawCore/extra';
 import { ToolButton } from '../toolButton';
 import { useHistory } from '@/app/fullScreenDraw/components/drawCore/components/historyContext';
 
-const HistoryControlsCore: React.FC<{ disable: boolean }> = ({ disable }) => {
+const HistoryControlsCore: React.FC<{ disable: boolean; hidden?: boolean }> = ({
+    disable,
+    hidden,
+}) => {
     const { history } = useHistory();
     const [canUndo, setCanUndo] = useState(false);
     const [canRedo, setCanRedo] = useState(false);
@@ -26,6 +29,7 @@ const HistoryControlsCore: React.FC<{ disable: boolean }> = ({ disable }) => {
         <>
             {/* 撤销 */}
             <ToolButton
+                hidden={hidden}
                 componentKey={KeyEventKey.UndoTool}
                 icon={<UndoOutlined />}
                 drawState={DrawState.Undo}
@@ -37,6 +41,7 @@ const HistoryControlsCore: React.FC<{ disable: boolean }> = ({ disable }) => {
 
             {/* 重做 */}
             <ToolButton
+                hidden={hidden}
                 componentKey={KeyEventKey.RedoTool}
                 icon={<RedoOutlined />}
                 drawState={DrawState.Redo}

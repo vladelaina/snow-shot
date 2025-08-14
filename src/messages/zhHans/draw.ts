@@ -49,6 +49,7 @@ export const draw = {
     'draw.eraserTool': '橡皮擦',
     'draw.undoTool': '撤销',
     'draw.redoTool': '重做',
+    'draw.redoUndoTool': '撤销/重做',
     'draw.cancelTool': '取消',
     'draw.copyTool': '复制到剪贴板',
     'draw.scrollScreenshotTool': '滚动截图',
