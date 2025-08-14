@@ -214,6 +214,10 @@ export const settings = {
         '高质量模型',
     'settings.functionSettings.translationSettings.apiConfig.deeplPreferQualityOptimized.tip':
         '如果开启，DeepL 会优先使用延迟更高、质量更高的翻译模型',
+    'settings.functionSettings.trayIconSettings': '托盘',
+    'settings.functionSettings.trayIconSettings.iconClickAction': '左键点击后',
+    'settings.functionSettings.trayIconSettings.iconClickAction.screenshot': '截图',
+    'settings.functionSettings.trayIconSettings.iconClickAction.showMainWindow': '显示主窗口',
     'settings.systemSettings.dataFile': '软件数据',
     'settings.systemSettings.dataFilePath': '配置目录',
     'settings.systemSettings.dataFilePath.open': '打开目录',

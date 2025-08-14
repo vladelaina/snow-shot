@@ -59,6 +59,7 @@ export enum AppSettingsGroup {
     FunctionOutput = 'functionOutput',
     FunctionFixedContent = 'functionFixedContent',
     FunctionVideoRecord = 'functionVideoRecord',
+    FunctionTrayIcon = 'functionTrayIcon',
 }
 
 export enum AppSettingsLanguage {
@@ -75,6 +76,11 @@ export enum AppSettingsControlNode {
 export enum AppSettingsFixedContentInitialPosition {
     MonitorCenter = 'monitorCenter',
     MousePosition = 'mousePosition',
+}
+
+export enum TrayIconClickAction {
+    ShowMainWindow = 'showMainWindow',
+    Screenshot = 'screenshot',
 }
 
 export type AppSettingsData = {
@@ -230,6 +236,10 @@ export type AppSettingsData = {
         imageFeatureDescriptionLength: number;
         imageFeatureThreshold: number;
     };
+    [AppSettingsGroup.FunctionTrayIcon]: {
+        /** 托盘点击后 */
+        iconClickAction: TrayIconClickAction;
+    };
 };
 
 export const CanHiddenToolSet: Set<DrawState> = new Set([
@@ -380,6 +390,9 @@ export const defaultAppSettingsData: AppSettingsData = {
         ocrModel: OcrModel.RapidOcrV4,
         ocrDetectAngle: false,
         historyValidDuration: HistoryValidDuration.Week,
+    },
+    [AppSettingsGroup.FunctionTrayIcon]: {
+        iconClickAction: TrayIconClickAction.Screenshot,
     },
 };
 
@@ -1086,6 +1099,19 @@ const ContextWrapCore: React.FC<{ children: React.ReactNode }> = ({ children }) 
                             ? newSettings.tryRollback
                             : (prevSettings?.tryRollback ??
                               defaultAppSettingsData[group].tryRollback),
+                };
+            } else if (group === AppSettingsGroup.FunctionTrayIcon) {
+                newSettings = newSettings as AppSettingsData[typeof group];
+                const prevSettings = appSettingsRef.current[group] as
+                    | AppSettingsData[typeof group]
+                    | undefined;
+
+                settings = {
+                    iconClickAction:
+                        typeof newSettings?.iconClickAction === 'string'
+                            ? (newSettings.iconClickAction as TrayIconClickAction)
+                            : (prevSettings?.iconClickAction ??
+                              defaultAppSettingsData[group].iconClickAction),
                 };
             } else if (group === AppSettingsGroup.CommonTrayIcon) {
                 newSettings = newSettings as AppSettingsData[typeof group];
