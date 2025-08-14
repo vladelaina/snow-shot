@@ -97,8 +97,8 @@ export type AppSettingsData = {
         fullScreenAuxiliaryLineColor: string;
         /** 禁用动画 */
         disableAnimation: boolean;
-        /** 是否显示 OCR 翻译 */
-        showOcrTranslate: boolean;
+        /** 自定义工具栏工具 */
+        customToolbarToolList: DrawState[];
     };
     [AppSettingsGroup.FixedContent]: {
         /** 边框颜色 */
@@ -232,6 +232,20 @@ export type AppSettingsData = {
     };
 };
 
+export const CanHiddenToolSet: Set<DrawState> = new Set([
+    DrawState.Ellipse,
+    DrawState.Arrow,
+    DrawState.Pen,
+    DrawState.Text,
+    DrawState.SerialNumber,
+    DrawState.Blur,
+    DrawState.Redo,
+    DrawState.Fixed,
+    DrawState.OcrDetect,
+    DrawState.OcrTranslate,
+    DrawState.ScrollScreenshot,
+]);
+
 export const defaultAppSettingsData: AppSettingsData = {
     [AppSettingsGroup.Common]: {
         darkMode: false,
@@ -246,7 +260,20 @@ export const defaultAppSettingsData: AppSettingsData = {
         beyondSelectRectElementOpacity: 100,
         fullScreenAuxiliaryLineColor: '#00000000',
         hotKeyTipOpacity: 100,
-        showOcrTranslate: true,
+        customToolbarToolList: [
+            DrawState.Ellipse,
+            DrawState.Arrow,
+            DrawState.Pen,
+            DrawState.Text,
+            DrawState.SerialNumber,
+            DrawState.Blur,
+            /** 特殊值，如果禁用则不显示撤销和重做 */
+            DrawState.Redo,
+            DrawState.Fixed,
+            DrawState.OcrDetect,
+            DrawState.OcrTranslate,
+            DrawState.ScrollScreenshot,
+        ],
     },
     [AppSettingsGroup.FixedContent]: {
         borderColor: '#dbdbdb',
@@ -636,10 +663,11 @@ const ContextWrapCore: React.FC<{ children: React.ReactNode }> = ({ children }) 
                         typeof newSettings?.fullScreenAuxiliaryLineColor === 'string'
                             ? newSettings.fullScreenAuxiliaryLineColor
                             : (prevSettings?.fullScreenAuxiliaryLineColor ?? '#00000'),
-                    showOcrTranslate:
-                        typeof newSettings?.showOcrTranslate === 'boolean'
-                            ? newSettings.showOcrTranslate
-                            : (prevSettings?.showOcrTranslate ?? true),
+                    customToolbarToolList:
+                        typeof newSettings?.customToolbarToolList === 'object'
+                            ? newSettings.customToolbarToolList
+                            : (prevSettings?.customToolbarToolList ??
+                              defaultAppSettingsData[group].customToolbarToolList),
                 };
             } else if (group === AppSettingsGroup.FixedContent) {
                 newSettings = newSettings as AppSettingsData[typeof group];

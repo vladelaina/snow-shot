@@ -109,6 +109,7 @@ export const en = {
     'draw.eraserTool': 'Eraser',
     'draw.undoTool': 'Undo',
     'draw.redoTool': 'Redo',
+    'draw.redoUndoTool': 'Redo/Undo',
     'draw.cancelTool': 'Cancel',
     'draw.copyTool': 'Copy to Clipboard',
     'draw.saveTool': 'Save as File',

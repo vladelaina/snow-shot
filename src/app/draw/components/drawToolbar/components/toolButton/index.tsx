@@ -9,6 +9,7 @@ import { KeyEventKey } from '../keyEventWrap/extra';
 import { HotkeysScope } from '@/components/globalLayoutExtra';
 
 const ToolButtonCore: React.FC<{
+    hidden?: boolean;
     componentKey?: KeyEventKey;
     icon: React.ReactNode;
     onClick: () => void;
@@ -20,6 +21,7 @@ const ToolButtonCore: React.FC<{
     hotkeyScope?: HotkeysScope;
     buttonProps?: React.ComponentProps<typeof Button>;
 }> = ({
+    hidden,
     componentKey,
     icon,
     onClick,
@@ -49,6 +51,9 @@ const ToolButtonCore: React.FC<{
 
     const buttonDom = (
         <Button
+            style={{
+                display: hidden ? 'none' : undefined,
+            }}
             {...buttonProps}
             icon={icon}
             type={buttonType}

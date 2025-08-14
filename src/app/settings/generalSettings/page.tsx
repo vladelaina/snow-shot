@@ -9,7 +9,7 @@ import {
     AppSettingsGroup,
     AppSettingsLanguage,
 } from '../../contextWrap';
-import { useCallback, useContext } from 'react';
+import { useCallback, useContext, useMemo } from 'react';
 import { useAppSettingsLoad } from '@/hooks/useAppSettingsLoad';
 import { FormattedMessage, useIntl } from 'react-intl';
 import { ContentWrap } from '@/components/contentWrap';
@@ -17,10 +17,16 @@ import { DarkModeIcon, LanguageIcon } from '@/components/icons';
 import { IconLabel } from '@/components/iconLable';
 import { ResetSettingsButton } from '@/components/resetSettingsButton';
 import { useStateRef } from '@/hooks/useStateRef';
-import ProForm, { ProFormRadio, ProFormSlider, ProFormSwitch } from '@ant-design/pro-form';
+import ProForm, {
+    ProFormRadio,
+    ProFormSelect,
+    ProFormSlider,
+    ProFormSwitch,
+} from '@ant-design/pro-form';
 import { AggregationColor } from 'antd/es/color-picker/color';
 import { PathInput } from '@/components/pathInput';
 import { ColorPickerShowMode } from '@/app/draw/components/colorPicker';
+import { DrawState } from '@/app/fullScreenDraw/components/drawCore/extra';
 
 const { Option } = Select;
 
@@ -74,6 +80,56 @@ export default function GeneralSettings() {
         ),
         true,
     );
+
+    const customToolbarToolListOptions = useMemo(() => {
+        return [
+            {
+                label: intl.formatMessage({ id: 'draw.ellipseTool' }),
+                value: DrawState.Ellipse,
+            },
+            {
+                label: intl.formatMessage({ id: 'draw.arrowTool' }),
+                value: DrawState.Arrow,
+            },
+            {
+                label: intl.formatMessage({ id: 'draw.penTool' }),
+                value: DrawState.Pen,
+            },
+            {
+                label: intl.formatMessage({ id: 'draw.textTool' }),
+                value: DrawState.Text,
+            },
+            {
+                label: intl.formatMessage({ id: 'draw.serialNumberTool' }),
+                value: DrawState.SerialNumber,
+            },
+            {
+                label: intl.formatMessage({ id: 'draw.blurTool' }),
+                value: DrawState.Blur,
+            },
+            {
+                label: intl.formatMessage({ id: 'draw.redoUndoTool' }),
+                value: DrawState.Redo,
+            },
+            {
+                label: intl.formatMessage({ id: 'draw.fixedTool' }),
+                value: DrawState.Fixed,
+            },
+            {
+                label: intl.formatMessage({ id: 'draw.ocrDetectTool' }),
+                value: DrawState.OcrDetect,
+            },
+            {
+                label: intl.formatMessage({ id: 'draw.ocrTranslateTool' }),
+                value: DrawState.OcrTranslate,
+            },
+            {
+                label: intl.formatMessage({ id: 'draw.scrollScreenshotTool' }),
+                value: DrawState.ScrollScreenshot,
+            },
+        ];
+    }, [intl]);
+
     return (
         <ContentWrap className="settings-wrap">
             <GroupTitle
@@ -293,11 +349,13 @@ export default function GeneralSettings() {
                         </Col>
                     </Row>
 
-                    <Row>
-                        <Col span={12}>
-                            <ProFormSwitch
-                                name="showOcrTranslate"
-                                label={<FormattedMessage id="settings.showOcrTranslate" />}
+                    <Row gutter={token.margin}>
+                        <Col span={24}>
+                            <ProFormSelect
+                                name="customToolbarToolList"
+                                label={<FormattedMessage id="settings.customToolbarToolList" />}
+                                options={customToolbarToolListOptions}
+                                mode="multiple"
                             />
                         </Col>
                     </Row>

@@ -55,6 +55,7 @@ import {
     AppSettingsData,
     AppSettingsGroup,
     AppSettingsPublisher,
+    CanHiddenToolSet,
 } from '@/app/contextWrap';
 import { DrawSubTools } from './components/tools/drawSubTools';
 import { debounce } from 'es-toolkit';
@@ -115,9 +116,11 @@ const DrawToolbarCore: React.FC<DrawToolbarProps> = ({
     const [showLockDrawTool, setShowLockDrawTool, showLockDrawToolRef] = useStateRef(false);
     const [enableLockDrawTool, setEnableLockDrawTool, enableLockDrawToolRef] = useStateRef(false);
     const [enableFastSave, setEnableFastSave] = useState(false);
-    const [enableOcrTranslate, setEnableOcrTranslate] = useState(true);
     const [enableScrollScreenshot, setEnableScrollScreenshot] = useState(false);
     const [shortcutCanleTip, setShortcutCanleTip] = useState(false);
+    const [customToolbarToolHiddenMap, setCustomToolbarToolHiddenMap] = useState<
+        Partial<Record<DrawState, boolean>> | undefined
+    >(undefined);
     const drawToolarContainerRef = useRef<HTMLDivElement | null>(null);
     const drawToolbarOpacityWrapRef = useRef<HTMLDivElement | null>(null);
     const scrollScreenshotToolActionRef = useRef<ScrollScreenshotActionType | undefined>(undefined);
@@ -134,9 +137,25 @@ const DrawToolbarCore: React.FC<DrawToolbarProps> = ({
                 setShowLockDrawTool(!settings[AppSettingsGroup.FunctionScreenshot].lockDrawTool);
                 // 是否启用锁定绘制工具
                 setEnableLockDrawTool(settings[AppSettingsGroup.Cache].enableLockDrawTool);
-                setEnableOcrTranslate(settings[AppSettingsGroup.Screenshot].showOcrTranslate);
+
+                const toolHiddenMap = CanHiddenToolSet.values().reduce(
+                    (acc, drawState) => {
+                        acc[drawState] = true;
+                        return acc;
+                    },
+                    {} as Partial<Record<DrawState, boolean>>,
+                );
+                setCustomToolbarToolHiddenMap(
+                    settings[AppSettingsGroup.Screenshot].customToolbarToolList.reduce(
+                        (acc, drawState) => {
+                            acc[drawState] = false;
+                            return acc;
+                        },
+                        toolHiddenMap,
+                    ),
+                );
             },
-            [setEnableLockDrawTool, setShowLockDrawTool, setEnableOcrTranslate],
+            [setCustomToolbarToolHiddenMap, setEnableLockDrawTool, setShowLockDrawTool],
         ),
     );
     const draggingRef = useRef(false);
@@ -556,6 +575,7 @@ const DrawToolbarCore: React.FC<DrawToolbarProps> = ({
 
                             {/* 默认状态 */}
                             <ToolButton
+                                hidden={customToolbarToolHiddenMap?.[DrawState.Idle]}
                                 componentKey={KeyEventKey.MoveTool}
                                 icon={<DragOutlined />}
                                 drawState={DrawState.Idle}
@@ -566,6 +586,7 @@ const DrawToolbarCore: React.FC<DrawToolbarProps> = ({
 
                             {/* 选择状态 */}
                             <ToolButton
+                                hidden={customToolbarToolHiddenMap?.[DrawState.Select]}
                                 componentKey={KeyEventKey.SelectTool}
                                 icon={<ArrowSelectIcon style={{ fontSize: '1.08em' }} />}
                                 drawState={DrawState.Select}
@@ -579,6 +600,7 @@ const DrawToolbarCore: React.FC<DrawToolbarProps> = ({
                                 <>
                                     {/* 锁定绘制工具 */}
                                     <ToolButton
+                                        hidden={customToolbarToolHiddenMap?.[DrawState.Lock]}
                                         componentKey={KeyEventKey.LockDrawTool}
                                         icon={<LockOutlined />}
                                         drawState={DrawState.Lock}
@@ -594,6 +616,7 @@ const DrawToolbarCore: React.FC<DrawToolbarProps> = ({
 
                             {/* 矩形 */}
                             <ToolButton
+                                hidden={customToolbarToolHiddenMap?.[DrawState.Rect]}
                                 componentKey={KeyEventKey.RectTool}
                                 icon={<RectIcon style={{ fontSize: '1em' }} />}
                                 disable={disableNormalScreenshotTool}
@@ -606,6 +629,7 @@ const DrawToolbarCore: React.FC<DrawToolbarProps> = ({
 
                             {/* 椭圆 */}
                             <ToolButton
+                                hidden={customToolbarToolHiddenMap?.[DrawState.Ellipse]}
                                 componentKey={KeyEventKey.EllipseTool}
                                 icon={<CircleIcon style={{ fontSize: '1em' }} />}
                                 drawState={DrawState.Ellipse}
@@ -617,6 +641,7 @@ const DrawToolbarCore: React.FC<DrawToolbarProps> = ({
 
                             {/* 箭头 */}
                             <ToolButton
+                                hidden={customToolbarToolHiddenMap?.[DrawState.Arrow]}
                                 componentKey={KeyEventKey.ArrowTool}
                                 icon={<ArrowIcon style={{ fontSize: '0.83em' }} />}
                                 drawState={DrawState.Arrow}
@@ -629,6 +654,7 @@ const DrawToolbarCore: React.FC<DrawToolbarProps> = ({
 
                             {/* 画笔 */}
                             <ToolButton
+                                hidden={customToolbarToolHiddenMap?.[DrawState.Pen]}
                                 componentKey={KeyEventKey.PenTool}
                                 icon={<PenIcon style={{ fontSize: '1.08em' }} />}
                                 drawState={DrawState.Pen}
@@ -640,6 +666,7 @@ const DrawToolbarCore: React.FC<DrawToolbarProps> = ({
 
                             {/* 文本 */}
                             <ToolButton
+                                hidden={customToolbarToolHiddenMap?.[DrawState.Text]}
                                 componentKey={KeyEventKey.TextTool}
                                 icon={<TextIcon style={{ fontSize: '1.08em' }} />}
                                 drawState={DrawState.Text}
@@ -651,6 +678,7 @@ const DrawToolbarCore: React.FC<DrawToolbarProps> = ({
 
                             {/* 序列号 */}
                             <ToolButton
+                                hidden={customToolbarToolHiddenMap?.[DrawState.SerialNumber]}
                                 componentKey={KeyEventKey.SerialNumberTool}
                                 icon={<SerialNumberIcon style={{ fontSize: '1.16em' }} />}
                                 drawState={DrawState.SerialNumber}
@@ -662,6 +690,7 @@ const DrawToolbarCore: React.FC<DrawToolbarProps> = ({
 
                             {/* 模糊 */}
                             <ToolButton
+                                hidden={customToolbarToolHiddenMap?.[DrawState.Blur]}
                                 componentKey={KeyEventKey.BlurTool}
                                 icon={<MosaicIcon />}
                                 drawState={DrawState.Blur}
@@ -673,6 +702,7 @@ const DrawToolbarCore: React.FC<DrawToolbarProps> = ({
 
                             {/* 橡皮擦 */}
                             <ToolButton
+                                hidden={customToolbarToolHiddenMap?.[DrawState.Eraser]}
                                 componentKey={KeyEventKey.EraserTool}
                                 icon={<EraserIcon style={{ fontSize: '0.9em' }} />}
                                 drawState={DrawState.Eraser}
@@ -682,14 +712,20 @@ const DrawToolbarCore: React.FC<DrawToolbarProps> = ({
                                 }}
                             />
 
-                            <div className="draw-toolbar-splitter" />
+                            {!customToolbarToolHiddenMap?.[DrawState.Redo] && (
+                                <div className="draw-toolbar-splitter" />
+                            )}
 
-                            <HistoryControls disable={enableScrollScreenshot} />
+                            <HistoryControls
+                                hidden={customToolbarToolHiddenMap?.[DrawState.Redo]}
+                                disable={enableScrollScreenshot}
+                            />
 
                             <div className="draw-toolbar-splitter" />
 
                             {/* 额外工具 */}
                             <ToolButton
+                                hidden={customToolbarToolHiddenMap?.[DrawState.ExtraTools]}
                                 componentKey={KeyEventKey.ExtraToolsTool}
                                 icon={<ToolIcon style={{ fontSize: '0.95em' }} />}
                                 drawState={DrawState.ExtraTools}
@@ -702,6 +738,7 @@ const DrawToolbarCore: React.FC<DrawToolbarProps> = ({
 
                             {/* 固定到屏幕 */}
                             <ToolButton
+                                hidden={customToolbarToolHiddenMap?.[DrawState.Fixed]}
                                 componentKey={KeyEventKey.FixedTool}
                                 icon={
                                     <FixedIcon
@@ -720,6 +757,7 @@ const DrawToolbarCore: React.FC<DrawToolbarProps> = ({
 
                             {/* OCR */}
                             <ToolButton
+                                hidden={customToolbarToolHiddenMap?.[DrawState.OcrDetect]}
                                 componentKey={KeyEventKey.OcrDetectTool}
                                 icon={<OcrDetectIcon style={{ fontSize: '0.88em' }} />}
                                 drawState={DrawState.OcrDetect}
@@ -730,20 +768,20 @@ const DrawToolbarCore: React.FC<DrawToolbarProps> = ({
                             />
 
                             {/* OCR 翻译 */}
-                            {enableOcrTranslate && (
-                                <ToolButton
-                                    componentKey={KeyEventKey.OcrTranslateTool}
-                                    icon={<OcrTranslateIcon style={{ fontSize: '1em' }} />}
-                                    drawState={DrawState.OcrTranslate}
-                                    disable={disableNormalScreenshotTool}
-                                    onClick={() => {
-                                        onToolClick(DrawState.OcrTranslate);
-                                    }}
-                                />
-                            )}
+                            <ToolButton
+                                hidden={customToolbarToolHiddenMap?.[DrawState.OcrTranslate]}
+                                componentKey={KeyEventKey.OcrTranslateTool}
+                                icon={<OcrTranslateIcon style={{ fontSize: '1em' }} />}
+                                drawState={DrawState.OcrTranslate}
+                                disable={disableNormalScreenshotTool}
+                                onClick={() => {
+                                    onToolClick(DrawState.OcrTranslate);
+                                }}
+                            />
 
                             {/* 滚动截图 */}
                             <ToolButton
+                                hidden={customToolbarToolHiddenMap?.[DrawState.ScrollScreenshot]}
                                 componentKey={KeyEventKey.ScrollScreenshotTool}
                                 icon={
                                     <div style={{ position: 'relative', top: '0.11em' }}>
@@ -759,6 +797,7 @@ const DrawToolbarCore: React.FC<DrawToolbarProps> = ({
                             {/* 快速保存截图 */}
                             {enableFastSave && (
                                 <ToolButton
+                                    hidden={customToolbarToolHiddenMap?.[DrawState.FastSave]}
                                     componentKey={KeyEventKey.FastSaveTool}
                                     icon={<FastSaveIcon style={{ fontSize: '1.08em' }} />}
                                     drawState={DrawState.FastSave}
@@ -770,6 +809,7 @@ const DrawToolbarCore: React.FC<DrawToolbarProps> = ({
 
                             {/* 保存截图 */}
                             <ToolButton
+                                hidden={customToolbarToolHiddenMap?.[DrawState.Save]}
                                 componentKey={KeyEventKey.SaveTool}
                                 icon={<SaveIcon style={{ fontSize: '1em' }} />}
                                 drawState={DrawState.Save}
@@ -782,6 +822,7 @@ const DrawToolbarCore: React.FC<DrawToolbarProps> = ({
 
                             {/* 取消截图 */}
                             <ToolButton
+                                hidden={customToolbarToolHiddenMap?.[DrawState.Cancel]}
                                 componentKey={KeyEventKey.CancelTool}
                                 icon={
                                     <CloseOutlined
@@ -801,6 +842,7 @@ const DrawToolbarCore: React.FC<DrawToolbarProps> = ({
 
                             {/* 复制截图 */}
                             <ToolButton
+                                hidden={customToolbarToolHiddenMap?.[DrawState.Copy]}
                                 componentKey={KeyEventKey.CopyTool}
                                 icon={
                                     <CopyOutlined
