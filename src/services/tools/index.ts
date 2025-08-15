@@ -158,15 +158,15 @@ export const serviceFetch = async <R>(
 };
 
 export const appFetch = (async (...params: Parameters<typeof fetch>) => {
-    const response = await fetch(params[0], {
-        ...params[1],
-        headers: {
-            'Accept-Language': window.__APP_ACCEPT_LANGUAGE__,
-            ...params[1]?.headers,
-        },
-    });
-
     try {
+        const response = await fetch(params[0], {
+            ...params[1],
+            headers: {
+                'Accept-Language': window.__APP_ACCEPT_LANGUAGE__,
+                ...params[1]?.headers,
+            },
+        });
+
         if (response.status !== 200) {
             const data = (await response.json()) as {
                 error: {
@@ -182,9 +182,12 @@ export const appFetch = (async (...params: Parameters<typeof fetch>) => {
                 ).success();
             }
         }
-    } catch {}
+        return response;
+    } catch (error) {
+        console.error(error);
+        throw error;
+    }
 
-    return response;
 }) as typeof fetch;
 
 export type StreamFetchEventOptions<R> = {

@@ -58,11 +58,11 @@ import { SendQueueMessageList } from './components/sendQueueMessageList';
 import { ChatMessage, ChatMessageFlowConfig, SendQueueMessage } from './types';
 import { WorkflowList } from './components/workflowList';
 import { ChatApiConfig } from '@/app/settings/functionSettings/extra';
-import path from 'path';
 import { ModelSelectLabel } from './components/modelSelectLabel';
 import { openUrl } from '@tauri-apps/plugin-opener';
 import { writeTextToClipboard } from '@/utils/clipboard';
 import { formatKey } from '@/utils/format';
+import urlJoin from 'url-join';
 
 type BubbleDataType = AntdBubbleDataType & {
     flow_config?: ChatMessageFlowConfig;
@@ -358,9 +358,10 @@ const Chat = () => {
                 return undefined;
             }
 
+            const baseURL = urlJoin(customConfig.api_uri, 'chat/completions');
             return {
                 request: XRequest({
-                    baseURL: path.join(customConfig.api_uri, '/chat/completions'),
+                    baseURL,
                     dangerouslyApiKey: `Bearer ${customConfig.api_key}`,
                     fetch: appFetch,
                 }),

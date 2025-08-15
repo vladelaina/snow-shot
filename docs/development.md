@@ -41,7 +41,7 @@ pnpm update:excalidraw
 
 Snow Shot 使用 ONNX 调用 OCR 模型，为了更好的兼容性，使用了静态编译来包含模型所需的库。所以需要下载将 ONNX Runtime 的静态库放到 `src-tauri/lib` 目录下供静态编译使用。
 
-ONNX Runtime 可以从 [ONNX Runtime Releases](https://github.com/supertone-inc/onnxruntime-build/releases) 下载，选择 `onnxruntime-win-x64-static_lib-1.21.1.zip`。
+ONNX Runtime 可以从 [ONNX Runtime Releases](https://github.com/supertone-inc/onnxruntime-build/releases) 下载，选择 `onnxruntime-win-x64-static_lib-1.22.1.zip`。
 
 下载完毕后将 `onnxruntime.lib` 文件放到 `src-tauri/lib` 下即可。
 
@@ -61,8 +61,16 @@ pnpm i
 
 #### 5. 运行
 
-安装完成后，使用以下命令运行项目
+安装完成后，使用以下命令调试项目
 
 ```bash
 pnpm tauri dev
+```
+#### 6. 打包
+
+开发完成后，使用一下命令打包项目
+
+```bash
+pnpm build 
+pnpm tauri build
 ```
