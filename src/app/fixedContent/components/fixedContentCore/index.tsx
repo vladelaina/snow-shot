@@ -1109,6 +1109,10 @@ export const FixedContentCore: React.FC<{
             </div>
 
             <style jsx>{`
+                .fixed-image-container {
+                    display: ${disabled ? 'none' : 'block'};
+                }
+
                 .fixed-image-container:hover :global(.ant-btn.fixed-image-close-button) {
                     opacity: 1 !important;
                 }

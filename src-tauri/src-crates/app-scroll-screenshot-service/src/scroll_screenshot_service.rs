@@ -859,7 +859,7 @@ impl ScrollScreenshotService {
         };
 
         // 创建最终大小的图片
-        let mut final_image = image::DynamicImage::new_rgba8(total_width, total_height);
+        let mut final_image = image::DynamicImage::new_rgb8(total_width, total_height);
 
         // 当前位置偏移量
         let mut offset_x = 0;

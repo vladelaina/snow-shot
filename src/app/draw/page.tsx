@@ -441,7 +441,6 @@ const DrawPageCore: React.FC = () => {
             } catch {
                 imageBuffer = undefined;
             }
-
             await initCaptureBoundingBoxInfoPromise;
 
             // 如果截图失败了，等窗口显示后，结束截图

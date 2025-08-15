@@ -20,7 +20,7 @@ export async function getPixels(imageBuffer: ArrayBuffer): Promise<{
 
         if (!wasmModuleArrayBuffer) {
             const wasmModuleResponse = await fetch(
-                new URL('turbo-webp/turbo_webp_bg.wasm', import.meta.url),
+                new URL('turbo-png/turbo_png_bg.wasm', import.meta.url),
             );
             wasmModuleArrayBuffer = await wasmModuleResponse.arrayBuffer();
         }

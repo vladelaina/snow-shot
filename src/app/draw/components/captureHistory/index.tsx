@@ -16,6 +16,7 @@ import { Ordered } from '@mg-chao/excalidraw/element/types';
 import { NonDeletedExcalidrawElement } from '@mg-chao/excalidraw/element/types';
 import { AntdContext } from '@/components/globalLayoutExtra';
 import { FormattedMessage } from 'react-intl';
+import { AppState } from '@mg-chao/excalidraw/types';
 
 export type CaptureHistoryActionType = {
     saveCurrentCapture: () => Promise<void>;
@@ -158,6 +159,9 @@ const CaptureHistoryControllerCore: React.FC<{
                                 elements:
                                     captureHistoryListRef.current[currentIndexRef.current]
                                         .excalidraw_elements ?? [],
+                                appState:
+                                    captureHistoryListRef.current[currentIndexRef.current]
+                                        .excalidraw_app_state,
                                 captureUpdate: 'NEVER',
                             });
                         }),
@@ -208,9 +212,12 @@ const CaptureHistoryControllerCore: React.FC<{
             return;
         }
 
+        const excalidrawApi = drawCacheLayerActionRef.current?.getExcalidrawAPI();
+
         const captureHistoryItem = await captureHistoryRef.current.save(
             captureHistoryListRef.current[currentIndexRef.current] ?? imageBufferRef.current,
-            drawCacheLayerActionRef.current?.getExcalidrawAPI()?.getSceneElements(),
+            excalidrawApi?.getSceneElements(),
+            excalidrawApi?.getAppState(),
             selectRect,
         );
         captureHistoryListRef.current.push(captureHistoryItem);

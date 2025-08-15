@@ -159,7 +159,7 @@ impl MonitorList {
             if capture_image.is_some() {
                 let capture_image = capture_image.as_ref().unwrap();
                 if capture_image.width() == 1 && capture_image.height() == 1 {
-                    return Ok(image::DynamicImage::new_rgba8(
+                    return Ok(image::DynamicImage::new_rgb8(
                         (first_monitor.rect.max_x - first_monitor.rect.min_x) as u32,
                         (first_monitor.rect.max_y - first_monitor.rect.min_y) as u32,
                     ));
@@ -225,12 +225,12 @@ impl MonitorList {
 
         // 声明该图像，分配内存
         let mut capture_image = if let Some(crop_region) = crop_region {
-            image::DynamicImage::new_rgba8(
+            image::DynamicImage::new_rgb8(
                 (crop_region.max_x - crop_region.min_x) as u32,
                 (crop_region.max_y - crop_region.min_y) as u32,
             )
         } else {
-            image::DynamicImage::new_rgba8(
+            image::DynamicImage::new_rgb8(
                 (monitors_bounding_box.max_x - monitors_bounding_box.min_x) as u32,
                 (monitors_bounding_box.max_y - monitors_bounding_box.min_y) as u32,
             )
@@ -306,10 +306,10 @@ mod tests {
         let instance = std::time::Instant::now();
 
         let crop_region = ElementRect {
-            min_x: -1000,
-            min_y: 0,
-            max_x: 1000,
-            max_y: 1000,
+            min_x: -3840,
+            min_y: -2160,
+            max_x: 3840,
+            max_y: 2160,
         };
 
         let monitors = MonitorList::get_by_region(crop_region);
