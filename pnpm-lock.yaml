@@ -152,6 +152,12 @@ importers:
       turbo-png:
         specifier: file:..\turbo-png\pkg
         version: file:../turbo-png/pkg
+      turbo-webp:
+        specifier: 0.2.0
+        version: 0.2.0
+      url-join:
+        specifier: ^5.0.0
+        version: 5.0.0
       use-interval:
         specifier: ^1.4.0
         version: 1.4.0(react@19.1.1)
@@ -4174,6 +4180,9 @@ packages:
   turbo-png@file:../turbo-png/pkg:
     resolution: {directory: ../turbo-png/pkg, type: directory}
 
+  turbo-webp@0.2.0:
+    resolution: {integrity: sha512-1LIjR5xbHR/rnyuAfgbVK4wTO2dU02+gOsA0AWwqtIcrdRCAEfjrtNsezk2RgNQR3n7lhjyDxNt9XRzkpOALvQ==}
+
   type-check@0.4.0:
     resolution: {integrity: sha512-XleUoc9uwGXqjWwXaUTZAmzMcFZ5858QA2vvx1Ur5xIcixXIP+8LnFDgRplU30us6teqdlskFfu+ae4K79Ooew==}
     engines: {node: '>= 0.8.0'}
@@ -4247,6 +4256,10 @@ packages:
 
   uri-js@4.4.1:
     resolution: {integrity: sha512-7rKUyy33Q1yc98pQ1DAmLtwX109F7TIfWlW1Ydo8Wl1ii1SeHieeh0HHfPeL2fMXK6z0s8ecKs9frCuLJvndBg==}
+
+  url-join@5.0.0:
+    resolution: {integrity: sha512-n2huDr9h9yzd6exQVnH/jU5mr+Pfx08LRXXZhkLLetAMESRj+anQsTAh940iMrIetKAmry9coFuZQ2jY8/p3WA==}
+    engines: {node: ^12.20.0 || ^14.13.1 || >=16.0.0}
 
   use-callback-ref@1.3.3:
     resolution: {integrity: sha512-jQL3lRnocaFtu3V00JToYz/4QkNWswxijDaCVNZRiRTO3HQDLsdu1ZtmIUvV4yPp+rvWm5j0y0TG/S61cuijTg==}
@@ -9231,6 +9244,8 @@ snapshots:
 
   turbo-png@file:../turbo-png/pkg: {}
 
+  turbo-webp@0.2.0: {}
+
   type-check@0.4.0:
     dependencies:
       prelude-ls: 1.2.1
@@ -9351,6 +9366,8 @@ snapshots:
   uri-js@4.4.1:
     dependencies:
       punycode: 2.3.1
+
+  url-join@5.0.0: {}
 
   use-callback-ref@1.3.3(@types/react@19.1.10)(react@19.1.1):
     dependencies:

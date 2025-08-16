@@ -26,7 +26,7 @@ export const tools = {
     'tools.chat.welcome.description': '我是一名 AI 助手，有任何问题都可以问我，我会尽力帮助你~',
     'tools.chat.requestAborted': '请求被中止',
     'tools.chat.requestFailed': '抱歉，请求失败了，请再试一次',
-    'tools.chat.agentPlaceholder': '生成内容中，请稍后...',
+    'tools.chat.agentPlaceholder': '生成内容中，请稍候...',
     'tools.chat.newSession.tip': '已经是新的对话了',
     'tools.chat.session.current': '当前',
     'tools.chat.sessions': '对话',
