@@ -62,3 +62,15 @@ export const getPlatformValue = <T>(defaultValue: T, macosValue?: T, linuxValue?
 
     return value ?? defaultValue;
 };
+
+/**
+ * 判断是否支持 OffscreenCanvas
+ * @returns 是否支持
+ */
+export const supportOffscreenCanvas = () => {
+    if (typeof window === 'undefined') {
+        return false;
+    }
+
+    return 'OffscreenCanvas' in window;
+};

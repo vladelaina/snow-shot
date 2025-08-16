@@ -10,15 +10,12 @@ import {
     BaseLayerContext,
 } from '../baseLayer';
 import { zIndexs } from '@/utils/zIndex';
-import * as PIXI from 'pixi.js';
 import { CaptureHistoryItem } from '@/utils/appStore';
+import { INIT_CONTAINER_KEY } from '../baseLayer/actions';
 import { convertFileSrc } from '@tauri-apps/api/core';
 import { getCaptureHistoryImageAbsPath } from '@/utils/captureHistory';
 
 export type DrawLayerActionType = BaseLayerActionType & {
-    getBlurContainer: () => PIXI.Container | undefined;
-    getImageTexture: () => PIXI.Texture | undefined;
-    getDrawContainer: () => PIXI.Container | undefined;
     switchCaptureHistory: (item: CaptureHistoryItem | undefined) => Promise<void>;
 };
 
@@ -26,38 +23,38 @@ export type DrawLayerProps = {
     actionRef: React.RefObject<DrawLayerActionType | undefined>;
 };
 
-const DrawLayerCore: React.FC<DrawLayerProps> = ({ actionRef }) => {
-    const { addChildToTopContainer, createNewCanvasContainer, getCanvasApp, getTopContainer } =
-        useContext(BaseLayerContext);
+export const DRAW_LAYER_BLUR_CONTAINER_KEY = 'draw_layer_blur_container';
 
-    const imageContainerRef = useRef<PIXI.Container | undefined>(undefined);
-    const imageTextureRef = useRef<PIXI.Texture | undefined>(undefined);
-    const captureHistoryImageTextureRef = useRef<PIXI.Texture | undefined>(undefined);
-    const imageSpriteRef = useRef<PIXI.Sprite | undefined>(undefined);
-    const captureHistoryImageSpriteRef = useRef<PIXI.Sprite | undefined>(undefined);
-    const blurContainerRef = useRef<PIXI.Container | undefined>(undefined);
-    const drawContainerRef = useRef<PIXI.Container | undefined>(undefined);
+const DrawLayerCore: React.FC<DrawLayerProps> = ({ actionRef }) => {
+    const {
+        createNewCanvasContainer,
+        canvasRender,
+        addImageToContainer,
+        clearContainer,
+        createBlurSprite,
+        updateBlurSprite,
+        deleteBlurSprite,
+    } = useContext(BaseLayerContext);
+
+    const currentCaptureImageSrcRef = useRef<string | undefined>(undefined);
+    const blurContainerKeyRef = useRef<string | undefined>(undefined);
     /*
      * 初始化截图
      */
     const onCaptureReady = useCallback<BaseLayerEventActionType['onCaptureReady']>(
-        async (texture: PIXI.Texture): Promise<void> => {
+        async (imageSrc: string): Promise<void> => {
             // 底图作为单独的层级显示
-            imageContainerRef.current = getTopContainer();
-            const imageSprite = new PIXI.Sprite(texture);
-            addChildToTopContainer(imageSprite);
-            imageSpriteRef.current = imageSprite;
-
-            imageTextureRef.current = texture;
-            captureHistoryImageTextureRef.current = undefined;
+            currentCaptureImageSrcRef.current = imageSrc;
+            await addImageToContainer(INIT_CONTAINER_KEY, imageSrc);
 
             // 模糊层和和绘制层独立处理
-            blurContainerRef.current = createNewCanvasContainer();
-            drawContainerRef.current = createNewCanvasContainer();
+            blurContainerKeyRef.current = await createNewCanvasContainer(
+                DRAW_LAYER_BLUR_CONTAINER_KEY,
+            );
 
-            getCanvasApp()!.render();
+            await canvasRender();
         },
-        [addChildToTopContainer, createNewCanvasContainer, getCanvasApp, getTopContainer],
+        [createNewCanvasContainer, canvasRender, addImageToContainer],
     );
 
     const onCaptureFinish = useCallback<
@@ -67,45 +64,23 @@ const DrawLayerCore: React.FC<DrawLayerProps> = ({ actionRef }) => {
     const switchCaptureHistory = useCallback(
         async (item: CaptureHistoryItem | undefined) => {
             // 移除当前显示的已有内容
-            captureHistoryImageSpriteRef.current?.destroy(); // 移除历史截图
-            imageSpriteRef.current?.removeFromParent(); // 移除当前截图
+            await clearContainer(DRAW_LAYER_BLUR_CONTAINER_KEY);
 
             if (!item) {
-                captureHistoryImageTextureRef.current = undefined;
-
-                if (imageContainerRef.current && imageSpriteRef.current) {
-                    imageContainerRef.current.addChild(imageSpriteRef.current);
+                if (currentCaptureImageSrcRef.current) {
+                    await addImageToContainer(
+                        INIT_CONTAINER_KEY,
+                        currentCaptureImageSrcRef.current,
+                    );
                 }
             } else {
-                let imageTexture: PIXI.Texture | undefined = undefined;
-                try {
-                    const fileUri = convertFileSrc(
-                        await getCaptureHistoryImageAbsPath(item.file_name),
-                    );
-
-                    imageTexture = await PIXI.Assets.load<PIXI.Texture>({
-                        src: fileUri,
-                        parser: 'texture',
-                    });
-                } catch (error) {
-                    // 如果读取失败，则使用当前截图
-                    imageTexture = imageTextureRef.current;
-
-                    console.warn('[switchCaptureHistory] failed read image file', error);
-                }
-
-                if (imageTexture) {
-                    captureHistoryImageTextureRef.current = imageTexture;
-                    const imageSprite = new PIXI.Sprite(imageTexture);
-                    captureHistoryImageSpriteRef.current = imageSprite;
-
-                    imageContainerRef.current?.addChild(imageSprite);
-                }
+                const fileUri = convertFileSrc(await getCaptureHistoryImageAbsPath(item.file_name));
+                await addImageToContainer(INIT_CONTAINER_KEY, fileUri);
             }
 
-            getCanvasApp()!.render();
+            await canvasRender();
         },
-        [getCanvasApp],
+        [addImageToContainer, canvasRender, clearContainer],
     );
 
     useImperativeHandle(
@@ -114,15 +89,24 @@ const DrawLayerCore: React.FC<DrawLayerProps> = ({ actionRef }) => {
             ...defaultBaseLayerActions,
             onCaptureReady,
             onCaptureFinish,
-            getBlurContainer: () => blurContainerRef.current,
-            getDrawContainer: () => drawContainerRef.current,
-            getImageTexture: () => captureHistoryImageTextureRef.current ?? imageTextureRef.current,
             switchCaptureHistory,
+            createBlurSprite,
+            updateBlurSprite,
+            deleteBlurSprite,
+            canvasRender,
         }),
-        [onCaptureFinish, onCaptureReady, switchCaptureHistory],
+        [
+            onCaptureFinish,
+            onCaptureReady,
+            switchCaptureHistory,
+            createBlurSprite,
+            updateBlurSprite,
+            deleteBlurSprite,
+            canvasRender,
+        ],
     );
 
     return <></>;
 };
 
-export default withBaseLayer(DrawLayerCore, zIndexs.Draw_DrawLayer);
+export const DrawLayer = withBaseLayer(DrawLayerCore, zIndexs.Draw_DrawLayer);

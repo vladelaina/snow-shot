@@ -1,13 +1,7 @@
 import { useCallback, useContext, useRef } from 'react';
 import { DrawContext } from '@/app/draw/types';
 import { useStateSubscriber } from '@/hooks/useStateSubscriber';
-import * as PIXI from 'pixi.js';
-import {
-    CaptureBoundingBoxInfo,
-    CaptureEvent,
-    CaptureEventParams,
-    CaptureEventPublisher,
-} from '@/app/draw/extra';
+import { CaptureEvent, CaptureEventParams, CaptureEventPublisher } from '@/app/draw/extra';
 import { useCallbackRender } from '@/hooks/useCallbackRender';
 import {
     ExcalidrawEventOnChangeParams,
@@ -16,6 +10,7 @@ import {
     ExcalidrawOnHandleEraserParams,
     ExcalidrawOnHandleEraserPublisher,
 } from '@/app/fullScreenDraw/components/drawCore/extra';
+import { DRAW_LAYER_BLUR_CONTAINER_KEY } from '../../../drawLayer';
 
 type BlurSpriteProps = {
     blur: number;
@@ -47,32 +42,17 @@ const isEqualBlurSpriteProps = (
 
 const BlurToolCore: React.FC = () => {
     const { drawLayerActionRef, drawCacheLayerActionRef } = useContext(DrawContext);
-    const captureBoundingBoxInfoRef = useRef<CaptureBoundingBoxInfo | undefined>(undefined);
     const blurSpriteMapRef = useRef<
         Map<
             string,
             {
-                sprite: PIXI.Sprite;
-                spriteBlurFliter: PIXI.BlurFilter;
-                spriteMask: PIXI.Graphics;
                 props: BlurSpriteProps;
             }
         >
     >(new Map());
     const clear = useCallback(() => {
-        captureBoundingBoxInfoRef.current = undefined;
         blurSpriteMapRef.current.clear();
     }, []);
-    const init = useCallback(
-        (imageTexture: PIXI.Texture, captureBoundingBoxInfo: CaptureBoundingBoxInfo) => {
-            if (!drawLayerActionRef.current) {
-                return;
-            }
-
-            captureBoundingBoxInfoRef.current = captureBoundingBoxInfo;
-        },
-        [drawLayerActionRef],
-    );
 
     useStateSubscriber(
         CaptureEventPublisher,
@@ -83,30 +63,21 @@ const BlurToolCore: React.FC = () => {
                 }
 
                 if (params.event === CaptureEvent.onCaptureLoad) {
-                    init(params.params[0], params.params[2]);
                 } else if (params.event === CaptureEvent.onCaptureFinish) {
                     clear();
                 }
             },
-            [clear, init],
+            [clear],
         ),
     );
 
     const updateBlur = useCallback(
-        (params: ExcalidrawEventOnChangeParams['params'] | undefined) => {
+        async (params: ExcalidrawEventOnChangeParams['params'] | undefined) => {
             if (!params) {
                 return;
             }
 
-            const blurContainer = drawLayerActionRef.current?.getBlurContainer();
-            const imageTexture = drawLayerActionRef.current?.getImageTexture();
-
-            if (
-                !drawLayerActionRef.current ||
-                !blurContainer ||
-                !captureBoundingBoxInfoRef.current ||
-                !imageTexture
-            ) {
+            if (!drawLayerActionRef.current) {
                 return;
             }
 
@@ -146,37 +117,20 @@ const BlurToolCore: React.FC = () => {
 
                 let blurSprite = blurSpriteMapRef.current.get(element.id);
                 if (!blurSprite) {
+                    await drawLayerActionRef.current.createBlurSprite(
+                        DRAW_LAYER_BLUR_CONTAINER_KEY,
+                        element.id,
+                    );
+
                     blurSprite = {
-                        sprite: new PIXI.Sprite(imageTexture),
-                        spriteBlurFliter: new PIXI.BlurFilter(),
-                        spriteMask: new PIXI.Graphics(),
                         props: {
                             ...blurProps,
                             blur: -1,
                         },
                     };
-                    blurSprite.sprite.filters = [blurSprite.spriteBlurFliter];
-                    blurSprite.sprite.x = 0;
-                    blurSprite.sprite.y = 0;
-                    blurSprite.sprite.width = imageTexture.width;
-                    blurSprite.sprite.height = imageTexture.height;
-                    blurSprite.sprite.setMask({
-                        mask: blurSprite.spriteMask,
-                    });
-                    blurSprite.spriteMask.setFillStyle({
-                        color: 'white',
-                        alpha: 1,
-                    });
-                    drawLayerActionRef.current.addChildToContainer(
-                        blurContainer,
-                        blurSprite.sprite,
-                    );
-                    drawLayerActionRef.current.addChildToContainer(
-                        blurContainer,
-                        blurSprite.spriteMask,
-                    );
 
                     blurSpriteMapRef.current.set(element.id, blurSprite);
+
                     needRender = true;
                 }
 
@@ -185,25 +139,12 @@ const BlurToolCore: React.FC = () => {
                     continue;
                 }
 
-                blurSprite.spriteMask
-                    .clear()
-                    .rotateTransform(blurProps.angle)
-                    .translateTransform(
-                        blurProps.x + blurProps.width * 0.5,
-                        blurProps.y + blurProps.height * 0.5,
-                    )
-                    .scaleTransform(blurProps.zoom, blurProps.zoom)
-                    .rect(
-                        -blurProps.width * 0.5,
-                        -blurProps.height * 0.5,
-                        blurProps.width,
-                        blurProps.height,
-                    )
-                    .fill();
-                blurSprite.sprite.alpha = blurProps.opacity / 100;
-                if (blurSprite.props.blur !== blurProps.blur) {
-                    blurSprite.spriteBlurFliter.strength = Math.max(0, (blurProps.blur / 100) * 32);
-                }
+                await drawLayerActionRef.current.updateBlurSprite(
+                    element.id,
+                    blurProps,
+                    blurSprite.props.blur !== blurProps.blur,
+                );
+
                 blurSprite.props = blurProps;
                 needRender = true;
             }
@@ -211,19 +152,15 @@ const BlurToolCore: React.FC = () => {
             const blurSprites = Array.from(blurSpriteMapRef.current.entries()).filter(
                 ([, blurSprite]) => !blurSprite.props.valid,
             );
-            for (const [id, blurSprite] of blurSprites) {
+            for (const [id] of blurSprites) {
                 blurSpriteMapRef.current.delete(id);
-                blurContainer.removeChild(blurSprite.sprite);
-                blurContainer.removeChild(blurSprite.spriteMask);
-                blurSprite.sprite.destroy();
-                blurSprite.spriteBlurFliter.destroy();
-                blurSprite.spriteMask.destroy();
+                await drawLayerActionRef.current.deleteBlurSprite(id);
 
                 needRender = true;
             }
 
             if (needRender) {
-                drawLayerActionRef.current.getCanvasApp()!.render();
+                drawLayerActionRef.current.canvasRender();
             }
         },
         [drawCacheLayerActionRef, drawLayerActionRef],
@@ -236,13 +173,14 @@ const BlurToolCore: React.FC = () => {
                 return;
             }
 
-            params.elements.forEach((id) => {
+            params.elements.forEach(async (id) => {
                 const blurSprite = blurSpriteMapRef.current.get(id);
                 if (!blurSprite) {
                     return;
                 }
-                blurSprite.sprite.alpha = (blurSprite.props.opacity / 100) * 0.2;
-                drawLayerActionRef.current?.getCanvasApp()!.render();
+                blurSprite.props.opacity = (blurSprite.props.opacity / 100) * 0.2;
+                await drawLayerActionRef.current?.updateBlurSprite(id, blurSprite.props, true);
+                drawLayerActionRef.current?.canvasRender();
             });
         },
         [drawLayerActionRef],

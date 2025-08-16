@@ -35,11 +35,6 @@ export const ScanQrcodeTool: React.FC<{
             opacity: 1,
         });
 
-        const canvasApp = drawLayerActionRef.current?.getCanvasApp();
-        if (!canvasApp) {
-            return;
-        }
-
         const imageData = await drawLayerActionRef.current?.getImageData(selectRect);
         if (!imageData) {
             return;

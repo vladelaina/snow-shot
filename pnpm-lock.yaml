@@ -150,11 +150,8 @@ importers:
         specifier: ^2.3.0
         version: 2.3.0
       turbo-png:
-        specifier: file:..\turbo-png\pkg
-        version: file:../turbo-png/pkg
-      turbo-webp:
-        specifier: 0.2.0
-        version: 0.2.0
+        specifier: 0.0.3
+        version: 0.0.3
       url-join:
         specifier: ^5.0.0
         version: 5.0.0
@@ -4177,11 +4174,8 @@ packages:
   tunnel-rat@0.1.2:
     resolution: {integrity: sha512-lR5VHmkPhzdhrM092lI2nACsLO4QubF0/yoOhzX7c+wIpbN1GjHNzCc91QlpxBi+cnx8vVJ+Ur6vL5cEoQPFpQ==}
 
-  turbo-png@file:../turbo-png/pkg:
-    resolution: {directory: ../turbo-png/pkg, type: directory}
-
-  turbo-webp@0.2.0:
-    resolution: {integrity: sha512-1LIjR5xbHR/rnyuAfgbVK4wTO2dU02+gOsA0AWwqtIcrdRCAEfjrtNsezk2RgNQR3n7lhjyDxNt9XRzkpOALvQ==}
+  turbo-png@0.0.3:
+    resolution: {integrity: sha512-gcS91DTyIMSjX/AnFcyDPFoVks2qinoioV1FRz4LPg2R3ognPAYTD24r2UTzpe/geV2xeOmHwKN7eLt/k6rWCw==}
 
   type-check@0.4.0:
     resolution: {integrity: sha512-XleUoc9uwGXqjWwXaUTZAmzMcFZ5858QA2vvx1Ur5xIcixXIP+8LnFDgRplU30us6teqdlskFfu+ae4K79Ooew==}
@@ -9242,9 +9236,7 @@ snapshots:
       - immer
       - react
 
-  turbo-png@file:../turbo-png/pkg: {}
-
-  turbo-webp@0.2.0: {}
+  turbo-png@0.0.3: {}
 
   type-check@0.4.0:
     dependencies:

@@ -4,10 +4,9 @@ import { createDrawWindow, ElementRect, getMousePosition, ImageBuffer } from '@/
 import { EventListenerContext } from '@/components/eventListener';
 import React, { useMemo, useState } from 'react';
 import { useCallback, useContext, useEffect, useRef } from 'react';
-import * as PIXI from 'pixi.js';
 import { CanvasLayer, CaptureStep, DrawContext, DrawContextType } from './types';
 import SelectLayer, { SelectLayerActionType } from './components/selectLayer';
-import DrawLayer, { DrawLayerActionType } from './components/drawLayer';
+import { DrawLayer, DrawLayerActionType } from './components/drawLayer';
 import { Window as AppWindow, getCurrentWindow } from '@tauri-apps/api/window';
 import {
     CaptureLoadingPublisher,
@@ -156,13 +155,13 @@ const DrawPageCore: React.FC = () => {
     const [getCaptureEvent, setCaptureEvent] = useStateSubscriber(CaptureEventPublisher, undefined);
     const onCaptureLoad = useCallback<BaseLayerEventActionType['onCaptureLoad']>(
         async (
-            texture: PIXI.Texture,
+            imageSrc: string,
             imageBuffer: ImageBuffer,
             captureBoundingBoxInfo: CaptureBoundingBoxInfo,
         ) => {
             await Promise.all([
                 drawLayerActionRef.current?.onCaptureLoad(
-                    texture,
+                    imageSrc,
                     imageBuffer,
                     captureBoundingBoxInfo,
                 ),
@@ -170,7 +169,7 @@ const DrawPageCore: React.FC = () => {
 
             setCaptureEvent({
                 event: CaptureEvent.onCaptureLoad,
-                params: [texture, imageBuffer, captureBoundingBoxInfo],
+                params: [imageSrc, imageBuffer, captureBoundingBoxInfo],
             });
         },
         [setCaptureEvent],
@@ -248,10 +247,6 @@ const DrawPageCore: React.FC = () => {
             }
 
             imageBlobUrlRef.current = URL.createObjectURL(new Blob([imageBuffer.data]));
-            const imageTexture = await PIXI.Assets.load<PIXI.Texture>({
-                src: imageBlobUrlRef.current,
-                parser: 'texture',
-            });
             mousePositionRef.current = new MousePosition(
                 Math.floor(captureBoundingBoxInfo.mousePosition.mouseX / window.devicePixelRatio),
                 Math.floor(captureBoundingBoxInfo.mousePosition.mouseY / window.devicePixelRatio),
@@ -259,7 +254,7 @@ const DrawPageCore: React.FC = () => {
 
             await Promise.all([
                 drawLayerActionRef.current?.onCaptureReady(
-                    imageTexture,
+                    imageBlobUrlRef.current,
                     imageBuffer,
                     captureBoundingBoxInfo,
                 ),
@@ -267,11 +262,11 @@ const DrawPageCore: React.FC = () => {
             ]);
             setCaptureEvent({
                 event: CaptureEvent.onCaptureReady,
-                params: [imageTexture, imageBuffer, captureBoundingBoxInfo],
+                params: [imageBlobUrlRef.current, imageBuffer, captureBoundingBoxInfo],
             });
             setCaptureLoading(false);
 
-            onCaptureLoad(imageTexture, imageBuffer, captureBoundingBoxInfo);
+            onCaptureLoad(imageBlobUrlRef.current, imageBuffer, captureBoundingBoxInfo);
         },
         [onCaptureLoad, setCaptureLoading, setCaptureEvent],
     );

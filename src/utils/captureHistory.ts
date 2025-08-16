@@ -69,11 +69,11 @@ export class CaptureHistory {
             create_ts: timestamp,
             excalidraw_elements: excalidrawElements,
             excalidraw_app_state: excalidrawAppState
-                ? {
+                ? ({
                       zoom: excalidrawAppState.zoom,
                       scrollX: excalidrawAppState.scrollX,
                       scrollY: excalidrawAppState.scrollY,
-                  }
+                  } as CaptureHistoryItem['excalidraw_app_state'])
                 : undefined,
         };
     }
