@@ -40,19 +40,26 @@ import Color from 'color';
 import { DrawToolbarStatePublisher } from '../drawToolbar';
 import { SelectState } from '../selectLayer/extra';
 import { DrawState, DrawStatePublisher } from '@/app/fullScreenDraw/components/drawCore/extra';
-import { writeTextToClipboard } from '@/utils/clipboard';
 import { useMoveCursor } from './extra';
-import { getPlatform } from '@/utils';
+import { getPlatform, supportOffscreenCanvas } from '@/utils';
 import { getExcalidrawCanvas } from '@/utils/excalidraw';
 import { ImageBuffer } from '@/commands';
-import { getPixels } from './workers/getPixels';
 import { CaptureHistoryItem } from '@/utils/appStore';
+import {
+    COLOR_PICKER_PREVIEW_CANVAS_SIZE,
+    COLOR_PICKER_PREVIEW_PICKER_SIZE,
+    COLOR_PICKER_PREVIEW_SCALE,
+} from './renderActions';
+import {
+    getPreviewImageDataAction,
+    initImageDataAction,
+    initPreviewCanvasAction,
+    putImageDataAction,
+    switchCaptureHistoryAction,
+} from './actions';
+import { writeTextToClipboard } from '@/utils/clipboard';
 import { convertFileSrc } from '@tauri-apps/api/core';
 import { getCaptureHistoryImageAbsPath } from '@/utils/captureHistory';
-
-const previewScale = 12;
-const previewPickerSize = 10 + 1;
-const previewCanvasSize = previewPickerSize * previewScale;
 
 export enum ColorPickerShowMode {
     Always = 0,
@@ -81,7 +88,7 @@ export const isEnableColorPicker = (
 };
 
 export type ColorPickerActionType = {
-    getCurrentImageData: () => ImageData | undefined;
+    getPreviewImageData: () => Promise<ImageData | null>;
     switchCaptureHistory: (item: CaptureHistoryItem | undefined) => Promise<void>;
 };
 
@@ -97,6 +104,13 @@ const colorPickerColorFormatList = [
     ColorPickerColorFormat.HSL,
 ];
 
+const decoderWasmModuleArrayBuffer =
+    typeof window !== 'undefined'
+        ? await fetch(new URL('turbo-png/turbo_png_bg.wasm', import.meta.url)).then((res) =>
+              res.arrayBuffer(),
+          )
+        : (undefined as unknown as ArrayBuffer);
+
 const ColorPickerCore: React.FC<{
     onCopyColor?: () => void;
     actionRef: React.Ref<ColorPickerActionType | undefined>;
@@ -108,6 +122,7 @@ const ColorPickerCore: React.FC<{
     const [getCaptureEvent] = useStateSubscriber(CaptureEventPublisher, undefined);
     const [getScreenshotType] = useStateSubscriber(ScreenshotTypePublisher, undefined);
     const [getAppSettings] = useStateSubscriber(AppSettingsPublisher, undefined);
+    const imageDataReadyRef = useRef(false);
 
     const { updateAppSettings } = useContext(AppSettingsActionContext);
 
@@ -125,7 +140,7 @@ const ColorPickerCore: React.FC<{
             return;
         }
 
-        if (!currentCanvasImageDataRef.current) {
+        if (!imageDataReadyRef.current) {
             return;
         }
 
@@ -197,7 +212,9 @@ const ColorPickerCore: React.FC<{
 
     const colorPickerRef = useRef<HTMLDivElement>(null);
     const previewCanvasRef = useRef<HTMLCanvasElement>(null);
+    const previewOffscreenCanvasRef = useRef<OffscreenCanvas>(null);
     const previewCanvasCtxRef = useRef<CanvasRenderingContext2D | null>(null);
+    const decoderWasmModuleArrayBufferRef = useRef<ArrayBuffer | null>(null);
     const pickerPositionRef = useRef<MousePosition>(new MousePosition(0, 0));
     const updatePickerPosition = useCallback((x: number, y: number) => {
         pickerPositionRef.current.mouseX = x;
@@ -206,6 +223,13 @@ const ColorPickerCore: React.FC<{
         if (pickerPositionElementRef.current) {
             pickerPositionElementRef.current.textContent = `X: ${x} Y: ${y}`;
         }
+    }, []);
+    const renderWorker = useMemo(() => {
+        if (supportOffscreenCanvas()) {
+            return new Worker(new URL('./workers/renderWorker.ts', import.meta.url));
+        }
+
+        return undefined;
     }, []);
 
     const enableRef = useRef(false);
@@ -263,14 +287,15 @@ const ColorPickerCore: React.FC<{
     useStateSubscriber(ScreenshotTypePublisher, updateEnableDebounce);
     useStateSubscriber(DrawToolbarStatePublisher, updateEnableDebounce);
 
-    const currentCanvasImageDataRef = useRef<ImageData | undefined>(undefined);
+    const previewImageDataRef = useRef<ImageData | null>(null);
     const captureHistoryImageDataRef = useRef<ImageData | undefined>(undefined);
-    const getCurrentImageData = useCallback(() => {
-        if (captureHistoryImageDataRef.current) {
-            return captureHistoryImageDataRef.current;
-        }
-        return currentCanvasImageDataRef.current;
-    }, []);
+    const getPreviewImageData = useCallback(async () => {
+        return await getPreviewImageDataAction(
+            renderWorker,
+            previewImageDataRef,
+            captureHistoryImageDataRef,
+        );
+    }, [renderWorker]);
 
     const colorRef = useRef({
         red: 0,
@@ -330,12 +355,20 @@ const ColorPickerCore: React.FC<{
 
     const { isDisableMouseMove, enableMouseMove, disableMouseMove } = useMoveCursor();
     const updateImageDataPutImage = useCallback(
-        (ctx: CanvasRenderingContext2D, x: number, y: number, imageData: ImageData) => {
-            ctx.clearRect(0, 0, previewPickerSize, previewPickerSize);
-
-            ctx.putImageData(imageData, -x, -y, x, y, previewPickerSize, previewPickerSize);
+        async (x: number, y: number, baseIndex: number) => {
+            const color = await putImageDataAction(
+                renderWorker,
+                previewCanvasCtxRef,
+                previewImageDataRef,
+                captureHistoryImageDataRef,
+                x,
+                y,
+                baseIndex,
+            );
+            // 更新颜色
+            updateColor(color.color[0], color.color[1], color.color[2]);
         },
-        [],
+        [renderWorker, updateColor],
     );
     const updateImageDataPutImageRender = useCallbackRender(updateImageDataPutImage);
     const updateImageData = useCallback(
@@ -368,36 +401,22 @@ const ColorPickerCore: React.FC<{
                 captureBoundingBoxInfo.height - 1,
             );
 
-            const ctx = previewCanvasCtxRef.current!;
-            const halfPickerSize = Math.floor(previewPickerSize / 2);
+            const halfPickerSize = Math.floor(COLOR_PICKER_PREVIEW_PICKER_SIZE / 2);
             // 将数据绘制到预览画布
             updatePickerPosition(mouseX, mouseY);
 
-            const imageData = getCurrentImageData();
-            if (imageData) {
-                const baseIndex = (mouseY * captureBoundingBoxInfo.width + mouseX) * 4;
+            const baseIndex = (mouseY * captureBoundingBoxInfo.width + mouseX) * 4;
 
-                // 更新颜色
-                updateColor(
-                    imageData.data[baseIndex] ?? 0,
-                    imageData.data[baseIndex + 1] ?? 0,
-                    imageData.data[baseIndex + 2] ?? 0,
-                );
-
-                // 计算和绘制错开 1 帧率
-                updateImageDataPutImageRender(
-                    ctx,
-                    mouseX - halfPickerSize,
-                    mouseY - halfPickerSize,
-                    imageData,
-                );
-            }
+            // 计算和绘制错开 1 帧率
+            updateImageDataPutImageRender(
+                mouseX - halfPickerSize,
+                mouseY - halfPickerSize,
+                baseIndex,
+            );
         },
         [
             captureBoundingBoxInfoRef,
             enableMouseMove,
-            getCurrentImageData,
-            updateColor,
             updateImageDataPutImageRender,
             updatePickerPosition,
         ],
@@ -437,21 +456,34 @@ const ColorPickerCore: React.FC<{
         },
         [updateImageRender, updateTransformRender],
     );
-    const initPreviewCanvas = useCallback(() => {
+
+    const initedPreviewCanvasRef = useRef(false);
+    const initPreviewCanvas = useCallback(async () => {
+        if (initedPreviewCanvasRef.current) {
+            return;
+        }
+
+        initedPreviewCanvasRef.current = true;
+
         const previewCanvas = previewCanvasRef.current;
         if (!previewCanvas) {
             return;
         }
 
-        const ctx = previewCanvas.getContext('2d');
-        if (!ctx) {
-            return;
+        if (supportOffscreenCanvas() && !previewOffscreenCanvasRef.current) {
+            previewOffscreenCanvasRef.current = previewCanvas.transferControlToOffscreen();
         }
 
-        previewCanvasCtxRef.current = ctx;
-        previewCanvas.width = previewPickerSize;
-        previewCanvas.height = previewPickerSize;
-    }, []);
+        await initPreviewCanvasAction(
+            renderWorker,
+            previewCanvasRef,
+            previewOffscreenCanvasRef,
+            previewCanvasCtxRef,
+            decoderWasmModuleArrayBufferRef,
+            decoderWasmModuleArrayBuffer,
+            previewOffscreenCanvasRef.current ? [previewOffscreenCanvasRef.current] : undefined,
+        );
+    }, [renderWorker]);
 
     const refreshMouseMove = useCallback(() => {
         update(
@@ -463,22 +495,25 @@ const ColorPickerCore: React.FC<{
     }, [update]);
 
     const initImageData = useCallback(
-        async (imageBuffer: ArrayBuffer) => {
-            // 这里用 wasm 解码图片来获取像素点，如果通过读取 canvas 的上下文获取会阻塞主线程
-            getPixels(imageBuffer).then((pixels) => {
-                currentCanvasImageDataRef.current = pixels.data;
-                refreshMouseMove();
-            });
+        async (imageBuffer: ImageBuffer) => {
+            await initImageDataAction(
+                renderWorker,
+                previewCanvasRef,
+                previewImageDataRef,
+                decoderWasmModuleArrayBufferRef,
+                imageBuffer,
+            );
+            imageDataReadyRef.current = true;
+            refreshMouseMove();
         },
-        [refreshMouseMove],
+        [renderWorker, refreshMouseMove],
     );
 
-    const onCaptureReady = useCallback(
+    const onCaptureImageBufferReady = useCallback(
         async (imageBuffer: ImageBuffer) => {
-            initPreviewCanvas();
-            initImageData(imageBuffer.buffer);
+            await initImageData(imageBuffer);
         },
-        [initImageData, initPreviewCanvas],
+        [initImageData],
     );
     const [, setDrawEvent] = useStateSubscriber(DrawEventPublisher, undefined);
     const onCaptureLoad = useCallback(
@@ -494,12 +529,12 @@ const ColorPickerCore: React.FC<{
         useCallback(
             (captureEvent: CaptureEventParams | undefined) => {
                 if (captureEvent?.event === CaptureEvent.onCaptureFinish) {
-                    currentCanvasImageDataRef.current = undefined;
+                    imageDataReadyRef.current = false;
                 } else if (captureEvent?.event === CaptureEvent.onCaptureImageBufferReady) {
-                    onCaptureReady(captureEvent.params.imageBuffer);
+                    onCaptureImageBufferReady(captureEvent.params.imageBuffer);
                 }
             },
-            [onCaptureReady],
+            [onCaptureImageBufferReady],
         ),
     );
 
@@ -582,25 +617,30 @@ const ColorPickerCore: React.FC<{
                 refreshMouseMove();
                 return;
             }
-
             const fileUri = convertFileSrc(await getCaptureHistoryImageAbsPath(item.file_name));
-            const fileBuffer = await fetch(fileUri).then((res) => res.arrayBuffer());
-
-            const pixels = await getPixels(fileBuffer);
-            captureHistoryImageDataRef.current = pixels.data;
+            await switchCaptureHistoryAction(
+                renderWorker,
+                decoderWasmModuleArrayBufferRef,
+                captureHistoryImageDataRef,
+                fileUri,
+            );
             refreshMouseMove();
         },
-        [refreshMouseMove],
+        [renderWorker, refreshMouseMove],
     );
 
     useImperativeHandle(
         actionRef,
         () => ({
-            getCurrentImageData,
+            getPreviewImageData,
             switchCaptureHistory,
         }),
-        [getCurrentImageData, switchCaptureHistory],
+        [getPreviewImageData, switchCaptureHistory],
     );
+
+    useEffect(() => {
+        initPreviewCanvas();
+    }, [initPreviewCanvas]);
 
     return (
         <div className="color-picker" ref={colorPickerRef}>
@@ -723,8 +763,8 @@ const ColorPickerCore: React.FC<{
                     }
 
                     .color-picker-container {
-                        width: ${previewCanvasSize}px;
-                        height: ${previewCanvasSize}px;
+                        width: ${COLOR_PICKER_PREVIEW_CANVAS_SIZE}px;
+                        height: ${COLOR_PICKER_PREVIEW_CANVAS_SIZE}px;
                         border-radius: ${token.borderRadius}px;
                         overflow: hidden;
                     }
@@ -734,17 +774,17 @@ const ColorPickerCore: React.FC<{
 
                     .color-picker-preview-border {
                         position: absolute;
-                        width: ${1 * previewScale}px;
-                        height: ${1 * previewScale}px;
-                        left: ${previewCanvasSize / 2 - 2}px;
-                        top: ${previewCanvasSize / 2 - 2}px;
+                        width: ${1 * COLOR_PICKER_PREVIEW_SCALE}px;
+                        height: ${1 * COLOR_PICKER_PREVIEW_SCALE}px;
+                        left: ${COLOR_PICKER_PREVIEW_CANVAS_SIZE / 2 - 2}px;
+                        top: ${COLOR_PICKER_PREVIEW_CANVAS_SIZE / 2 - 2}px;
                         background-color: transparent;
                         border-radius: ${token.borderRadiusXS}px;
                     }
 
                     .preview-canvas {
-                        width: ${previewCanvasSize}px;
-                        height: ${previewCanvasSize}px;
+                        width: ${COLOR_PICKER_PREVIEW_CANVAS_SIZE}px;
+                        height: ${COLOR_PICKER_PREVIEW_CANVAS_SIZE}px;
                         image-rendering: pixelated;
                     }
 
@@ -754,7 +794,7 @@ const ColorPickerCore: React.FC<{
                         gap: ${token.marginXXS}px;
                         margin-top: ${token.marginXXS}px;
                         font-size: ${token.fontSizeSM}px;
-                        width: ${previewCanvasSize}px;
+                        width: ${COLOR_PICKER_PREVIEW_CANVAS_SIZE}px;
                         border-bottom-left-radius: ${token.borderRadius}px;
                         border-bottom-right-radius: ${token.borderRadius}px;
                         overflow: hidden;

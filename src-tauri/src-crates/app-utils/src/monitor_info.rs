@@ -1,3 +1,4 @@
+use image::GenericImage;
 use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
 use snow_shot_app_shared::ElementRect;
 use xcap::Monitor;
@@ -56,6 +57,48 @@ impl MonitorInfo {
             min_y: monitor_crop_region.min_y - self.rect.min_y,
             max_x: monitor_crop_region.max_x - self.rect.min_x,
             max_y: monitor_crop_region.max_y - self.rect.min_y,
+        }
+    }
+}
+
+/// 将一个图像绘制到另一个图像上
+///
+/// # Arguments
+///
+/// - `image_pixels` (`&mut [u8]`) - 合并后的图像像素数据
+/// - `target_pixels` (`&[u8]`) - 待合并的图像的像素数组
+/// - `offset_x` (`i64`) - 待合并的图像在合并后的图像上的偏移量
+/// - `offset_y` (`i64`) - 待合并的图像在合并后的图像上的偏移量
+///
+/// ```
+fn overlay_image(
+    image_pixels: &mut Vec<u8>,
+    image_width: usize,
+    target_image: &image::DynamicImage,
+    offset_x: usize,
+    offset_y: usize,
+    channel_count: usize,
+) {
+    let image_pixels_ptr = image_pixels.as_mut_ptr();
+
+    let target_image_width = target_image.width() as usize;
+    let target_image_height = target_image.height() as usize;
+    let target_image_pixels = target_image.as_bytes();
+    let target_image_pixels_ptr = target_image_pixels.as_ptr();
+
+    let image_base_index = offset_y * image_width * channel_count + offset_x * channel_count;
+    unsafe {
+        for y in 0..target_image_height {
+            let image_row_ptr =
+                image_pixels_ptr.add(image_base_index + y * image_width * channel_count);
+            let target_image_row_ptr =
+                target_image_pixels_ptr.add(y * target_image_width * channel_count);
+
+            std::ptr::copy_nonoverlapping(
+                target_image_row_ptr,
+                image_row_ptr,
+                target_image_width * channel_count,
+            );
         }
     }
 }
@@ -177,6 +220,8 @@ impl MonitorList {
             };
         }
 
+        let capture_start_ts = std::time::Instant::now();
+
         // 将每个显示器截取的图像，绘制到该图像上
         let monitor_image_list = monitors
             .par_iter()
@@ -220,21 +265,43 @@ impl MonitorList {
             ));
         }
 
+        log::info!(
+            "capture_core capture duration: {:?}",
+            capture_start_ts.elapsed()
+        );
+
+        let init_image_start_ts = std::time::Instant::now();
+
         // 获取能容纳所有显示器的最小矩形
         let monitors_bounding_box = self.get_monitors_bounding_box();
 
         // 声明该图像，分配内存
-        let mut capture_image = if let Some(crop_region) = crop_region {
-            image::DynamicImage::new_rgb8(
-                (crop_region.max_x - crop_region.min_x) as u32,
-                (crop_region.max_y - crop_region.min_y) as u32,
+        let (capture_image_width, capture_image_height) = if let Some(crop_region) = crop_region {
+            (
+                (crop_region.max_x - crop_region.min_x) as usize,
+                (crop_region.max_y - crop_region.min_y) as usize,
             )
         } else {
-            image::DynamicImage::new_rgb8(
-                (monitors_bounding_box.max_x - monitors_bounding_box.min_x) as u32,
-                (monitors_bounding_box.max_y - monitors_bounding_box.min_y) as u32,
+            (
+                (monitors_bounding_box.max_x - monitors_bounding_box.min_x) as usize,
+                (monitors_bounding_box.max_y - monitors_bounding_box.min_y) as usize,
             )
         };
+
+        const RGB_CHANNEL_COUNT: usize = 3;
+        let mut capture_image_pixels: Vec<u8> = unsafe {
+            let mut vec =
+                Vec::with_capacity(capture_image_width * capture_image_height * RGB_CHANNEL_COUNT);
+            vec.set_len(capture_image_width * capture_image_height * RGB_CHANNEL_COUNT);
+            vec
+        };
+
+        log::info!(
+            "capture_core init_image duration: {:?}",
+            init_image_start_ts.elapsed()
+        );
+
+        let draw_image_start_ts = std::time::Instant::now();
 
         // 将每个显示器的截图绘制到合并图像上
         for (index, (monitor_image, monitor_crop_region)) in monitor_image_list.iter().enumerate() {
@@ -259,8 +326,29 @@ impl MonitorList {
             }
 
             // 将显示器图像绘制到合并图像上
-            image::imageops::overlay(&mut capture_image, monitor_image, offset_x, offset_y);
+            overlay_image(
+                &mut capture_image_pixels,
+                capture_image_width,
+                monitor_image,
+                offset_x as usize,
+                offset_y as usize,
+                RGB_CHANNEL_COUNT,
+            );
         }
+
+        let capture_image = image::DynamicImage::ImageRgb8(
+            image::RgbImage::from_raw(
+                capture_image_width as u32,
+                capture_image_height as u32,
+                capture_image_pixels,
+            )
+            .unwrap(),
+        );
+
+        log::info!(
+            "capture_core draw_image duration: {:?}",
+            draw_image_start_ts.elapsed()
+        );
 
         Ok(capture_image)
     }

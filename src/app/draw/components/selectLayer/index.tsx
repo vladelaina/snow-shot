@@ -454,7 +454,7 @@ const SelectLayerCore: React.FC<SelectLayerProps> = ({ actionRef }) => {
         | undefined
     >(undefined);
     const renderElementMask = useCallback(
-        (isEnable: boolean) => {
+        async (isEnable: boolean) => {
             if (isEnable) {
                 // 如果有缓存，则把遮罩去除
                 if (opacityImageDataRef.current && captureBoundingBoxInfoRef.current) {
@@ -484,7 +484,7 @@ const SelectLayerCore: React.FC<SelectLayerProps> = ({ actionRef }) => {
             ) {
                 imageData = opacityImageDataRef.current.imageData;
             } else {
-                const originalImageData = colorPickerActionRef.current?.getCurrentImageData();
+                const originalImageData = await colorPickerActionRef.current?.getPreviewImageData();
 
                 if (originalImageData) {
                     let newImageData: ImageData;

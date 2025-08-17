@@ -1,0 +1,114 @@
+import { RefType } from '../baseLayer/baseLayerRenderActions';
+import { getPixels } from './workers/getPixels';
+
+export const COLOR_PICKER_PREVIEW_SCALE = 12;
+export const COLOR_PICKER_PREVIEW_PICKER_SIZE = 10 + 1;
+export const COLOR_PICKER_PREVIEW_CANVAS_SIZE =
+    COLOR_PICKER_PREVIEW_PICKER_SIZE * COLOR_PICKER_PREVIEW_SCALE;
+
+export const renderInitPreviewCanvasAction = (
+    previewCanvasRef: RefType<HTMLCanvasElement | OffscreenCanvas | null>,
+    previewCanvasCtxRef: RefType<OffscreenCanvasRenderingContext2D | RenderingContext | null>,
+    decoderWasmModuleArrayBufferRef: RefType<ArrayBuffer | null>,
+    decoderWasmModuleArrayBuffer: ArrayBuffer | null,
+) => {
+    if (previewCanvasCtxRef.current) {
+        return;
+    }
+
+    const previewCanvas = previewCanvasRef.current;
+    if (!previewCanvas) {
+        return;
+    }
+
+    const ctx = previewCanvas.getContext('2d');
+    if (!ctx) {
+        return;
+    }
+
+    previewCanvasCtxRef.current = ctx;
+    previewCanvas.width = COLOR_PICKER_PREVIEW_PICKER_SIZE;
+    previewCanvas.height = COLOR_PICKER_PREVIEW_PICKER_SIZE;
+
+    decoderWasmModuleArrayBufferRef.current = decoderWasmModuleArrayBuffer;
+};
+
+export function renderInitImageDataAction(
+    _previewCanvasRef: RefType<OffscreenCanvas | HTMLCanvasElement | null>,
+    previewImageDataRef: RefType<ImageData | null>,
+    decoderWasmModuleArrayBufferRef: RefType<ArrayBuffer | null>,
+    imageSrc: ArrayBuffer,
+): Promise<void> {
+    return new Promise(async (resolve) => {
+        getPixels(decoderWasmModuleArrayBufferRef.current!, imageSrc as ArrayBuffer).then(
+            (pixels) => {
+                previewImageDataRef.current = pixels.data;
+                resolve(undefined);
+            },
+        );
+    });
+}
+
+export function renderPutImageDataAction(
+    previewCanvasCtxRef: RefType<
+        OffscreenCanvasRenderingContext2D | CanvasRenderingContext2D | null
+    >,
+    previewImageDataRef: RefType<ImageData | null>,
+    captureHistoryImageDataRef: RefType<ImageData | undefined>,
+    x: number,
+    y: number,
+    baseIndex: number,
+): { color: [red: number, green: number, blue: number] } {
+    const ctx = previewCanvasCtxRef.current;
+    const imageData = captureHistoryImageDataRef.current ?? previewImageDataRef.current;
+    if (!ctx || !imageData) {
+        return {
+            color: [0, 0, 0],
+        };
+    }
+
+    ctx.clearRect(0, 0, COLOR_PICKER_PREVIEW_PICKER_SIZE, COLOR_PICKER_PREVIEW_PICKER_SIZE);
+
+    ctx.putImageData(
+        imageData,
+        -x,
+        -y,
+        x,
+        y,
+        COLOR_PICKER_PREVIEW_PICKER_SIZE,
+        COLOR_PICKER_PREVIEW_PICKER_SIZE,
+    );
+
+    const color: [red: number, green: number, blue: number] = [
+        imageData.data[baseIndex] ?? 0,
+        imageData.data[baseIndex + 1] ?? 0,
+        imageData.data[baseIndex + 2] ?? 0,
+    ];
+
+    return {
+        color,
+    };
+}
+
+export function renderGetPreviewImageDataAction(
+    previewImageDataRef: RefType<ImageData | null>,
+    captureHistoryImageDataRef: RefType<ImageData | undefined>,
+): ImageData | null {
+    if (captureHistoryImageDataRef.current) {
+        return captureHistoryImageDataRef.current;
+    }
+    return previewImageDataRef.current;
+}
+
+export function renderSwitchCaptureHistoryAction(
+    decoderWasmModuleArrayBufferRef: RefType<ArrayBuffer | null>,
+    captureHistoryImageDataRef: RefType<ImageData | undefined>,
+    imageSrc: string,
+): Promise<void> {
+    return new Promise(async (resolve) => {
+        const fileBuffer = await fetch(imageSrc).then((res) => res.arrayBuffer());
+        const pixels = await getPixels(decoderWasmModuleArrayBufferRef.current!, fileBuffer);
+        captureHistoryImageDataRef.current = pixels.data;
+        resolve(undefined);
+    });
+}

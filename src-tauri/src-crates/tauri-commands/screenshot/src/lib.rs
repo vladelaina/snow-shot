@@ -39,11 +39,22 @@ pub async fn capture_current_monitor(
 }
 
 pub async fn capture_all_monitors(window: tauri::Window) -> Result<Response, String> {
+    let capture_start_ts = std::time::Instant::now();
+
     let image = snow_shot_app_utils::get_capture_monitor_list(&window.app_handle(), None)?
         .capture(Some(&window))?;
 
+    log::info!(
+        "capture_all_monitors duration: {:?}",
+        capture_start_ts.elapsed()
+    );
+
+    let encode_start_ts = std::time::Instant::now();
+
     let image_buffer =
         snow_shot_app_utils::encode_image(&image, snow_shot_app_utils::ImageEncoder::Png);
+
+    log::info!("encode_image duration: {:?}", encode_start_ts.elapsed());
 
     Ok(Response::new(image_buffer))
 }

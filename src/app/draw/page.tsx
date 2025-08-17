@@ -231,13 +231,6 @@ const DrawPageCore: React.FC = () => {
         async (imageBuffer: ImageBuffer, captureBoundingBoxInfo: CaptureBoundingBoxInfo) => {
             setCaptureLoading(true);
 
-            setCaptureEvent({
-                event: CaptureEvent.onCaptureImageBufferReady,
-                params: {
-                    imageBuffer,
-                },
-            });
-
             if (imageBlobUrlRef.current) {
                 const tempUrl = imageBlobUrlRef.current;
                 // 延迟释放 URL，提速
@@ -247,6 +240,14 @@ const DrawPageCore: React.FC = () => {
             }
 
             imageBlobUrlRef.current = URL.createObjectURL(new Blob([imageBuffer.data]));
+
+            setCaptureEvent({
+                event: CaptureEvent.onCaptureImageBufferReady,
+                params: {
+                    imageBuffer,
+                },
+            });
+
             mousePositionRef.current = new MousePosition(
                 Math.floor(captureBoundingBoxInfo.mousePosition.mouseX / window.devicePixelRatio),
                 Math.floor(captureBoundingBoxInfo.mousePosition.mouseY / window.devicePixelRatio),

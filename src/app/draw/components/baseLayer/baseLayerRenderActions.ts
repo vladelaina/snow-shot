@@ -4,7 +4,7 @@ import { RefWrap } from './workers/renderWorkerTypes';
 import { RefObject } from 'react';
 import { ElementRect } from '@/commands';
 
-type RefType<T> = RefWrap<T> | RefObject<T>;
+export type RefType<T> = RefWrap<T> | RefObject<T>;
 
 export const renderDisposeCanvasAction = (canvasAppRef: RefType<Application | undefined>) => {
     const canvasApp = canvasAppRef.current;
