@@ -11,7 +11,7 @@ export const renderDisposeCanvasAction = (canvasAppRef: RefType<Application | un
     if (!canvasApp) {
         return;
     }
-    canvasApp.destroy();
+    canvasApp.destroy(true, true);
     canvasAppRef.current = undefined;
 };
 

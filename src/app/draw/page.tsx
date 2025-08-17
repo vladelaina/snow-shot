@@ -494,6 +494,8 @@ const DrawPageCore: React.FC = () => {
         );
 
         await captureHistoryActionRef.current?.saveCurrentCapture();
+
+        imageBufferRef.current = undefined;
     }, [updateAppSettings]);
 
     const onSave = useCallback(
