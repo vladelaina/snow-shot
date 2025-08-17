@@ -149,7 +149,6 @@ pub fn run() {
             screenshot::create_draw_window,
             screenshot::switch_always_on_top,
             screenshot::set_draw_window_style,
-            screenshot::recovery_window_z_order,
             file::save_file,
             file::create_dir,
             core::exit_app,

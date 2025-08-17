@@ -9,7 +9,6 @@ import {
     getWindowElements,
     initUiElements,
     initUiElementsCache,
-    recoveryWindowZOrder,
     TryGetElementByFocus,
 } from '@/commands';
 import { AppSettingsData, AppSettingsGroup, AppSettingsPublisher } from '@/app/contextWrap';
@@ -159,16 +158,6 @@ const SelectLayerCore: React.FC<SelectLayerProps> = ({ actionRef }) => {
 
     const setSelectState = useCallback(
         (state: SelectState) => {
-            if (
-                state === SelectState.Selected &&
-                (selectStateRef.current === SelectState.Manual ||
-                    selectStateRef.current === SelectState.Auto)
-            ) {
-                recoveryWindowZOrder().then(() => {
-                    getCurrentWindow().setFocus();
-                });
-            }
-
             selectStateRef.current = state;
 
             if (state === SelectState.Selected) {
@@ -1141,8 +1130,6 @@ const SelectLayerCore: React.FC<SelectLayerProps> = ({ actionRef }) => {
                 selectStateRef.current !== SelectState.Selected
             ) {
                 finishCapture();
-                // 提前结束截图后，恢复窗口的层级
-                recoveryWindowZOrder();
 
                 e.preventDefault();
                 return;

@@ -1,4 +1,3 @@
-use image::GenericImage;
 use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
 use snow_shot_app_shared::ElementRect;
 use xcap::Monitor;

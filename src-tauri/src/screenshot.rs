@@ -3,13 +3,15 @@ use tauri::ipc::Response;
 use tauri_plugin_clipboard_manager::ClipboardExt;
 use tokio::sync::Mutex;
 
-use snow_shot_app_os::TryGetElementByFocus;
 use snow_shot_app_os::ui_automation::UIElements;
 use snow_shot_app_shared::ElementRect;
 use snow_shot_tauri_commands_screenshot::WindowElement;
 
 #[command]
-pub async fn capture_current_monitor(window: tauri::Window, encoder: String) -> Result<Response, String> {
+pub async fn capture_current_monitor(
+    window: tauri::Window,
+    encoder: String,
+) -> Result<Response, String> {
     snow_shot_tauri_commands_screenshot::capture_current_monitor(window, encoder).await
 }
 
@@ -49,21 +51,10 @@ pub async fn init_ui_elements(ui_elements: tauri::State<'_, Mutex<UIElements>>) 
 
 #[command]
 pub async fn init_ui_elements_cache(
+    window: tauri::Window,
     ui_elements: tauri::State<'_, Mutex<UIElements>>,
-    try_get_element_by_focus: TryGetElementByFocus,
-) -> Result<(), ()> {
-    snow_shot_tauri_commands_screenshot::init_ui_elements_cache(
-        ui_elements,
-        try_get_element_by_focus,
-    )
-    .await
-}
-
-#[command]
-pub async fn recovery_window_z_order(
-    ui_elements: tauri::State<'_, Mutex<UIElements>>,
-) -> Result<(), ()> {
-    snow_shot_tauri_commands_screenshot::recovery_window_z_order(ui_elements).await
+) -> Result<(), String> {
+    snow_shot_tauri_commands_screenshot::init_ui_elements_cache(window, ui_elements).await
 }
 
 #[command]
@@ -79,17 +70,11 @@ pub async fn switch_always_on_top(window_id: u32) -> bool {
 #[command]
 pub async fn get_element_from_position(
     ui_elements: tauri::State<'_, Mutex<UIElements>>,
-    window: tauri::Window,
     mouse_x: i32,
     mouse_y: i32,
 ) -> Result<Vec<ElementRect>, ()> {
-    snow_shot_tauri_commands_screenshot::get_element_from_position(
-        ui_elements,
-        window,
-        mouse_x,
-        mouse_y,
-    )
-    .await
+    snow_shot_tauri_commands_screenshot::get_element_from_position(ui_elements, mouse_x, mouse_y)
+        .await
 }
 
 #[command]

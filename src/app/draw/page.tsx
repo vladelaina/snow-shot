@@ -277,6 +277,7 @@ const DrawPageCore: React.FC = () => {
         async ({ min_x, min_y, max_x, max_y }: ElementRect) => {
             const appWindow = appWindowRef.current;
 
+            await new Promise((resolve) => setTimeout(resolve, 1000));
             await Promise.all([
                 setWindowRect(appWindow, { min_x, min_y, max_x, max_y }),
                 appWindow.setAlwaysOnTop(true),
