@@ -104,9 +104,15 @@ export function renderGetPreviewImageDataAction(
 export function renderSwitchCaptureHistoryAction(
     decoderWasmModuleArrayBufferRef: RefType<ArrayBuffer | null>,
     captureHistoryImageDataRef: RefType<ImageData | undefined>,
-    imageSrc: string,
+    imageSrc: string | undefined,
 ): Promise<void> {
     return new Promise(async (resolve) => {
+        if (!imageSrc) {
+            captureHistoryImageDataRef.current = undefined;
+            resolve(undefined);
+            return;
+        }
+
         const fileBuffer = await fetch(imageSrc).then((res) => res.arrayBuffer());
         const pixels = await getPixels(decoderWasmModuleArrayBufferRef.current!, fileBuffer);
         captureHistoryImageDataRef.current = pixels.data;

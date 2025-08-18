@@ -621,12 +621,9 @@ const ColorPickerCore: React.FC<{
 
     const switchCaptureHistory = useCallback(
         async (item: CaptureHistoryItem | undefined) => {
-            if (!item) {
-                captureHistoryImageDataRef.current = undefined;
-                refreshMouseMove();
-                return;
-            }
-            const fileUri = convertFileSrc(await getCaptureHistoryImageAbsPath(item.file_name));
+            const fileUri = item
+                ? convertFileSrc(await getCaptureHistoryImageAbsPath(item.file_name))
+                : undefined;
             await switchCaptureHistoryAction(
                 renderWorker,
                 decoderWasmModuleArrayBufferRef,

@@ -192,7 +192,7 @@ export const switchCaptureHistoryAction = async (
     renderWorker: Worker | undefined,
     decoderWasmModuleArrayBufferRef: RefType<ArrayBuffer | null>,
     captureHistoryImageDataRef: RefType<ImageData | undefined>,
-    imageSrc: string,
+    imageSrc: string | undefined,
 ): Promise<void> => {
     return new Promise(async (resolve) => {
         if (renderWorker) {

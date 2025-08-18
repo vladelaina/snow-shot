@@ -38,7 +38,7 @@ export type ColorPickerRenderGetPreviewImageDataData = {
 export type ColorPickerRenderSwitchCaptureHistoryData = {
     type: ColorPickerRenderMessageType.SwitchCaptureHistory;
     payload: {
-        imageSrc: string;
+        imageSrc: string | undefined;
     };
 };
 
