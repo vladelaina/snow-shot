@@ -219,8 +219,6 @@ impl MonitorList {
             };
         }
 
-        let capture_start_ts = std::time::Instant::now();
-
         // 将每个显示器截取的图像，绘制到该图像上
         let monitor_image_list = monitors
             .par_iter()
@@ -264,13 +262,6 @@ impl MonitorList {
             ));
         }
 
-        log::info!(
-            "capture_core capture duration: {:?}",
-            capture_start_ts.elapsed()
-        );
-
-        let init_image_start_ts = std::time::Instant::now();
-
         // 获取能容纳所有显示器的最小矩形
         let monitors_bounding_box = self.get_monitors_bounding_box();
 
@@ -294,13 +285,6 @@ impl MonitorList {
             vec.set_len(capture_image_width * capture_image_height * RGB_CHANNEL_COUNT);
             vec
         };
-
-        log::info!(
-            "capture_core init_image duration: {:?}",
-            init_image_start_ts.elapsed()
-        );
-
-        let draw_image_start_ts = std::time::Instant::now();
 
         // 将每个显示器的截图绘制到合并图像上
         for (index, (monitor_image, monitor_crop_region)) in monitor_image_list.iter().enumerate() {
@@ -342,11 +326,6 @@ impl MonitorList {
                 capture_image_pixels,
             )
             .unwrap(),
-        );
-
-        log::info!(
-            "capture_core draw_image duration: {:?}",
-            draw_image_start_ts.elapsed()
         );
 
         Ok(capture_image)
