@@ -46,7 +46,6 @@ import { zIndexs } from '@/utils/zIndex';
 import { isHotkeyPressed } from 'react-hotkeys-hook';
 import { KeyEventKey } from '../drawToolbar/components/keyEventWrap/extra';
 import { DrawState, DrawStatePublisher } from '@/app/fullScreenDraw/components/drawCore/extra';
-import { getCurrentWindow } from '@tauri-apps/api/window';
 import { getPlatform } from '@/utils';
 import { useMoveCursor } from '../colorPicker/extra';
 import { CaptureHistoryItem } from '@/utils/appStore';

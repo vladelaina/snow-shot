@@ -16,7 +16,6 @@ import { Ordered } from '@mg-chao/excalidraw/element/types';
 import { NonDeletedExcalidrawElement } from '@mg-chao/excalidraw/element/types';
 import { AntdContext } from '@/components/globalLayoutExtra';
 import { FormattedMessage } from 'react-intl';
-import { AppState } from '@mg-chao/excalidraw/types';
 
 export type CaptureHistoryActionType = {
     saveCurrentCapture: () => Promise<void>;

@@ -723,14 +723,6 @@ const DrawPageCore: React.FC = () => {
         | undefined
     >(undefined);
 
-    const recoveryWindowFocus = useMemo(() => {
-        return debounce(() => {
-            if (appWindowRef.current) {
-                appWindowRef.current.setFocus();
-            }
-        }, 128);
-    }, []);
-
     useEffect(() => {
         if (isFixed) {
             return;
@@ -786,25 +778,12 @@ const DrawPageCore: React.FC = () => {
             }, 0);
         });
 
-        const uiAutomationTryFocusListenerId = addListener('ui-automation-try-focus', () => {
-            recoveryWindowFocus();
-        });
-
         return () => {
             removeListener(listenerId);
             removeListener(finishListenerId);
             removeListener(releaseListenerId);
-            removeListener(uiAutomationTryFocusListenerId);
         };
-    }, [
-        addListener,
-        excuteScreenshot,
-        removeListener,
-        isFixed,
-        finishCapture,
-        releasePage,
-        recoveryWindowFocus,
-    ]);
+    }, [addListener, excuteScreenshot, removeListener, isFixed, finishCapture]);
 
     // 默认隐藏
     useEffect(() => {

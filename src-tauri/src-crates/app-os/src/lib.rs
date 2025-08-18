@@ -78,19 +78,7 @@ impl ElementLevel {
         }
     }
 
-    pub fn is_root(&self) -> bool {
-        self.window_index == i32::MAX
-    }
-
-    pub fn parent_is_root(&self) -> bool {
-        self.parent_index == i32::MAX
-    }
-
     pub fn next_level(&mut self) {
-        if self.is_root() {
-            self.window_index = 0;
-        }
-
         self.element_level += 1;
         let current_element_index = self.element_index;
         self.element_index = 0;
@@ -99,10 +87,6 @@ impl ElementLevel {
 
     pub fn next_element(&mut self) {
         self.element_index += 1;
-
-        if self.parent_is_root() {
-            self.window_index += 1;
-        }
     }
 }
 
