@@ -198,6 +198,7 @@ export type BlurSpriteProps = {
     angle: number;
     opacity: number;
     zoom: number;
+    eraserAlpha: undefined | number;
 };
 
 export const renderUpdateBlurSpriteAction = (
@@ -221,7 +222,7 @@ export const renderUpdateBlurSpriteAction = (
         .scaleTransform(blurProps.zoom, blurProps.zoom)
         .rect(-blurProps.width * 0.5, -blurProps.height * 0.5, blurProps.width, blurProps.height)
         .fill();
-    blurSprite.sprite.alpha = blurProps.opacity / 100;
+    blurSprite.sprite.alpha = blurProps.eraserAlpha ?? blurProps.opacity / 100;
 
     if (updateFilter) {
         blurSprite.spriteBlurFliter.strength = Math.max(0, (blurProps.blur / 100) * 32);

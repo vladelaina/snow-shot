@@ -11,18 +11,7 @@ import {
     ExcalidrawOnHandleEraserPublisher,
 } from '@/app/fullScreenDraw/components/drawCore/extra';
 import { DRAW_LAYER_BLUR_CONTAINER_KEY } from '../../../drawLayer';
-
-type BlurSpriteProps = {
-    blur: number;
-    x: number;
-    y: number;
-    width: number;
-    height: number;
-    angle: number;
-    opacity: number;
-    valid: boolean;
-    zoom: number;
-};
+import { BlurSpriteProps } from '../../../baseLayer/baseLayerRenderActions';
 
 const isEqualBlurSpriteProps = (
     a: Omit<BlurSpriteProps, 'valid'>,
@@ -46,7 +35,7 @@ const BlurToolCore: React.FC = () => {
         Map<
             string,
             {
-                props: BlurSpriteProps;
+                props: BlurSpriteProps & { valid: boolean };
             }
         >
     >(new Map());
@@ -113,6 +102,7 @@ const BlurToolCore: React.FC = () => {
                     opacity: element.opacity,
                     zoom: zoom.value,
                     valid: true,
+                    eraserAlpha: undefined,
                 };
 
                 let blurSprite = blurSpriteMapRef.current.get(element.id);
@@ -178,7 +168,12 @@ const BlurToolCore: React.FC = () => {
                 if (!blurSprite) {
                     return;
                 }
-                blurSprite.props.opacity = (blurSprite.props.opacity / 100) * 0.2;
+
+                const targetOpacity = (blurSprite.props.opacity / 100) * 0.42;
+                if (targetOpacity === blurSprite.props.eraserAlpha) {
+                    return;
+                }
+                blurSprite.props.eraserAlpha = targetOpacity;
                 await drawLayerActionRef.current?.updateBlurSprite(id, blurSprite.props, true);
                 drawLayerActionRef.current?.canvasRender();
             });

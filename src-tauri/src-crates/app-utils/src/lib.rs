@@ -247,7 +247,10 @@ pub fn capture_target_monitor(
         return match image {
             Ok(image) => Some(image::DynamicImage::ImageRgb8(image)),
             Err(error) => {
-                log::error!("[capture_target_monitor] failed to capture image: {:?}", error);
+                log::error!(
+                    "[capture_target_monitor] failed to capture image: {:?}",
+                    error
+                );
                 None
             }
         };
@@ -452,4 +455,46 @@ pub fn encode_image(image: &image::DynamicImage, encoder: ImageEncoder) -> Vec<u
     }
 
     return buf;
+}
+
+/// 将一个图像绘制到另一个图像上
+///
+/// # Arguments
+///
+/// - `image_pixels` (`&mut [u8]`) - 合并后的图像像素数据
+/// - `target_pixels` (`&[u8]`) - 待合并的图像的像素数组
+/// - `offset_x` (`i64`) - 待合并的图像在合并后的图像上的偏移量
+/// - `offset_y` (`i64`) - 待合并的图像在合并后的图像上的偏移量
+///
+/// ```
+pub fn overlay_image(
+    image_pixels: &mut Vec<u8>,
+    image_width: usize,
+    target_image: &image::DynamicImage,
+    offset_x: usize,
+    offset_y: usize,
+    channel_count: usize,
+) {
+    let image_pixels_ptr = image_pixels.as_mut_ptr();
+
+    let target_image_width = target_image.width() as usize;
+    let target_image_height = target_image.height() as usize;
+    let target_image_pixels = target_image.as_bytes();
+    let target_image_pixels_ptr = target_image_pixels.as_ptr();
+
+    let image_base_index = offset_y * image_width * channel_count + offset_x * channel_count;
+    unsafe {
+        for y in 0..target_image_height {
+            let image_row_ptr =
+                image_pixels_ptr.add(image_base_index + y * image_width * channel_count);
+            let target_image_row_ptr =
+                target_image_pixels_ptr.add(y * target_image_width * channel_count);
+
+            std::ptr::copy_nonoverlapping(
+                target_image_row_ptr,
+                image_row_ptr,
+                target_image_width * channel_count,
+            );
+        }
+    }
 }
