@@ -9,7 +9,6 @@ import {
     getWindowElements,
     initUiElements,
     initUiElementsCache,
-    TryGetElementByFocus,
 } from '@/commands';
 import { AppSettingsData, AppSettingsGroup, AppSettingsPublisher } from '@/app/contextWrap';
 import Flatbush from 'flatbush';
@@ -257,11 +256,7 @@ const SelectLayerCore: React.FC<SelectLayerProps> = ({ actionRef }) => {
         const windowElementsPromise = getWindowElements();
 
         const rectList: ElementRect[] = [];
-        const initUiElementsCachePromise = initUiElementsCache(
-            // todo: 暂时禁用，发现效果不佳
-            // getAppSettings()[AppSettingsGroup.SystemScreenshot].tryGetElementByFocus,
-            TryGetElementByFocus.Never,
-        );
+        const initUiElementsCachePromise = initUiElementsCache();
         const map = new Map<number, number>();
 
         const windowElements = await windowElementsPromise;

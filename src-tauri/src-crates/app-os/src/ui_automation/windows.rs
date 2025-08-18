@@ -44,15 +44,6 @@ pub struct UIElements {
 unsafe impl Send for UIElements {}
 unsafe impl Sync for UIElements {}
 
-/**
- * 获取兄弟节点的遍历方向
- */
-enum SiblingDirection {
-    Next,
-    Previous,
-    Unknown,
-}
-
 impl UIElements {
     pub fn new() -> Self {
         Self {
@@ -147,7 +138,7 @@ impl UIElements {
     /**
      * 初始化窗口元素缓存
      */
-    pub fn init_cache(&mut self, mouse_x: i32, mouse_y: i32) -> Result<(), UIAutomationError> {
+    pub fn init_cache(&mut self) -> Result<(), UIAutomationError> {
         let root_element = self.root_element.clone().unwrap();
 
         self.element_cache = RTree::new();
@@ -156,11 +147,6 @@ impl UIElements {
         self.element_children_next_sibling_cache.clear();
         self.window_rect_map.clear();
         self.window_index_level_map.clear();
-
-        self.automation
-            .as_ref()
-            .unwrap()
-            .element_from_point(uiautomation::types::Point::new(mouse_x, mouse_y))?;
 
         // 桌面的窗口索引应该是最高，因为其优先级最低
         let mut current_level = ElementLevel::root();

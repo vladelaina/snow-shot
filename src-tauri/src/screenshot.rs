@@ -51,10 +51,9 @@ pub async fn init_ui_elements(ui_elements: tauri::State<'_, Mutex<UIElements>>) 
 
 #[command]
 pub async fn init_ui_elements_cache(
-    window: tauri::Window,
     ui_elements: tauri::State<'_, Mutex<UIElements>>,
 ) -> Result<(), String> {
-    snow_shot_tauri_commands_screenshot::init_ui_elements_cache(window, ui_elements).await
+    snow_shot_tauri_commands_screenshot::init_ui_elements_cache(ui_elements).await
 }
 
 #[command]

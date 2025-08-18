@@ -191,14 +191,11 @@ pub async fn init_ui_elements(ui_elements: tauri::State<'_, Mutex<UIElements>>) 
 }
 
 pub async fn init_ui_elements_cache(
-    window: tauri::Window,
     ui_elements: tauri::State<'_, Mutex<UIElements>>,
 ) -> Result<(), String> {
     let mut ui_elements = ui_elements.lock().await;
 
-    let (mouse_x, mouse_y) = snow_shot_app_utils::get_mouse_position(&window.app_handle())?;
-
-    match ui_elements.init_cache(mouse_x, mouse_y) {
+    match ui_elements.init_cache() {
         Ok(_) => Ok(()),
         Err(e) => Err(format!("[init_ui_elements_cache] error: {:?}", e)),
     }
