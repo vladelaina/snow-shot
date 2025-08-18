@@ -104,12 +104,21 @@ const colorPickerColorFormatList = [
     ColorPickerColorFormat.HSL,
 ];
 
-const decoderWasmModuleArrayBuffer =
-    typeof window !== 'undefined'
-        ? await fetch(new URL('turbo-png/turbo_png_bg.wasm', import.meta.url)).then((res) =>
-              res.arrayBuffer(),
-          )
-        : (undefined as unknown as ArrayBuffer);
+let decoderWasmModuleArrayBuffer: ArrayBuffer = undefined as unknown as ArrayBuffer;
+const getDecoderWasmModuleArrayBuffer = async (): Promise<ArrayBuffer> => {
+    if (decoderWasmModuleArrayBuffer) {
+        return decoderWasmModuleArrayBuffer;
+    }
+
+    decoderWasmModuleArrayBuffer =
+        typeof window !== 'undefined'
+            ? await fetch(new URL('turbo-png/turbo_png_bg.wasm', import.meta.url)).then((res) =>
+                  res.arrayBuffer(),
+              )
+            : (undefined as unknown as ArrayBuffer);
+
+    return decoderWasmModuleArrayBuffer;
+};
 
 const ColorPickerCore: React.FC<{
     onCopyColor?: () => void;
@@ -480,7 +489,7 @@ const ColorPickerCore: React.FC<{
             previewOffscreenCanvasRef,
             previewCanvasCtxRef,
             decoderWasmModuleArrayBufferRef,
-            decoderWasmModuleArrayBuffer,
+            await getDecoderWasmModuleArrayBuffer(),
             previewOffscreenCanvasRef.current ? [previewOffscreenCanvasRef.current] : undefined,
         );
     }, [renderWorker]);

@@ -150,8 +150,8 @@ importers:
         specifier: ^2.3.0
         version: 2.3.0
       turbo-png:
-        specifier: 0.0.3
-        version: 0.0.3
+        specifier: 0.0.4
+        version: 0.0.4
       url-join:
         specifier: ^5.0.0
         version: 5.0.0
@@ -4174,8 +4174,8 @@ packages:
   tunnel-rat@0.1.2:
     resolution: {integrity: sha512-lR5VHmkPhzdhrM092lI2nACsLO4QubF0/yoOhzX7c+wIpbN1GjHNzCc91QlpxBi+cnx8vVJ+Ur6vL5cEoQPFpQ==}
 
-  turbo-png@0.0.3:
-    resolution: {integrity: sha512-gcS91DTyIMSjX/AnFcyDPFoVks2qinoioV1FRz4LPg2R3ognPAYTD24r2UTzpe/geV2xeOmHwKN7eLt/k6rWCw==}
+  turbo-png@0.0.4:
+    resolution: {integrity: sha512-pfHDNCSa7nDN2NL/faiNOwr+luycuDqrEtiiLFopK6v+VEVEOJ5VWyiesHv+ISvOzVlw7+L6kFbz/PxkQFdlNA==}
 
   type-check@0.4.0:
     resolution: {integrity: sha512-XleUoc9uwGXqjWwXaUTZAmzMcFZ5858QA2vvx1Ur5xIcixXIP+8LnFDgRplU30us6teqdlskFfu+ae4K79Ooew==}
@@ -9236,7 +9236,7 @@ snapshots:
       - immer
       - react
 
-  turbo-png@0.0.3: {}
+  turbo-png@0.0.4: {}
 
   type-check@0.4.0:
     dependencies:

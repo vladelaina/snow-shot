@@ -43,6 +43,7 @@ export function renderInitImageDataAction(
         getPixels(decoderWasmModuleArrayBufferRef.current!, imageSrc as ArrayBuffer).then(
             (pixels) => {
                 previewImageDataRef.current = pixels.data;
+
                 resolve(undefined);
             },
         );
