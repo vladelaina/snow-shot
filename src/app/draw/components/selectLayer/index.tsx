@@ -9,8 +9,6 @@ import {
     getWindowElements,
     initUiElements,
     initUiElementsCache,
-    recoveryWindowZOrder,
-    TryGetElementByFocus,
 } from '@/commands';
 import { AppSettingsData, AppSettingsGroup, AppSettingsPublisher } from '@/app/contextWrap';
 import Flatbush from 'flatbush';
@@ -48,7 +46,6 @@ import { zIndexs } from '@/utils/zIndex';
 import { isHotkeyPressed } from 'react-hotkeys-hook';
 import { KeyEventKey } from '../drawToolbar/components/keyEventWrap/extra';
 import { DrawState, DrawStatePublisher } from '@/app/fullScreenDraw/components/drawCore/extra';
-import { getCurrentWindow } from '@tauri-apps/api/window';
 import { getPlatform } from '@/utils';
 import { useMoveCursor } from '../colorPicker/extra';
 import { CaptureHistoryItem } from '@/utils/appStore';
@@ -159,16 +156,6 @@ const SelectLayerCore: React.FC<SelectLayerProps> = ({ actionRef }) => {
 
     const setSelectState = useCallback(
         (state: SelectState) => {
-            if (
-                state === SelectState.Selected &&
-                (selectStateRef.current === SelectState.Manual ||
-                    selectStateRef.current === SelectState.Auto)
-            ) {
-                recoveryWindowZOrder().then(() => {
-                    getCurrentWindow().setFocus();
-                });
-            }
-
             selectStateRef.current = state;
 
             if (state === SelectState.Selected) {
@@ -268,11 +255,7 @@ const SelectLayerCore: React.FC<SelectLayerProps> = ({ actionRef }) => {
         const windowElementsPromise = getWindowElements();
 
         const rectList: ElementRect[] = [];
-        const initUiElementsCachePromise = initUiElementsCache(
-            // todo: 暂时禁用，发现效果不佳
-            // getAppSettings()[AppSettingsGroup.SystemScreenshot].tryGetElementByFocus,
-            TryGetElementByFocus.Never,
-        );
+        const initUiElementsCachePromise = initUiElementsCache();
         const map = new Map<number, number>();
 
         const windowElements = await windowElementsPromise;
@@ -454,7 +437,7 @@ const SelectLayerCore: React.FC<SelectLayerProps> = ({ actionRef }) => {
         | undefined
     >(undefined);
     const renderElementMask = useCallback(
-        (isEnable: boolean) => {
+        async (isEnable: boolean) => {
             if (isEnable) {
                 // 如果有缓存，则把遮罩去除
                 if (opacityImageDataRef.current && captureBoundingBoxInfoRef.current) {
@@ -484,7 +467,7 @@ const SelectLayerCore: React.FC<SelectLayerProps> = ({ actionRef }) => {
             ) {
                 imageData = opacityImageDataRef.current.imageData;
             } else {
-                const originalImageData = colorPickerActionRef.current?.getCurrentImageData();
+                const originalImageData = await colorPickerActionRef.current?.getPreviewImageData();
 
                 if (originalImageData) {
                     let newImageData: ImageData;
@@ -1141,8 +1124,6 @@ const SelectLayerCore: React.FC<SelectLayerProps> = ({ actionRef }) => {
                 selectStateRef.current !== SelectState.Selected
             ) {
                 finishCapture();
-                // 提前结束截图后，恢复窗口的层级
-                recoveryWindowZOrder();
 
                 e.preventDefault();
                 return;

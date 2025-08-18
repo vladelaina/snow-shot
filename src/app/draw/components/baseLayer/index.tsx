@@ -12,17 +12,31 @@ import React, {
 import * as PIXI from 'pixi.js';
 import { ElementRect, ImageBuffer } from '@/commands';
 import styles from './index.module.css';
-import { last } from 'es-toolkit';
 import { releaseDrawPage } from '@/functions/screenshot';
 import { CaptureBoundingBoxInfo } from '../../extra';
+import {
+    clearCanvasAction,
+    createNewCanvasContainerAction,
+    disposeCanvasAction,
+    getImageDataAction,
+    initCanvasAction,
+    resizeCanvasAction,
+    canvasRenderAction,
+    addImageToContainerAction,
+    INIT_CONTAINER_KEY,
+    clearContainerAction,
+    createBlurSpriteAction,
+    updateBlurSpriteAction,
+    deleteBlurSpriteAction,
+} from './actions';
+import { supportOffscreenCanvas } from '@/utils';
+import { BlurSprite, BlurSpriteProps } from './baseLayerRenderActions';
 
 export type BaseLayerContextType = {
     /** 调整画布大小 */
     resizeCanvas: (width: number, height: number) => void;
-    /** 添加一个子元素到最上层的容器 */
-    addChildToTopContainer: (children: PIXI.Container<PIXI.ContainerChild>) => void;
     /** 创建一个新的画布容器 */
-    createNewCanvasContainer: () => PIXI.Container | undefined;
+    createNewCanvasContainer: (containerKey: string) => Promise<string | undefined>;
     /** 清空画布 */
     clearCanvas: () => void;
     /** 是否启用 */
@@ -33,18 +47,41 @@ export type BaseLayerContextType = {
     changeCursor: (cursor: Required<React.CSSProperties>['cursor']) => string;
     /** 画布容器元素 */
     layerContainerElementRef: React.RefObject<HTMLDivElement | null>;
-    /** 获取画布上下文 */
-    getCanvasApp: () => PIXI.Application | undefined;
+    /** 获取图片数据 */
+    getImageData: (selectRect: ElementRect) => Promise<ImageData | undefined>;
     /**
-     * 获取最上层的容器
+     * 渲染画布
      */
-    getTopContainer: () => PIXI.Container<PIXI.ContainerChild> | undefined;
+    canvasRender: () => Promise<void>;
+    /**
+     * 添加图片到画布容器
+     */
+    addImageToContainer: (containerKey: string, imageSrc: string) => Promise<void>;
+    /**
+     * 清空画布容器
+     */
+    clearContainer: (containerKey: string) => Promise<void>;
+    /**
+     * 创建模糊效果
+     */
+    createBlurSprite: (blurContainerKey: string, blurElementId: string) => Promise<void>;
+    /**
+     * 更新模糊效果
+     */
+    updateBlurSprite: (
+        blurElementId: string,
+        blurProps: BlurSpriteProps,
+        updateFilter: boolean,
+    ) => Promise<void>;
+    /**
+     * 删除模糊效果
+     */
+    deleteBlurSprite: (blurElementId: string) => Promise<void>;
 };
 
 export const BaseLayerContext = React.createContext<BaseLayerContextType>({
     resizeCanvas: () => {},
-    addChildToTopContainer: () => {},
-    createNewCanvasContainer: () => undefined,
+    createNewCanvasContainer: () => Promise.resolve(undefined),
     clearCanvas: () => {},
     isEnable: false,
     /**
@@ -53,9 +90,13 @@ export const BaseLayerContext = React.createContext<BaseLayerContextType>({
     changeCursor: () => 'auto',
     /** 画布容器元素 */
     layerContainerElementRef: { current: null },
-    /** 获取画布上下文 */
-    getCanvasApp: () => undefined,
-    getTopContainer: () => undefined,
+    getImageData: () => Promise.resolve(undefined),
+    canvasRender: () => Promise.resolve(),
+    addImageToContainer: () => Promise.resolve(),
+    clearContainer: () => Promise.resolve(),
+    createBlurSprite: () => Promise.resolve(),
+    updateBlurSprite: () => Promise.resolve(),
+    deleteBlurSprite: () => Promise.resolve(),
 });
 
 export type BaseLayerEventActionType = {
@@ -75,7 +116,7 @@ export type BaseLayerEventActionType = {
      * 截图准备
      */
     onCaptureReady: (
-        texture: PIXI.Texture,
+        imageSrc: string,
         imageBuffer: ImageBuffer,
         captureBoundingBoxInfo: CaptureBoundingBoxInfo,
     ) => Promise<void>;
@@ -89,7 +130,7 @@ export type BaseLayerEventActionType = {
      * 截图加载完成
      */
     onCaptureLoad: (
-        texture: PIXI.Texture,
+        imageSrc: string,
         imageBuffer: ImageBuffer,
         captureBoundingBoxInfo: CaptureBoundingBoxInfo,
     ) => Promise<void>;
@@ -98,40 +139,45 @@ export type BaseLayerEventActionType = {
      */
     onCaptureFinish: () => Promise<void>;
     /**
-     * 获取画布上下文
-     */
-    getCanvasApp: () => PIXI.Application | undefined | null;
-    /**
      * 获取画布容器元素
      */
     getLayerContainerElement: () => HTMLDivElement | null;
     /**
-     * 添加一个子元素到最上层的容器
-     */
-    addChildToTopContainer: (children: PIXI.Container<PIXI.ContainerChild>) => void;
-    /**
-     * 添加一个子元素到指定的容器
-     */
-    addChildToContainer: (
-        container: PIXI.Container<PIXI.ContainerChild>,
-        children: PIXI.Container<PIXI.ContainerChild>,
-    ) => void;
-    /**
      * 创建一个新的画布容器
      */
-    createNewCanvasContainer: () => PIXI.Container | undefined;
+    createNewCanvasContainer: (containerKey: string) => Promise<string | undefined>;
     /**
      * 获取图片数据
      */
     getImageData: (selectRect: ElementRect) => Promise<ImageData | undefined>;
     /**
-     * 获取画布
+     * 渲染画布
      */
-    getCanvas: () => PIXI.ICanvas | undefined;
+    canvasRender: () => Promise<void>;
     /**
-     * 获取最上层的容器
+     * 添加图片到画布容器
      */
-    getTopContainer: () => PIXI.Container<PIXI.ContainerChild> | undefined;
+    addImageToContainer: (containerKey: string, imageSrc: string) => Promise<void>;
+    /**
+     * 清空画布容器
+     */
+    clearContainer: (containerKey: string) => Promise<void>;
+    /**
+     * 创建模糊效果
+     */
+    createBlurSprite: (blurContainerKey: string, blurElementId: string) => Promise<void>;
+    /**
+     * 更新模糊效果
+     */
+    updateBlurSprite: (
+        blurElementId: string,
+        blurProps: BlurSpriteProps,
+        updateFilter: boolean,
+    ) => Promise<void>;
+    /**
+     * 删除模糊效果
+     */
+    deleteBlurSprite: (blurElementId: string) => Promise<void>;
 };
 
 export type BaseLayerActionType = {
@@ -154,15 +200,16 @@ export const defaultBaseLayerActions: BaseLayerActionType = {
     onCaptureBoundingBoxInfoReady: () => Promise.resolve(),
     setEnable: () => {},
     onExecuteScreenshot: () => Promise.resolve(),
-    getCanvasApp: () => null,
     getLayerContainerElement: () => null,
-    addChildToTopContainer: () => {},
-    getTopContainer: () => undefined,
     changeCursor: () => 'auto',
-    createNewCanvasContainer: () => undefined,
-    addChildToContainer: () => {},
+    createNewCanvasContainer: () => Promise.resolve(undefined),
     getImageData: () => Promise.resolve(undefined),
-    getCanvas: () => undefined,
+    canvasRender: () => Promise.resolve(),
+    addImageToContainer: () => Promise.resolve(),
+    clearContainer: () => Promise.resolve(),
+    createBlurSprite: () => Promise.resolve(),
+    updateBlurSprite: () => Promise.resolve(),
+    deleteBlurSprite: () => Promise.resolve(),
 };
 
 type BaseLayerCoreActionType = {
@@ -172,60 +219,80 @@ type BaseLayerCoreActionType = {
     initCanvas: (antialias: boolean) => Promise<void>;
     resizeCanvas: (width: number, height: number) => void;
     clearCanvas: () => Promise<void>;
-    getCanvasApp: () => PIXI.Application | undefined;
     getLayerContainerElement: () => HTMLDivElement | null;
-    addChildToTopContainer: (children: PIXI.Container<PIXI.ContainerChild>) => void;
-    getTopContainer: () => PIXI.Container<PIXI.ContainerChild> | undefined;
-    addChildToContainer: (
-        container: PIXI.Container<PIXI.ContainerChild>,
-        children: PIXI.Container<PIXI.ContainerChild>,
-    ) => void;
     changeCursor: (cursor: Required<React.CSSProperties>['cursor']) => string;
     getImageData: (selectRect: ElementRect) => Promise<ImageData | undefined>;
-    getCanvas: () => PIXI.ICanvas | undefined;
+    /**
+     * 渲染画布
+     */
+    canvasRender: () => Promise<void>;
+    /**
+     * 添加图片到画布容器
+     */
+    addImageToContainer: (containerKey: string, imageSrc: string) => Promise<void>;
+    /**
+     * 清空画布容器
+     */
+    clearContainer: (containerKey: string) => Promise<void>;
+    /**
+     * 创建模糊效果
+     */
+    createBlurSprite: (blurContainerKey: string, blurElementId: string) => Promise<void>;
+    /**
+     * 更新模糊效果
+     */
+    updateBlurSprite: (
+        blurElementId: string,
+        blurProps: BlurSpriteProps,
+        updateFilter: boolean,
+    ) => Promise<void>;
+    /**
+     * 删除模糊效果
+     */
+    deleteBlurSprite: (blurElementId: string) => Promise<void>;
 };
 
 export type BaseLayerProps = {
     children: React.ReactNode;
     zIndex: number;
     enable: boolean;
-    onCanvasReadyAction: (app: PIXI.Application) => void;
 };
 
 export const BaseLayerCore: React.FC<
     BaseLayerProps & { actionRef?: React.RefObject<BaseLayerCoreActionType | undefined> }
-> = ({ zIndex, actionRef, enable, children, onCanvasReadyAction }) => {
+> = ({ zIndex, actionRef, enable, children }) => {
     const layerContainerElementRef = useRef<HTMLDivElement>(null);
+    const canvasElementRef = useRef<HTMLCanvasElement>(null);
+    /** 可能的 OffscreenCanvas，用于在 Web Worker 中渲染 */
+    const offscreenCanvasRef = useRef<OffscreenCanvas | undefined>(undefined);
     const canvasAppRef = useRef<PIXI.Application | undefined>(undefined);
-    const canvasContainerListRef = useRef<PIXI.Container[]>([]);
+    const canvasContainerMapRef = useRef<Map<string, PIXI.Container>>(new Map());
     const canvasContainerChildCountRef = useRef<number>(0);
+    const currentImageTextureRef = useRef<PIXI.Texture | undefined>(undefined);
+    const blurSpriteMapRef = useRef<Map<string, BlurSprite>>(new Map());
+    const rendererWorker = useMemo(() => {
+        if (supportOffscreenCanvas()) {
+            return new Worker(new URL('./workers/renderWorker.ts', import.meta.url));
+        }
+        return undefined;
+    }, []);
 
     /** 创建一个新的画布容器 */
-    const createNewCanvasContainer = useCallback((): PIXI.Container | undefined => {
-        const canvasApp = canvasAppRef.current;
-        if (!canvasApp) {
-            return;
-        }
+    const createNewCanvasContainer = useCallback(
+        async (containerKey: string): Promise<string | undefined> => {
+            return await createNewCanvasContainerAction(
+                rendererWorker,
+                canvasAppRef,
+                canvasContainerMapRef,
+                containerKey,
+            );
+        },
+        [rendererWorker],
+    );
 
-        const container = new PIXI.Container();
-        container.zIndex = canvasContainerListRef.current.length + 1;
-        container.sortableChildren = true;
-        container.x = 0;
-        container.y = 0;
-        canvasApp.stage.addChild(container);
-        canvasContainerListRef.current.push(container);
-
-        return container;
-    }, []);
-
-    const disposeCanvas = useCallback(() => {
-        const canvasApp = canvasAppRef.current;
-        if (!canvasApp) {
-            return;
-        }
-        layerContainerElementRef.current?.removeChild(canvasApp.canvas);
-        canvasApp.destroy();
-    }, []);
+    const disposeCanvas = useCallback(async () => {
+        await disposeCanvasAction(rendererWorker, canvasAppRef);
+    }, [rendererWorker]);
 
     /** 初始化画布 */
     const initedRef = useRef(false);
@@ -235,12 +302,20 @@ export const BaseLayerCore: React.FC<
                 return;
             }
 
+            if (!canvasElementRef.current) {
+                console.error('[BaseLayerCore] canvasRef.current is null');
+                return;
+            }
+
+            offscreenCanvasRef.current = supportOffscreenCanvas()
+                ? canvasElementRef.current.transferControlToOffscreen()
+                : undefined;
+
             initedRef.current = true;
 
-            disposeCanvas();
+            await disposeCanvas();
 
-            const canvasApp = new PIXI.Application();
-            await canvasApp.init({
+            const initOptions: Partial<PIXI.ApplicationOptions> = {
                 backgroundAlpha: 0,
                 eventFeatures: {
                     move: false,
@@ -250,84 +325,44 @@ export const BaseLayerCore: React.FC<
                 },
                 autoStart: false,
                 antialias,
+                canvas: offscreenCanvasRef.current ?? canvasElementRef.current,
                 preference: 'webgl',
-            });
-            canvasAppRef.current = canvasApp;
-            layerContainerElementRef.current?.appendChild(canvasApp.canvas);
+            };
 
-            onCanvasReadyAction(canvasApp);
+            await initCanvasAction(
+                rendererWorker,
+                canvasAppRef,
+                initOptions,
+                offscreenCanvasRef.current ? [offscreenCanvasRef.current] : undefined,
+            );
 
             releaseDrawPage();
         },
-        [disposeCanvas, onCanvasReadyAction],
+        [disposeCanvas, rendererWorker],
     );
 
     /** 调整画布大小 */
     const resizeCanvas = useCallback(
-        (width: number, height: number) => {
-            const canvasApp = canvasAppRef.current;
-            if (!canvasApp) {
-                return;
-            }
-
-            // 创建根画布容器
-            createNewCanvasContainer();
-
-            canvasApp.renderer.resize(width, height);
+        async (width: number, height: number) => {
+            await createNewCanvasContainer(INIT_CONTAINER_KEY);
+            await resizeCanvasAction(rendererWorker, canvasAppRef, width, height);
         },
-        [createNewCanvasContainer],
-    );
-
-    const getTopContainer = useCallback(() => {
-        return last(canvasContainerListRef.current);
-    }, []);
-
-    const addChildToTopContainer = useCallback(
-        (children: PIXI.Container<PIXI.ContainerChild>) => {
-            const topContainer = getTopContainer();
-            if (!topContainer) {
-                throw new Error('Top container not found');
-            }
-            children.zIndex = canvasContainerChildCountRef.current + 1;
-            topContainer.addChild(children);
-            canvasContainerChildCountRef.current++;
-        },
-        [getTopContainer],
-    );
-
-    const addChildToContainer = useCallback(
-        (
-            container: PIXI.Container<PIXI.ContainerChild>,
-            children: PIXI.Container<PIXI.ContainerChild>,
-        ) => {
-            children.zIndex = canvasContainerChildCountRef.current + 1;
-            container.addChild(children);
-            canvasContainerChildCountRef.current++;
-        },
-        [],
+        [createNewCanvasContainer, rendererWorker],
     );
 
     const clearCanvas = useCallback<BaseLayerCoreActionType['clearCanvas']>(async () => {
-        const canvasApp = canvasAppRef.current;
-        if (!canvasApp) {
-            return;
-        }
-        while (canvasApp.stage.children[0]) {
-            canvasApp.stage.removeChild(canvasApp.stage.children[0]);
-        }
-        canvasContainerListRef.current = [];
-        canvasContainerChildCountRef.current = 0;
-        canvasApp.render();
-    }, []);
+        await clearCanvasAction(
+            rendererWorker,
+            canvasAppRef,
+            canvasContainerMapRef,
+            canvasContainerChildCountRef,
+        );
+    }, [rendererWorker]);
 
     const changeCursor = useCallback<BaseLayerContextType['changeCursor']>((cursor) => {
         const previousCursor = layerContainerElementRef.current!.style.cursor;
         layerContainerElementRef.current!.style.cursor = cursor;
         return previousCursor;
-    }, []);
-
-    const getCanvasApp = useCallback<BaseLayerContextType['getCanvasApp']>(() => {
-        return canvasAppRef.current;
     }, []);
 
     const getLayerContainerElement = useCallback<
@@ -336,35 +371,68 @@ export const BaseLayerCore: React.FC<
 
     const getImageData = useCallback<BaseLayerActionType['getImageData']>(
         async (selectRect: ElementRect) => {
-            const canvasApp = canvasAppRef.current;
-            if (!canvasApp) {
-                return;
-            }
-
-            return canvasApp.renderer.extract
-                .canvas(canvasApp.stage)
-                .getContext('2d')
-                ?.getImageData(
-                    selectRect.min_x,
-                    selectRect.min_y,
-                    selectRect.max_x - selectRect.min_x,
-                    selectRect.max_y - selectRect.min_y,
-                    {
-                        colorSpace: 'srgb',
-                    },
-                );
+            return getImageDataAction(rendererWorker, canvasAppRef, selectRect);
         },
-        [],
+        [rendererWorker],
     );
 
-    const getCanvas = useCallback<BaseLayerActionType['getCanvas']>(() => {
-        const canvasApp = canvasAppRef.current;
-        if (!canvasApp) {
-            return;
-        }
+    const canvasRender = useCallback<BaseLayerActionType['canvasRender']>(async () => {
+        await canvasRenderAction(rendererWorker, canvasAppRef);
+    }, [rendererWorker]);
 
-        return canvasApp.renderer.extract.canvas(canvasApp.stage);
-    }, []);
+    const addImageToContainer = useCallback<BaseLayerActionType['addImageToContainer']>(
+        async (containerKey: string, imageSrc: string) => {
+            await addImageToContainerAction(
+                rendererWorker,
+                canvasContainerMapRef,
+                currentImageTextureRef,
+                containerKey,
+                imageSrc,
+            );
+        },
+        [rendererWorker],
+    );
+
+    const clearContainer = useCallback<BaseLayerActionType['clearContainer']>(
+        async (containerKey: string) => {
+            await clearContainerAction(rendererWorker, canvasContainerMapRef, containerKey);
+        },
+        [rendererWorker],
+    );
+
+    const createBlurSprite = useCallback<BaseLayerActionType['createBlurSprite']>(
+        async (blurContainerKey: string, blurElementId: string) => {
+            await createBlurSpriteAction(
+                rendererWorker,
+                canvasContainerMapRef,
+                currentImageTextureRef,
+                blurSpriteMapRef,
+                blurContainerKey,
+                blurElementId,
+            );
+        },
+        [rendererWorker],
+    );
+
+    const updateBlurSprite = useCallback<BaseLayerActionType['updateBlurSprite']>(
+        async (blurElementId: string, blurProps: BlurSpriteProps, updateFilter: boolean) => {
+            await updateBlurSpriteAction(
+                rendererWorker,
+                blurSpriteMapRef,
+                blurElementId,
+                blurProps,
+                updateFilter,
+            );
+        },
+        [rendererWorker],
+    );
+
+    const deleteBlurSprite = useCallback<BaseLayerActionType['deleteBlurSprite']>(
+        async (blurElementId: string) => {
+            await deleteBlurSpriteAction(rendererWorker, blurSpriteMapRef, blurElementId);
+        },
+        [rendererWorker],
+    );
 
     useEffect(() => {
         return () => {
@@ -377,30 +445,32 @@ export const BaseLayerCore: React.FC<
         () => ({
             resizeCanvas,
             clearCanvas,
-            getCanvasApp,
             getLayerContainerElement,
-            addChildToTopContainer,
-            addChildToContainer,
             changeCursor,
             createNewCanvasContainer,
             getImageData,
-            getCanvas,
             initCanvas,
-            getTopContainer,
+            canvasRender,
+            addImageToContainer,
+            clearContainer,
+            createBlurSprite,
+            updateBlurSprite,
+            deleteBlurSprite,
         }),
         [
             resizeCanvas,
             clearCanvas,
-            getCanvasApp,
             getLayerContainerElement,
-            addChildToTopContainer,
-            addChildToContainer,
             changeCursor,
             createNewCanvasContainer,
             getImageData,
-            getCanvas,
             initCanvas,
-            getTopContainer,
+            canvasRender,
+            addImageToContainer,
+            clearContainer,
+            createBlurSprite,
+            updateBlurSprite,
+            deleteBlurSprite,
         ],
     );
 
@@ -415,29 +485,39 @@ export const BaseLayerCore: React.FC<
     const baseLayerContextValue = useMemo(() => {
         return {
             resizeCanvas,
-            addChildToTopContainer,
             clearCanvas,
             createNewCanvasContainer,
             isEnable: enable,
             changeCursor,
             layerContainerElementRef,
-            getCanvasApp,
-            getTopContainer,
+            getImageData,
+            canvasRender,
+            addImageToContainer,
+            clearContainer,
+            createBlurSprite,
+            updateBlurSprite,
+            deleteBlurSprite,
         };
     }, [
         resizeCanvas,
-        addChildToTopContainer,
         clearCanvas,
         createNewCanvasContainer,
         enable,
         changeCursor,
-        getCanvasApp,
-        getTopContainer,
+        getImageData,
+        canvasRender,
+        addImageToContainer,
+        clearContainer,
+        createBlurSprite,
+        updateBlurSprite,
+        deleteBlurSprite,
     ]);
 
     return (
         <BaseLayerContext.Provider value={baseLayerContextValue}>
-            <div className={styles.baseLayer} ref={layerContainerElementRef} style={{ zIndex }} />
+            <div className={styles.baseLayer} ref={layerContainerElementRef} style={{ zIndex }}>
+                <canvas ref={canvasElementRef} />
+            </div>
             {children}
         </BaseLayerContext.Provider>
     );
@@ -497,34 +577,10 @@ export function withBaseLayer<
             layerActionRef.current?.setEnable(...args);
         }, []);
 
-        const onCanvasReadyAction = useCallback((app: PIXI.Application) => {
-            layerActionRef.current?.onCanvasReady(app);
-        }, []);
-
-        const getCanvasApp = useCallback(() => {
-            return baseLayerCoreActionRef.current?.getCanvasApp();
-        }, []);
-
         const getLayerContainerElement = useCallback(() => {
             return baseLayerCoreActionRef.current?.getLayerContainerElement();
         }, []);
 
-        const addChildToTopContainer = useCallback(
-            (children: PIXI.Container<PIXI.ContainerChild>) => {
-                baseLayerCoreActionRef.current?.addChildToTopContainer(children);
-            },
-            [],
-        );
-
-        const addChildToContainer = useCallback(
-            (
-                container: PIXI.Container<PIXI.ContainerChild>,
-                children: PIXI.Container<PIXI.ContainerChild>,
-            ) => {
-                baseLayerCoreActionRef.current?.addChildToContainer(container, children);
-            },
-            [],
-        );
         const changeCursor = useCallback<BaseLayerActionType['changeCursor']>((cursor) => {
             return baseLayerCoreActionRef.current?.changeCursor(cursor) ?? 'auto';
         }, []);
@@ -536,10 +592,6 @@ export function withBaseLayer<
             [],
         );
 
-        const getCanvas = useCallback<BaseLayerActionType['getCanvas']>(() => {
-            return baseLayerCoreActionRef.current?.getCanvas();
-        }, []);
-
         useImperativeHandle(
             actionRef,
             () => ({
@@ -548,13 +600,9 @@ export function withBaseLayer<
                 onCaptureFinish,
                 onCaptureBoundingBoxInfoReady,
                 setEnable,
-                getCanvasApp,
                 getLayerContainerElement,
-                addChildToTopContainer,
-                addChildToContainer,
                 changeCursor,
                 getImageData,
-                getCanvas,
                 initCanvas,
             }),
             [
@@ -562,24 +610,15 @@ export function withBaseLayer<
                 onCaptureFinish,
                 onCaptureBoundingBoxInfoReady,
                 setEnable,
-                getCanvasApp,
                 getLayerContainerElement,
-                addChildToTopContainer,
-                addChildToContainer,
                 changeCursor,
                 getImageData,
-                getCanvas,
                 initCanvas,
             ],
         );
 
         return (
-            <BaseLayerCore
-                zIndex={zIndex}
-                actionRef={baseLayerCoreActionRef}
-                enable={layerEnable}
-                onCanvasReadyAction={onCanvasReadyAction}
-            >
+            <BaseLayerCore zIndex={zIndex} actionRef={baseLayerCoreActionRef} enable={layerEnable}>
                 <WrappedComponent {...props} actionRef={layerActionRef} />
             </BaseLayerCore>
         );

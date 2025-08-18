@@ -1,12 +1,11 @@
 use serde::Serialize;
-use snow_shot_app_os::TryGetElementByFocus;
 use snow_shot_app_os::ui_automation::UIElements;
 use snow_shot_app_shared::ElementRect;
 use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::{SystemTime, UNIX_EPOCH};
+use tauri::Manager;
 use tauri::ipc::Response;
-use tauri::{Emitter, Manager};
 use tokio::sync::Mutex;
 use xcap::Window;
 
@@ -43,7 +42,7 @@ pub async fn capture_all_monitors(window: tauri::Window) -> Result<Response, Str
         .capture(Some(&window))?;
 
     let image_buffer =
-        snow_shot_app_utils::encode_image(&image, snow_shot_app_utils::ImageEncoder::Webp);
+        snow_shot_app_utils::encode_image(&image, snow_shot_app_utils::ImageEncoder::Png);
 
     Ok(Response::new(image_buffer))
 }
@@ -182,26 +181,13 @@ pub async fn init_ui_elements(ui_elements: tauri::State<'_, Mutex<UIElements>>) 
 
 pub async fn init_ui_elements_cache(
     ui_elements: tauri::State<'_, Mutex<UIElements>>,
-    try_get_element_by_focus: TryGetElementByFocus,
-) -> Result<(), ()> {
+) -> Result<(), String> {
     let mut ui_elements = ui_elements.lock().await;
 
-    match ui_elements.init_cache(try_get_element_by_focus) {
-        Ok(_) => (),
-        Err(_) => return Err(()),
+    match ui_elements.init_cache() {
+        Ok(_) => Ok(()),
+        Err(e) => Err(format!("[init_ui_elements_cache] error: {:?}", e)),
     }
-
-    Ok(())
-}
-
-pub async fn recovery_window_z_order(
-    ui_elements: tauri::State<'_, Mutex<UIElements>>,
-) -> Result<(), ()> {
-    let ui_elements = ui_elements.lock().await;
-
-    ui_elements.recovery_window_z_order();
-
-    Ok(())
 }
 
 #[derive(PartialEq, Eq, Serialize, Clone, Debug, Copy, Hash)]
@@ -378,21 +364,17 @@ pub async fn switch_always_on_top(#[allow(unused_variables)] window_id: u32) -> 
 
 pub async fn get_element_from_position(
     ui_elements: tauri::State<'_, Mutex<UIElements>>,
-    window: tauri::Window,
     mouse_x: i32,
     mouse_y: i32,
 ) -> Result<Vec<ElementRect>, ()> {
     let mut ui_elements = ui_elements.lock().await;
 
-    let element_rect_list =
-        match ui_elements.get_element_from_point_walker(mouse_x, mouse_y, &|| {
-            let _ = window.emit("ui-automation-try-focus", ());
-        }) {
-            Ok(element_rect) => element_rect,
-            Err(_) => {
-                return Err(());
-            }
-        };
+    let element_rect_list = match ui_elements.get_element_from_point_walker(mouse_x, mouse_y) {
+        Ok(element_rect) => element_rect,
+        Err(_) => {
+            return Err(());
+        }
+    };
 
     Ok(element_rect_list)
 }

@@ -9,7 +9,7 @@ import zhTW from 'antd/es/locale/zh_TW';
 import enUS from 'antd/es/locale/en_US';
 import { IntlProvider } from 'react-intl';
 import { messages } from '@/messages/map';
-import { ElementRect, ImageBuffer, TryGetElementByFocus } from '@/commands';
+import { ElementRect, ImageBuffer } from '@/commands';
 import { emit } from '@tauri-apps/api/event';
 import { getCurrentWindow, Window as AppWindow } from '@tauri-apps/api/window';
 import { AppFunction, AppFunctionConfig, defaultAppFunctionConfigs } from './extra';
@@ -226,7 +226,6 @@ export type AppSettingsData = {
         historyValidDuration: HistoryValidDuration;
         ocrModel: OcrModel;
         ocrDetectAngle: boolean;
-        tryGetElementByFocus: TryGetElementByFocus;
     };
     [AppSettingsGroup.SystemScrollScreenshot]: {
         tryRollback: boolean;
@@ -386,7 +385,6 @@ export const defaultAppSettingsData: AppSettingsData = {
         videoMaxSize: VideoMaxSize.P1080,
     },
     [AppSettingsGroup.SystemScreenshot]: {
-        tryGetElementByFocus: TryGetElementByFocus.WhiteList,
         ocrModel: OcrModel.RapidOcrV4,
         ocrDetectAngle: false,
         historyValidDuration: HistoryValidDuration.Week,
@@ -1191,11 +1189,6 @@ const ContextWrapCore: React.FC<{ children: React.ReactNode }> = ({ children }) 
                     | undefined;
 
                 settings = {
-                    tryGetElementByFocus:
-                        typeof newSettings?.tryGetElementByFocus === 'string'
-                            ? (newSettings.tryGetElementByFocus as TryGetElementByFocus)
-                            : (prevSettings?.tryGetElementByFocus ??
-                              defaultAppSettingsData[group].tryGetElementByFocus),
                     ocrModel:
                         typeof newSettings?.ocrModel === 'string'
                             ? (newSettings.ocrModel as OcrModel)

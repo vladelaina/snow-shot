@@ -32,7 +32,6 @@ import { openPath } from '@tauri-apps/plugin-opener';
 import { AntdContext } from '@/components/globalLayoutExtra';
 import { clearAllAppStore } from '@/utils/appStore';
 import { relaunch } from '@tauri-apps/plugin-process';
-import { TryGetElementByFocus } from '@/commands';
 import { OcrModel } from '@/commands/ocr';
 import { CaptureHistory, HistoryValidDuration } from '@/utils/captureHistory';
 import { usePlatform } from '@/hooks/usePlatform';
@@ -159,34 +158,6 @@ export default function SystemSettings() {
         return options;
     }, [intl]);
 
-    const tryGetElementByFocusOptions = useMemo(() => {
-        return [
-            {
-                label: intl.formatMessage({
-                    id: 'settings.systemSettings.screenshotSettings.tryGetElementByFocus.never',
-                }),
-                value: TryGetElementByFocus.Never,
-            },
-            {
-                label: intl.formatMessage({
-                    id: 'settings.systemSettings.screenshotSettings.tryGetElementByFocus.firefox',
-                }),
-                value: TryGetElementByFocus.Firefox,
-            },
-            {
-                label: intl.formatMessage({
-                    id: 'settings.systemSettings.screenshotSettings.tryGetElementByFocus.whiteList',
-                }),
-                value: TryGetElementByFocus.WhiteList,
-            },
-            {
-                label: intl.formatMessage({
-                    id: 'settings.systemSettings.screenshotSettings.tryGetElementByFocus.always',
-                }),
-                value: TryGetElementByFocus.Always,
-            },
-        ];
-    }, [intl]);
     const ocrModelOptions = useMemo(() => {
         return [
             {
@@ -322,30 +293,6 @@ export default function SystemSettings() {
                                 }
                                 name="historyValidDuration"
                                 options={historyValidDurationOptions}
-                            />
-                        </Col>
-                    </Row>
-                    <Row gutter={token.margin}>
-                        <Col span={12}>
-                            <ProFormSelect
-                                label={
-                                    <IconLabel
-                                        label={
-                                            <FormattedMessage id="settings.systemSettings.screenshotSettings.tryGetElementByFocus" />
-                                        }
-                                        tooltipTitle={
-                                            <FormattedMessage
-                                                id="settings.systemSettings.screenshotSettings.tryGetElementByFocus.tip"
-                                                values={{
-                                                    whiteList:
-                                                        'Mozilla Firefox、Microsoft Edge、Google Chrome、Snow Shot',
-                                                }}
-                                            />
-                                        }
-                                    />
-                                }
-                                name="tryGetElementByFocus"
-                                options={tryGetElementByFocusOptions}
                             />
                         </Col>
                     </Row>

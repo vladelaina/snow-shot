@@ -158,6 +158,9 @@ const CaptureHistoryControllerCore: React.FC<{
                                 elements:
                                     captureHistoryListRef.current[currentIndexRef.current]
                                         .excalidraw_elements ?? [],
+                                appState:
+                                    captureHistoryListRef.current[currentIndexRef.current]
+                                        .excalidraw_app_state,
                                 captureUpdate: 'NEVER',
                             });
                         }),
@@ -208,9 +211,12 @@ const CaptureHistoryControllerCore: React.FC<{
             return;
         }
 
+        const excalidrawApi = drawCacheLayerActionRef.current?.getExcalidrawAPI();
+
         const captureHistoryItem = await captureHistoryRef.current.save(
             captureHistoryListRef.current[currentIndexRef.current] ?? imageBufferRef.current,
-            drawCacheLayerActionRef.current?.getExcalidrawAPI()?.getSceneElements(),
+            excalidrawApi?.getSceneElements(),
+            excalidrawApi?.getAppState(),
             selectRect,
         );
         captureHistoryListRef.current.push(captureHistoryItem);

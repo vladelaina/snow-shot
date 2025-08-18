@@ -848,22 +848,28 @@ impl ScrollScreenshotService {
         // 计算最终图片尺寸
         let (total_width, total_height) = if self.current_direction == ScrollDirection::Vertical {
             (
-                self.image_width,
-                (self.top_image_size + self.bottom_image_size) as u32,
+                self.image_width as usize,
+                (self.top_image_size + self.bottom_image_size) as usize,
             )
         } else {
             (
-                (self.top_image_size + self.bottom_image_size) as u32,
-                self.image_height,
+                (self.top_image_size + self.bottom_image_size) as usize,
+                self.image_height as usize,
             )
         };
 
+        const RGB_CHANNEL_COUNT: usize = 3;
+
         // 创建最终大小的图片
-        let mut final_image = image::DynamicImage::new_rgba8(total_width, total_height);
+        let mut final_image = unsafe {
+            let mut vec = Vec::with_capacity(total_width * total_height * RGB_CHANNEL_COUNT);
+            vec.set_len(total_width * total_height * RGB_CHANNEL_COUNT);
+            vec
+        };
 
         // 当前位置偏移量
-        let mut offset_x = 0;
-        let mut offset_y = 0;
+        let mut offset_x: usize = 0;
+        let mut offset_y: usize = 0;
 
         // 先处理top_image_list（从尾部开始，即倒序）
         if self.current_direction == ScrollDirection::Vertical {
@@ -877,12 +883,26 @@ impl ScrollScreenshotService {
         for img in self.top_image_list.iter().rev() {
             if self.current_direction == ScrollDirection::Vertical {
                 // 垂直拼接
-                image::imageops::overlay(&mut final_image, img, 0, offset_y as i64);
-                offset_y += img.height();
+                snow_shot_app_utils::overlay_image(
+                    &mut final_image,
+                    total_width,
+                    img,
+                    0,
+                    offset_y,
+                    RGB_CHANNEL_COUNT,
+                );
+                offset_y += img.height() as usize;
             } else {
                 // 水平拼接
-                image::imageops::overlay(&mut final_image, img, offset_x as i64, 0);
-                offset_x += img.width();
+                snow_shot_app_utils::overlay_image(
+                    &mut final_image,
+                    total_width,
+                    img,
+                    offset_x,
+                    0,
+                    RGB_CHANNEL_COUNT,
+                );
+                offset_x += img.width() as usize;
             }
         }
 
@@ -890,15 +910,32 @@ impl ScrollScreenshotService {
         for img in &self.bottom_image_list {
             if self.current_direction == ScrollDirection::Vertical {
                 // 垂直拼接
-                image::imageops::overlay(&mut final_image, img, 0, offset_y as i64);
-                offset_y += img.height();
+                snow_shot_app_utils::overlay_image(
+                    &mut final_image,
+                    total_width,
+                    img,
+                    0,
+                    offset_y,
+                    RGB_CHANNEL_COUNT,
+                );
+                offset_y += img.height() as usize;
             } else {
                 // 水平拼接
-                image::imageops::overlay(&mut final_image, img, offset_x as i64, 0);
-                offset_x += img.width();
+                snow_shot_app_utils::overlay_image(
+                    &mut final_image,
+                    total_width,
+                    img,
+                    offset_x,
+                    0,
+                    RGB_CHANNEL_COUNT,
+                );
+                offset_x += img.width() as usize;
             }
         }
 
-        Some(final_image)
+        Some(image::DynamicImage::ImageRgb8(
+            image::RgbImage::from_raw(total_width as u32, total_height as u32, final_image)
+                .unwrap(),
+        ))
     }
 }

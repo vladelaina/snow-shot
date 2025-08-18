@@ -51,26 +51,8 @@ export const getWindowElements = async () => {
     return result;
 };
 
-export enum TryGetElementByFocus {
-    /// 从不
-    Never = 'Never',
-    /// 仅针对 Firefox 浏览器
-    Firefox = 'Firefox',
-    /// 尝试在白名单中获取焦点
-    WhiteList = 'WhiteList',
-    /// 总是尝试获取焦点
-    Always = 'Always',
-}
-
-export const initUiElementsCache = async (tryGetElementByFocus: TryGetElementByFocus) => {
-    const result = await invoke<void>('init_ui_elements_cache', {
-        tryGetElementByFocus,
-    });
-    return result;
-};
-
-export const recoveryWindowZOrder = async () => {
-    const result = await invoke<void>('recovery_window_z_order');
+export const initUiElementsCache = async () => {
+    const result = await invoke<void>('init_ui_elements_cache');
     return result;
 };
 

@@ -1,29 +1,27 @@
-let wasmModuleArrayBuffer: ArrayBuffer;
-
-export async function getPixels(imageBuffer: ArrayBuffer): Promise<{
+export type DecodeResult = {
     data: ImageData;
     width: number;
     height: number;
-}> {
+};
+
+const decodeWorker: Worker =
+    typeof window !== 'undefined'
+        ? new Worker(new URL('./getPixelsWorker.ts', import.meta.url))
+        : (undefined as unknown as Worker);
+
+export async function getPixels(
+    wasmModuleArrayBuffer: ArrayBuffer,
+    imageBuffer: ArrayBuffer,
+): Promise<DecodeResult> {
     return new Promise(async (resolve, reject) => {
-        const worker = new Worker(new URL('./getPixelsWorker.ts', import.meta.url));
-
-        worker.onmessage = async (event) => {
+        decodeWorker.onmessage = async (event: MessageEvent<DecodeResult>) => {
             resolve(event.data);
-            worker.terminate();
         };
 
-        worker.onerror = (error) => {
+        decodeWorker.onerror = (error) => {
             reject(error);
-            worker.terminate();
         };
 
-        if (!wasmModuleArrayBuffer) {
-            const wasmModuleResponse = await fetch(
-                new URL('turbo-webp/turbo_webp_bg.wasm', import.meta.url),
-            );
-            wasmModuleArrayBuffer = await wasmModuleResponse.arrayBuffer();
-        }
-        worker.postMessage({ imageBuffer, wasmModuleArrayBuffer });
+        decodeWorker.postMessage({ imageBuffer, wasmModuleArrayBuffer });
     });
 }

@@ -1,27 +1,20 @@
 use std::cmp::Ordering;
 use std::collections::HashMap;
-use std::collections::HashSet;
 use std::mem;
 
 use atree::Arena;
 use atree::Token;
 use rtree_rs::{RTree, Rect};
-use std::thread::sleep;
-use std::time::Duration;
 use uiautomation::UIAutomation;
 use uiautomation::UIElement;
 use uiautomation::UITreeWalker;
 use uiautomation::types::Point;
-use windows::Win32::Foundation::HWND;
-use windows::Win32::UI::WindowsAndMessaging::GetClassNameW;
-use windows::Win32::UI::WindowsAndMessaging::SetForegroundWindow;
-use xcap::Window;
 
 use snow_shot_app_shared::ElementRect;
 use snow_shot_app_utils::monitor_info::MonitorList;
+use xcap::Window;
 
 use super::ElementLevel;
-use super::TryGetElementByFocus;
 use super::UIAutomationError;
 
 enum ElementChildrenNextSiblingCacheItem {
@@ -45,15 +38,11 @@ pub struct UIElements {
     element_rect_tree: Arena<uiautomation::types::Rect>,
     element_children_next_sibling_cache: HashMap<ElementLevel, ElementChildrenNextSiblingCacheItem>,
     window_rect_map: HashMap<ElementLevel, uiautomation::types::Rect>,
-    window_focus_count_map: HashMap<i32, i32>,
     window_index_level_map: HashMap<i32, ElementLevel>,
-    try_get_element_by_focus: TryGetElementByFocus,
 }
 
 unsafe impl Send for UIElements {}
 unsafe impl Sync for UIElements {}
-
-const DISABLE_FOCUS_COUNT: i32 = 999;
 
 impl UIElements {
     pub fn new() -> Self {
@@ -66,8 +55,6 @@ impl UIElements {
             element_level_map: HashMap::new(),
             element_children_next_sibling_cache: HashMap::new(),
             window_rect_map: HashMap::new(),
-            window_focus_count_map: HashMap::new(),
-            try_get_element_by_focus: TryGetElementByFocus::Always,
             window_index_level_map: HashMap::new(),
         }
     }
@@ -151,12 +138,7 @@ impl UIElements {
     /**
      * 初始化窗口元素缓存
      */
-    pub fn init_cache(
-        &mut self,
-        try_get_element_by_focus: TryGetElementByFocus,
-    ) -> Result<(), UIAutomationError> {
-        self.try_get_element_by_focus = try_get_element_by_focus;
-
+    pub fn init_cache(&mut self) -> Result<(), UIAutomationError> {
         let root_element = self.root_element.clone().unwrap();
 
         self.element_cache = RTree::new();
@@ -164,13 +146,10 @@ impl UIElements {
         self.element_rect_tree = Arena::new();
         self.element_children_next_sibling_cache.clear();
         self.window_rect_map.clear();
-        self.window_focus_count_map.clear();
         self.window_index_level_map.clear();
 
-        self.try_get_element_by_focus = try_get_element_by_focus;
-
         // 桌面的窗口索引应该是最高，因为其优先级最低
-        let mut current_level = ElementLevel::min();
+        let mut current_level = ElementLevel::root();
         let monitors_bounding_box = MonitorList::all().get_monitors_bounding_box();
         let root_element_rect = uiautomation::types::Rect::new(
             monitors_bounding_box.min_x,
@@ -179,26 +158,26 @@ impl UIElements {
             monitors_bounding_box.max_y,
         );
 
-        let root_tree_token = self.element_rect_tree.new_node(root_element_rect);
-        let (_, parent_tree_token) = self.insert_element_cache(
+        let mut root_tree_token = self.element_rect_tree.new_node(root_element_rect);
+        let (_, mut parent_tree_token) = self.insert_element_cache(
+            &mut root_tree_token,
             root_element.clone(),
             root_element_rect,
             current_level,
-            root_tree_token,
         );
 
         // 遍历所有窗口
         let windows = Window::all().unwrap_or_default();
 
         let automation = self.automation.as_ref().unwrap();
-        let mut children_list: Vec<(UIElement, bool)> = Vec::with_capacity(windows.len());
+        let mut children_list: Vec<UIElement> = Vec::with_capacity(windows.len());
 
         for window in windows {
             if window.is_minimized().unwrap_or(true) {
                 continue;
             }
 
-            let window_title = match window.title() {
+            match window.title() {
                 Ok(title) => {
                     if title.eq("Shell Handwriting Canvas") || title.eq("Snow Shot - Draw") {
                         continue;
@@ -209,102 +188,39 @@ impl UIElements {
                 Err(_) => continue,
             };
 
-            let window_hwnd = window.hwnd();
+            let window_hwnd = match window.hwnd() {
+                Ok(hwnd) => hwnd,
+                Err(_) => continue,
+            };
 
-            match window_hwnd {
-                Ok(hwnd) => {
-                    if let Ok(element) = automation
-                        .element_from_handle(uiautomation::types::Handle::from(hwnd as isize))
-                    {
-                        let disable_focus;
-
-                        match self.try_get_element_by_focus {
-                            TryGetElementByFocus::Never => {
-                                disable_focus = true;
-                            }
-                            TryGetElementByFocus::Firefox => {
-                                if window_title.ends_with("Mozilla Firefox") {
-                                    disable_focus = false;
-                                } else {
-                                    disable_focus = true;
-                                }
-                            }
-                            TryGetElementByFocus::WhiteList => {
-                                if window_title.ends_with("Mozilla Firefox")
-                                    || window_title.ends_with("Microsoft​ Edge")
-                                    || window_title.ends_with("Microsoft Edge")
-                                    || window_title.ends_with("Google Chrome")
-                                    || window_title.eq("Snow Shot")
-                                {
-                                    disable_focus = false;
-                                } else {
-                                    disable_focus = true;
-                                }
-                            }
-                            TryGetElementByFocus::Always => {
-                                let mut class_name = [0u16; 256];
-                                let class_name_len =
-                                    unsafe { GetClassNameW(HWND(hwnd), &mut class_name) };
-
-                                // 任务栏能正常获取元素，禁用焦点选择防止闪烁
-                                if String::from_utf16_lossy(&class_name[..class_name_len as usize])
-                                    .eq("Shell_TrayWnd")
-                                {
-                                    disable_focus = true;
-                                } else {
-                                    disable_focus = false;
-                                }
-                            }
-                        }
-
-                        children_list.push((element, disable_focus));
-                    }
-                }
-                Err(_) => {}
+            if let Ok(element) = automation
+                .element_from_handle(uiautomation::types::Handle::from(window_hwnd as isize))
+            {
+                children_list.push(element);
             }
         }
-
-        // 最后获取桌面的 hwnd
-        // unsafe {
-        //     let program_manager_hwnd = FindWindowW(
-        //         windows::core::w!("Progman"),
-        //         windows::core::w!("Program Manager"),
-        //     );
-        //     if let Ok(hwnd) = program_manager_hwnd {
-        //         if let Ok(element) = automation
-        //             .element_from_handle(uiautomation::types::Handle::from(hwnd.0 as isize))
-        //         {
-        //             children_list.push(element);
-        //         }
-        //     }
-        // }
 
         // 窗口层级
         current_level.window_index = 0;
         current_level.next_level();
 
-        for (current_child, disable_focus) in children_list {
+        for current_child in children_list {
             current_level.window_index += 1;
             current_level.next_element();
 
             let current_child_rect = current_child.get_bounding_rectangle()?;
 
             let (current_child_rect, _) = self.insert_element_cache(
+                &mut parent_tree_token,
                 current_child.clone(),
                 current_child_rect,
                 current_level,
-                parent_tree_token,
             );
 
             self.window_rect_map
                 .insert(current_level.clone(), current_child_rect);
             self.window_index_level_map
                 .insert(current_level.window_index, current_level.clone());
-
-            if disable_focus {
-                self.window_focus_count_map
-                    .insert(current_level.window_index, DISABLE_FOCUS_COUNT);
-            }
         }
 
         Ok(())
@@ -333,10 +249,10 @@ impl UIElements {
 
     pub fn insert_element_cache(
         &mut self,
+        parent_tree_token: &mut Token,
         element: UIElement,
         element_rect: uiautomation::types::Rect,
         element_level: ElementLevel,
-        parent_tree_token: Token,
     ) -> (uiautomation::types::Rect, Token) {
         let element_rect = uiautomation::types::Rect::new(
             element_rect.get_left(),
@@ -387,7 +303,7 @@ impl UIElements {
             .search(Rect::new_point([mouse_x, mouse_y]));
 
         // 获取层级最高的元素
-        let mut max_level = ElementLevel::min();
+        let mut max_level = ElementLevel::root();
         let mut max_level_rect = None;
         for rect in element_rect {
             if max_level.cmp(&rect.data) == Ordering::Less {
@@ -410,62 +326,53 @@ impl UIElements {
         }
     }
 
-    fn get_first_child<F>(
-        &mut self,
-        element: &UIElement,
-        level: &ElementLevel,
-        on_try_focus: &F,
-    ) -> Result<UIElement, uiautomation::Error>
-    where
-        F: Fn(),
-    {
-        let automation_walker = self.automation_walker.as_mut().unwrap();
+    // fn skip_invalid_window(
+    //     &self,
+    //     automation_walker: &UITreeWalker,
+    //     current_element: &mut uiautomation::Result<UIElement>,
+    //     parent_level: &ElementLevel,
+    // ) {
+    //     // 跳过 Snow Shot 窗口
+    //     if parent_level.is_root() {
+    //         if let Ok(element) = current_element.as_ref() {
+    //             if let Ok(name) = element.get_name() {
+    //                 if name == "Snow Shot - Draw" {
+    //                     *current_element = automation_walker.get_next_sibling(element);
+    //                     return;
+    //                 }
+    //             }
 
-        let mut first_child = automation_walker.get_first_child(element);
-        if first_child.is_err() && self.try_get_element_by_focus != TryGetElementByFocus::Never {
-            let focus_count = self
-                .window_focus_count_map
-                .entry(level.window_index)
-                .or_insert(0);
-
-            // 像浏览器可能首次获取会失败，这里多试几次
-            let mut try_count = 0;
-            while *focus_count < 3 * 4 && try_count < 3 {
-                if element.try_focus() {
-                    // 截图窗口此时会失去焦点，交给前端节流处理，避免焦点快速切换
-                    on_try_focus();
-
-                    sleep(Duration::from_millis(32));
-                    first_child = automation_walker.get_first_child(element);
-                }
-
-                *focus_count += 1;
-                try_count += 1;
-            }
-        }
-
-        first_child
-    }
+    //             unsafe {
+    //                 if let Ok(handle) = element.get_native_window_handle() {
+    //                     let window_hwnd: HWND = handle.into();
+    //                     if !IsWindow(Some(window_hwnd)).as_bool()
+    //                         || !IsWindowVisible(window_hwnd).as_bool()
+    //                         || IsIconic(window_hwnd).as_bool()
+    //                     {
+    //                         *current_element = automation_walker.get_next_sibling(element);
+    //                         return;
+    //                     }
+    //                 }
+    //             }
+    //         }
+    //     }
+    // }
 
     /**
      * 获取所有可选区域
      */
-    pub fn get_element_from_point_walker<F>(
+    pub fn get_element_from_point_walker(
         &mut self,
         mouse_x: i32,
         mouse_y: i32,
-        on_try_focus: &F,
-    ) -> Result<Vec<ElementRect>, UIAutomationError>
-    where
-        F: Fn(),
-    {
+    ) -> Result<Vec<ElementRect>, UIAutomationError> {
         let automation_walker = self.automation_walker.clone().unwrap();
         let (parent_element, mut parent_level, parent_rect, mut parent_tree_token) =
             match self.get_element_from_cache(mouse_x, mouse_y) {
                 Some(element) => element,
                 None => (
                     self.root_element.clone().unwrap(),
-                    ElementLevel::min(),
+                    ElementLevel::root(),
                     uiautomation::types::Rect::new(0, 0, i32::MAX, i32::MAX),
                     self.element_rect_tree
                         .new_node(uiautomation::types::Rect::new(0, 0, i32::MAX, i32::MAX)),
@@ -473,7 +380,7 @@ impl UIElements {
             };
 
         // 父元素必然命中了 mouse position，所以直接取第一个元素
-        let mut current_level = ElementLevel::min();
+        let mut current_level = ElementLevel::root();
 
         let mut queue = Option::<UIElement>::None;
 
@@ -497,7 +404,8 @@ impl UIElements {
 
         if try_get_first_child {
             // 没有命中缓存，说明是第一次获取
-            let first_child = self.get_first_child(&parent_element, &parent_level, on_try_focus);
+            let first_child = automation_walker.get_first_child(&parent_element);
+
             match first_child {
                 Ok(element) => {
                     queue = Some(element.clone());
@@ -508,12 +416,6 @@ impl UIElements {
                         parent_level,
                         ElementChildrenNextSiblingCacheItem::Element(element, current_level),
                     );
-
-                    // cache_level = Some(parent_level.clone());
-                    // cache_level.as_mut().unwrap().next_level();
-
-                    // self.element_children_next_sibling_cache
-                    //     .insert(parent_level, Some((element, cache_level.as_ref().unwrap().clone())));
                 }
                 Err(_) => {
                     self.element_children_next_sibling_cache
@@ -521,23 +423,6 @@ impl UIElements {
                 }
             }
         }
-
-        // let mut first_child_level = Option::<ElementLevel>::None;
-        // let first_child = automation_walker.get_first_child(&self.element_level_map.get(&parent_level).unwrap().0);
-        // match first_child {
-        //     Ok(element) => {
-        //         queue = Some(element.clone());
-        //         current_level = parent_level.clone();
-        //         current_level.next_level();
-
-        //         // first_child_level = Some(current_level.clone());
-        //     }
-        //     Err(_) => {}
-        // }
-
-        // if cache_level != first_child_level {
-        //     println!("cache_level: {:?} first_child_level: {:?} parent_level: {:?}", cache_level, first_child_level, parent_level);
-        // }
 
         let mut current_element_rect = parent_rect;
         let mut current_element_token = parent_tree_token;
@@ -563,10 +448,10 @@ impl UIElements {
                 && current_element_bottom == 0)
             {
                 (current_element_rect, current_element_token) = self.insert_element_cache(
+                    &mut parent_tree_token,
                     current_element.clone(),
                     current_element_rect,
                     current_level,
-                    parent_tree_token,
                 );
 
                 if current_element_left <= mouse_x
@@ -577,8 +462,7 @@ impl UIElements {
                     result_token = current_element_token;
                     result_rect = current_element_rect;
 
-                    let first_child =
-                        self.get_first_child(&current_element, &current_level, on_try_focus);
+                    let first_child = automation_walker.get_first_child(&current_element);
                     if let Ok(child) = first_child {
                         queue = Some(child.clone());
                         parent_tree_token = current_element_token;
@@ -641,69 +525,6 @@ impl UIElements {
         }
 
         return Ok(result_rect_list);
-    }
-
-    pub fn recovery_window_z_order(&self) {
-        if self.try_get_element_by_focus == TryGetElementByFocus::Never {
-            return;
-        }
-
-        // 开启 try_get_element_by_focus 后窗口的排序会受焦点影响
-        // 这里获取下可能受影响的窗口，然后恢复排序
-
-        let mut focused_window_rect_list = Vec::with_capacity(8);
-        let mut max_window_index = 0;
-        for (window_index, count) in self.window_focus_count_map.iter() {
-            if *count > 0 && *count < DISABLE_FOCUS_COUNT {
-                let rect = self
-                    .window_rect_map
-                    .get(self.window_index_level_map.get(window_index).unwrap())
-                    .unwrap();
-                focused_window_rect_list.push(rect);
-                max_window_index = max_window_index.max(*window_index);
-            }
-        }
-
-        let mut window_element_level_set: HashSet<ElementLevel> =
-            HashSet::with_capacity(focused_window_rect_list.len() * 2);
-        for rect in focused_window_rect_list {
-            // 通过 level 获取窗口 rect，然后通过 rect 获取范围内的窗口
-            let element_rect_iter = self.element_cache.search(Rect::new(
-                [rect.get_left(), rect.get_top()],
-                [rect.get_right(), rect.get_bottom()],
-            ));
-
-            for rect in element_rect_iter {
-                // 判断是否是窗口
-                if self.window_rect_map.contains_key(&rect.data) {
-                    window_element_level_set.insert(rect.data.clone());
-                }
-            }
-        }
-
-        // 将受影响的窗口按 window_index 排序
-        // 然后从底部到顶部依次设置 set focus 以恢复焦点
-        let mut window_element_level_list = window_element_level_set.iter().collect::<Vec<_>>();
-        window_element_level_list.sort_by_key(|level| level.window_index);
-
-        // 按从大到小依次设置
-        for level in window_element_level_list.iter().rev() {
-            if level.window_index > max_window_index {
-                continue;
-            }
-
-            let (element, _) = self.element_level_map.get(level).unwrap();
-
-            match element.get_native_window_handle() {
-                Ok(handle) => unsafe {
-                    let result = SetForegroundWindow(HWND::from(handle.into()));
-                    if result.as_bool() {
-                        sleep(Duration::from_millis(16));
-                    }
-                },
-                Err(_) => {}
-            }
-        }
     }
 }
 

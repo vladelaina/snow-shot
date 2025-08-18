@@ -4,6 +4,8 @@ use std::path::PathBuf;
 
 use device_query::{DeviceQuery, DeviceState, MouseState};
 use image::DynamicImage;
+use image::codecs::avif::AvifEncoder;
+use image::codecs::jpeg::JpegEncoder;
 use image::codecs::png::{CompressionType, FilterType, PngEncoder};
 use image::codecs::webp::WebPEncoder;
 use snow_shot_app_shared::ElementRect;
@@ -232,19 +234,25 @@ pub fn capture_target_monitor(
     #[cfg(not(target_os = "macos"))]
     {
         let image = if let Some(crop_area) = crop_area {
-            monitor.capture_region(
+            monitor.capture_region_rgb(
                 crop_area.min_x as u32,
                 crop_area.min_y as u32,
                 (crop_area.max_x - crop_area.min_x) as u32,
                 (crop_area.max_y - crop_area.min_y) as u32,
             )
         } else {
-            monitor.capture_image()
+            monitor.capture_image_rgb()
         };
 
         return match image {
-            Ok(image) => Some(image::DynamicImage::ImageRgba8(image)),
-            Err(_) => None,
+            Ok(image) => Some(image::DynamicImage::ImageRgb8(image)),
+            Err(error) => {
+                log::error!(
+                    "[capture_target_monitor] failed to capture image: {:?}",
+                    error
+                );
+                None
+            }
         };
     }
 
@@ -266,7 +274,7 @@ pub fn capture_target_monitor(
             .eq("DeskPad Display")
         {
             log::warn!("[capture_current_monitor_with_scap] skip DeskPad Display");
-            return Some(image::DynamicImage::ImageRgba8(image::RgbaImage::new(1, 1)));
+            return Some(image::DynamicImage::ImageRgb8(image::RgbImage::new(1, 1)));
         }
 
         let monitor_id = match monitor.id() {
@@ -370,12 +378,12 @@ pub fn capture_target_monitor(
         };
         capturer.stop_capture();
 
-        match image::RgbaImage::from_raw(
+        match image::RgbImage::from_raw(
             frame.width as u32,
             frame.height as u32,
-            bgra_to_rgba(&frame.data),
+            bgra_to_rgb(&frame.data),
         ) {
-            Some(rgba_image) => Some(image::DynamicImage::ImageRgba8(rgba_image)),
+            Some(rgb_image) => Some(image::DynamicImage::ImageRgb8(rgb_image)),
             None => {
                 log::error!("[capture_current_monitor_with_scap] failed to create image");
                 return None;
@@ -385,33 +393,34 @@ pub fn capture_target_monitor(
 }
 
 #[cfg(target_os = "macos")]
-fn bgra_to_rgba(bgra_data: &[u8]) -> Vec<u8> {
+pub fn bgra_to_rgb(bgra_data: &[u8]) -> Vec<u8> {
     let pixel_count = bgra_data.len() / 4;
-    let mut rgba_data = Vec::with_capacity(pixel_count * 4);
+    let mut rgb_data = Vec::with_capacity(pixel_count * 3);
 
     unsafe {
-        rgba_data.set_len(pixel_count * 4);
+        rgb_data.set_len(pixel_count * 3);
 
         let bgra_ptr = bgra_data.as_ptr();
-        let rgba_ptr: *mut u8 = rgba_data.as_mut_ptr();
+        let rgb_ptr: *mut u8 = rgb_data.as_mut_ptr();
 
         for i in 0..pixel_count {
             let bgra_base = i * 4;
-            let rgba_base = i * 4;
+            let rgb_base = i * 3;
 
-            *rgba_ptr.add(rgba_base) = *bgra_ptr.add(bgra_base + 2); // R
-            *rgba_ptr.add(rgba_base + 1) = *bgra_ptr.add(bgra_base + 1); // G  
-            *rgba_ptr.add(rgba_base + 2) = *bgra_ptr.add(bgra_base); // B
-            *rgba_ptr.add(rgba_base + 3) = *bgra_ptr.add(bgra_base + 3); // A
+            *rgb_ptr.add(rgb_base) = *bgra_ptr.add(bgra_base + 2); // R
+            *rgb_ptr.add(rgb_base + 1) = *bgra_ptr.add(bgra_base + 1); // G
+            *rgb_ptr.add(rgb_base + 2) = *bgra_ptr.add(bgra_base); // B
         }
     }
 
-    rgba_data
+    rgb_data
 }
 
 pub enum ImageEncoder {
     Webp,
     Png,
+    Avif,
+    Jpeg,
 }
 
 pub fn encode_image(image: &image::DynamicImage, encoder: ImageEncoder) -> Vec<u8> {
@@ -419,6 +428,11 @@ pub fn encode_image(image: &image::DynamicImage, encoder: ImageEncoder) -> Vec<u
     let mut buf = Vec::with_capacity(image.as_bytes().len() / 8);
 
     match encoder {
+        ImageEncoder::Jpeg => {
+            image
+                .write_with_encoder(JpegEncoder::new_with_quality(&mut buf, 80))
+                .unwrap();
+        }
         ImageEncoder::Webp => {
             image
                 .write_with_encoder(WebPEncoder::new_lossless(&mut buf))
@@ -429,11 +443,58 @@ pub fn encode_image(image: &image::DynamicImage, encoder: ImageEncoder) -> Vec<u
                 .write_with_encoder(PngEncoder::new_with_quality(
                     &mut buf,
                     CompressionType::Fast,
-                    FilterType::Adaptive,
+                    FilterType::Paeth,
                 ))
+                .unwrap();
+        }
+        ImageEncoder::Avif => {
+            image
+                .write_with_encoder(AvifEncoder::new_with_speed_quality(&mut buf, 10, 80))
                 .unwrap();
         }
     }
 
     return buf;
+}
+
+/// 将一个图像绘制到另一个图像上
+///
+/// # Arguments
+///
+/// - `image_pixels` (`&mut [u8]`) - 合并后的图像像素数据
+/// - `target_pixels` (`&[u8]`) - 待合并的图像的像素数组
+/// - `offset_x` (`i64`) - 待合并的图像在合并后的图像上的偏移量
+/// - `offset_y` (`i64`) - 待合并的图像在合并后的图像上的偏移量
+///
+/// ```
+pub fn overlay_image(
+    image_pixels: &mut Vec<u8>,
+    image_width: usize,
+    target_image: &image::DynamicImage,
+    offset_x: usize,
+    offset_y: usize,
+    channel_count: usize,
+) {
+    let image_pixels_ptr = image_pixels.as_mut_ptr();
+
+    let target_image_width = target_image.width() as usize;
+    let target_image_height = target_image.height() as usize;
+    let target_image_pixels = target_image.as_bytes();
+    let target_image_pixels_ptr = target_image_pixels.as_ptr();
+
+    let image_base_index = offset_y * image_width * channel_count + offset_x * channel_count;
+    unsafe {
+        for y in 0..target_image_height {
+            let image_row_ptr =
+                image_pixels_ptr.add(image_base_index + y * image_width * channel_count);
+            let target_image_row_ptr =
+                target_image_pixels_ptr.add(y * target_image_width * channel_count);
+
+            std::ptr::copy_nonoverlapping(
+                target_image_row_ptr,
+                image_row_ptr,
+                target_image_width * channel_count,
+            );
+        }
+    }
 }

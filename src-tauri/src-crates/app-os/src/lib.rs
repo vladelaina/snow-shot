@@ -42,7 +42,6 @@ pub mod utils;
 // #[path = "./macos.rs"]
 // pub mod ui_automation;
 
-use serde::{Deserialize, Serialize};
 use std::{cmp::Ordering, hash::Hash};
 
 /**
@@ -69,24 +68,12 @@ pub struct ElementLevel {
     pub window_index: i32,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash, Copy, PartialOrd, Serialize, Deserialize)]
-pub enum TryGetElementByFocus {
-    /// 从不
-    Never,
-    /// 仅针对 Firefox 浏览器
-    Firefox,
-    /// 尝试在白名单中获取焦点
-    WhiteList,
-    /// 总是尝试获取焦点
-    Always,
-}
-
 impl ElementLevel {
-    pub fn min() -> Self {
+    pub fn root() -> Self {
         Self {
             element_index: 0,
             element_level: 0,
-            parent_index: 0,
+            parent_index: i32::MAX,
             window_index: i32::MAX,
         }
     }

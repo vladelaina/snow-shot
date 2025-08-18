@@ -1,0 +1,86 @@
+export enum ColorPickerRenderMessageType {
+    InitPreviewCanvas = 'initPreviewCanvas',
+    InitImageData = 'initImageData',
+    PutImageData = 'putImageData',
+    GetPreviewImageData = 'getPreviewImageData',
+    SwitchCaptureHistory = 'switchCaptureHistory',
+}
+
+export type ColorPickerRenderInitPreviewCanvasData = {
+    type: ColorPickerRenderMessageType.InitPreviewCanvas;
+    payload: {
+        previewCanvas: OffscreenCanvas;
+        decoderWasmModuleArrayBuffer: ArrayBuffer;
+    };
+};
+
+export type ColorPickerRenderInitImageDataData = {
+    type: ColorPickerRenderMessageType.InitImageData;
+    payload: {
+        imageBuffer: ArrayBuffer;
+    };
+};
+
+export type ColorPickerRenderPutImageDataData = {
+    type: ColorPickerRenderMessageType.PutImageData;
+    payload: {
+        x: number;
+        y: number;
+        baseIndex: number;
+    };
+};
+
+export type ColorPickerRenderGetPreviewImageDataData = {
+    type: ColorPickerRenderMessageType.GetPreviewImageData;
+    payload: undefined;
+};
+
+export type ColorPickerRenderSwitchCaptureHistoryData = {
+    type: ColorPickerRenderMessageType.SwitchCaptureHistory;
+    payload: {
+        imageSrc: string | undefined;
+    };
+};
+
+export type ColorPickerRenderData =
+    | ColorPickerRenderInitPreviewCanvasData
+    | ColorPickerRenderInitImageDataData
+    | ColorPickerRenderPutImageDataData
+    | ColorPickerRenderGetPreviewImageDataData
+    | ColorPickerRenderSwitchCaptureHistoryData;
+
+export type ColorPickerRenderInitPreviewCanvasResult = {
+    type: ColorPickerRenderMessageType.InitPreviewCanvas;
+    payload: undefined;
+};
+
+export type ColorPickerRenderInitImageDataResult = {
+    type: ColorPickerRenderMessageType.InitImageData;
+    payload: undefined;
+};
+
+export type ColorPickerRenderPutImageDataResult = {
+    type: ColorPickerRenderMessageType.PutImageData;
+    payload: {
+        color: [red: number, green: number, blue: number];
+    };
+};
+
+export type ColorPickerRenderGetPreviewImageDataResult = {
+    type: ColorPickerRenderMessageType.GetPreviewImageData;
+    payload: {
+        imageData: ImageData | null;
+    };
+};
+
+export type ColorPickerRenderSwitchCaptureHistoryResult = {
+    type: ColorPickerRenderMessageType.SwitchCaptureHistory;
+    payload: undefined;
+};
+
+export type ColorPickerRenderResult =
+    | ColorPickerRenderInitPreviewCanvasResult
+    | ColorPickerRenderInitImageDataResult
+    | ColorPickerRenderPutImageDataResult
+    | ColorPickerRenderGetPreviewImageDataResult
+    | ColorPickerRenderSwitchCaptureHistoryResult;

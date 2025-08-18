@@ -159,7 +159,7 @@ impl MonitorList {
             if capture_image.is_some() {
                 let capture_image = capture_image.as_ref().unwrap();
                 if capture_image.width() == 1 && capture_image.height() == 1 {
-                    return Ok(image::DynamicImage::new_rgba8(
+                    return Ok(image::DynamicImage::new_rgb8(
                         (first_monitor.rect.max_x - first_monitor.rect.min_x) as u32,
                         (first_monitor.rect.max_y - first_monitor.rect.min_y) as u32,
                     ));
@@ -224,16 +224,24 @@ impl MonitorList {
         let monitors_bounding_box = self.get_monitors_bounding_box();
 
         // 声明该图像，分配内存
-        let mut capture_image = if let Some(crop_region) = crop_region {
-            image::DynamicImage::new_rgba8(
-                (crop_region.max_x - crop_region.min_x) as u32,
-                (crop_region.max_y - crop_region.min_y) as u32,
+        let (capture_image_width, capture_image_height) = if let Some(crop_region) = crop_region {
+            (
+                (crop_region.max_x - crop_region.min_x) as usize,
+                (crop_region.max_y - crop_region.min_y) as usize,
             )
         } else {
-            image::DynamicImage::new_rgba8(
-                (monitors_bounding_box.max_x - monitors_bounding_box.min_x) as u32,
-                (monitors_bounding_box.max_y - monitors_bounding_box.min_y) as u32,
+            (
+                (monitors_bounding_box.max_x - monitors_bounding_box.min_x) as usize,
+                (monitors_bounding_box.max_y - monitors_bounding_box.min_y) as usize,
             )
+        };
+
+        const RGB_CHANNEL_COUNT: usize = 3;
+        let mut capture_image_pixels: Vec<u8> = unsafe {
+            let mut vec =
+                Vec::with_capacity(capture_image_width * capture_image_height * RGB_CHANNEL_COUNT);
+            vec.set_len(capture_image_width * capture_image_height * RGB_CHANNEL_COUNT);
+            vec
         };
 
         // 将每个显示器的截图绘制到合并图像上
@@ -259,8 +267,24 @@ impl MonitorList {
             }
 
             // 将显示器图像绘制到合并图像上
-            image::imageops::overlay(&mut capture_image, monitor_image, offset_x, offset_y);
+            super::overlay_image(
+                &mut capture_image_pixels,
+                capture_image_width,
+                monitor_image,
+                offset_x as usize,
+                offset_y as usize,
+                RGB_CHANNEL_COUNT,
+            );
         }
+
+        let capture_image = image::DynamicImage::ImageRgb8(
+            image::RgbImage::from_raw(
+                capture_image_width as u32,
+                capture_image_height as u32,
+                capture_image_pixels,
+            )
+            .unwrap(),
+        );
 
         Ok(capture_image)
     }
@@ -306,10 +330,10 @@ mod tests {
         let instance = std::time::Instant::now();
 
         let crop_region = ElementRect {
-            min_x: -1000,
-            min_y: 0,
-            max_x: 1000,
-            max_y: 1000,
+            min_x: -3840,
+            min_y: -2160,
+            max_x: 3840,
+            max_y: 2160,
         };
 
         let monitors = MonitorList::get_by_region(crop_region);

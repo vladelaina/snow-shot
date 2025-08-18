@@ -6,6 +6,7 @@ import { appConfigDir } from '@tauri-apps/api/path';
 import { join as joinPath } from '@tauri-apps/api/path';
 import path from 'path';
 import { NonDeletedExcalidrawElement, Ordered } from '@mg-chao/excalidraw/element/types';
+import { AppState } from '@mg-chao/excalidraw/types';
 
 const captureHistoryImagesDir = 'captureHistoryImages';
 
@@ -41,6 +42,7 @@ export class CaptureHistory {
     static generateCaptureHistoryItem(
         imageBuffer: ImageBuffer | CaptureHistoryItem,
         excalidrawElements: readonly Ordered<NonDeletedExcalidrawElement>[] | undefined,
+        excalidrawAppState: Readonly<AppState> | undefined,
         selectedRect: ElementRect,
     ): CaptureHistoryItem {
         let fileExtension = '.webp';
@@ -66,17 +68,26 @@ export class CaptureHistory {
             file_name: fileName,
             create_ts: timestamp,
             excalidraw_elements: excalidrawElements,
+            excalidraw_app_state: excalidrawAppState
+                ? ({
+                      zoom: excalidrawAppState.zoom,
+                      scrollX: excalidrawAppState.scrollX,
+                      scrollY: excalidrawAppState.scrollY,
+                  } as CaptureHistoryItem['excalidraw_app_state'])
+                : undefined,
         };
     }
 
     async save(
         imageData: ImageBuffer | CaptureHistoryItem,
         excalidrawElements: readonly Ordered<NonDeletedExcalidrawElement>[] | undefined,
+        excalidrawAppState: Readonly<AppState> | undefined,
         selectedRect: ElementRect,
     ): Promise<CaptureHistoryItem> {
         const captureHistoryItem = CaptureHistory.generateCaptureHistoryItem(
             imageData,
             excalidrawElements,
+            excalidrawAppState,
             selectedRect,
         );
 
