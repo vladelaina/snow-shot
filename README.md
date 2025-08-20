@@ -46,8 +46,12 @@ _注意：软件正在快速迭代中，Bug 和使用问题难以避免。且因
 
 [果核剥壳 - 互联网的净土](https://www.ghxi.com/)
 [玄夜の资源小站](https://www.sakuraxy.top/)
+[资源汇社区](https://space.bilibili.com/175870152)
+[FreeDw资源库](https://space.bilibili.com/383210848)
 
 真的非常感谢，为项目带来了大量关注~
+
+（欢迎推广，Snow Shot 知道后都会登记哈，也欢迎主动联系交流，十分感谢！）
 
 ### 问题反馈
 
