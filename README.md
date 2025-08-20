@@ -2,7 +2,7 @@
 
 <a name="readme-top"></a>
 
-<img height="83" src="/docs/imgs/snow_shot_logo.png">
+<img height="83" src="/docs/imgs/app-icon.png">
 
 <h1>Snow Shot</h1>
 
