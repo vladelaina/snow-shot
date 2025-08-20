@@ -80,7 +80,8 @@
         ],
         "resources": {
             "models/": "models/",
-            "ffmpeg/": "ffmpeg/"
+            "ffmpeg/": "ffmpeg/",
+            "app-icons/": "app-icons/"
         }
     }
 }

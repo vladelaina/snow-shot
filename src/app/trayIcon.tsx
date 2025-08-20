@@ -15,6 +15,7 @@ import {
     AppSettingsGroup,
     AppSettingsPublisher,
     TrayIconClickAction,
+    TrayIconDefaultIcon,
 } from './contextWrap';
 import { isEqual } from 'es-toolkit';
 import { AppFunction, AppFunctionConfig } from './extra';
@@ -35,12 +36,32 @@ import { AntdContext } from '@/components/globalLayoutExtra';
 import { Image } from '@tauri-apps/api/image';
 import { createFixedContentWindow, createFullScreenDrawWindow } from '@/commands/core';
 import { getPlatformValue } from '@/utils';
+import { join, resourceDir } from '@tauri-apps/api/path';
+import { convertFileSrc } from '@tauri-apps/api/core';
 
 export const TrayIconStatePublisher = createPublisher<{
     disableShortcut: boolean;
 }>({
     disableShortcut: false,
 });
+
+export const getDefaultIconPath = async (
+    defaultIcon: TrayIconDefaultIcon,
+    resourceDirPath?: string,
+): Promise<{
+    web_path: string;
+    native_path: string;
+}> => {
+    const basePath = resourceDirPath ?? (await resourceDir());
+
+    const nativePath = await join(basePath, 'app-icons', `snow-shot-tray-${defaultIcon}.png`);
+    const defaultIconPath = convertFileSrc(nativePath);
+
+    return {
+        web_path: defaultIconPath,
+        native_path: nativePath,
+    };
+};
 
 const trayIconId = 'snow-shot-tray-icon';
 let trayIcon: TrayIcon | undefined = undefined;
@@ -62,6 +83,9 @@ const TrayIconLoaderComponent = () => {
         Record<AppFunction, AppFunctionConfig> | undefined
     >(undefined);
     const [iconPath, setIconPath] = useState('');
+    const [defaultIcon, setDefaultIcon] = useState<TrayIconDefaultIcon>(
+        TrayIconDefaultIcon.Default,
+    );
     const [getAppSettings] = useStateSubscriber(
         AppSettingsPublisher,
         useCallback(
@@ -77,8 +101,9 @@ const TrayIconLoaderComponent = () => {
                 }
 
                 setIconPath(settings[AppSettingsGroup.CommonTrayIcon].iconPath);
+                setDefaultIcon(settings[AppSettingsGroup.CommonTrayIcon].defaultIcons);
             },
-            [setShortcutKeys, shortcutKeysRef, setIconPath],
+            [setShortcutKeys, shortcutKeysRef, setIconPath, setDefaultIcon],
         ),
     );
 
@@ -125,7 +150,17 @@ const TrayIconLoaderComponent = () => {
 
         const options: TrayIconOptions = {
             id: trayIconId,
-            icon: iconImage ? iconImage : ((await defaultWindowIcon()) ?? ''),
+            icon: iconImage
+                ? iconImage
+                : ((await (async () => {
+                      const { native_path } = await getDefaultIconPath(defaultIcon);
+
+                      const iconImage = await Image.fromPath(native_path);
+
+                      return iconImage;
+                  })()) ??
+                  (await defaultWindowIcon()) ??
+                  ''),
             showMenuOnLeftClick: false,
             tooltip: 'Snow Shot',
             action: (event) => {
@@ -381,6 +416,7 @@ const TrayIconLoaderComponent = () => {
         }
     }, [
         closeTrayIcon,
+        defaultIcon,
         disableShortcut,
         getAppSettings,
         iconPath,

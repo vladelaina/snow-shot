@@ -83,6 +83,15 @@ export enum TrayIconClickAction {
     Screenshot = 'screenshot',
 }
 
+export enum TrayIconDefaultIcon {
+    Default = 'default',
+    Light = 'light',
+    Dark = 'dark',
+    SnowDefault = 'snow-default',
+    SnowLight = 'snow-light',
+    SnowDark = 'snow-dark',
+}
+
 export type AppSettingsData = {
     [AppSettingsGroup.Common]: {
         darkMode: boolean;
@@ -113,6 +122,7 @@ export type AppSettingsData = {
     [AppSettingsGroup.CommonTrayIcon]: {
         /** 自定义托盘图标 */
         iconPath: string;
+        defaultIcons: TrayIconDefaultIcon;
     };
     [AppSettingsGroup.Cache]: {
         menuCollapsed: boolean;
@@ -293,6 +303,7 @@ export const defaultAppSettingsData: AppSettingsData = {
     },
     [AppSettingsGroup.CommonTrayIcon]: {
         iconPath: '',
+        defaultIcons: TrayIconDefaultIcon.Default,
     },
     [AppSettingsGroup.Cache]: {
         menuCollapsed: false,
@@ -1122,6 +1133,11 @@ const ContextWrapCore: React.FC<{ children: React.ReactNode }> = ({ children }) 
                         typeof newSettings?.iconPath === 'string'
                             ? newSettings.iconPath
                             : (prevSettings?.iconPath ?? ''),
+                    defaultIcons:
+                        typeof newSettings?.defaultIcons === 'string'
+                            ? (newSettings.defaultIcons as TrayIconDefaultIcon)
+                            : (prevSettings?.defaultIcons ??
+                              defaultAppSettingsData[group].defaultIcons),
                 };
             } else if (group === AppSettingsGroup.FunctionVideoRecord) {
                 newSettings = newSettings as AppSettingsData[typeof group];

@@ -53,7 +53,7 @@ const About = () => {
                 <div>
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
-                        src={'/images/snow_shot_logo.png'}
+                        src={'/images/app-icon.png'}
                         alt="Snow Shot"
                         width={83}
                         height={83}
