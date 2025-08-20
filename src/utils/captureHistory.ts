@@ -1,7 +1,7 @@
 import { AppSettingsData, AppSettingsGroup } from '@/app/contextWrap';
 import { CaptureHistoryItem, CaptureHistoryStore } from './appStore';
 import { ElementRect, ImageBuffer, ImageEncoder } from '@/commands';
-import { BaseDirectory, copyFile, mkdir, remove, writeFile } from '@tauri-apps/plugin-fs';
+import { BaseDirectory, copyFile, exists, mkdir, remove, writeFile } from '@tauri-apps/plugin-fs';
 import { appConfigDir } from '@tauri-apps/api/path';
 import { join as joinPath } from '@tauri-apps/api/path';
 import path from 'path';
@@ -92,33 +92,38 @@ export class CaptureHistory {
         );
 
         try {
-            await mkdir(captureHistoryImagesDir, {
+            const isDirExists = await exists(captureHistoryImagesDir, {
                 baseDir: BaseDirectory.AppConfig,
             });
-        } catch (error) {
-            console.warn('[CaptureHistory] mkdir failed', error);
-        }
-
-        if ('encoder' in imageData) {
-            await writeFile(
-                getCaptureImageFilePath(captureHistoryItem.file_name),
-                new Uint8Array(imageData.buffer),
-                {
+            if (!isDirExists) {
+                await mkdir(captureHistoryImagesDir, {
                     baseDir: BaseDirectory.AppConfig,
-                },
-            );
-        } else {
-            await copyFile(
-                getCaptureImageFilePath(imageData.file_name),
-                getCaptureImageFilePath(captureHistoryItem.file_name),
-                {
-                    fromPathBaseDir: BaseDirectory.AppConfig,
-                    toPathBaseDir: BaseDirectory.AppConfig,
-                },
-            );
-        }
+                });
+            }
 
-        await this.store.set(captureHistoryItem.id, captureHistoryItem);
+            if ('encoder' in imageData) {
+                await writeFile(
+                    getCaptureImageFilePath(captureHistoryItem.file_name),
+                    new Uint8Array(imageData.buffer),
+                    {
+                        baseDir: BaseDirectory.AppConfig,
+                    },
+                );
+            } else {
+                await copyFile(
+                    getCaptureImageFilePath(imageData.file_name),
+                    getCaptureImageFilePath(captureHistoryItem.file_name),
+                    {
+                        fromPathBaseDir: BaseDirectory.AppConfig,
+                        toPathBaseDir: BaseDirectory.AppConfig,
+                    },
+                );
+            }
+
+            await this.store.set(captureHistoryItem.id, captureHistoryItem);
+        } catch (error) {
+            console.error('[CaptureHistory] save captureHistoryItem failed', error);
+        }
 
         return captureHistoryItem;
     }

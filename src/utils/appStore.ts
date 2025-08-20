@@ -122,18 +122,19 @@ export class CaptureHistoryStore extends BaseStore<CaptureHistoryItem> {
 }
 
 export const clearAllAppStore = async () => {
-    const chatHistoryStore = new ChatHistoryStore();
+    // 忽略截图历史的存储，因为和图片文件关联
+    // const chatHistoryStore = new ChatHistoryStore();
     const excalidrawAppStateStore = new ExcalidrawAppStateStore();
     const chatWorkflowConfigStore = new ChatWorkflowConfigStore();
 
     await Promise.all([
-        chatHistoryStore.init(),
+        // chatHistoryStore.init(),
         excalidrawAppStateStore.init(),
         chatWorkflowConfigStore.init(),
     ]);
 
     await Promise.all([
-        chatHistoryStore.clear(),
+        // chatHistoryStore.clear(),
         excalidrawAppStateStore.clear(),
         chatWorkflowConfigStore.clear(),
     ]);

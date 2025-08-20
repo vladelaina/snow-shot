@@ -1,7 +1,14 @@
 'use client';
 
 import { createContext, RefObject, useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { BaseDirectory, mkdir, readTextFile, writeTextFile, remove } from '@tauri-apps/plugin-fs';
+import {
+    BaseDirectory,
+    mkdir,
+    readTextFile,
+    writeTextFile,
+    remove,
+    exists,
+} from '@tauri-apps/plugin-fs';
 import { ConfigProvider, theme } from 'antd';
 import { debounce, isEqual, trim } from 'es-toolkit';
 import zhCN from 'antd/es/locale/zh_CN';
@@ -1255,14 +1262,15 @@ const ContextWrapCore: React.FC<{ children: React.ReactNode }> = ({ children }) 
 
         const settings: AppSettingsData = {} as AppSettingsData;
 
-        try {
+        // 启动时验证下目录是否存在
+        const isDirExists = await exists(configDir, {
+            baseDir: BaseDirectory.AppConfig,
+        });
+        if (!isDirExists) {
             await mkdir(configDir, {
                 baseDir: BaseDirectory.AppConfig,
                 recursive: true,
             });
-        } catch (error) {
-            // 一般是提示目录已存在
-            console.warn('[reloadAppSettings] mkdir configDir failed', error);
         }
 
         await Promise.all(
