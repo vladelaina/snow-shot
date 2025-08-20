@@ -1,12 +1,13 @@
 import { AppSettingsData, AppSettingsGroup } from '@/app/contextWrap';
 import { CaptureHistoryItem, CaptureHistoryStore } from './appStore';
 import { ElementRect, ImageBuffer, ImageEncoder } from '@/commands';
-import { BaseDirectory, copyFile, mkdir, remove, writeFile } from '@tauri-apps/plugin-fs';
+import { BaseDirectory, copyFile, exists, mkdir, remove, writeFile } from '@tauri-apps/plugin-fs';
 import { appConfigDir } from '@tauri-apps/api/path';
 import { join as joinPath } from '@tauri-apps/api/path';
 import path from 'path';
 import { NonDeletedExcalidrawElement, Ordered } from '@mg-chao/excalidraw/element/types';
 import { AppState } from '@mg-chao/excalidraw/types';
+import { appError, appWarn } from './log';
 
 const captureHistoryImagesDir = 'captureHistoryImages';
 
@@ -92,33 +93,38 @@ export class CaptureHistory {
         );
 
         try {
-            await mkdir(captureHistoryImagesDir, {
+            const isDirExists = await exists(captureHistoryImagesDir, {
                 baseDir: BaseDirectory.AppConfig,
             });
-        } catch (error) {
-            console.warn('[CaptureHistory] mkdir failed', error);
-        }
-
-        if ('encoder' in imageData) {
-            await writeFile(
-                getCaptureImageFilePath(captureHistoryItem.file_name),
-                new Uint8Array(imageData.buffer),
-                {
+            if (!isDirExists) {
+                await mkdir(captureHistoryImagesDir, {
                     baseDir: BaseDirectory.AppConfig,
-                },
-            );
-        } else {
-            await copyFile(
-                getCaptureImageFilePath(imageData.file_name),
-                getCaptureImageFilePath(captureHistoryItem.file_name),
-                {
-                    fromPathBaseDir: BaseDirectory.AppConfig,
-                    toPathBaseDir: BaseDirectory.AppConfig,
-                },
-            );
-        }
+                });
+            }
 
-        await this.store.set(captureHistoryItem.id, captureHistoryItem);
+            if ('encoder' in imageData) {
+                await writeFile(
+                    getCaptureImageFilePath(captureHistoryItem.file_name),
+                    new Uint8Array(imageData.buffer),
+                    {
+                        baseDir: BaseDirectory.AppConfig,
+                    },
+                );
+            } else {
+                await copyFile(
+                    getCaptureImageFilePath(imageData.file_name),
+                    getCaptureImageFilePath(captureHistoryItem.file_name),
+                    {
+                        fromPathBaseDir: BaseDirectory.AppConfig,
+                        toPathBaseDir: BaseDirectory.AppConfig,
+                    },
+                );
+            }
+
+            await this.store.set(captureHistoryItem.id, captureHistoryItem);
+        } catch (error) {
+            appError('[CaptureHistory] save captureHistoryItem failed', error);
+        }
 
         return captureHistoryItem;
     }
@@ -168,14 +174,14 @@ export class CaptureHistory {
                 try {
                     await this.store.delete(id);
                 } catch (error) {
-                    console.warn('[CaptureHistory] delete captureHistoryItem failed', error);
+                    appWarn('[CaptureHistory] delete captureHistoryItem failed', error);
                 }
                 try {
                     await remove(getCaptureImageFilePath(item.file_name), {
                         baseDir: BaseDirectory.AppConfig,
                     });
                 } catch (error) {
-                    console.warn('[CaptureHistory] remove captureHistoryItem image failed', error);
+                    appWarn('[CaptureHistory] remove captureHistoryItem image failed', error);
                 }
             }),
         );
@@ -189,7 +195,7 @@ export class CaptureHistory {
                 recursive: true,
             });
         } catch (error) {
-            console.warn('[CaptureHistory] remove captureHistoryImagesDir failed', error);
+            appWarn('[CaptureHistory] remove captureHistoryImagesDir failed', error);
         }
     }
 }

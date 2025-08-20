@@ -63,6 +63,7 @@ import { openUrl } from '@tauri-apps/plugin-opener';
 import { writeTextToClipboard } from '@/utils/clipboard';
 import { formatKey } from '@/utils/format';
 import urlJoin from 'url-join';
+import { appError } from '@/utils/log';
 
 type BubbleDataType = AntdBubbleDataType & {
     flow_config?: ChatMessageFlowConfig;
@@ -569,7 +570,7 @@ const Chat = () => {
                     }
                 }
             } catch (error) {
-                console.error(error);
+                appError('[transformMessage] error', error);
             }
 
             newestMessage.current = {

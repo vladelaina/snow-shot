@@ -38,6 +38,7 @@ import { createFixedContentWindow, createFullScreenDrawWindow } from '@/commands
 import { getPlatformValue } from '@/utils';
 import { join, resourceDir } from '@tauri-apps/api/path';
 import { convertFileSrc } from '@tauri-apps/api/core';
+import { appError } from '@/utils/log';
 
 export const TrayIconStatePublisher = createPublisher<{
     disableShortcut: boolean;
@@ -119,7 +120,7 @@ const TrayIconLoaderComponent = () => {
                 await trayIcon2.close();
             }
         } catch (error) {
-            console.error(error);
+            appError(`[closeTrayIcon] error`, error);
         }
     }, []);
 
@@ -411,7 +412,7 @@ const TrayIconLoaderComponent = () => {
             await closeTrayIcon();
             trayIcon = await TrayIcon.new(options);
         } catch (error) {
-            console.error(error);
+            appError(`[initTrayIcon] create tray icon failed`, error);
             message.error(intl.formatMessage({ id: 'home.trayIcon.error' }));
         }
     }, [

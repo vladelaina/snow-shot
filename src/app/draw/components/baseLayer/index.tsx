@@ -31,6 +31,7 @@ import {
 } from './actions';
 import { supportOffscreenCanvas } from '@/utils';
 import { BlurSprite, BlurSpriteProps } from './baseLayerRenderActions';
+import { appError } from '@/utils/log';
 
 export type BaseLayerContextType = {
     /** 调整画布大小 */
@@ -303,7 +304,7 @@ export const BaseLayerCore: React.FC<
             }
 
             if (!canvasElementRef.current) {
-                console.error('[BaseLayerCore] canvasRef.current is null');
+                appError('[BaseLayerCore] canvasRef.current is null');
                 return;
             }
 

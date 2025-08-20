@@ -81,6 +81,7 @@ import Flatbush from 'flatbush';
 import { isOcrTool } from './components/drawToolbar/components/tools/ocrTool';
 import { CaptureHistoryActionType, CaptureHistoryController } from './components/captureHistory';
 import { AntdContext } from '@/components/globalLayoutExtra';
+import { appError } from '@/utils/log';
 
 const DrawCacheLayer = dynamic(
     async () => (await import('./components/drawCacheLayer')).DrawCacheLayer,
@@ -302,7 +303,7 @@ const DrawPageCore: React.FC = () => {
 
             // 监听键盘
             listenKeyStart().catch((error) => {
-                console.error('[DrawPageCore] listenKeyStart error', error);
+                appError('[DrawPageCore] listenKeyStart error', error);
             });
 
             setDrawWindowStyle();
@@ -333,7 +334,7 @@ const DrawPageCore: React.FC = () => {
         async (clearScrollScreenshot: boolean = true) => {
             // 停止监听键盘
             listenKeyStop().catch((error) => {
-                console.error('[DrawPageCore] listenKeyStop error', error);
+                appError('[DrawPageCore] listenKeyStop error', error);
             });
 
             drawPageStateRef.current = DrawPageState.WaitRelease;
@@ -381,7 +382,7 @@ const DrawPageCore: React.FC = () => {
         const [captureBoundingBox, mousePosition] = await Promise.all([
             getMonitorsBoundingBox(),
             getMousePosition().catch((error) => {
-                console.error('[DrawPageCore] getMousePosition error', error);
+                appError('[DrawPageCore] getMousePosition error', error);
                 message.error(<FormattedMessage id="draw.getMousePositionError" />);
                 return [0, 0];
             }),
@@ -418,7 +419,7 @@ const DrawPageCore: React.FC = () => {
 
             const initCaptureBoundingBoxInfoPromise = initCaptureBoundingBoxInfoAndShowWindow();
             const captureAllMonitorsPromise = captureAllMonitors().catch((error) => {
-                console.error('[DrawPageCore] captureAllMonitors error', error);
+                appError('[DrawPageCore] captureAllMonitors error', error);
                 return undefined;
             });
 

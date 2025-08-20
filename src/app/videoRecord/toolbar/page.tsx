@@ -57,6 +57,7 @@ import { getMonitorsBoundingBox, MonitorBoundingBox } from '@/commands/core';
 import { setWindowRect } from '@/utils/window';
 import { Window as AppWindow } from '@tauri-apps/api/window';
 import { useStateRef } from '@/hooks/useStateRef';
+import { appError } from '@/utils/log';
 
 dayjs.extend(duration);
 
@@ -525,7 +526,7 @@ export default function VideoRecordToolbar() {
                                     await createDir(saveDirectory);
                                     await openPath(saveDirectory);
                                 } catch (error) {
-                                    console.error(error);
+                                    appError('[openFolder] error', error);
                                 }
                                 setOpenFolderLoading(false);
                             }}

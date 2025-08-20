@@ -16,6 +16,7 @@ import { Ordered } from '@mg-chao/excalidraw/element/types';
 import { NonDeletedExcalidrawElement } from '@mg-chao/excalidraw/element/types';
 import { AntdContext } from '@/components/globalLayoutExtra';
 import { FormattedMessage } from 'react-intl';
+import { appError } from '@/utils/log';
 
 export type CaptureHistoryActionType = {
     saveCurrentCapture: () => Promise<void>;
@@ -193,7 +194,7 @@ const CaptureHistoryControllerCore: React.FC<{
 
     const saveCurrentCapture = useCallback(async () => {
         if (!imageBufferRef.current || !captureHistoryRef.current) {
-            console.error('[CaptureHistoryController] saveCurrentCapture error, invalid state', {
+            appError('[CaptureHistoryController] saveCurrentCapture error, invalid state', {
                 imageBufferRef: imageBufferRef.current,
                 captureHistoryRef: captureHistoryRef.current,
             });
@@ -202,7 +203,7 @@ const CaptureHistoryControllerCore: React.FC<{
 
         const selectRect = selectLayerActionRef.current?.getSelectRect();
         if (!selectRect) {
-            console.error(
+            appError(
                 '[CaptureHistoryController] saveCurrentCapture error, invalid selectRect',
                 {
                     selectRect: selectRect,

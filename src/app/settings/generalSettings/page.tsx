@@ -41,8 +41,7 @@ import { AggregationColor } from 'antd/es/color-picker/color';
 import { PathInput } from '@/components/pathInput';
 import { ColorPickerShowMode } from '@/app/draw/components/colorPicker';
 import { DrawState } from '@/app/fullScreenDraw/components/drawCore/extra';
-import { convertFileSrc } from '@tauri-apps/api/core';
-import { join, resourceDir } from '@tauri-apps/api/path';
+import { resourceDir } from '@tauri-apps/api/path';
 import { getDefaultIconPath } from '@/app/trayIcon';
 
 const { Option } = Select;

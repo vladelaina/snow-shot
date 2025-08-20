@@ -36,6 +36,7 @@ import { OcrModel } from '@/commands/ocr';
 import { CaptureHistory, HistoryValidDuration } from '@/utils/captureHistory';
 import { usePlatform } from '@/hooks/usePlatform';
 import { MacOSPermissionsSettings } from './components/macosPermissionsSettings';
+import { appLogDir } from '@tauri-apps/api/path';
 
 export default function SystemSettings() {
     const intl = useIntl();
@@ -112,9 +113,13 @@ export default function SystemSettings() {
     );
 
     const [configDirPath, setConfigDirPath] = useState<string>('');
+    const [appLogPath, setAppLogPath] = useState<string>('');
     useEffect(() => {
         getConfigDirPath().then((path) => {
             setConfigDirPath(path);
+        });
+        appLogDir().then((path) => {
+            setAppLogPath(path);
         });
     }, []);
 
@@ -758,6 +763,40 @@ export default function SystemSettings() {
                                 >
                                     <FormattedMessage id="settings.systemSettings.dataFile.clearAll" />
                                 </Button>
+                            </ProForm.Item>
+                        </Col>
+                        <Col span={24}>
+                            <ProForm.Item
+                                label={
+                                    <IconLabel
+                                        label={
+                                            <FormattedMessage id="settings.systemSettings.appLogFilePath" />
+                                        }
+                                    />
+                                }
+                            >
+                                <Space wrap>
+                                    <Typography.Text
+                                        copyable={{
+                                            text: appLogPath,
+                                        }}
+                                    >
+                                        {appLogPath}
+                                    </Typography.Text>
+                                    <Button
+                                        onClick={async () => {
+                                            try {
+                                                await openPath(appLogPath);
+                                            } catch {
+                                                message.error(
+                                                    <FormattedMessage id="settings.systemSettings.appLogFilePath.open.failed" />,
+                                                );
+                                            }
+                                        }}
+                                    >
+                                        <FormattedMessage id="settings.systemSettings.appLogFilePath.open" />
+                                    </Button>
+                                </Space>
                             </ProForm.Item>
                         </Col>
                     </Row>

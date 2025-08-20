@@ -1,7 +1,14 @@
 'use client';
 
 import { createContext, RefObject, useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { BaseDirectory, mkdir, readTextFile, writeTextFile, remove } from '@tauri-apps/plugin-fs';
+import {
+    BaseDirectory,
+    mkdir,
+    readTextFile,
+    writeTextFile,
+    remove,
+    exists,
+} from '@tauri-apps/plugin-fs';
 import { ConfigProvider, theme } from 'antd';
 import { debounce, isEqual, trim } from 'es-toolkit';
 import zhCN from 'antd/es/locale/zh_CN';
@@ -36,6 +43,8 @@ import { OcrModel } from '@/commands/ocr';
 import { HistoryValidDuration } from '@/utils/captureHistory';
 import { getPlatformValue } from '@/utils';
 import { VideoMaxSize } from '@/commands/videoRecord';
+import * as tauriLog from '@tauri-apps/plugin-log';
+import { appWarn } from '@/utils/log';
 
 export enum AppSettingsGroup {
     Common = 'common',
@@ -1255,14 +1264,15 @@ const ContextWrapCore: React.FC<{ children: React.ReactNode }> = ({ children }) 
 
         const settings: AppSettingsData = {} as AppSettingsData;
 
-        try {
+        // 启动时验证下目录是否存在
+        const isDirExists = await exists(configDir, {
+            baseDir: BaseDirectory.AppConfig,
+        });
+        if (!isDirExists) {
             await mkdir(configDir, {
                 baseDir: BaseDirectory.AppConfig,
                 recursive: true,
             });
-        } catch (error) {
-            // 一般是提示目录已存在
-            console.warn('[reloadAppSettings] mkdir configDir failed', error);
         }
 
         await Promise.all(
@@ -1274,9 +1284,8 @@ const ContextWrapCore: React.FC<{ children: React.ReactNode }> = ({ children }) 
                         baseDir: BaseDirectory.AppConfig,
                     });
                 } catch (error) {
-                    console.warn(
-                        `[reloadAppSettings] read file ${getFileName(group)} failed`,
-                        error,
+                    appWarn(
+                        `[reloadAppSettings] read file ${getFileName(group)} failed: ${JSON.stringify(error)}`,
                     );
                 }
 
@@ -1353,6 +1362,28 @@ const ContextWrapCore: React.FC<{ children: React.ReactNode }> = ({ children }) 
             appWindowRef,
         };
     }, [appWindowRef]);
+
+    useEffect(() => {
+        const handleUnhandledRejection = (event: PromiseRejectionEvent) => {
+            tauriLog.error(
+                `[${location.href}] ${typeof event.reason === 'string' ? event.reason : JSON.stringify(event.reason)} ${JSON.stringify(event)}`,
+            );
+        };
+
+        const handleGlobalError = (event: ErrorEvent) => {
+            tauriLog.error(
+                `[${location.href}] ${typeof event.error === 'string' ? event.error : JSON.stringify(event.error)} ${JSON.stringify(event)}`,
+            );
+        };
+
+        window.addEventListener('unhandledrejection', handleUnhandledRejection);
+        window.addEventListener('error', handleGlobalError);
+
+        return () => {
+            window.removeEventListener('unhandledrejection', handleUnhandledRejection);
+            window.removeEventListener('error', handleGlobalError);
+        };
+    }, []);
 
     return (
         <AppSettingsActionContext.Provider value={appSettingsContextValue}>

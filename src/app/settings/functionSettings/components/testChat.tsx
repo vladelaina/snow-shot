@@ -8,6 +8,7 @@ import { TestChatIcon } from '@/components/icons';
 import { appFetch } from '@/services/tools';
 import { useStateSubscriber } from '@/hooks/useStateSubscriber';
 import { AppSettingsGroup, AppSettingsPublisher } from '@/app/contextWrap';
+import { appError } from '@/utils/log';
 
 export const TestChat: React.FC<{ config: ChatApiConfig }> = ({ config }) => {
     const { token } = theme.useToken();
@@ -41,7 +42,7 @@ export const TestChat: React.FC<{ config: ChatApiConfig }> = ({ config }) => {
                 }
             }
         } catch (error) {
-            console.error(error);
+            appError('[handleTest] error', error);
         }
 
         setLoading(false);

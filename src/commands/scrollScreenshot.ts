@@ -1,3 +1,4 @@
+import { appError } from '@/utils/log';
 import { invoke } from '@tauri-apps/api/core';
 
 export enum ScrollDirection {
@@ -79,7 +80,7 @@ export const scrollScreenshotHandleImage = async (
             thumbnailSize,
         });
     } catch (error) {
-        console.error('[scrollScreenshotHandleImage] error', error);
+        appError('[scrollScreenshotHandleImage] error', error);
         result = new ArrayBuffer();
     }
 
@@ -164,7 +165,7 @@ export const scrollScreenshotGetImageData = async (): Promise<Blob | undefined> 
     try {
         result = await invoke<ArrayBuffer>('scroll_screenshot_get_image_data');
     } catch (error) {
-        console.error(error);
+        appError('[scrollScreenshotGetImageData] error', error);
         return undefined;
     }
 

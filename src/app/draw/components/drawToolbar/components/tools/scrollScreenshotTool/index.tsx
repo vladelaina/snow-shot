@@ -38,6 +38,7 @@ import { DrawState } from '@/app/fullScreenDraw/components/drawCore/extra';
 import { DrawStatePublisher } from '@/app/fullScreenDraw/components/drawCore/extra';
 import { MessageType } from 'antd/es/message/interface';
 import { getCurrentWindow } from '@tauri-apps/api/window';
+import { appError } from '@/utils/log';
 
 const THUMBNAIL_WIDTH = 128;
 
@@ -212,7 +213,7 @@ export const ScrollScreenshot: React.FC<{
                 Math.round(THUMBNAIL_WIDTH * window.devicePixelRatio),
             );
         } catch (error) {
-            console.error(error);
+            appError('[handleCaptureImage] scrollScreenshotHandleImage error', error);
             message.error(intl.formatMessage({ id: 'draw.scrollScreenshot.captureError' }));
             return needContinue;
         }
@@ -250,7 +251,7 @@ export const ScrollScreenshot: React.FC<{
             try {
                 needContinue = await handleCaptureImage();
             } catch (error) {
-                console.error('[handleCaptureImageList] error', error);
+                appError('[handleCaptureImageList] error', error);
                 break;
             }
         }
@@ -347,7 +348,7 @@ export const ScrollScreenshot: React.FC<{
                     scrollSettings.tryRollback,
                 );
             } catch (error) {
-                console.error(error);
+                appError('[init] scrollScreenshotInit error', error);
                 message.error(intl.formatMessage({ id: 'draw.scrollScreenshot.initError' }));
                 return;
             }
