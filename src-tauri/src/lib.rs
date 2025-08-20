@@ -87,7 +87,7 @@ pub fn run() {
                     .targets([
                         Target::new(TargetKind::Stdout),
                         Target::new(TargetKind::LogDir {
-                            file_name: Some(format!("snow-shot-{}.log", current_date)),
+                            file_name: Some(format!("snow-shot-{}", current_date)),
                         }),
                         Target::new(TargetKind::Webview),
                     ])

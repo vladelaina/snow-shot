@@ -1366,13 +1366,13 @@ const ContextWrapCore: React.FC<{ children: React.ReactNode }> = ({ children }) 
     useEffect(() => {
         const handleUnhandledRejection = (event: PromiseRejectionEvent) => {
             tauriLog.error(
-                `[${location.href}] ${typeof event.reason === 'string' ? event.reason : JSON.stringify(event.reason)}`,
+                `[${location.href}] ${typeof event.reason === 'string' ? event.reason : JSON.stringify(event.reason)} ${JSON.stringify(event)}`,
             );
         };
 
         const handleGlobalError = (event: ErrorEvent) => {
             tauriLog.error(
-                `[${location.href}] ${typeof event.error === 'string' ? event.error : JSON.stringify(event.error)}`,
+                `[${location.href}] ${typeof event.error === 'string' ? event.error : JSON.stringify(event.error)} ${JSON.stringify(event)}`,
             );
         };
 

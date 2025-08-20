@@ -234,6 +234,9 @@ export const settings = {
     'settings.systemSettings.dataFile.clearAll.confirm':
         '确定清除所有数据吗？完成清除后将自动重启软件（重启后会自动生成默认配置的数据）',
     'settings.systemSettings.dataFilePath.open.failed': '打开配置目录失败，请手动复制目录打开',
+    'settings.systemSettings.appLogFilePath': '日志目录',
+    'settings.systemSettings.appLogFilePath.open': '打开目录',
+    'settings.systemSettings.appLogFilePath.open.failed': '打开日志目录失败，请手动复制目录打开',
     'settings.functionSettings.chatSettings.testChat': '测试 API 配置',
     'settings.functionSettings.chatSettings.testPrompt': '测试提示词: "Say "Hello, world!""',
     'settings.systemSettings.screenshotSettings': '截图',
