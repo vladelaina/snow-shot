@@ -46,6 +46,7 @@ import { MousePosition } from '@/utils/mousePosition';
 import { CaptureBoundingBoxInfo } from '@/app/draw/extra';
 import { useTextScaleFactor } from '@/hooks/useTextScaleFactor';
 import { AntdContext } from '@/components/globalLayoutExtra';
+import { appError } from '@/utils/log';
 
 export type FixedContentInitDrawParams = {
     captureBoundingBoxInfo: CaptureBoundingBoxInfo;
@@ -813,7 +814,7 @@ export const FixedContentCore: React.FC<{
                         appWindow.setPosition(new PhysicalPosition(newX, newY)),
                     ]);
                 } catch (error) {
-                    console.error('Error during mouse-centered scaling:', error);
+                    appError('[scaleWindow] Error during mouse-centered scaling', error);
                     // 如果出错，回退到普通缩放
                     await Promise.all([appWindow.setSize(new PhysicalSize(newWidth, newHeight))]);
                 }
@@ -961,7 +962,7 @@ export const FixedContentCore: React.FC<{
             if (distance > 6 || (isThumbnailRef.current && distance > 2)) {
                 dragRegionMouseDownMousePositionRef.current = undefined;
                 startFreeDrag().catch((error) => {
-                    console.error('[FixedContentCore] startFreeDrag error', error);
+                    appError('[FixedContentCore] startFreeDrag error', error);
                     message.error(<FormattedMessage id="draw.captureAllMonitorsError" />);
                 });
             }

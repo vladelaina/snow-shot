@@ -7,6 +7,7 @@ import { join as joinPath } from '@tauri-apps/api/path';
 import path from 'path';
 import { NonDeletedExcalidrawElement, Ordered } from '@mg-chao/excalidraw/element/types';
 import { AppState } from '@mg-chao/excalidraw/types';
+import { appError, appWarn } from './log';
 
 const captureHistoryImagesDir = 'captureHistoryImages';
 
@@ -122,7 +123,7 @@ export class CaptureHistory {
 
             await this.store.set(captureHistoryItem.id, captureHistoryItem);
         } catch (error) {
-            console.error('[CaptureHistory] save captureHistoryItem failed', error);
+            appError('[CaptureHistory] save captureHistoryItem failed', error);
         }
 
         return captureHistoryItem;
@@ -173,14 +174,14 @@ export class CaptureHistory {
                 try {
                     await this.store.delete(id);
                 } catch (error) {
-                    console.warn('[CaptureHistory] delete captureHistoryItem failed', error);
+                    appWarn('[CaptureHistory] delete captureHistoryItem failed', error);
                 }
                 try {
                     await remove(getCaptureImageFilePath(item.file_name), {
                         baseDir: BaseDirectory.AppConfig,
                     });
                 } catch (error) {
-                    console.warn('[CaptureHistory] remove captureHistoryItem image failed', error);
+                    appWarn('[CaptureHistory] remove captureHistoryItem image failed', error);
                 }
             }),
         );
@@ -194,7 +195,7 @@ export class CaptureHistory {
                 recursive: true,
             });
         } catch (error) {
-            console.warn('[CaptureHistory] remove captureHistoryImagesDir failed', error);
+            appWarn('[CaptureHistory] remove captureHistoryImagesDir failed', error);
         }
     }
 }

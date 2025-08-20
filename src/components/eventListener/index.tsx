@@ -20,6 +20,7 @@ import {
 } from '@/commands/listenKey';
 import { showWindow } from '@/utils/window';
 import { AntdContext } from '../globalLayoutExtra';
+import { appError } from '@/utils/log';
 
 type Listener = {
     event: string;
@@ -300,7 +301,7 @@ const EventListenerCore: React.FC<{ children: React.ReactNode }> = ({ children }
                                 listenerMapRef.current.get(id)?.callback(e);
                             });
                         } catch (error) {
-                            console.error(error);
+                            appError('[EventListenerCore] callback error', error);
                         }
                     },
                 };

@@ -1,3 +1,5 @@
+import { appWarn } from './log';
+
 /**
  * 播放音效的通用函数
  * @param soundPath 音效文件路径
@@ -8,9 +10,9 @@ export const playSound = (soundPath: string, volume: number = 1) => {
         const audio = new Audio(soundPath);
         audio.volume = Math.max(0, Math.min(1, volume)); // 确保音量在0-1范围内
         audio.play().catch((error) => {
-            console.warn(`[audio][playSound] Failed to play sound (${soundPath}):`, error);
+            appWarn(`[audio][playSound] Failed to play sound (${soundPath}):`, error);
         });
     } catch (error) {
-        console.warn(`[audio][playSound] Failed to create audio object (${soundPath}):`, error);
+        appWarn(`[audio][playSound] Failed to create audio object (${soundPath}):`, error);
     }
 };

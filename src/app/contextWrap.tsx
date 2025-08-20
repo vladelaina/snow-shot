@@ -43,6 +43,8 @@ import { OcrModel } from '@/commands/ocr';
 import { HistoryValidDuration } from '@/utils/captureHistory';
 import { getPlatformValue } from '@/utils';
 import { VideoMaxSize } from '@/commands/videoRecord';
+import * as tauriLog from '@tauri-apps/plugin-log';
+import { appWarn } from '@/utils/log';
 
 export enum AppSettingsGroup {
     Common = 'common',
@@ -1282,9 +1284,8 @@ const ContextWrapCore: React.FC<{ children: React.ReactNode }> = ({ children }) 
                         baseDir: BaseDirectory.AppConfig,
                     });
                 } catch (error) {
-                    console.warn(
-                        `[reloadAppSettings] read file ${getFileName(group)} failed`,
-                        error,
+                    appWarn(
+                        `[reloadAppSettings] read file ${getFileName(group)} failed: ${JSON.stringify(error)}`,
                     );
                 }
 
@@ -1361,6 +1362,28 @@ const ContextWrapCore: React.FC<{ children: React.ReactNode }> = ({ children }) 
             appWindowRef,
         };
     }, [appWindowRef]);
+
+    useEffect(() => {
+        const handleUnhandledRejection = (event: PromiseRejectionEvent) => {
+            tauriLog.error(
+                `[${location.href}] ${typeof event.reason === 'string' ? event.reason : JSON.stringify(event.reason)}`,
+            );
+        };
+
+        const handleGlobalError = (event: ErrorEvent) => {
+            tauriLog.error(
+                `[${location.href}] ${typeof event.error === 'string' ? event.error : JSON.stringify(event.error)}`,
+            );
+        };
+
+        window.addEventListener('unhandledrejection', handleUnhandledRejection);
+        window.addEventListener('error', handleGlobalError);
+
+        return () => {
+            window.removeEventListener('unhandledrejection', handleUnhandledRejection);
+            window.removeEventListener('error', handleGlobalError);
+        };
+    }, []);
 
     return (
         <AppSettingsActionContext.Provider value={appSettingsContextValue}>

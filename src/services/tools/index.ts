@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
+import { appError } from '@/utils/log';
 import { fetch } from '@tauri-apps/plugin-http';
 
 export const getUrl = (url: string, params?: Record<string, any>) => {
@@ -69,7 +70,7 @@ export class ServiceResponse<T> {
             try {
                 window.__APP_HANDLE_REQUEST_ERROR__?.(this);
             } catch (error) {
-                console.error(error);
+                appError('[ServiceResponse] success error', error);
             }
             return undefined;
         }
@@ -78,7 +79,7 @@ export class ServiceResponse<T> {
             try {
                 window.__APP_HANDLE_HTTP_ERROR__?.(this);
             } catch (error) {
-                console.error(error);
+                appError('[ServiceResponse] httpError error', error);
             }
             return undefined;
         }
@@ -87,7 +88,7 @@ export class ServiceResponse<T> {
             try {
                 window.__APP_HANDLE_SERVICE_ERROR__?.(this);
             } catch (error) {
-                console.error(error);
+                appError('[ServiceResponse] serviceError error', error);
             }
             return undefined;
         }
@@ -184,10 +185,9 @@ export const appFetch = (async (...params: Parameters<typeof fetch>) => {
         }
         return response;
     } catch (error) {
-        console.error(error);
+        appError('[appFetch] fetch error', error);
         throw error;
     }
-
 }) as typeof fetch;
 
 export type StreamFetchEventOptions<R> = {

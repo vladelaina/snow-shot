@@ -6,11 +6,13 @@ pub mod screenshot;
 pub mod scroll_screenshot;
 pub mod video_record;
 
+use chrono::Local;
 use snow_shot_app_services::device_event_handler_service;
 use tauri::Emitter;
 use tokio::sync::Mutex;
 
 use tauri::Manager;
+use tauri_plugin_log::{Target, TargetKind};
 
 use snow_shot_app_os::ui_automation::UIElements;
 use snow_shot_app_scroll_screenshot_service::scroll_screenshot_capture_service;
@@ -77,21 +79,22 @@ pub fn run() {
         .plugin(tauri_plugin_notification::init())
         .plugin(tauri_plugin_process::init())
         .setup(|app| {
-            #[cfg(debug_assertions)]
-            {
-                use tauri_plugin_log::{Target, TargetKind};
+            let current_date = Local::now().format("%Y-%m-%d").to_string();
 
-                app.handle().plugin(
-                    tauri_plugin_log::Builder::default()
-                        .targets([
-                            Target::new(TargetKind::Stdout),
-                            Target::new(TargetKind::LogDir { file_name: None }),
-                            Target::new(TargetKind::Webview),
-                        ])
-                        .level(log::LevelFilter::Info)
-                        .build(),
-                )?;
-            }
+            app.handle().plugin(
+                tauri_plugin_log::Builder::default()
+                    .rotation_strategy(tauri_plugin_log::RotationStrategy::KeepAll)
+                    .targets([
+                        Target::new(TargetKind::Stdout),
+                        Target::new(TargetKind::LogDir {
+                            file_name: Some(format!("snow-shot-{}.log", current_date)),
+                        }),
+                        Target::new(TargetKind::Webview),
+                    ])
+                    .level(log::LevelFilter::Info)
+                    .build(),
+            )?;
+
             let main_window = app
                 .get_webview_window("main")
                 .expect("[lib::setup] no main window");

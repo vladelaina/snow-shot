@@ -8,6 +8,7 @@ import { trim } from 'es-toolkit';
 import { formatKey } from '@/utils/format';
 import { listenKeyStart, listenKeyStop } from '@/commands/listenKey';
 import { getPlatform } from '@/utils';
+import { appError } from '@/utils/log';
 
 type KeyConfig = {
     recordKeys: string;
@@ -159,11 +160,11 @@ export const KeyButton: React.FC<{
     useEffect(() => {
         if (open) {
             listenKeyStart().catch((error) => {
-                console.error('[KeyButton] listenKeyStart error', error);
+                appError('[KeyButton] listenKeyStart error', error);
             });
         } else {
             listenKeyStop().catch((error) => {
-                console.error('[KeyButton] listenKeyStop error', error);
+                appError('[KeyButton] listenKeyStop error', error);
             });
         }
     }, [open]);

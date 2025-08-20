@@ -12,13 +12,14 @@ import { AppSettingsData, AppSettingsGroup } from '@/app/contextWrap';
 import { useAppSettingsLoad } from '@/hooks/useAppSettingsLoad';
 import { compare } from 'compare-versions';
 import { getPlatform } from '@/utils';
+import { appError } from '@/utils/log';
 
 const WEBSITE_URL = 'https://snowshot.top/';
 
 export const getLatestVersion = async () => {
     const response = await fetch(`${WEBSITE_URL}latest-version.txt`);
     if (!response.ok) {
-        console.error('Failed to get latest version:', response.statusText);
+        appError('Failed to get latest version:', response.statusText);
         return;
     }
 
@@ -101,7 +102,7 @@ export const CheckVersion: React.FC = () => {
                 }
             }
         } catch (error) {
-            console.error('Failed to check version:', error);
+            appError('Failed to check version:', error);
         }
     }, [clearIntervalRef, intl]);
 
