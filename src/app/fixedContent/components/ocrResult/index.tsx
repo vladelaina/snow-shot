@@ -268,15 +268,14 @@ export const OcrResult: React.FC<{
 
             if (imageBlob) {
                 monitorScaleFactorRef.current = window.devicePixelRatio;
-                const detectResult = await ocrDetect(
-                    await imageBlob.arrayBuffer(),
-                    window.devicePixelRatio,
-                    getAppSettings()[AppSettingsGroup.SystemScreenshot].ocrDetectAngle,
-                );
-                releaseOcrSession();
-
                 const ocrResult = params.ocrResult ?? {
-                    result: detectResult,
+                    result: await ocrDetect(
+                        await imageBlob.arrayBuffer(),
+                        monitorScaleFactorRef.current,
+                        getAppSettings()[AppSettingsGroup.SystemScreenshot].ocrDetectAngle,
+                    ).finally(() => {
+                        releaseOcrSession();
+                    }),
                     ignoreScale: false,
                 };
 
