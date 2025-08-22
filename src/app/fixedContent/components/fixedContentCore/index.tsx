@@ -94,6 +94,20 @@ const closeRightClickMenu = async () => {
     }
 };
 
+const getSelectTextMode = (fixedContentType: FixedContentType | undefined) => {
+    if (!fixedContentType) {
+        return undefined;
+    }
+
+    if (
+        fixedContentType === FixedContentType.DrawCanvas ||
+        fixedContentType === FixedContentType.Image
+    ) {
+        return 'ocr'; // 使用 OCR 选取文本
+    }
+    return 'text'; // 支持文本选取
+};
+
 export const FixedContentCore: React.FC<{
     actionRef: React.RefObject<FixedContentActionType | undefined>;
     onDrawLoad?: () => void;
@@ -152,10 +166,11 @@ export const FixedContentCore: React.FC<{
         y: 100,
     });
 
-    const [fixedContentType, setFixedContentType] = useState<FixedContentType | undefined>(
-        undefined,
-    );
+    const [fixedContentType, setFixedContentType, fixedContentTypeRef] = useStateRef<
+        FixedContentType | undefined
+    >(undefined);
     const [enableSelectText, setEnableSelectText] = useState(false);
+    const [isAlwaysOnTop, setIsAlwaysOnTop] = useStateRef(true);
     const dragRegionMouseDownMousePositionRef = useRef<MousePosition>(undefined);
 
     const [htmlBlobUrl, setHtmlBlobUrl] = useState<string | undefined>(undefined);
@@ -216,6 +231,34 @@ export const FixedContentCore: React.FC<{
                             }, '*');
                         });
 
+                        // 转发键盘事件到父窗口
+                        document.addEventListener('keydown', (e) => {
+                            window.parent.postMessage({
+                                type: 'keydown',
+                                key: e.key,
+                                code: e.code,
+                                keyCode: e.keyCode,
+                                ctrlKey: e.ctrlKey,
+                                shiftKey: e.shiftKey,
+                                altKey: e.altKey,
+                                metaKey: e.metaKey,
+                                repeat: e.repeat,
+                            }, '*');
+                        });
+
+                        document.addEventListener('keyup', (e) => {
+                            window.parent.postMessage({
+                                type: 'keyup',
+                                key: e.key,
+                                code: e.code,
+                                keyCode: e.keyCode,
+                                ctrlKey: e.ctrlKey,
+                                shiftKey: e.shiftKey,
+                                altKey: e.altKey,
+                                metaKey: e.metaKey,
+                            }, '*');
+                        });
+
                         // 拦截 a 标签的跳转操作
                         document.addEventListener('click', (e) => {
                             const target = e.target;
@@ -234,6 +277,7 @@ export const FixedContentCore: React.FC<{
                                 }, '*');
                             }
                         });
+
                     </script>
                     ${htmlContent.slice(6, -7)}
                 </html>`;
@@ -244,7 +288,7 @@ export const FixedContentCore: React.FC<{
             const blobUrl = URL.createObjectURL(blob);
             setHtmlBlobUrl(blobUrl);
         },
-        [token.colorBgContainer, token.padding],
+        [setFixedContentType, token.colorBgContainer, token.padding],
     );
 
     const [textContent, setTextContent, textContentRef] = useStateRef<string | undefined>(
@@ -288,7 +332,7 @@ export const FixedContentCore: React.FC<{
                 }, timeout);
             }, 17);
         },
-        [onTextLoad, setWindowSize, setTextContent],
+        [setFixedContentType, setTextContent, onTextLoad, setWindowSize],
     );
 
     const initOcrParams = useRef<{
@@ -300,18 +344,21 @@ export const FixedContentCore: React.FC<{
 
     const imageRef = useRef<HTMLImageElement>(null);
     const imageOcrSignRef = useRef<boolean>(false);
-    const initImage = useCallback((imageContent: Blob | string) => {
-        setFixedContentType(FixedContentType.Image);
+    const initImage = useCallback(
+        (imageContent: Blob | string) => {
+            setFixedContentType(FixedContentType.Image);
 
-        if (typeof imageContent === 'string') {
-            setImageUrl(imageContent);
-        } else {
-            setImageUrl(URL.createObjectURL(imageContent));
-            imageBlobRef.current = imageContent;
-        }
+            if (typeof imageContent === 'string') {
+                setImageUrl(imageContent);
+            } else {
+                setImageUrl(URL.createObjectURL(imageContent));
+                imageBlobRef.current = imageContent;
+            }
 
-        imageOcrSignRef.current = false;
-    }, []);
+            imageOcrSignRef.current = false;
+        },
+        [setFixedContentType],
+    );
 
     const initDraw = useCallback(
         async (params: FixedContentInitDrawParams) => {
@@ -381,15 +428,22 @@ export const FixedContentCore: React.FC<{
                 });
             }
         },
-        [getAppSettings, setWindowSize],
+        [getAppSettings, setFixedContentType, setWindowSize],
     );
+
+    useEffect(() => {
+        if (isAlwaysOnTop) {
+            appWindowRef.current?.setAlwaysOnTop(true);
+            setCurrentWindowAlwaysOnTop(true);
+        } else {
+            appWindowRef.current?.setAlwaysOnTop(false);
+        }
+    }, [isAlwaysOnTop]);
 
     useImperativeHandle(
         actionRef,
         () => ({
             init: async (params) => {
-                setCurrentWindowAlwaysOnTop(true);
-
                 if ('htmlContent' in params) {
                     initHtml(params.htmlContent);
                 } else if ('textContent' in params) {
@@ -555,6 +609,100 @@ export const FixedContentCore: React.FC<{
         }
     }, [scaleRef, setIsThumbnail, setScale]);
 
+    const copyToClipboard = useCallback(async () => {
+        if (fixedContentTypeRef.current === FixedContentType.DrawCanvas) {
+            if (!blobRef.current) {
+                return;
+            }
+
+            await writeImageToClipboard(blobRef.current);
+        } else if (
+            fixedContentTypeRef.current === FixedContentType.Html &&
+            originHtmlContentRef.current
+        ) {
+            await writeHtmlToClipboard(originHtmlContentRef.current);
+        } else if (
+            fixedContentTypeRef.current === FixedContentType.Text &&
+            textContentRef.current
+        ) {
+            await writeTextToClipboard(textContentRef.current);
+        } else if (fixedContentTypeRef.current === FixedContentType.Image && imageBlobRef.current) {
+            // 这里的图片类型不确定，浏览器不一定支持，所以通过本地 API 写入
+            const arrayBuffer = await imageBlobRef.current.arrayBuffer();
+            await clipboard.writeImage(arrayBuffer);
+        }
+    }, [fixedContentTypeRef, textContentRef]);
+
+    const saveToFile = useCallback(async () => {
+        const filePath = await dialog.save({
+            filters: [
+                {
+                    name: 'PNG(*.png)',
+                    extensions: ['png'],
+                },
+            ],
+            defaultPath: generateImageFileName(
+                getAppSettings()[AppSettingsGroup.FunctionOutput].manualSaveFileNameFormat,
+            ),
+            canCreateDirectories: true,
+        });
+
+        if (!filePath) {
+            return;
+        }
+
+        if (fixedContentTypeRef.current === FixedContentType.DrawCanvas && blobRef.current) {
+            await saveFile(filePath, await blobRef.current.arrayBuffer(), ImageFormat.PNG);
+        } else if (fixedContentTypeRef.current === FixedContentType.Image && imageBlobRef.current) {
+            await saveFile(filePath, await imageBlobRef.current.arrayBuffer(), ImageFormat.PNG);
+        } else {
+            let htmlElement: HTMLElement | undefined | null;
+            if (fixedContentTypeRef.current === FixedContentType.Html) {
+                htmlElement = htmlContentContainerRef.current?.contentWindow?.document.body;
+            } else if (fixedContentTypeRef.current === FixedContentType.Text) {
+                htmlElement = textContentContainerRef.current;
+            } else if (fixedContentTypeRef.current === FixedContentType.Image) {
+                // 这种情况说明是从本地路径读取的图片
+                htmlElement = imageRef.current;
+            }
+
+            if (!htmlElement) {
+                return;
+            }
+
+            htmlToImage.toBlob(htmlElement).then(async (blob) => {
+                if (!blob) {
+                    return;
+                }
+
+                await saveFile(filePath, await blob.arrayBuffer(), ImageFormat.PNG);
+            });
+        }
+    }, [fixedContentTypeRef, getAppSettings]);
+
+    const switcSelectText = useCallback(async () => {
+        if (getSelectTextMode(fixedContentTypeRef.current) === 'ocr') {
+            if (initOcrParams.current) {
+                ocrResultActionRef.current?.init(initOcrParams.current);
+                initOcrParams.current = undefined;
+            } else if (imageRef.current && !imageOcrSignRef.current) {
+                ocrResultActionRef.current?.init({
+                    imageElement: imageRef.current,
+                    monitorScaleFactor: window.devicePixelRatio,
+                });
+                imageOcrSignRef.current = true;
+            }
+
+            ocrResultActionRef.current?.setEnable((enable) => !enable);
+        } else if (getSelectTextMode(fixedContentTypeRef.current) === 'text') {
+            setEnableSelectText((enable) => !enable);
+        }
+    }, [fixedContentTypeRef, setEnableSelectText]);
+
+    const switchAlwaysOnTop = useCallback(async () => {
+        setIsAlwaysOnTop((isAlwaysOnTop) => !isAlwaysOnTop);
+    }, [setIsAlwaysOnTop]);
+
     const initMenu = useCallback(async () => {
         if (disabled) {
             return;
@@ -574,147 +722,47 @@ export const FixedContentCore: React.FC<{
                 {
                     id: `${appWindow.label}-copyTool`,
                     text: intl.formatMessage({ id: 'draw.copyTool' }),
-                    action: async () => {
-                        if (fixedContentType === FixedContentType.DrawCanvas) {
-                            if (!blobRef.current) {
-                                return;
-                            }
-
-                            await writeImageToClipboard(blobRef.current);
-                        } else if (
-                            fixedContentType === FixedContentType.Html &&
-                            originHtmlContentRef.current
-                        ) {
-                            await writeHtmlToClipboard(originHtmlContentRef.current);
-                        } else if (
-                            fixedContentType === FixedContentType.Text &&
-                            textContentRef.current
-                        ) {
-                            await writeTextToClipboard(textContentRef.current);
-                        } else if (
-                            fixedContentType === FixedContentType.Image &&
-                            imageBlobRef.current
-                        ) {
-                            // 这里的图片类型不确定，浏览器不一定支持，所以通过本地 API 写入
-                            const arrayBuffer = await imageBlobRef.current.arrayBuffer();
-                            await clipboard.writeImage(arrayBuffer);
-                        }
-                    },
+                    accelerator: hotkeys?.[KeyEventKey.FixedContentCopyToClipboard]?.hotKey,
+                    action: copyToClipboard,
                 },
-                fixedContentType === FixedContentType.DrawCanvas ||
-                fixedContentType === FixedContentType.Image ||
-                fixedContentType === FixedContentType.Text ||
-                fixedContentType === FixedContentType.Html
-                    ? {
-                          id: `${appWindow.label}-saveTool`,
-                          text: intl.formatMessage({ id: 'draw.saveTool' }),
-                          action: async () => {
-                              const filePath = await dialog.save({
-                                  filters: [
-                                      {
-                                          name: 'PNG(*.png)',
-                                          extensions: ['png'],
-                                      },
-                                  ],
-                                  defaultPath: generateImageFileName(
-                                      getAppSettings()[AppSettingsGroup.FunctionOutput]
-                                          .manualSaveFileNameFormat,
-                                  ),
-                                  canCreateDirectories: true,
-                              });
-
-                              if (!filePath) {
-                                  return;
-                              }
-
-                              if (
-                                  fixedContentType === FixedContentType.DrawCanvas &&
-                                  blobRef.current
-                              ) {
-                                  await saveFile(
-                                      filePath,
-                                      await blobRef.current.arrayBuffer(),
-                                      ImageFormat.PNG,
-                                  );
-                              } else if (
-                                  fixedContentType === FixedContentType.Image &&
-                                  imageBlobRef.current
-                              ) {
-                                  await saveFile(
-                                      filePath,
-                                      await imageBlobRef.current.arrayBuffer(),
-                                      ImageFormat.PNG,
-                                  );
-                              } else {
-                                  let htmlElement: HTMLElement | undefined | null;
-                                  if (fixedContentType === FixedContentType.Html) {
-                                      htmlElement =
-                                          htmlContentContainerRef.current?.contentWindow?.document
-                                              .body;
-                                  } else if (fixedContentType === FixedContentType.Text) {
-                                      htmlElement = textContentContainerRef.current;
-                                  } else if (fixedContentType === FixedContentType.Image) {
-                                      // 这种情况说明是从本地路径读取的图片
-                                      htmlElement = imageRef.current;
-                                  }
-
-                                  if (!htmlElement) {
-                                      return;
-                                  }
-
-                                  htmlToImage.toBlob(htmlElement).then(async (blob) => {
-                                      if (!blob) {
-                                          return;
-                                      }
-
-                                      await saveFile(
-                                          filePath,
-                                          await blob.arrayBuffer(),
-                                          ImageFormat.PNG,
-                                      );
-                                  });
-                              }
-                          },
-                      }
-                    : undefined,
-                fixedContentType === FixedContentType.DrawCanvas ||
-                fixedContentType === FixedContentType.Image
-                    ? {
-                          id: `${appWindow.label}-ocrTool`,
-                          text: intl.formatMessage({ id: 'draw.showOrHideOcrResult' }),
-                          action: async () => {
-                              if (initOcrParams.current) {
-                                  ocrResultActionRef.current?.init(initOcrParams.current);
-                                  initOcrParams.current = undefined;
-                              } else if (imageRef.current && !imageOcrSignRef.current) {
-                                  ocrResultActionRef.current?.init({
-                                      imageElement: imageRef.current,
-                                      monitorScaleFactor: window.devicePixelRatio,
-                                  });
-                                  imageOcrSignRef.current = true;
-                              }
-
-                              ocrResultActionRef.current?.setEnable((enable) => !enable);
-                          },
-                      }
-                    : undefined,
-                fixedContentType === FixedContentType.Html ||
-                fixedContentType === FixedContentType.Text
-                    ? {
-                          id: `${appWindow.label}-selectTextTool`,
-                          text: intl.formatMessage({ id: 'draw.selectText' }),
-                          action: async () => {
-                              setEnableSelectText((enable) => !enable);
-                          },
-                      }
-                    : undefined,
+                {
+                    id: `${appWindow.label}-saveTool`,
+                    text: intl.formatMessage({ id: 'draw.saveTool' }),
+                    accelerator: hotkeys?.[KeyEventKey.FixedContentSaveToFile]?.hotKey,
+                    action: saveToFile,
+                },
+                {
+                    id: `${appWindow.label}-ocrTool`,
+                    text:
+                        getSelectTextMode(fixedContentType) === 'ocr'
+                            ? intl.formatMessage({ id: 'draw.showOrHideOcrResult' })
+                            : intl.formatMessage({ id: 'draw.selectText' }),
+                    accelerator: hotkeys?.[KeyEventKey.FixedContentSelectText]?.hotKey,
+                    action: switcSelectText,
+                },
+                {
+                    item: 'Separator',
+                },
                 {
                     id: `${appWindow.label}-switchThumbnailTool`,
                     text: intl.formatMessage({ id: 'draw.switchThumbnail' }),
+                    checked: isThumbnail,
                     accelerator: hotkeys?.[KeyEventKey.FixedContentSwitchThumbnail]?.hotKey,
                     action: async () => {
                         switchThumbnail();
                     },
+                },
+                {
+                    id: `${appWindow.label}-switchAlwaysOnTopTool`,
+                    text: intl.formatMessage({
+                        id: 'settings.hotKeySettings.fixedContent.fixedContentAlwaysOnTop',
+                    }),
+                    checked: isAlwaysOnTop,
+                    accelerator: hotkeys?.[KeyEventKey.FixedContentAlwaysOnTop]?.hotKey,
+                    action: switchAlwaysOnTop,
+                },
+                {
+                    item: 'Separator',
                 },
                 {
                     id: `${appWindow.label}-closeTool`,
@@ -730,10 +778,14 @@ export const FixedContentCore: React.FC<{
     }, [
         disabled,
         intl,
-        fixedContentType,
         hotkeys,
-        textContentRef,
-        getAppSettings,
+        copyToClipboard,
+        saveToFile,
+        fixedContentType,
+        switcSelectText,
+        isThumbnail,
+        isAlwaysOnTop,
+        switchAlwaysOnTop,
         switchThumbnail,
     ]);
 
@@ -932,6 +984,21 @@ export const FixedContentCore: React.FC<{
                 onWheel({ deltaY: deltaY });
             } else if (type === 'linkClick') {
                 openUrl(href);
+            } else if (type === 'keydown' || type === 'keyup') {
+                // 创建并触发自定义键盘事件
+                const keyEvent = new KeyboardEvent(type, {
+                    key: event.data.key,
+                    code: event.data.code,
+                    keyCode: event.data.keyCode,
+                    ctrlKey: event.data.ctrlKey,
+                    shiftKey: event.data.shiftKey,
+                    altKey: event.data.altKey,
+                    metaKey: event.data.metaKey,
+                    repeat: event.data.repeat,
+                    bubbles: true,
+                    cancelable: true,
+                });
+                document.dispatchEvent(keyEvent);
             }
         };
 
@@ -955,10 +1022,61 @@ export const FixedContentCore: React.FC<{
             [disabled],
         ),
     );
-
     useHotkeys(
         hotkeys?.[KeyEventKey.FixedContentCloseWindow]?.hotKey ?? '',
         closeWindowComplete,
+        useMemo(
+            () => ({
+                keyup: false,
+                keydown: true,
+                enabled: !disabled,
+                preventDefault: true,
+            }),
+            [disabled],
+        ),
+    );
+    useHotkeys(
+        hotkeys?.[KeyEventKey.FixedContentCopyToClipboard]?.hotKey ?? '',
+        copyToClipboard,
+        useMemo(
+            () => ({
+                keyup: false,
+                keydown: true,
+                enabled: !disabled,
+                preventDefault: true,
+            }),
+            [disabled],
+        ),
+    );
+    useHotkeys(
+        hotkeys?.[KeyEventKey.FixedContentSelectText]?.hotKey ?? '',
+        switcSelectText,
+        useMemo(
+            () => ({
+                keyup: false,
+                keydown: true,
+                enabled: !disabled,
+                preventDefault: true,
+            }),
+            [disabled],
+        ),
+    );
+    useHotkeys(
+        hotkeys?.[KeyEventKey.FixedContentSaveToFile]?.hotKey ?? '',
+        saveToFile,
+        useMemo(
+            () => ({
+                keyup: false,
+                keydown: true,
+                enabled: !disabled,
+                preventDefault: true,
+            }),
+            [disabled],
+        ),
+    );
+    useHotkeys(
+        hotkeys?.[KeyEventKey.FixedContentAlwaysOnTop]?.hotKey ?? '',
+        switchAlwaysOnTop,
         useMemo(
             () => ({
                 keyup: false,

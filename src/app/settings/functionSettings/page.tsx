@@ -21,7 +21,7 @@ import {
     AppSettingsGroup,
     TrayIconClickAction,
 } from '../../contextWrap';
-import { useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import { useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { useAppSettingsLoad } from '@/hooks/useAppSettingsLoad';
 import { FormattedMessage, useIntl } from 'react-intl';
 import { ContentWrap } from '@/components/contentWrap';
@@ -198,7 +198,13 @@ export default function SystemSettings() {
         [currentPlatform],
     );
 
+    const initedMicrophoneDeviceNameOptions = useRef(false);
     useEffect(() => {
+        if (initedMicrophoneDeviceNameOptions.current) {
+            return;
+        }
+        initedMicrophoneDeviceNameOptions.current = true;
+
         const options: { label: string; value: string }[] = [
             {
                 label: intl.formatMessage({
