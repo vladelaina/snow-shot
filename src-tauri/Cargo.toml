@@ -15,7 +15,7 @@ members = [
 [package]
 name = "app"
 version = "0.1.0"
-description = "A Tauri App"
+description = "简单优雅的截图工具"
 authors = ["mg-chao <chao@mgchao.top>"]
 repository = "https://github.com/mg-chao/snow-shot"
 edition = "2024"
