@@ -49,6 +49,7 @@ import { CheckVersion } from '@/components/checkVersion';
 import { InitService } from '@/components/initService';
 import * as tauriOs from '@tauri-apps/plugin-os';
 import { getPlatformValue } from '@/utils';
+import { GlobalShortcut } from '@/components/globalShortcut';
 
 type MenuItem = ItemType<MenuItemType>;
 
@@ -701,7 +702,7 @@ const MenuLayoutCore: React.FC<{ children: React.ReactNode }> = ({ children }) =
                 <Layout>
                     <MenuSider menuItems={menuItems} darkMode={darkMode} pathname={pathname} />
                     <MenuContent pathname={pathname} routeTabsMap={routeTabsMap}>
-                        {children}
+                        <GlobalShortcut>{children}</GlobalShortcut>
                     </MenuContent>
                 </Layout>
                 <style jsx>{`
