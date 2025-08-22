@@ -60,14 +60,6 @@ impl UIElements {
     }
 
     pub fn init(&mut self) -> Result<(), UIAutomationError> {
-        let automation = UIAutomation::new()?;
-        let automation_walker = automation.get_content_view_walker()?;
-        let root_element = automation.get_root_element()?;
-
-        self.automation = Some(automation);
-        self.automation_walker = Some(automation_walker);
-        self.root_element = Some(root_element);
-
         Ok(())
     }
 
@@ -135,6 +127,14 @@ impl UIElements {
      * 初始化窗口元素缓存
      */
     pub fn init_cache(&mut self) -> Result<(), UIAutomationError> {
+        let automation = UIAutomation::new()?;
+        let automation_walker = automation.get_content_view_walker()?;
+        let root_element = automation.get_root_element()?;
+
+        self.automation = Some(automation);
+        self.automation_walker = Some(automation_walker);
+        self.root_element = Some(root_element);
+
         let root_element = self.root_element.as_ref().unwrap();
 
         self.element_cache = RTree::new();
