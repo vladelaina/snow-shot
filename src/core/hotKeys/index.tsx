@@ -23,7 +23,11 @@ export enum KeyEventKey {
     ChatCopy = 'chatCopy',
     ChatNewSession = 'chatNewSession',
     FixedContentSwitchThumbnail = 'fixedContentSwitchThumbnail',
+    FixedContentAlwaysOnTop = 'fixedContentAlwaysOnTop',
     FixedContentCloseWindow = 'fixedContentCloseWindow',
+    FixedContentCopyToClipboard = 'fixedContentCopyToClipboard',
+    FixedContentSaveToFile = 'fixedContentSaveToFile',
+    FixedContentSelectText = 'fixedContentSelectText',
 }
 
 export const defaultKeyEventSettings: Record<KeyEventKey, KeyEventValue> = {
@@ -51,8 +55,24 @@ export const defaultKeyEventSettings: Record<KeyEventKey, KeyEventValue> = {
         hotKey: 'R',
         group: KeyEventGroup.FixedContent,
     },
+    [KeyEventKey.FixedContentAlwaysOnTop]: {
+        hotKey: getPlatformValue('Ctrl+T', 'Meta+T'),
+        group: KeyEventGroup.FixedContent,
+    },
     [KeyEventKey.FixedContentCloseWindow]: {
         hotKey: 'Escape',
+        group: KeyEventGroup.FixedContent,
+    },
+    [KeyEventKey.FixedContentCopyToClipboard]: {
+        hotKey: getPlatformValue('Ctrl+C', 'Meta+C'),
+        group: KeyEventGroup.FixedContent,
+    },
+    [KeyEventKey.FixedContentSaveToFile]: {
+        hotKey: getPlatformValue('Ctrl+S', 'Meta+S'),
+        group: KeyEventGroup.FixedContent,
+    },
+    [KeyEventKey.FixedContentSelectText]: {
+        hotKey: getPlatformValue('Ctrl+D', 'Meta+D'),
         group: KeyEventGroup.FixedContent,
     },
 };

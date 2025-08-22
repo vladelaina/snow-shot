@@ -106,7 +106,7 @@ export const draw = {
     'draw.extraTool.videoRecord.multiMonitor': 'MacOS 暂不支持跨屏录制',
     'draw.scrollScreenshot.tip': '如果无法滚动窗口，请双击截图区域以聚焦窗口',
     'draw.selectText': '选取文本/拖拽窗口',
-    'draw.switchThumbnail': '切换缩略图',
+    'draw.switchThumbnail': '缩略模式',
     'draw.captureError': '截图失败，请检查是否开启“录屏与系统录音”权限',
     'draw.loadingCaptureHistory': '加载截图历史中',
     'draw.getMousePositionError': '获取鼠标位置失败，请检查应用权限',

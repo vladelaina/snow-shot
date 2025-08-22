@@ -378,9 +378,8 @@ const TrayIconLoaderComponent = () => {
                     },
                     {
                         id: `${appWindow.label}-disableShortcut`,
-                        text: disableShortcut
-                            ? intl.formatMessage({ id: 'home.enableShortcut' })
-                            : intl.formatMessage({ id: 'home.disableShortcut' }),
+                        text: intl.formatMessage({ id: 'home.disableShortcut' }),
+                        checked: disableShortcut,
                         action: async () => {
                             setTrayIconState({
                                 disableShortcut: !disableShortcut,
