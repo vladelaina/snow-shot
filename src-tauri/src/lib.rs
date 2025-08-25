@@ -127,9 +127,9 @@ pub fn run() {
             }
 
             // 如果不是自动启动，则显示窗口
-            // if !std::env::args().any(|arg| arg == "--auto_start") {
-            //     main_window.show().unwrap();
-            // }
+            if !std::env::args().any(|arg| arg == "--auto_start") {
+                main_window.show().unwrap();
+            }
 
             Ok(())
         })
