@@ -3,7 +3,7 @@ import { ResetIcon } from '@/components/icons';
 import { useStateRef } from '@/hooks/useStateRef';
 import { openUrl } from '@tauri-apps/plugin-opener';
 import { Alert, Button, List, theme } from 'antd';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { FormattedMessage } from 'react-intl';
 import {
     checkAccessibilityPermission,
@@ -71,7 +71,7 @@ export const MacOSPermissionsSettings: React.FC = () => {
         enableMicrophone: false,
     });
 
-    const reloadPermissionsState = useCallback(async () => {
+    const reloadPermissionsStateCore = useCallback(async () => {
         const [enableRecordScreen, enableAccessibility, enableMicrophone] = await Promise.all([
             checkScreenRecordingPermission(),
             checkAccessibilityPermission(),
@@ -80,6 +80,17 @@ export const MacOSPermissionsSettings: React.FC = () => {
 
         setPermissionsState({ enableRecordScreen, enableAccessibility, enableMicrophone });
     }, [setPermissionsState]);
+
+    const reloadPermissionsStateLoadingRef = useRef(false);
+    const reloadPermissionsState = useCallback(async () => {
+        if (reloadPermissionsStateLoadingRef.current) {
+            return;
+        }
+
+        reloadPermissionsStateLoadingRef.current = true;
+        await reloadPermissionsStateCore();
+        reloadPermissionsStateLoadingRef.current = false;
+    }, [reloadPermissionsStateCore]);
 
     useEffect(() => {
         reloadPermissionsState();
