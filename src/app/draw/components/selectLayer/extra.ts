@@ -65,6 +65,16 @@ export const getMaskBackgroundColor = (darkMode: boolean) => {
     return darkMode ? DARK_MASK_BACKGROUND_COLOR : LIGHT_MASK_BACKGROUND_COLOR;
 };
 
+const drawCircleControl = (
+    canvasContext: CanvasRenderingContext2D,
+    x: number,
+    y: number,
+    maskCircleControlWidth: number,
+) => {
+    canvasContext.moveTo(x + maskCircleControlWidth, y);
+    canvasContext.arc(x, y, maskCircleControlWidth, 0, Math.PI * 2);
+};
+
 export const drawSelectRect = (
     monitorWidth: number,
     monitorHeight: number,
@@ -91,11 +101,15 @@ export const drawSelectRect = (
     const rectHeight = rectMaxY - rectMinY;
     const minWidth = Math.min(rectWidth, rectHeight);
 
-    const maskCircleControlWidth = MASK_CIRCLE_CONTROL_WIDTH * scaleFactor;
-    const maskCircleControlStrokeWidth = MASK_CIRCLE_CONTROL_STROKE_WIDTH * scaleFactor;
-    const maskControlBorderStrokeWidth = MASK_CONTROL_BORDER_STROKE_WIDTH * scaleFactor;
-    const maskCircleControlShowEndWidth = MASK_CIRCLE_CONTROL_SHOW_END_CONTROL_WIDTH * scaleFactor;
-    const maskCircleControlShowMidWidth = MASK_CIRCLE_CONTROL_SHOW_MID_CONTROL_WIDTH * scaleFactor;
+    const maskCircleControlWidth = Math.floor(MASK_CIRCLE_CONTROL_WIDTH * scaleFactor);
+    const maskCircleControlStrokeWidth = Math.floor(MASK_CIRCLE_CONTROL_STROKE_WIDTH * scaleFactor);
+    const maskControlBorderStrokeWidth = Math.floor(MASK_CONTROL_BORDER_STROKE_WIDTH * scaleFactor);
+    const maskCircleControlShowEndWidth = Math.floor(
+        MASK_CIRCLE_CONTROL_SHOW_END_CONTROL_WIDTH * scaleFactor,
+    );
+    const maskCircleControlShowMidWidth = Math.floor(
+        MASK_CIRCLE_CONTROL_SHOW_MID_CONTROL_WIDTH * scaleFactor,
+    );
 
     const fillColor = getMaskBackgroundColor(darkMode);
 
@@ -114,48 +128,50 @@ export const drawSelectRect = (
         return;
     }
 
-    if (fullScreenAuxiliaryLine) {
-        const { mouseX, mouseY } = fullScreenAuxiliaryLine.mousePosition;
+    if (fullScreenAuxiliaryLine || monitorCenterAuxiliaryLine) {
+        canvasContext.setLineDash(
+            AUXILIARY_LINE_DASH.map((dash) => Math.floor(dash * scaleFactor)),
+        );
+        canvasContext.lineWidth = Math.floor(AUXILIARY_LINE_WIDTH * scaleFactor);
 
-        canvasContext.save();
-        canvasContext.strokeStyle = fullScreenAuxiliaryLine.color;
-        canvasContext.lineWidth = AUXILIARY_LINE_WIDTH * scaleFactor;
-        canvasContext.setLineDash(AUXILIARY_LINE_DASH.map((dash) => dash * scaleFactor));
+        if (fullScreenAuxiliaryLine) {
+            const { mouseX, mouseY } = fullScreenAuxiliaryLine.mousePosition;
 
-        canvasContext.beginPath();
-        // 绘制垂直线
-        canvasContext.moveTo(mouseX, 0);
-        canvasContext.lineTo(mouseX, monitorHeight);
-        // 绘制水平线
-        canvasContext.moveTo(0, mouseY);
-        canvasContext.lineTo(monitorWidth, mouseY);
-        canvasContext.stroke();
+            canvasContext.strokeStyle = fullScreenAuxiliaryLine.color;
 
-        canvasContext.restore();
-    }
+            canvasContext.beginPath();
+            // 绘制垂直线
+            canvasContext.moveTo(mouseX, 0);
+            canvasContext.lineTo(mouseX, monitorHeight);
+            // 绘制水平线
+            canvasContext.moveTo(0, mouseY);
+            canvasContext.lineTo(monitorWidth, mouseY);
+            canvasContext.stroke();
+        }
 
-    if (monitorCenterAuxiliaryLine) {
-        const { activeMonitorRect, color } = monitorCenterAuxiliaryLine;
-        const centerX =
-            activeMonitorRect.min_x + (activeMonitorRect.max_x - activeMonitorRect.min_x) / 2;
-        const centerY =
-            activeMonitorRect.min_y + (activeMonitorRect.max_y - activeMonitorRect.min_y) / 2;
+        if (monitorCenterAuxiliaryLine) {
+            const { activeMonitorRect, color } = monitorCenterAuxiliaryLine;
+            const centerX =
+                activeMonitorRect.min_x +
+                Math.floor((activeMonitorRect.max_x - activeMonitorRect.min_x) / 2);
+            const centerY =
+                activeMonitorRect.min_y +
+                Math.floor((activeMonitorRect.max_y - activeMonitorRect.min_y) / 2);
 
-        canvasContext.save();
-        canvasContext.strokeStyle = color;
-        canvasContext.lineWidth = AUXILIARY_LINE_WIDTH * scaleFactor;
-        canvasContext.setLineDash(AUXILIARY_LINE_DASH.map((dash) => dash * scaleFactor));
+            canvasContext.strokeStyle = color;
 
-        canvasContext.beginPath();
-        // 绘制垂直线
-        canvasContext.moveTo(centerX, 0);
-        canvasContext.lineTo(centerX, monitorHeight);
-        // 绘制水平线
-        canvasContext.moveTo(0, centerY);
-        canvasContext.lineTo(monitorWidth, centerY);
-        canvasContext.stroke();
+            canvasContext.beginPath();
+            // 绘制垂直线
+            canvasContext.moveTo(centerX, 0);
+            canvasContext.lineTo(centerX, monitorHeight);
+            // 绘制水平线
+            canvasContext.moveTo(0, centerY);
+            canvasContext.lineTo(monitorWidth, centerY);
 
-        canvasContext.restore();
+            canvasContext.stroke();
+        }
+
+        canvasContext.setLineDash([]);
     }
 
     canvasContext.strokeStyle = MASK_CONTROL_BORDER_STROKE_COLOR;
@@ -169,47 +185,37 @@ export const drawSelectRect = (
     const controlFillColor = MASK_CIRCLE_CONTROL_COLOR;
     const controlStrokeColor = MASK_CIRCLE_CONTROL_STROKE_COLOR;
 
+    canvasContext.beginPath();
     if (minWidth > maskCircleControlShowEndWidth) {
-        // 创建顶点控制点
-        const cornerPoints = [
-            [rectMinX, rectMinY], // 左上角
-            [rectMaxX, rectMinY], // 右上角
-            [rectMinX, rectMaxY], // 左下角
-            [rectMaxX, rectMaxY], // 右下角
-        ];
-
-        for (const [x, y] of cornerPoints) {
-            canvasContext.beginPath();
-            canvasContext.arc(x, y, maskCircleControlWidth, 0, Math.PI * 2);
-            canvasContext.fillStyle = controlFillColor;
-            canvasContext.fill();
-            canvasContext.strokeStyle = controlStrokeColor;
-            canvasContext.lineWidth = maskCircleControlStrokeWidth;
-            canvasContext.stroke();
-        }
+        // 左上角
+        drawCircleControl(canvasContext, rectMinX, rectMinY, maskCircleControlWidth);
+        // 右上角
+        drawCircleControl(canvasContext, rectMaxX, rectMinY, maskCircleControlWidth);
+        // 左下角
+        drawCircleControl(canvasContext, rectMinX, rectMaxY, maskCircleControlWidth);
+        // 右下角
+        drawCircleControl(canvasContext, rectMaxX, rectMaxY, maskCircleControlWidth);
     }
 
     if (minWidth > maskCircleControlShowMidWidth) {
-        const midX = rectMinX + rectWidth / 2;
-        const midY = rectMinY + rectHeight / 2;
+        const centerX = rectMinX + Math.floor((rectMaxX - rectMinX) / 2);
+        const centerY = rectMinY + Math.floor((rectMaxY - rectMinY) / 2);
 
-        const midPoints = [
-            [midX, rectMinY], // 上边中点
-            [midX, rectMaxY], // 下边中点
-            [rectMinX, midY], // 左边中点
-            [rectMaxX, midY], // 右边中点
-        ];
-
-        for (const [x, y] of midPoints) {
-            canvasContext.beginPath();
-            canvasContext.arc(x, y, maskCircleControlWidth, 0, Math.PI * 2);
-            canvasContext.fillStyle = controlFillColor;
-            canvasContext.fill();
-            canvasContext.strokeStyle = controlStrokeColor;
-            canvasContext.lineWidth = maskCircleControlStrokeWidth;
-            canvasContext.stroke();
-        }
+        // 上边中点
+        drawCircleControl(canvasContext, centerX, rectMinY, maskCircleControlWidth);
+        // 下边中点
+        drawCircleControl(canvasContext, centerX, rectMaxY, maskCircleControlWidth);
+        // 左边中点
+        drawCircleControl(canvasContext, rectMinX, centerY, maskCircleControlWidth);
+        // 右边中点
+        drawCircleControl(canvasContext, rectMaxX, centerY, maskCircleControlWidth);
     }
+
+    canvasContext.fillStyle = controlFillColor;
+    canvasContext.fill();
+    canvasContext.strokeStyle = controlStrokeColor;
+    canvasContext.lineWidth = maskCircleControlStrokeWidth;
+    canvasContext.stroke();
 };
 
 export const convertDragModeToCursor = (dragMode: DragMode) => {

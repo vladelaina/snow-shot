@@ -12,7 +12,7 @@ import {
 } from '@/commands';
 import { AppSettingsData, AppSettingsGroup, AppSettingsPublisher } from '@/app/contextWrap';
 import Flatbush from 'flatbush';
-import { useCallbackRender } from '@/hooks/useCallbackRender';
+import { useCallbackRender, useCallbackRenderSlow } from '@/hooks/useCallbackRender';
 import { TweenAnimation } from '@/utils/tweenAnimation';
 import * as TWEEN from '@tweenjs/tween.js';
 import {
@@ -348,6 +348,14 @@ const SelectLayerCore: React.FC<SelectLayerProps> = ({ actionRef }) => {
         [isEnableFindChildrenElements],
     );
 
+    const resizeToolbarUpdateStyle = useCallback(
+        (rect: ElementRect) => {
+            resizeToolbarActionRef.current?.updateStyle(rect);
+        },
+        [resizeToolbarActionRef],
+    );
+    const resizeToolbarUpdateStyleRenderCallback = useCallbackRenderSlow(resizeToolbarUpdateStyle);
+
     const drawCanvasSelectRect = useCallback(
         (
             rect: ElementRect,
@@ -388,12 +396,11 @@ const SelectLayerCore: React.FC<SelectLayerProps> = ({ actionRef }) => {
                       }
                     : undefined,
             );
+
             // 和 canvas 同步下
-            requestAnimationFrame(() => {
-                resizeToolbarActionRef.current?.updateStyle(rect);
-            });
+            resizeToolbarUpdateStyleRenderCallback(rect);
         },
-        [getAppSettings, getScreenshotType],
+        [getAppSettings, getScreenshotType, resizeToolbarUpdateStyleRenderCallback],
     );
 
     const initAnimation = useCallback(
@@ -615,6 +622,37 @@ const SelectLayerCore: React.FC<SelectLayerProps> = ({ actionRef }) => {
     );
     const updateDragModeRenderCallback = useCallbackRender(updateDragMode);
 
+    const updateMonitorRect = useCallback(
+        (rect: ElementRect) => {
+            const captureBoundingBoxInfo = captureBoundingBoxInfoRef.current;
+
+            if (!captureBoundingBoxInfo) {
+                return;
+            }
+
+            currentActiveMonitorRectRef.current = captureBoundingBoxInfo.transformMonitorRect(
+                captureBoundingBoxInfo.getActiveMonitorRect(
+                    captureBoundingBoxInfo.transformWindowRect({
+                        min_x: rect.min_x,
+                        min_y: rect.min_y,
+                        max_x: rect.min_x,
+                        max_y: rect.min_y,
+                    }),
+                ),
+            );
+
+            setDrawEvent({
+                event: DrawEvent.ChangeMonitor,
+                params: {
+                    monitorRect: currentActiveMonitorRectRef.current,
+                },
+            });
+            setDrawEvent(undefined);
+        },
+        [setDrawEvent],
+    );
+    const updateMonitorRectRenderCallback = useCallbackRenderSlow(updateMonitorRect);
+
     const setSelectRect = useCallback(
         (rect: ElementRect, ignoreAnimation: boolean = false, forceUpdate: boolean = false) => {
             if (forceUpdate) {
@@ -633,30 +671,9 @@ const SelectLayerCore: React.FC<SelectLayerProps> = ({ actionRef }) => {
                 rect.max_y - rect.min_y,
             );
 
-            const captureBoundingBoxInfo = captureBoundingBoxInfoRef.current;
-
-            if (captureBoundingBoxInfo) {
-                currentActiveMonitorRectRef.current = captureBoundingBoxInfo.transformMonitorRect(
-                    captureBoundingBoxInfo.getActiveMonitorRect(
-                        captureBoundingBoxInfo.transformWindowRect({
-                            min_x: rect.min_x,
-                            min_y: rect.min_y,
-                            max_x: rect.min_x,
-                            max_y: rect.min_y,
-                        }),
-                    ),
-                );
-
-                setDrawEvent({
-                    event: DrawEvent.ChangeMonitor,
-                    params: {
-                        monitorRect: currentActiveMonitorRectRef.current,
-                    },
-                });
-                setDrawEvent(undefined);
-            }
+            updateMonitorRectRenderCallback(rect);
         },
-        [setDrawEvent, drawCanvasSelectRect, getAppSettings],
+        [drawCanvasSelectRect, getAppSettings, updateMonitorRectRenderCallback],
     );
 
     const previousDrawStateRef = useRef<DrawState | undefined>(undefined);
