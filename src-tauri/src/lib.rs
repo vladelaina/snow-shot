@@ -36,7 +36,6 @@ pub fn run() {
     let enigo_instance = Mutex::new(EnigoManager::new());
 
     let ui_elements = Mutex::new(UIElements::new());
-    let auto_start_hide_window = Mutex::new(false);
 
     let scroll_screenshot_service =
         Mutex::new(scroll_screenshot_service::ScrollScreenshotService::new());
@@ -53,19 +52,14 @@ pub fn run() {
 
     let listen_key_service = Mutex::new(listen_key_service::ListenKeyService::new());
 
-    let mut app_builder = tauri::Builder::default().plugin(tauri_plugin_os::init());
-
-    #[cfg(desktop)]
-    {
-        app_builder = app_builder.plugin(tauri_plugin_single_instance::init(|app, _, _| {
+    tauri::Builder::default()
+        .plugin(tauri_plugin_os::init())
+        .plugin(tauri_plugin_single_instance::init(|app, _, _| {
             let app_window = app.get_webview_window("main").expect("no main window");
             app_window.unminimize().unwrap();
             app_window.set_focus().unwrap();
             app_window.show().unwrap();
-        }));
-    }
-
-    app_builder
+        }))
         .plugin(tauri_plugin_macos_permissions::init())
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_clipboard::init())
@@ -132,11 +126,15 @@ pub fn run() {
                 });
             }
 
+            // 如果不是自动启动，则显示窗口
+            if !std::env::args().any(|arg| arg == "--auto_start") {
+                main_window.show().unwrap();
+            }
+
             Ok(())
         })
         .manage(ui_elements)
         .manage(ocr_instance)
-        .manage(auto_start_hide_window)
         .manage(enigo_instance)
         .manage(scroll_screenshot_service)
         .manage(scroll_screenshot_image_service)
@@ -164,7 +162,6 @@ pub fn run() {
             ocr::ocr_detect,
             ocr::ocr_init,
             ocr::ocr_release,
-            core::auto_start_hide_window,
             core::get_selected_text,
             core::set_enable_proxy,
             core::scroll_through,

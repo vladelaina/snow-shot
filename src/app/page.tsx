@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useCallback, useContext, useEffect } from 'react';
+import React, { useCallback, useContext } from 'react';
 import { FormattedMessage } from 'react-intl';
 import { Space, Spin, Tooltip } from 'antd';
 import { ContentWrap } from '@/components/contentWrap';
@@ -16,7 +16,6 @@ import {
     convertShortcutKeyStatusToTip,
     ShortcutKeyStatus,
 } from './extra';
-import { autoStartHideWindow } from '@/commands';
 import { GroupTitle } from '@/components/groupTitle';
 import { theme } from 'antd';
 import { ResetSettingsButton } from '@/components/resetSettingsButton';
@@ -26,13 +25,6 @@ import { GlobalShortcutContext } from '@/components/globalShortcut';
 
 export default function Home() {
     const { token } = theme.useToken();
-
-    useEffect(() => {
-        if (!window.__APP_AUTO_START_HIDE_WINDOW__) {
-            autoStartHideWindow();
-            window.__APP_AUTO_START_HIDE_WINDOW__ = true;
-        }
-    }, []);
 
     const { updateAppSettings } = useContext(AppSettingsActionContext);
 

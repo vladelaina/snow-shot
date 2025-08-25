@@ -17,14 +17,6 @@ pub async fn get_selected_text() -> String {
 }
 
 #[command]
-pub async fn auto_start_hide_window(
-    window: tauri::Window,
-    auto_start_hide_window: tauri::State<'_, Mutex<bool>>,
-) -> Result<(), ()> {
-    snow_shot_tauri_commands_core::auto_start_hide_window(window, auto_start_hide_window).await
-}
-
-#[command]
 pub async fn set_enable_proxy(enable: bool, host: String) -> Result<(), ()> {
     snow_shot_tauri_commands_core::set_enable_proxy(enable, host).await
 }
@@ -47,7 +39,10 @@ pub async fn click_through(window: tauri::Window) -> Result<(), ()> {
 
 /// 创建内容固定到屏幕的窗口
 #[command]
-pub async fn create_fixed_content_window(app: tauri::AppHandle, scroll_screenshot: bool) -> Result<(), String> {
+pub async fn create_fixed_content_window(
+    app: tauri::AppHandle,
+    scroll_screenshot: bool,
+) -> Result<(), String> {
     snow_shot_tauri_commands_core::create_fixed_content_window(app, scroll_screenshot).await
 }
 
@@ -69,7 +64,8 @@ pub async fn create_full_screen_draw_window(app: tauri::AppHandle) -> Result<(),
 }
 
 #[command]
-pub async fn get_current_monitor_info() -> Result<snow_shot_tauri_commands_core::MonitorInfo, String> {
+pub async fn get_current_monitor_info() -> Result<snow_shot_tauri_commands_core::MonitorInfo, String>
+{
     snow_shot_tauri_commands_core::get_current_monitor_info().await
 }
 
