@@ -10,11 +10,14 @@ import { Menu } from '@tauri-apps/api/menu';
 import OcrTool, { isOcrTool } from '../drawToolbar/components/tools/ocrTool';
 import {
     AppOcrResult,
+    covertOcrResultToText,
+    OcrDetectAfterAction,
     OcrResult,
     OcrResultActionType,
 } from '@/app/fixedContent/components/ocrResult';
 import { zIndexs } from '@/utils/zIndex';
 import { writeTextToClipboard } from '@/utils/clipboard';
+import { AppSettingsGroup, AppSettingsPublisher } from '@/app/contextWrap';
 
 export type OcrBlocksActionType = {
     init: (
@@ -35,7 +38,8 @@ export const OcrBlocks: React.FC<{
 
     const ocrResultActionRef = useRef<OcrResultActionType>(undefined);
 
-    useStateSubscriber(
+    const [getAppSettings] = useStateSubscriber(AppSettingsPublisher, undefined);
+    const [getDrawState] = useStateSubscriber(
         DrawStatePublisher,
         useCallback((drawState: DrawState) => {
             ocrResultActionRef.current?.setEnable(isOcrTool(drawState));
@@ -103,6 +107,19 @@ export const OcrBlocks: React.FC<{
 
     const onOcrDetect = useCallback(
         (ocrResult: OcrDetectResult) => {
+            // 只在 OCR 检测时启用 OCR 后操作,截图翻译时不启用
+            if (getDrawState() === DrawState.OcrDetect) {
+                const ocrAfterAction =
+                    getAppSettings()[AppSettingsGroup.FunctionScreenshot].ocrAfterAction;
+
+                if (ocrAfterAction === OcrDetectAfterAction.CopyText) {
+                    writeTextToClipboard(covertOcrResultToText(ocrResult));
+                } else if (ocrAfterAction === OcrDetectAfterAction.CopyTextAndCloseWindow) {
+                    writeTextToClipboard(covertOcrResultToText(ocrResult));
+                    finishCapture?.();
+                }
+            }
+
             setDrawEvent({
                 event: DrawEvent.OcrDetect,
                 params: {
@@ -111,7 +128,7 @@ export const OcrBlocks: React.FC<{
             });
             setDrawEvent(undefined);
         },
-        [setDrawEvent],
+        [finishCapture, getAppSettings, getDrawState, setDrawEvent],
     );
 
     return (
@@ -122,7 +139,6 @@ export const OcrBlocks: React.FC<{
                 zIndex={zIndexs.Draw_OcrResult}
                 actionRef={ocrResultActionRef}
                 onOcrDetect={onOcrDetect}
-                finishCapture={finishCapture}
             />
         </>
     );
