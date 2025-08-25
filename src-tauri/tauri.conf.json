@@ -67,7 +67,7 @@
         "active": true,
         "category": "Utility",
         "shortDescription": "Snow Shot",
-        "longDescription": "简单优雅的截图工具",
+        "longDescription": "Simple and elegant screenshot tool",
         "macOS": {
             "minimumSystemVersion": "12.3.0"
         },

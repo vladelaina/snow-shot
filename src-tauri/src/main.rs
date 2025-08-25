@@ -8,10 +8,16 @@ use app_lib::PROFILER;
 #[global_allocator]
 static ALLOC: dhat::Alloc = dhat::Alloc;
 
+#[cfg(feature = "dhat-heap")]
 #[tokio::main]
 async fn main() {
     #[cfg(feature = "dhat-heap")]
     PROFILER.lock().await.replace(dhat::Profiler::new_heap());
 
+    app_lib::run();
+}
+
+#[cfg(not(feature = "dhat-heap"))]
+fn main() {
     app_lib::run();
 }

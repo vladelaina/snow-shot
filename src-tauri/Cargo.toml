@@ -15,7 +15,7 @@ members = [
 [package]
 name = "app"
 version = "0.1.0"
-description = "简单优雅的截图工具"
+description = "Simple and elegant screenshot tool"
 authors = ["mg-chao <chao@mgchao.top>"]
 repository = "https://github.com/mg-chao/snow-shot"
 edition = "2024"
@@ -41,7 +41,7 @@ image = { version = "^0.25", features = ["png", "webp"] }
 imageproc = "^0.25"
 enigo = "^0.5"
 tokio = "^1.45"
-tauri = { version = "^2.7" }
+tauri = { version = "^2.8" }
 rayon = "^1.10"
 regex = "^1.11"
 zune-jpegxl = "^0.4"
@@ -99,6 +99,7 @@ tauri-plugin-process = "^2"
 tauri-plugin-notification = "^2"
 tauri-plugin-os = "^2"
 tauri-plugin-macos-permissions = "2.3.0"
+
 
 # 其他依赖
 chrono = { version = "^0.4" }
