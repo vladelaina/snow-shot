@@ -28,6 +28,7 @@ export enum KeyEventKey {
     FixedContentCopyToClipboard = 'fixedContentCopyToClipboard',
     FixedContentSaveToFile = 'fixedContentSaveToFile',
     FixedContentSelectText = 'fixedContentSelectText',
+    FixedContentSetOpacity = 'fixedContentSetOpacity',
 }
 
 export const defaultKeyEventSettings: Record<KeyEventKey, KeyEventValue> = {
@@ -74,6 +75,11 @@ export const defaultKeyEventSettings: Record<KeyEventKey, KeyEventValue> = {
     [KeyEventKey.FixedContentSelectText]: {
         hotKey: getPlatformValue('Ctrl+D', 'Meta+D'),
         group: KeyEventGroup.FixedContent,
+    },
+    [KeyEventKey.FixedContentSetOpacity]: {
+        hotKey: getPlatformValue('Ctrl', 'Meta'),
+        group: KeyEventGroup.FixedContent,
+        unique: false,
     },
 };
 

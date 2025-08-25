@@ -39,6 +39,7 @@ import { getPlatformValue } from '@/utils';
 import { join, resourceDir } from '@tauri-apps/api/path';
 import { convertFileSrc } from '@tauri-apps/api/core';
 import { appError } from '@/utils/log';
+import { formatKey } from '@/utils/format';
 
 export const TrayIconStatePublisher = createPublisher<{
     disableShortcut: boolean;
@@ -190,7 +191,7 @@ const TrayIconLoaderComponent = () => {
                         text: intl.formatMessage({ id: 'home.screenshot' }),
                         accelerator: disableShortcut
                             ? undefined
-                            : shortcutKeys[AppFunction.Screenshot].shortcutKey,
+                            : formatKey(shortcutKeys[AppFunction.Screenshot].shortcutKey),
                         action: async () => {
                             executeScreenshot();
                         },
@@ -205,7 +206,7 @@ const TrayIconLoaderComponent = () => {
                         ),
                         accelerator: disableShortcut
                             ? undefined
-                            : shortcutKeys[AppFunction.ScreenshotFixed].shortcutKey,
+                            : formatKey(shortcutKeys[AppFunction.ScreenshotFixed].shortcutKey),
                         action: async () => {
                             executeScreenshot(ScreenshotType.Fixed);
                         },
@@ -220,7 +221,7 @@ const TrayIconLoaderComponent = () => {
                         ),
                         accelerator: disableShortcut
                             ? undefined
-                            : shortcutKeys[AppFunction.ScreenshotOcr].shortcutKey,
+                            : formatKey(shortcutKeys[AppFunction.ScreenshotOcr].shortcutKey),
                         action: async () => {
                             executeScreenshot(ScreenshotType.OcrDetect);
                         },
@@ -235,7 +236,9 @@ const TrayIconLoaderComponent = () => {
                         ),
                         accelerator: disableShortcut
                             ? undefined
-                            : shortcutKeys[AppFunction.ScreenshotOcrTranslate].shortcutKey,
+                            : formatKey(
+                                  shortcutKeys[AppFunction.ScreenshotOcrTranslate].shortcutKey,
+                              ),
                         action: async () => {
                             executeScreenshot(ScreenshotType.OcrTranslate);
                         },
@@ -247,7 +250,7 @@ const TrayIconLoaderComponent = () => {
                         }),
                         accelerator: disableShortcut
                             ? undefined
-                            : shortcutKeys[AppFunction.ScreenshotCopy].shortcutKey,
+                            : formatKey(shortcutKeys[AppFunction.ScreenshotCopy].shortcutKey),
                         action: async () => {
                             executeScreenshot(ScreenshotType.Copy);
                         },
@@ -261,8 +264,10 @@ const TrayIconLoaderComponent = () => {
                                   }),
                                   accelerator: disableShortcut
                                       ? undefined
-                                      : shortcutKeys[AppFunction.ScreenshotFocusedWindow]
-                                            .shortcutKey,
+                                      : formatKey(
+                                            shortcutKeys[AppFunction.ScreenshotFocusedWindow]
+                                                .shortcutKey,
+                                        ),
                                   action: async () => {
                                       executeScreenshotFocusedWindow(getAppSettings());
                                   },
@@ -277,7 +282,7 @@ const TrayIconLoaderComponent = () => {
                         text: intl.formatMessage({ id: 'home.chat' }),
                         accelerator: disableShortcut
                             ? undefined
-                            : shortcutKeys[AppFunction.Chat].shortcutKey,
+                            : formatKey(shortcutKeys[AppFunction.Chat].shortcutKey),
                         action: async () => {
                             executeChat();
                         },
@@ -289,7 +294,9 @@ const TrayIconLoaderComponent = () => {
                                   text: intl.formatMessage({ id: 'home.chatSelectText' }),
                                   accelerator: disableShortcut
                                       ? undefined
-                                      : shortcutKeys[AppFunction.ChatSelectText].shortcutKey,
+                                      : formatKey(
+                                            shortcutKeys[AppFunction.ChatSelectText].shortcutKey,
+                                        ),
                                   action: async () => {
                                       executeChatSelectedText();
                                   },
@@ -304,7 +311,7 @@ const TrayIconLoaderComponent = () => {
                         text: intl.formatMessage({ id: 'home.translation' }),
                         accelerator: disableShortcut
                             ? undefined
-                            : shortcutKeys[AppFunction.Translation].shortcutKey,
+                            : formatKey(shortcutKeys[AppFunction.Translation].shortcutKey),
                         action: async () => {
                             executeTranslate();
                         },
@@ -318,7 +325,10 @@ const TrayIconLoaderComponent = () => {
                                   }),
                                   accelerator: disableShortcut
                                       ? undefined
-                                      : shortcutKeys[AppFunction.TranslationSelectText].shortcutKey,
+                                      : formatKey(
+                                            shortcutKeys[AppFunction.TranslationSelectText]
+                                                .shortcutKey,
+                                        ),
                                   action: async () => {
                                       executeTranslateSelectedText();
                                   },
@@ -333,7 +343,7 @@ const TrayIconLoaderComponent = () => {
                         text: intl.formatMessage({ id: 'home.fixedContent' }),
                         accelerator: disableShortcut
                             ? undefined
-                            : shortcutKeys[AppFunction.FixedContent].shortcutKey,
+                            : formatKey(shortcutKeys[AppFunction.FixedContent].shortcutKey),
                         action: async () => {
                             createFixedContentWindow();
                         },
@@ -343,7 +353,7 @@ const TrayIconLoaderComponent = () => {
                         text: intl.formatMessage({ id: 'draw.extraTool.videoRecord' }),
                         accelerator: disableShortcut
                             ? undefined
-                            : shortcutKeys[AppFunction.VideoRecord].shortcutKey,
+                            : formatKey(shortcutKeys[AppFunction.VideoRecord].shortcutKey),
                         action: async () => {
                             executeScreenshot(ScreenshotType.VideoRecord);
                         },
@@ -355,7 +365,7 @@ const TrayIconLoaderComponent = () => {
                                 text: intl.formatMessage({ id: 'home.topWindow' }),
                                 accelerator: disableShortcut
                                     ? undefined
-                                    : shortcutKeys[AppFunction.TopWindow].shortcutKey,
+                                    : formatKey(shortcutKeys[AppFunction.TopWindow].shortcutKey),
                                 action: async () => {
                                     executeScreenshot(ScreenshotType.TopWindow);
                                 },
@@ -368,7 +378,7 @@ const TrayIconLoaderComponent = () => {
                         text: intl.formatMessage({ id: 'home.fullScreenDraw' }),
                         accelerator: disableShortcut
                             ? undefined
-                            : shortcutKeys[AppFunction.FullScreenDraw].shortcutKey,
+                            : formatKey(shortcutKeys[AppFunction.FullScreenDraw].shortcutKey),
                         action: async () => {
                             createFullScreenDrawWindow();
                         },

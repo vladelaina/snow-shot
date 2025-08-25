@@ -135,7 +135,7 @@ pub async fn create_fixed_content_window(
     .position(window_x, window_y)
     .decorations(false)
     .shadow(false)
-    .transparent(false)
+    .transparent(true)
     .skip_taskbar(true)
     .resizable(false)
     .inner_size(1.0, 1.0)
