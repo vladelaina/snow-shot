@@ -29,8 +29,6 @@ export type OcrResultInitDrawCanvasParams = {
     captureBoundingBoxInfo: CaptureBoundingBoxInfo;
     /** 已有的 OCR 结果 */
     ocrResult: AppOcrResult | undefined;
-    /** 是否启用 OCR 后操作 */
-    enableOcrAfterAction: boolean;
 };
 
 export type OcrResultInitImageParams = {
@@ -66,15 +64,7 @@ export const OcrResult: React.FC<{
     onOcrDetect?: (ocrResult: OcrDetectResult) => void;
     onContextMenu?: (e: React.MouseEvent<HTMLDivElement>) => void;
     onWheel?: (event: React.WheelEvent<HTMLDivElement>) => void;
-    finishCapture?: () => void;
-}> = ({
-    zIndex,
-    actionRef,
-    onOcrDetect,
-    onContextMenu: onContextMenuProp,
-    onWheel,
-    finishCapture,
-}) => {
+}> = ({ zIndex, actionRef, onOcrDetect, onContextMenu: onContextMenuProp, onWheel }) => {
     const intl = useIntl();
     const { token } = theme.useToken();
     const { message } = useContext(AntdContext);
@@ -275,18 +265,6 @@ export const OcrResult: React.FC<{
                     ignoreScale: false,
                 };
 
-                if (params.enableOcrAfterAction) {
-                    const ocrAfterAction =
-                        getAppSettings()[AppSettingsGroup.FunctionScreenshot].ocrAfterAction;
-
-                    if (ocrAfterAction === OcrDetectAfterAction.CopyText) {
-                        writeTextToClipboard(covertOcrResultToText(ocrResult.result));
-                    } else if (ocrAfterAction === OcrDetectAfterAction.CopyTextAndCloseWindow) {
-                        writeTextToClipboard(covertOcrResultToText(ocrResult.result));
-                        finishCapture?.();
-                    }
-                }
-
                 selectRectRef.current = selectRect;
                 updateOcrTextElements(ocrResult.result, ocrResult.ignoreScale);
                 onOcrDetect?.(ocrResult.result);
@@ -297,7 +275,7 @@ export const OcrResult: React.FC<{
                 }
             }
         },
-        [finishCapture, getAppSettings, onOcrDetect, setEnable, updateOcrTextElements],
+        [getAppSettings, onOcrDetect, setEnable, updateOcrTextElements],
     );
 
     const initImage = useCallback(

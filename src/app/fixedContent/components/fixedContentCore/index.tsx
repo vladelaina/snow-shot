@@ -381,7 +381,6 @@ export const FixedContentCore: React.FC<{
                     captureBoundingBoxInfo,
                     canvas,
                     ocrResult: params.ocrResult,
-                    enableOcrAfterAction: false,
                 };
             }
 
@@ -426,7 +425,6 @@ export const FixedContentCore: React.FC<{
                     captureBoundingBoxInfo,
                     canvas,
                     ocrResult: params.ocrResult ?? undefined,
-                    enableOcrAfterAction: false,
                 });
             }
         },
