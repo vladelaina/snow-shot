@@ -37,8 +37,9 @@ export const CheckVersion: React.FC = () => {
         }
     }, []);
 
+    // 是否已经发送过通知
     const hasSendRef = useRef(false);
-    const checkVersion = useCallback(async () => {
+    const checkVersionCore = useCallback(async () => {
         try {
             const currentVersion = await getVersion();
 
@@ -105,6 +106,17 @@ export const CheckVersion: React.FC = () => {
             appError('Failed to check version:', error);
         }
     }, [clearIntervalRef, intl]);
+
+    const checkVersionLoadingRef = useRef(false);
+    const checkVersion = useCallback(async () => {
+        if (checkVersionLoadingRef.current) {
+            return;
+        }
+
+        checkVersionLoadingRef.current = true;
+        await checkVersionCore();
+        checkVersionLoadingRef.current = false;
+    }, [checkVersionCore]);
 
     const [autoCheckVersion, setAutoCheckVersion] = useState<boolean | undefined>(undefined);
     useAppSettingsLoad(
