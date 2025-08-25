@@ -3,7 +3,7 @@ import { saveFile, getMousePosition } from '@/commands';
 import { useStateRef } from '@/hooks/useStateRef';
 import { useStateSubscriber } from '@/hooks/useStateSubscriber';
 import { LogicalPosition, PhysicalSize, PhysicalPosition } from '@tauri-apps/api/dpi';
-import { Menu, MenuItemOptions } from '@tauri-apps/api/menu';
+import { Menu, MenuItemOptions, Submenu } from '@tauri-apps/api/menu';
 import { getCurrentWindow, Window as AppWindow } from '@tauri-apps/api/window';
 import { Button, theme } from 'antd';
 import {
@@ -30,7 +30,7 @@ import {
 } from '../ocrResult';
 import * as clipboard from '@tauri-apps/plugin-clipboard-manager';
 import { KeyEventKey, KeyEventValue } from '@/core/hotKeys';
-import { useHotkeys } from 'react-hotkeys-hook';
+import { isHotkeyPressed, useHotkeys } from 'react-hotkeys-hook';
 import {
     getCurrentMonitorInfo,
     MonitorInfo,
@@ -52,6 +52,8 @@ import { CaptureBoundingBoxInfo } from '@/app/draw/extra';
 import { useTextScaleFactor } from '@/hooks/useTextScaleFactor';
 import { AntdContext } from '@/components/globalLayoutExtra';
 import { appError, appWarn } from '@/utils/log';
+import { formatKey } from '@/utils/format';
+import { useTempInfo } from '@/hooks/useTempInfo';
 
 export type FixedContentInitDrawParams = {
     captureBoundingBoxInfo: CaptureBoundingBoxInfo;
@@ -175,6 +177,7 @@ export const FixedContentCore: React.FC<{
         FixedContentType | undefined
     >(undefined);
     const [enableSelectText, setEnableSelectText] = useState(false);
+    const [contentOpacity, setContentOpacity, contentOpacityRef] = useStateRef(1);
     const [isAlwaysOnTop, setIsAlwaysOnTop] = useStateRef(true);
     const dragRegionMouseDownMousePositionRef = useRef<MousePosition>(undefined);
 
@@ -232,7 +235,14 @@ export const FixedContentCore: React.FC<{
                             e.preventDefault();
                             window.parent.postMessage({
                                 type: 'wheel',
-                                deltaY: e.deltaY,
+                                eventData: {
+                                    deltaY: e.deltaY,
+                                    clientX: e.clientX,
+                                    clientY: e.clientY,
+                                    ctrlKey: e.ctrlKey,
+                                    shiftKey: e.shiftKey,
+                                    altKey: e.altKey,
+                                },
                             }, '*');
                         });
 
@@ -609,6 +619,15 @@ export const FixedContentCore: React.FC<{
         }
     }, [scaleRef, setIsThumbnail, setScale]);
 
+    const [showOpacityInfo, showOpacityInfoTemporary] = useTempInfo();
+    const changeContentOpacity = useCallback(
+        (opacity: number) => {
+            setContentOpacity(Math.min(Math.max(opacity, 0.1), 1));
+            showOpacityInfoTemporary();
+        },
+        [setContentOpacity, showOpacityInfoTemporary],
+    );
+
     const copyToClipboard = useCallback(async () => {
         if (fixedContentTypeRef.current === FixedContentType.DrawCanvas) {
             if (!blobRef.current) {
@@ -703,7 +722,7 @@ export const FixedContentCore: React.FC<{
         setIsAlwaysOnTop((isAlwaysOnTop) => !isAlwaysOnTop);
     }, [setIsAlwaysOnTop]);
 
-    const initMenu = useCallback(async () => {
+    const initMenuCore = useCallback(async () => {
         if (disabled) {
             return;
         }
@@ -722,13 +741,15 @@ export const FixedContentCore: React.FC<{
                 {
                     id: `${appWindow.label}-copyTool`,
                     text: intl.formatMessage({ id: 'draw.copyTool' }),
-                    accelerator: hotkeys?.[KeyEventKey.FixedContentCopyToClipboard]?.hotKey,
+                    accelerator: formatKey(
+                        hotkeys?.[KeyEventKey.FixedContentCopyToClipboard]?.hotKey,
+                    ),
                     action: copyToClipboard,
                 },
                 {
                     id: `${appWindow.label}-saveTool`,
                     text: intl.formatMessage({ id: 'draw.saveTool' }),
-                    accelerator: hotkeys?.[KeyEventKey.FixedContentSaveToFile]?.hotKey,
+                    accelerator: formatKey(hotkeys?.[KeyEventKey.FixedContentSaveToFile]?.hotKey),
                     action: saveToFile,
                 },
                 {
@@ -737,7 +758,7 @@ export const FixedContentCore: React.FC<{
                         getSelectTextMode(fixedContentType) === 'ocr'
                             ? intl.formatMessage({ id: 'draw.showOrHideOcrResult' })
                             : intl.formatMessage({ id: 'draw.selectText' }),
-                    accelerator: hotkeys?.[KeyEventKey.FixedContentSelectText]?.hotKey,
+                    accelerator: formatKey(hotkeys?.[KeyEventKey.FixedContentSelectText]?.hotKey),
                     action: switcSelectText,
                 },
                 {
@@ -747,7 +768,9 @@ export const FixedContentCore: React.FC<{
                     id: `${appWindow.label}-switchThumbnailTool`,
                     text: intl.formatMessage({ id: 'draw.switchThumbnail' }),
                     checked: isThumbnail,
-                    accelerator: hotkeys?.[KeyEventKey.FixedContentSwitchThumbnail]?.hotKey,
+                    accelerator: formatKey(
+                        hotkeys?.[KeyEventKey.FixedContentSwitchThumbnail]?.hotKey,
+                    ),
                     action: async () => {
                         switchThumbnail();
                     },
@@ -758,16 +781,104 @@ export const FixedContentCore: React.FC<{
                         id: 'settings.hotKeySettings.fixedContent.fixedContentAlwaysOnTop',
                     }),
                     checked: isAlwaysOnTop,
-                    accelerator: hotkeys?.[KeyEventKey.FixedContentAlwaysOnTop]?.hotKey,
+                    accelerator: formatKey(hotkeys?.[KeyEventKey.FixedContentAlwaysOnTop]?.hotKey),
                     action: switchAlwaysOnTop,
                 },
+                await Submenu.new({
+                    id: `${appWindow.label}-setOpacityTool`,
+                    text: intl.formatMessage({
+                        id: 'settings.hotKeySettings.fixedContent.opacity',
+                    }),
+                    items: [
+                        {
+                            id: `${appWindow.label}-setOpacityTool25`,
+                            text: intl.formatMessage({
+                                id: 'settings.hotKeySettings.fixedContent.setOpacity.twentyFive',
+                            }),
+                            action: () => {
+                                changeContentOpacity(0.25);
+                            },
+                        },
+                        {
+                            id: `${appWindow.label}-setOpacityTool50`,
+                            text: intl.formatMessage({
+                                id: 'settings.hotKeySettings.fixedContent.setOpacity.fifty',
+                            }),
+                            action: () => {
+                                changeContentOpacity(0.5);
+                            },
+                        },
+                        {
+                            id: `${appWindow.label}-setOpacityTool75`,
+                            text: intl.formatMessage({
+                                id: 'settings.hotKeySettings.fixedContent.setOpacity.seventyFive',
+                            }),
+                            action: () => {
+                                changeContentOpacity(0.75);
+                            },
+                        },
+                        {
+                            id: `${appWindow.label}-setOpacityTool100`,
+                            text: intl.formatMessage({
+                                id: 'settings.hotKeySettings.fixedContent.setOpacity.hundred',
+                            }),
+                            action: () => {
+                                changeContentOpacity(1);
+                            },
+                        },
+                    ],
+                }),
+                await Submenu.new({
+                    id: `${appWindow.label}-setScaleTool`,
+                    text: intl.formatMessage({
+                        id: 'settings.hotKeySettings.fixedContent.scale',
+                    }),
+                    items: [
+                        {
+                            id: `${appWindow.label}-setScaleTool25`,
+                            text: intl.formatMessage({
+                                id: 'settings.hotKeySettings.fixedContent.setScale.twentyFive',
+                            }),
+                            action: () => {
+                                scaleWindow(25 - scaleRef.current.x, true);
+                            },
+                        },
+                        {
+                            id: `${appWindow.label}-setScaleTool50`,
+                            text: intl.formatMessage({
+                                id: 'settings.hotKeySettings.fixedContent.setScale.fifty',
+                            }),
+                            action: () => {
+                                scaleWindow(50 - scaleRef.current.x, true);
+                            },
+                        },
+                        {
+                            id: `${appWindow.label}-setScaleTool75`,
+                            text: intl.formatMessage({
+                                id: 'settings.hotKeySettings.fixedContent.setScale.seventyFive',
+                            }),
+                            action: () => {
+                                scaleWindow(75 - scaleRef.current.x, true);
+                            },
+                        },
+                        {
+                            id: `${appWindow.label}-setScaleTool100`,
+                            text: intl.formatMessage({
+                                id: 'settings.hotKeySettings.fixedContent.setScale.hundred',
+                            }),
+                            action: () => {
+                                scaleWindow(100 - scaleRef.current.x, true);
+                            },
+                        },
+                    ],
+                }),
                 {
                     item: 'Separator',
                 },
                 {
                     id: `${appWindow.label}-closeTool`,
                     text: intl.formatMessage({ id: 'draw.close' }),
-                    accelerator: hotkeys?.[KeyEventKey.FixedContentCloseWindow]?.hotKey,
+                    accelerator: formatKey(hotkeys?.[KeyEventKey.FixedContentCloseWindow]?.hotKey),
                     action: async () => {
                         await closeWindowComplete();
                     },
@@ -787,7 +898,9 @@ export const FixedContentCore: React.FC<{
         isAlwaysOnTop,
         switchAlwaysOnTop,
         switchThumbnail,
+        changeContentOpacity,
     ]);
+    const initMenu = useCallbackRender(initMenuCore);
 
     useEffect(() => {
         initMenu();
@@ -797,21 +910,7 @@ export const FixedContentCore: React.FC<{
         };
     }, [initMenu]);
 
-    const [showScaleInfo, setShowScaleInfo] = useState(false);
-    const scaleTimerRef = useRef<NodeJS.Timeout | null>(null);
-
-    const showScaleInfoTemporary = useCallback(() => {
-        setShowScaleInfo(true);
-
-        if (scaleTimerRef.current) {
-            clearTimeout(scaleTimerRef.current);
-        }
-
-        scaleTimerRef.current = setTimeout(() => {
-            setShowScaleInfo(false);
-            scaleTimerRef.current = null;
-        }, 1000);
-    }, []);
+    const [showScaleInfo, showScaleInfoTemporary] = useTempInfo();
 
     const textScaleFactor = useTextScaleFactor();
     const contentScaleFactor = useMemo(() => {
@@ -822,7 +921,7 @@ export const FixedContentCore: React.FC<{
     }, [canvasImageUrl, imageUrl, textScaleFactor]);
 
     const scaleWindow = useCallback(
-        async (scaleDelta: number) => {
+        async (scaleDelta: number, ignoreMouse: boolean = false) => {
             const appWindow = appWindowRef.current;
             if (!appWindow) {
                 return;
@@ -866,7 +965,7 @@ export const FixedContentCore: React.FC<{
                         (canvasPropsRef.current.scaleFactor * textScaleFactor)),
             );
 
-            if (zoomWithMouse) {
+            if (zoomWithMouse && !ignoreMouse) {
                 try {
                     // 获取当前鼠标位置和窗口位置
                     const [[mouseX, mouseY], currentPosition, currentSize] = await Promise.all([
@@ -918,22 +1017,25 @@ export const FixedContentCore: React.FC<{
     const scaleWindowRender = useCallbackRender(scaleWindow);
 
     useEffect(() => {
-        return () => {
-            if (scaleTimerRef.current) {
-                clearTimeout(scaleTimerRef.current);
-            }
-        };
-    }, []);
-
-    useEffect(() => {
         ocrResultActionRef.current?.setEnable(false);
     }, [getAppSettings]);
 
     const onWheel = useCallback(
-        ({ deltaY }: { deltaY: number }) => {
+        (event: React.WheelEvent<HTMLDivElement>) => {
+            const { deltaY } = event;
+
+            if (isHotkeyPressed(hotkeys?.[KeyEventKey.FixedContentSetOpacity]?.hotKey ?? '')) {
+                if (deltaY > 0) {
+                    changeContentOpacity(contentOpacityRef.current - 0.05);
+                } else {
+                    changeContentOpacity(contentOpacityRef.current + 0.05);
+                }
+                return;
+            }
+
             scaleWindowRender((deltaY > 0 ? -1 : 1) * 10);
         },
-        [scaleWindowRender],
+        [changeContentOpacity, contentOpacityRef, hotkeys, scaleWindowRender],
     );
 
     const handleContextMenu = useCallback(async (e: React.MouseEvent<HTMLDivElement>) => {
@@ -944,7 +1046,7 @@ export const FixedContentCore: React.FC<{
 
     useEffect(() => {
         const handleMessage = (event: MessageEvent) => {
-            const { type, x, y, deltaY, width, height, href } = event.data;
+            const { type, x, y, width, height, href } = event.data;
 
             if (
                 (type === 'bodySize' || type === 'resize') &&
@@ -981,7 +1083,7 @@ export const FixedContentCore: React.FC<{
                 } as React.MouseEvent<HTMLDivElement>;
                 handleContextMenu(syntheticEvent);
             } else if (type === 'wheel') {
-                onWheel({ deltaY: deltaY });
+                onWheel(event.data.eventData as unknown as React.WheelEvent<HTMLDivElement>);
             } else if (type === 'linkClick') {
                 openUrl(href);
             } else if (type === 'keydown' || type === 'keyup') {
@@ -1138,7 +1240,7 @@ export const FixedContentCore: React.FC<{
                 zIndex: zIndexs.Draw_FixedImage,
                 pointerEvents:
                     canvasImageUrl || htmlBlobUrl || textContent || imageUrl ? 'auto' : 'none',
-                opacity: isThumbnail ? 0.72 : 1,
+                opacity: isThumbnail ? 0.72 : contentOpacity,
                 userSelect: isThumbnail ? 'none' : undefined,
             }}
             onContextMenu={handleContextMenu}
@@ -1244,23 +1346,18 @@ export const FixedContentCore: React.FC<{
                     }}
                 />
 
-                <div
-                    className="scale-info"
-                    style={{
-                        position: 'absolute',
-                        bottom: 0,
-                        left: 0,
-                        backgroundColor: token.colorBgMask,
-                        color: token.colorWhite,
-                        padding: `${token.paddingXXS}px ${token.paddingSM}px`,
-                        borderTopRightRadius: token.borderRadius,
-                        fontSize: token.fontSizeSM,
-                        zIndex: 10,
-                        opacity: showScaleInfo ? 1 : 0,
-                        transition: `opacity ${token.motionDurationFast} ${token.motionEaseInOut}`,
-                    }}
-                >
-                    {scale.x}%
+                <div className="scale-info" style={{ opacity: showScaleInfo ? 1 : 0 }}>
+                    <FormattedMessage
+                        id="settings.hotKeySettings.fixedContent.scaleInfo"
+                        values={{ scale: scale.x }}
+                    />
+                </div>
+
+                <div className="scale-info" style={{ opacity: showOpacityInfo ? 1 : 0 }}>
+                    <FormattedMessage
+                        id="settings.hotKeySettings.fixedContent.opacityInfo"
+                        values={{ opacity: (contentOpacity * 100).toFixed(0) }}
+                    />
                 </div>
             </div>
 
@@ -1330,6 +1427,20 @@ export const FixedContentCore: React.FC<{
 
                 .fixed-html-content > :global(div):first-child {
                     padding: ${token.padding}px;
+                }
+
+                .scale-info {
+                    position: absolute;
+                    bottom: 0;
+                    left: 0;
+                    background-color: ${token.colorBgMask};
+                    color: ${token.colorWhite};
+                    padding: ${token.paddingXXS}px ${token.paddingSM}px;
+                    border-top-right-radius: ${token.borderRadius}px;
+                    font-size: ${token.fontSizeSM}px;
+                    z-index: 10;
+                    transition: opacity ${token.motionDurationFast} ${token.motionEaseInOut};
+                    display: ${isThumbnail ? 'none' : 'block'};
                 }
 
                 /* 
