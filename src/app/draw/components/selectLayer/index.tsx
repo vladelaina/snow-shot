@@ -10,7 +10,12 @@ import {
     initUiElements,
     initUiElementsCache,
 } from '@/commands';
-import { AppSettingsData, AppSettingsGroup, AppSettingsPublisher } from '@/app/contextWrap';
+import {
+    AppSettingsData,
+    AppSettingsGroup,
+    AppSettingsPublisher,
+    isDarkMode,
+} from '@/app/contextWrap';
 import Flatbush from 'flatbush';
 import { useCallbackRender, useCallbackRenderSlow } from '@/hooks/useCallbackRender';
 import { TweenAnimation } from '@/utils/tweenAnimation';
@@ -374,7 +379,7 @@ const SelectLayerCore: React.FC<SelectLayerProps> = ({ actionRef }) => {
                 captureBoundingBoxInfo.height,
                 rect,
                 selectLayerCanvasContextRef.current!,
-                getAppSettings()[AppSettingsGroup.Common].darkMode,
+                isDarkMode(getAppSettings()[AppSettingsGroup.Common].theme),
                 window.devicePixelRatio,
                 getScreenshotType(),
                 drawElementMask,

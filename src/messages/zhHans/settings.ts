@@ -1,7 +1,10 @@
 export const settings = {
     'settings.commonSettings': '常用',
     'settings.language': '语言',
-    'settings.darkMode': '暗黑模式',
+    'settings.theme': '主题',
+    'settings.theme.light': '浅色',
+    'settings.theme.dark': '暗黑',
+    'settings.theme.system': '跟随系统',
     'settings.controlNode': '选区控件样式',
     'settings.controlNode.circle': '圆形',
     'settings.controlNode.polyline': '多边形',

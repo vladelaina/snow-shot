@@ -9,7 +9,7 @@ export const zhHant = {
     'menu.tools.translation': '翻譯',
     'settings.commonSettings': '常用設定',
     'settings.language': '語言',
-    'settings.darkMode': '暗黑模式',
+    'settings.darkMode': '主題',
     'settings.controlNode': '選取範圍控制樣式',
     'settings.controlNode.circle': '圓形',
     'settings.controlNode.polyline': '多邊形',

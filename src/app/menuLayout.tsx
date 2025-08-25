@@ -29,6 +29,7 @@ import {
     AppSettingsLanguage,
     AppSettingsPublisher,
     defaultAppSettingsData,
+    isDarkMode,
 } from './contextWrap';
 import { Header } from 'antd/es/layout/layout';
 import { getCurrentWindow, Window as AppWindow } from '@tauri-apps/api/window';
@@ -372,12 +373,12 @@ const MenuLayoutCore: React.FC<{ children: React.ReactNode }> = ({ children }) =
     const appSettings = useContext(AppSettingsActionContext);
     const { updateAppSettings } = appSettings;
     const [darkMode, setDarkMode] = useState(
-        defaultAppSettingsData[AppSettingsGroup.Common].darkMode,
+        isDarkMode(defaultAppSettingsData[AppSettingsGroup.Common].theme),
     );
     useStateSubscriber(
         AppSettingsPublisher,
         useCallback((settings: AppSettingsData) => {
-            setDarkMode(settings[AppSettingsGroup.Common].darkMode);
+            setDarkMode(isDarkMode(settings[AppSettingsGroup.Common].theme));
         }, []),
     );
 

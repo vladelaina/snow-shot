@@ -2,7 +2,7 @@ import { Descriptions, Space, theme } from 'antd';
 import { CaptureStep, DrawContext } from '../../types';
 import Color from 'color';
 import { FormattedMessage } from 'react-intl';
-import { AppSettingsGroup, AppSettingsPublisher } from '@/app/contextWrap';
+import { AppSettingsGroup, AppSettingsPublisher, isDarkMode } from '@/app/contextWrap';
 import { useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { KeyboardIcon, MouseIcon } from '@/components/icons';
 import { DescriptionsItemType } from 'antd/es/descriptions';
@@ -52,7 +52,7 @@ const StatusBar: React.FC = () => {
     const [hotKeyTipOpacity, setHotKeyTipOpacity] = useState(100);
     useAppSettingsLoad(
         useCallback((settings) => {
-            setDarkMode(settings[AppSettingsGroup.Common].darkMode);
+            setDarkMode(isDarkMode(settings[AppSettingsGroup.Common].theme));
             setHotKeyTipOpacity(settings[AppSettingsGroup.Screenshot].hotKeyTipOpacity);
         }, []),
         true,
