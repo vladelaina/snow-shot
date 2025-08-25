@@ -1,7 +1,6 @@
 use enigo::{Axis, Mouse};
 use serde::Serialize;
 use std::{
-    env,
     path::PathBuf,
     time::{SystemTime, UNIX_EPOCH},
 };
@@ -30,19 +29,6 @@ pub async fn get_selected_text() -> String {
         }
     };
     text
-}
-
-pub async fn auto_start_hide_window(
-    window: tauri::Window,
-    auto_start_hide_window: tauri::State<'_, Mutex<bool>>,
-) -> Result<(), ()> {
-    let mut auto_start_hide_window = auto_start_hide_window.lock().await;
-
-    if *auto_start_hide_window == false && env::args().any(|arg| arg == "--auto_start") {
-        window.hide().unwrap();
-        *auto_start_hide_window = true;
-    }
-    Ok(())
 }
 
 pub async fn set_enable_proxy(enable: bool, host: String) -> Result<(), ()> {

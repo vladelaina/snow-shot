@@ -97,8 +97,3 @@ export const createDrawWindow = async () => {
     const result = await invoke<void>('create_draw_window');
     return result;
 };
-
-export const autoStartHideWindow = async () => {
-    const result = await invoke<void>('auto_start_hide_window');
-    return result;
-};
