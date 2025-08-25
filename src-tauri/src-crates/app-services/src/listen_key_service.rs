@@ -13,6 +13,7 @@ pub struct ListenKeyService {
     _key_down_guard: Arc<Mutex<Option<Box<dyn std::any::Any + Send>>>>,
     _key_up_guard: Arc<Mutex<Option<Box<dyn std::any::Any + Send>>>>,
     window_label_set: Arc<Mutex<HashSet<String>>>,
+    device_event_handler: Arc<Mutex<DeviceEventHandlerService>>,
 }
 
 #[derive(Serialize, Clone)]
@@ -31,15 +32,11 @@ impl ListenKeyService {
             _key_down_guard: Arc::new(Mutex::new(None)),
             _key_up_guard: Arc::new(Mutex::new(None)),
             window_label_set: Arc::new(Mutex::new(HashSet::new())),
+            device_event_handler: Arc::new(Mutex::new(DeviceEventHandlerService::new())),
         };
     }
 
-    pub fn start(
-        &mut self,
-        app_handle: AppHandle,
-        window: Window,
-        device_event_handler: &mut DeviceEventHandlerService,
-    ) -> Result<(), String> {
+    pub fn start(&mut self, app_handle: AppHandle, window: Window) -> Result<(), String> {
         let mut window_label_set_lock = match self.window_label_set.lock() {
             Ok(guard) => guard,
             Err(err) => {
@@ -61,6 +58,7 @@ impl ListenKeyService {
             }
         };
 
+        let mut device_event_handler = self.device_event_handler.lock().unwrap();
         if key_down_guard_lock.is_none() {
             let key_down_app_handle = app_handle.clone();
             *key_down_guard_lock = Some(Box::new(device_event_handler.on_key_down(
@@ -116,6 +114,7 @@ impl ListenKeyService {
     pub fn stop_core(
         key_down_guard: &Arc<Mutex<Option<Box<dyn std::any::Any + Send>>>>,
         key_up_guard: &Arc<Mutex<Option<Box<dyn std::any::Any + Send>>>>,
+        device_event_handler: &Arc<Mutex<DeviceEventHandlerService>>,
         window_label_set: &Arc<Mutex<HashSet<String>>>,
         window_label: &str,
     ) -> Result<(), String> {
@@ -157,6 +156,16 @@ impl ListenKeyService {
         };
         *key_up_guard_lock = None;
 
+        let mut device_event_handler_lock = match device_event_handler.lock() {
+            Ok(handler) => handler,
+            Err(_) => {
+                return Err(String::from(
+                    "[ListenKeyService::stop_core] Failed to lock device_event_handler",
+                ));
+            }
+        };
+        device_event_handler_lock.release();
+
         Ok(())
     }
 
@@ -164,6 +173,7 @@ impl ListenKeyService {
         Self::stop_core(
             &self._key_down_guard,
             &self._key_up_guard,
+            &self.device_event_handler,
             &self.window_label_set,
             window_label,
         )
