@@ -39,6 +39,7 @@ import {
     AppSettingsData,
     AppSettingsGroup,
     AppSettingsPublisher,
+    isDarkMode,
 } from '@/app/contextWrap';
 import Markdown, { ExtraProps } from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -292,7 +293,7 @@ const Chat = () => {
         useCallback(
             (settings: AppSettingsData) => {
                 setSelectedModel(settings[AppSettingsGroup.Cache].chatModel);
-                setDarkMode(settings[AppSettingsGroup.Common].darkMode);
+                setDarkMode(isDarkMode(settings[AppSettingsGroup.Common].theme));
                 setCustomModelConfigList(settings[AppSettingsGroup.FunctionChat].chatApiConfigList);
             },
             [setSelectedModel],

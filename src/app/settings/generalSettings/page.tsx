@@ -12,7 +12,6 @@ import {
     Select,
     Space,
     Spin,
-    Switch,
     theme,
 } from 'antd';
 import {
@@ -21,6 +20,7 @@ import {
     AppSettingsData,
     AppSettingsGroup,
     AppSettingsLanguage,
+    AppSettingsTheme,
     TrayIconDefaultIcon,
 } from '../../contextWrap';
 import { useCallback, useContext, useEffect, useMemo, useState } from 'react';
@@ -280,6 +280,23 @@ export default function GeneralSettings() {
         ]);
     }, [intl]);
 
+    const themeOptions = useMemo(() => {
+        return [
+            {
+                label: intl.formatMessage({ id: 'settings.theme.light' }),
+                value: AppSettingsTheme.Light,
+            },
+            {
+                label: intl.formatMessage({ id: 'settings.theme.dark' }),
+                value: AppSettingsTheme.Dark,
+            },
+            {
+                label: intl.formatMessage({ id: 'settings.theme.system' }),
+                value: AppSettingsTheme.System,
+            },
+        ];
+    }, [intl]);
+
     useEffect(() => {
         initDefaultIconsOptions();
     }, [initDefaultIconsOptions]);
@@ -314,13 +331,12 @@ export default function GeneralSettings() {
                                 label={
                                     <IconLabel
                                         icon={<DarkModeIcon />}
-                                        label={<FormattedMessage id="settings.darkMode" />}
+                                        label={<FormattedMessage id="settings.theme" />}
                                     />
                                 }
-                                name="darkMode"
-                                valuePropName="checked"
+                                name="theme"
                             >
-                                <Switch />
+                                <Select options={themeOptions} />
                             </Form.Item>
                         </Col>
                         <Col span={12}>

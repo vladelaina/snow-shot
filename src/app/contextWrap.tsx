@@ -103,7 +103,7 @@ export enum TrayIconDefaultIcon {
 
 export type AppSettingsData = {
     [AppSettingsGroup.Common]: {
-        darkMode: boolean;
+        theme: AppSettingsTheme;
         language: AppSettingsLanguage;
         /** 浏览器语言，用于自动切换语言 */
         browserLanguage: string;
@@ -280,9 +280,27 @@ export const CanHiddenToolSet: Set<DrawState> = new Set([
     DrawState.ScrollScreenshot,
 ]);
 
+export enum AppSettingsTheme {
+    Light = 'light',
+    Dark = 'dark',
+    System = 'system',
+}
+
+export const isDarkMode = (theme: AppSettingsTheme) => {
+    if (typeof window === 'undefined') {
+        return false;
+    }
+
+    if (theme === AppSettingsTheme.System) {
+        return window.matchMedia('(prefers-color-scheme: dark)').matches;
+    }
+
+    return theme === AppSettingsTheme.Dark;
+};
+
 export const defaultAppSettingsData: AppSettingsData = {
     [AppSettingsGroup.Common]: {
-        darkMode: false,
+        theme: AppSettingsTheme.System,
         language: AppSettingsLanguage.ZHHans,
         browserLanguage: '',
     },
@@ -480,7 +498,7 @@ const ContextWrapCore: React.FC<{ children: React.ReactNode }> = ({ children }) 
     const [, setAppSettingsStatePublisher] = useStateSubscriber(
         AppSettingsPublisher,
         useCallback((settings: AppSettingsData) => {
-            document.body.className = settings[AppSettingsGroup.Common].darkMode
+            document.body.className = isDarkMode(settings[AppSettingsGroup.Common].theme)
                 ? 'app-dark'
                 : 'app-light';
         }, []),
@@ -567,10 +585,10 @@ const ContextWrapCore: React.FC<{ children: React.ReactNode }> = ({ children }) 
                     | AppSettingsData[typeof group]
                     | undefined;
                 settings = {
-                    darkMode:
-                        typeof newSettings?.darkMode === 'boolean'
-                            ? newSettings.darkMode
-                            : (prevSettings?.darkMode ?? false),
+                    theme:
+                        typeof newSettings?.theme === 'string'
+                            ? newSettings.theme
+                            : (prevSettings?.theme ?? AppSettingsTheme.System),
                     language: (() => {
                         switch (newSettings?.language) {
                             case 'zh-Hans':
@@ -1403,7 +1421,7 @@ const ContextWrapCore: React.FC<{ children: React.ReactNode }> = ({ children }) 
         <AppSettingsActionContext.Provider value={appSettingsContextValue}>
             <ConfigProvider
                 theme={{
-                    algorithm: appSettings[AppSettingsGroup.Common].darkMode
+                    algorithm: isDarkMode(appSettings[AppSettingsGroup.Common].theme)
                         ? theme.darkAlgorithm
                         : theme.defaultAlgorithm,
                 }}
