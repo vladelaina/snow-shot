@@ -1,5 +1,5 @@
 import { AppSettingsData, AppSettingsGroup, AppSettingsPublisher } from '@/app/contextWrap';
-import { ElementRect, saveFile, getMousePosition } from '@/commands';
+import { saveFile, getMousePosition } from '@/commands';
 import { useStateRef } from '@/hooks/useStateRef';
 import { useStateSubscriber } from '@/hooks/useStateSubscriber';
 import { LogicalPosition, PhysicalSize, PhysicalPosition } from '@tauri-apps/api/dpi';
@@ -22,7 +22,12 @@ import { closeWindowComplete } from '@/utils/window';
 import { useCallbackRender } from '@/hooks/useCallbackRender';
 import { zIndexs } from '@/utils/zIndex';
 import { CloseOutlined } from '@ant-design/icons';
-import { AppOcrResult, OcrResult, OcrResultActionType } from '../ocrResult';
+import {
+    AppOcrResult,
+    OcrResult,
+    OcrResultActionType,
+    OcrResultInitDrawCanvasParams,
+} from '../ocrResult';
 import * as clipboard from '@tauri-apps/plugin-clipboard-manager';
 import { KeyEventKey, KeyEventValue } from '@/core/hotKeys';
 import { useHotkeys } from 'react-hotkeys-hook';
@@ -335,12 +340,7 @@ export const FixedContentCore: React.FC<{
         [setFixedContentType, setTextContent, onTextLoad, setWindowSize],
     );
 
-    const initOcrParams = useRef<{
-        selectRect: ElementRect;
-        canvas: HTMLCanvasElement;
-        captureBoundingBoxInfo: CaptureBoundingBoxInfo;
-        ocrResult: undefined;
-    }>(undefined);
+    const initOcrParams = useRef<OcrResultInitDrawCanvasParams | undefined>(undefined);
 
     const imageRef = useRef<HTMLImageElement>(null);
     const imageOcrSignRef = useRef<boolean>(false);
@@ -381,6 +381,7 @@ export const FixedContentCore: React.FC<{
                     captureBoundingBoxInfo,
                     canvas,
                     ocrResult: params.ocrResult,
+                    enableOcrAfterAction: false,
                 };
             }
 
@@ -424,7 +425,8 @@ export const FixedContentCore: React.FC<{
                     },
                     captureBoundingBoxInfo,
                     canvas,
-                    ocrResult: params.ocrResult,
+                    ocrResult: params.ocrResult ?? undefined,
+                    enableOcrAfterAction: false,
                 });
             }
         },

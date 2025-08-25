@@ -35,7 +35,7 @@ export const OcrBlocks: React.FC<{
 
     const ocrResultActionRef = useRef<OcrResultActionType>(undefined);
 
-    useStateSubscriber(
+    const [getDrawState] = useStateSubscriber(
         DrawStatePublisher,
         useCallback((drawState: DrawState) => {
             ocrResultActionRef.current?.setEnable(isOcrTool(drawState));
@@ -58,6 +58,7 @@ export const OcrBlocks: React.FC<{
                     captureBoundingBoxInfo,
                     canvas,
                     ocrResult,
+                    enableOcrAfterAction: getDrawState() === DrawState.OcrDetect, // 只在 OCR 检测时启用 OCR 后操作,截图翻译时不启用
                 });
             },
             setEnable: (enable: boolean | ((enable: boolean) => boolean)) => {
@@ -67,7 +68,7 @@ export const OcrBlocks: React.FC<{
                 return ocrResultActionRef.current;
             },
         }),
-        [],
+        [getDrawState],
     );
 
     const menuRef = useRef<Menu>(undefined);

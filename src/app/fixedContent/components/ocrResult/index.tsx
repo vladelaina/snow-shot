@@ -29,6 +29,8 @@ export type OcrResultInitDrawCanvasParams = {
     captureBoundingBoxInfo: CaptureBoundingBoxInfo;
     /** 已有的 OCR 结果 */
     ocrResult: AppOcrResult | undefined;
+    /** 是否启用 OCR 后操作 */
+    enableOcrAfterAction: boolean;
 };
 
 export type OcrResultInitImageParams = {
@@ -273,14 +275,16 @@ export const OcrResult: React.FC<{
                     ignoreScale: false,
                 };
 
-                const ocrAfterAction =
-                    getAppSettings()[AppSettingsGroup.FunctionScreenshot].ocrAfterAction;
+                if (params.enableOcrAfterAction) {
+                    const ocrAfterAction =
+                        getAppSettings()[AppSettingsGroup.FunctionScreenshot].ocrAfterAction;
 
-                if (ocrAfterAction === OcrDetectAfterAction.CopyText) {
-                    writeTextToClipboard(covertOcrResultToText(ocrResult.result));
-                } else if (ocrAfterAction === OcrDetectAfterAction.CopyTextAndCloseWindow) {
-                    writeTextToClipboard(covertOcrResultToText(ocrResult.result));
-                    finishCapture?.();
+                    if (ocrAfterAction === OcrDetectAfterAction.CopyText) {
+                        writeTextToClipboard(covertOcrResultToText(ocrResult.result));
+                    } else if (ocrAfterAction === OcrDetectAfterAction.CopyTextAndCloseWindow) {
+                        writeTextToClipboard(covertOcrResultToText(ocrResult.result));
+                        finishCapture?.();
+                    }
                 }
 
                 selectRectRef.current = selectRect;
