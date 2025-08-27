@@ -82,6 +82,7 @@ import { isOcrTool } from './components/drawToolbar/components/tools/ocrTool';
 import { CaptureHistoryActionType, CaptureHistoryController } from './components/captureHistory';
 import { AntdContext } from '@/components/globalLayoutExtra';
 import { appError } from '@/utils/log';
+import { NonDeletedExcalidrawElement } from '@mg-chao/excalidraw/element/types';
 
 const DrawCacheLayer = dynamic(
     async () => (await import('./components/drawCacheLayer')).DrawCacheLayer,
@@ -843,6 +844,9 @@ const DrawPageCore: React.FC<{
               id: string;
               created: number;
           }
+        | {
+              editingTextElement: NonDeletedExcalidrawElement;
+          }
         | undefined
     >(undefined);
     const unsetLatestExcalidrawNewElement = useMemo(() => {
@@ -852,17 +856,22 @@ const DrawPageCore: React.FC<{
     }, []);
     const onDoubleClickFirstClick = useCallback(() => {
         // 判断 excalidraw 是否在绘制中
-        const newElement = drawCacheLayerActionRef.current
-            ?.getExcalidrawAPI()
-            ?.getAppState().newElement;
+        const currentAppState = drawCacheLayerActionRef.current?.getExcalidrawAPI()?.getAppState();
+        const newElement = currentAppState?.newElement;
+        const editingTextElement = currentAppState?.editingTextElement;
 
-        if (newElement && 'updated' in newElement) {
+        if (editingTextElement) {
+            latestExcalidrawNewElementRef.current = {
+                editingTextElement: editingTextElement,
+            };
+        } else if (newElement && 'updated' in newElement) {
             let created = newElement.updated;
             if (
                 latestExcalidrawNewElementRef.current &&
+                'id' in latestExcalidrawNewElementRef.current &&
                 latestExcalidrawNewElementRef.current.id === newElement.id
             ) {
-                created = latestExcalidrawNewElementRef.current.created;
+                created = latestExcalidrawNewElementRef.current.created ?? created;
             }
 
             latestExcalidrawNewElementRef.current = {
@@ -879,8 +888,11 @@ const DrawPageCore: React.FC<{
                 e.button === 0 &&
                 // 如果存在创建时间大于512ms的在编辑中的元素，则认为是对箭头的双击
                 !(
-                    latestExcalidrawNewElementRef.current &&
-                    latestExcalidrawNewElementRef.current.created < Date.now() - 512
+                    (latestExcalidrawNewElementRef.current &&
+                        'created' in latestExcalidrawNewElementRef.current &&
+                        latestExcalidrawNewElementRef.current.created < Date.now() - 512) ||
+                    (latestExcalidrawNewElementRef.current &&
+                        'editingTextElement' in latestExcalidrawNewElementRef.current)
                 )
             ) {
                 onCopyToClipboard();
