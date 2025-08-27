@@ -58,6 +58,10 @@ export enum OcrDetectAfterAction {
     CopyTextAndCloseWindow = 'copyTextAndCloseWindow',
 }
 
+const stopPropagation: HTMLDivElement['onmousedown'] = (e) => {
+    e.stopPropagation();
+};
+
 export const OcrResult: React.FC<{
     zIndex: number;
     actionRef: React.RefObject<OcrResultActionType | undefined>;
@@ -212,6 +216,8 @@ export const OcrResult: React.FC<{
                     textElement.style.whiteSpace = 'nowrap';
                     textWrapElement.style.textAlign = 'center';
                 }
+
+                textElement.onmousedown = stopPropagation;
 
                 textWrapElement.appendChild(textElement);
                 textContainerElement.appendChild(textBackgroundElement);
