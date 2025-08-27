@@ -326,11 +326,15 @@ const DrawPageCore: React.FC<{
             }
 
             drawPageStateRef.current = DrawPageState.Release;
-            await createDrawWindow();
-            // 隔一段时间释放，防止释放中途用户唤起
-            setTimeout(() => {
-                appWindowRef.current.close();
-            }, 1000 * 8);
+            await Promise.all([
+                createDrawWindow(),
+                // 隔一段时间释放，防止释放中途用户唤起
+                new Promise((resolve) => {
+                    setTimeout(resolve, 1000 * 8);
+                }).then(() => {
+                    appWindowRef.current.close();
+                }),
+            ]);
         }, 1000 * 16);
     }, []);
 
