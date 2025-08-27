@@ -1245,6 +1245,9 @@ export const FixedContentCore: React.FC<{
             }}
             onContextMenu={handleContextMenu}
             onDoubleClick={onDoubleClick}
+            onMouseDown={onDragRegionMouseDown}
+            onMouseMove={onDragRegionMouseMove}
+            onMouseUp={onDragRegionMouseUp}
         >
             <OcrResult
                 actionRef={ocrResultActionRef}
@@ -1318,13 +1321,7 @@ export const FixedContentCore: React.FC<{
                 </div>
             )}
 
-            <div
-                className="fixed-image-container-inner"
-                onWheel={onWheel}
-                onMouseDown={onDragRegionMouseDown}
-                onMouseMove={onDragRegionMouseMove}
-                onMouseUp={onDragRegionMouseUp}
-            >
+            <div className="fixed-image-container-inner" onWheel={onWheel}>
                 <Button
                     className="fixed-image-close-button"
                     icon={<CloseOutlined />}

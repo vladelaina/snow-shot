@@ -39,11 +39,19 @@ export const listenKeyStart = async () => {
 };
 
 export const listenKeyStop = async () => {
+    if (getPlatform() !== 'macos') {
+        return;
+    }
+
     const result = await invoke<void>('listen_key_stop');
     return result;
 };
 
 export const listenKeyStopByWindowLabel = async (windowLabel: string) => {
+    if (getPlatform() !== 'macos') {
+        return;
+    }
+
     const result = await invoke<void>('listen_key_stop_by_window_label', { windowLabel });
     return result;
 };
