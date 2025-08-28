@@ -76,10 +76,3 @@ pub async fn save_file(request: tauri::ipc::Request<'_>) -> Result<(), String> {
         )),
     }
 }
-
-pub async fn create_dir(dir_path: String) -> Result<(), ()> {
-    match std::fs::create_dir_all(dir_path) {
-        Ok(_) => Ok(()),
-        Err(_) => Err(()),
-    }
-}

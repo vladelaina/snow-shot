@@ -33,24 +33,6 @@
                 "visible": false,
                 "backgroundThrottling": "disabled",
                 "url": "/"
-            },
-            {
-                "label": "draw",
-                "fullscreen": false,
-                "title": "Snow Shot - Draw",
-                "center": true,
-                "decorations": false,
-                "shadow": false,
-                "transparent": true,
-                "skipTaskbar": true,
-                "width": 1,
-                "height": 1,
-                "maximizable": false,
-                "minimizable": false,
-                "resizable": false,
-                "visible": false,
-                "focus": false,
-                "url": "/draw"
             }
         ],
         "macOSPrivateApi": true,

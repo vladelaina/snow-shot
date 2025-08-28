@@ -3,3 +3,4 @@ pub mod free_drag_window_service;
 pub mod listen_key_service;
 pub mod ocr_service;
 pub mod video_record_service;
+pub mod file_cache_service;

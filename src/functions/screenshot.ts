@@ -41,6 +41,8 @@ export const finishScreenshot = async () => {
     await emit('finish-screenshot');
 };
 
-export const releaseDrawPage = async () => {
-    await emit('release-draw-page');
+export const releaseDrawPage = async (force: boolean = false) => {
+    await emit('release-draw-page', {
+        force,
+    });
 };

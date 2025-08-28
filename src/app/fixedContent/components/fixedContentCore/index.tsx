@@ -1373,8 +1373,8 @@ export const FixedContentCore: React.FC<{
                 }
 
                 .fixed-image-container-inner {
-                    width: calc(100vw - 4px);
-                    height: calc(100vh - 4px);
+                    width: calc(${windowSize.width / contentScaleFactor}px - 4px);
+                    height: calc(${windowSize.height / contentScaleFactor}px - 4px);
                     position: absolute;
                     top: 0;
                     left: 0;

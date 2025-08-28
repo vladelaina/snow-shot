@@ -773,19 +773,21 @@ const DrawPageCore: React.FC<{
             finishCapture();
         });
 
-        const releaseListenerId = addListener('release-draw-page', () => {
-            if (drawPageStateRef.current !== DrawPageState.Release) {
-                return;
+        const releaseListenerId = addListener('release-draw-page', (args) => {
+            const payload = (args as { payload: { force: boolean } }).payload;
+
+            if (!payload.force) {
+                if (drawPageStateRef.current !== DrawPageState.Release) {
+                    return;
+                }
+
+                if (releaseExecuteScreenshotTimerRef.current?.timer) {
+                    clearInterval(releaseExecuteScreenshotTimerRef.current.timer);
+                    executeScreenshotFunc(releaseExecuteScreenshotTimerRef.current.type);
+                }
             }
 
-            if (releaseExecuteScreenshotTimerRef.current?.timer) {
-                clearInterval(releaseExecuteScreenshotTimerRef.current.timer);
-                executeScreenshotFunc(releaseExecuteScreenshotTimerRef.current.type);
-            }
-
-            setTimeout(() => {
-                getCurrentWindow().close();
-            }, 0);
+            getCurrentWindow().close();
         });
 
         return () => {

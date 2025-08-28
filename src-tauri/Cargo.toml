@@ -52,6 +52,7 @@ objc2 = "0.6.1"
 objc2-app-kit = { version = "0.3.1" }
 uiautomation = "0.22.2"
 macos-accessibility-client = "0.0.1"
+dashmap = "6.1.0"
 
 # 项目内依赖
 snow-shot-app-services = { path = "src-crates/app-services" }
