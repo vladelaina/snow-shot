@@ -1383,7 +1383,7 @@ const ContextWrapCore: React.FC<{ children: React.ReactNode }> = ({ children }) 
 
         reloadAppSettings().then(() => {
             if (appWindowRef.current?.label === 'main') {
-                releaseDrawPage().then(() => {
+                releaseDrawPage(true).then(() => {
                     createDrawWindow();
                 });
             }
