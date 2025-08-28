@@ -1,4 +1,4 @@
-import { useCallback, useContext, useEffect, useImperativeHandle, useRef } from 'react';
+import { useCallback, useContext, useEffect, useImperativeHandle, useMemo, useRef } from 'react';
 import { ElementRect } from '@/commands';
 import { ocrDetect, OcrDetectResult } from '@/commands/ocr';
 import { FormattedMessage, useIntl } from 'react-intl';
@@ -383,7 +383,7 @@ export const OcrResult: React.FC<{
 
     useHotkeysApp(
         getPlatformValue('Ctrl+A', 'Meta+A'),
-        (event) => {
+        useCallback((event) => {
             if (!enableRef.current) {
                 return;
             }
@@ -397,12 +397,15 @@ export const OcrResult: React.FC<{
                 selection.removeAllRanges();
                 selection.addRange(range);
             }
-        },
-        {
-            keyup: false,
-            keydown: true,
-            preventDefault: true,
-        },
+        }, []),
+        useMemo(
+            () => ({
+                keyup: false,
+                keydown: true,
+                preventDefault: true,
+            }),
+            [],
+        ),
     );
 
     const onContextMenu = useCallback(

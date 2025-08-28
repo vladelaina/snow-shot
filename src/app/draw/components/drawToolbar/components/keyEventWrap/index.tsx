@@ -31,18 +31,32 @@ const KeyEventHandleCore: React.FC<{
     hotkeyScope,
 }) => {
     const intl = useIntl();
-    useHotkeysApp(keyEventValue.hotKey, onKeyDownChildren, {
-        keydown: true,
-        keyup: false,
-        preventDefault: true,
-        scopes: hotkeyScope ?? HotkeysScope.DrawTool,
-    });
-    useHotkeysApp(keyEventValue.hotKey, onKeyUpChildren, {
-        keydown: false,
-        keyup: true,
-        preventDefault: true,
-        scopes: hotkeyScope ?? HotkeysScope.DrawTool,
-    });
+    useHotkeysApp(
+        keyEventValue.hotKey,
+        onKeyDownChildren,
+        useMemo(
+            () => ({
+                keydown: true,
+                keyup: false,
+                preventDefault: true,
+                scopes: hotkeyScope ?? HotkeysScope.DrawTool,
+            }),
+            [hotkeyScope],
+        ),
+    );
+    useHotkeysApp(
+        keyEventValue.hotKey,
+        onKeyUpChildren,
+        useMemo(
+            () => ({
+                keydown: false,
+                keyup: true,
+                preventDefault: true,
+                scopes: hotkeyScope ?? HotkeysScope.DrawTool,
+            }),
+            [hotkeyScope],
+        ),
+    );
 
     const buttonTitle = useMemo(() => {
         return intl.formatMessage(
