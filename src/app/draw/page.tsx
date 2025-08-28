@@ -783,9 +783,7 @@ const DrawPageCore: React.FC<{
                 executeScreenshotFunc(releaseExecuteScreenshotTimerRef.current.type);
             }
 
-            setTimeout(() => {
-                getCurrentWindow().close();
-            }, 0);
+            getCurrentWindow().close();
         });
 
         return () => {

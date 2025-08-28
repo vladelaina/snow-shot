@@ -7,6 +7,7 @@ pub mod scroll_screenshot;
 pub mod video_record;
 
 use chrono::Local;
+use std::sync::Arc;
 use tauri::Emitter;
 use tokio::sync::Mutex;
 
@@ -17,6 +18,7 @@ use snow_shot_app_os::ui_automation::UIElements;
 use snow_shot_app_scroll_screenshot_service::scroll_screenshot_capture_service;
 use snow_shot_app_scroll_screenshot_service::scroll_screenshot_image_service;
 use snow_shot_app_scroll_screenshot_service::scroll_screenshot_service;
+use snow_shot_app_services::file_cache_service;
 use snow_shot_app_services::free_drag_window_service;
 use snow_shot_app_services::listen_key_service;
 use snow_shot_app_services::ocr_service::OcrService;
@@ -47,6 +49,8 @@ pub fn run() {
         Mutex::new(free_drag_window_service::FreeDragWindowService::new());
 
     let listen_key_service = Mutex::new(listen_key_service::ListenKeyService::new());
+
+    let file_cache_service = Arc::new(file_cache_service::FileCacheService::new());
 
     tauri::Builder::default()
         .plugin(tauri_plugin_os::init())
@@ -139,6 +143,7 @@ pub fn run() {
         .manage(video_record_service)
         .manage(free_drag_window_service)
         .manage(listen_key_service)
+        .manage(file_cache_service)
         .invoke_handler(tauri::generate_handler![
             screenshot::capture_current_monitor,
             screenshot::capture_all_monitors,
@@ -153,6 +158,7 @@ pub fn run() {
             screenshot::set_draw_window_style,
             file::save_file,
             file::create_dir,
+            file::get_app_config_dir,
             core::exit_app,
             core::start_free_drag,
             ocr::ocr_detect,
@@ -188,6 +194,9 @@ pub fn run() {
             listen_key::listen_key_start,
             listen_key::listen_key_stop,
             listen_key::listen_key_stop_by_window_label,
+            file::text_file_read,
+            file::text_file_write,
+            file::text_file_clear,
         ])
         .on_window_event(|window, event| {
             if let tauri::WindowEvent::CloseRequested { .. } = event {

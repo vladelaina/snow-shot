@@ -1,14 +1,7 @@
 'use client';
 
 import { createContext, RefObject, useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import {
-    BaseDirectory,
-    mkdir,
-    readTextFile,
-    writeTextFile,
-    remove,
-    exists,
-} from '@tauri-apps/plugin-fs';
+import { BaseDirectory, remove } from '@tauri-apps/plugin-fs';
 import { ConfigProvider, theme } from 'antd';
 import { debounce, isEqual, trim } from 'es-toolkit';
 import zhCN from 'antd/es/locale/zh_CN';
@@ -16,7 +9,7 @@ import zhTW from 'antd/es/locale/zh_TW';
 import enUS from 'antd/es/locale/en_US';
 import { IntlProvider } from 'react-intl';
 import { messages } from '@/messages/map';
-import { ElementRect, ImageBuffer } from '@/commands';
+import { createDrawWindow, ElementRect, ImageBuffer } from '@/commands';
 import { emit } from '@tauri-apps/api/event';
 import { getCurrentWindow, Window as AppWindow } from '@tauri-apps/api/window';
 import { AppFunction, AppFunctionConfig, defaultAppFunctionConfigs } from './extra';
@@ -36,7 +29,7 @@ import { ChatApiConfig, TranslationApiConfig } from './settings/functionSettings
 import { defaultTranslationPrompt } from './tools/translation/extra';
 import { ColorPickerShowMode } from './draw/components/colorPicker';
 import { ImageFormat } from '@/utils/file';
-import { appConfigDir, join as joinPath } from '@tauri-apps/api/path';
+import { join as joinPath } from '@tauri-apps/api/path';
 import { DrawState } from './fullScreenDraw/components/drawCore/extra';
 import { OcrDetectAfterAction } from './fixedContent/components/ocrResult';
 import { OcrModel } from '@/commands/ocr';
@@ -44,7 +37,15 @@ import { HistoryValidDuration } from '@/utils/captureHistory';
 import { getPlatformValue } from '@/utils';
 import { VideoMaxSize } from '@/commands/videoRecord';
 import * as tauriLog from '@tauri-apps/plugin-log';
-import { appWarn } from '@/utils/log';
+import { appError, appWarn } from '@/utils/log';
+import {
+    createDir,
+    getAppConfigDir,
+    textFileClear,
+    textFileRead,
+    textFileWrite,
+} from '@/commands/file';
+import { releaseDrawPage } from '@/functions/screenshot';
 
 export enum AppSettingsGroup {
     Common = 'common',
@@ -457,14 +458,26 @@ export type ScreenshotContextType = {
 };
 
 const configDir = 'configs';
+
+let configDirPathCache: string | undefined = undefined;
 export const getConfigDirPath = async () => {
-    return joinPath(await appConfigDir(), configDir);
+    if (configDirPathCache) {
+        return configDirPathCache;
+    }
+
+    configDirPathCache = await joinPath(await getAppConfigDir(), configDir);
+
+    return configDirPathCache;
 };
 export const clearAllConfig = async () => {
-    await remove(configDir, { recursive: true, baseDir: BaseDirectory.AppConfig });
+    await Promise.all([
+        textFileClear(await getConfigDirPath()),
+        remove(configDir, { recursive: true, baseDir: BaseDirectory.AppConfig }),
+    ]);
 };
-const getFileName = (group: AppSettingsGroup) => {
-    return `${configDir}/${group}.json`;
+const getFilePath = async (group: AppSettingsGroup) => {
+    const configDirPath = await getConfigDirPath();
+    return `${configDirPath}/${group}.json`;
 };
 
 export type AppContextType = {
@@ -536,9 +549,8 @@ const ContextWrapCore: React.FC<{ children: React.ReactNode }> = ({ children }) 
             data: AppSettingsData[typeof group],
             syncAllWindow: boolean,
         ) => {
-            await writeTextFile(getFileName(group), JSON.stringify(data), {
-                baseDir: BaseDirectory.AppConfig,
-            });
+            const filePath = await getFilePath(group);
+            await textFileWrite(filePath, JSON.stringify(data));
             if (syncAllWindow) {
                 emit('reload-app-settings');
             }
@@ -1307,14 +1319,11 @@ const ContextWrapCore: React.FC<{ children: React.ReactNode }> = ({ children }) 
         const settings: AppSettingsData = {} as AppSettingsData;
 
         // 启动时验证下目录是否存在
-        const isDirExists = await exists(configDir, {
-            baseDir: BaseDirectory.AppConfig,
-        });
-        if (!isDirExists) {
-            await mkdir(configDir, {
-                baseDir: BaseDirectory.AppConfig,
-                recursive: true,
-            });
+        try {
+            await createDir(await getConfigDirPath());
+        } catch (error) {
+            appError(`[reloadAppSettings] create dir ${await getConfigDirPath()} failed`, error);
+            return;
         }
 
         await Promise.all(
@@ -1322,12 +1331,10 @@ const ContextWrapCore: React.FC<{ children: React.ReactNode }> = ({ children }) 
                 let fileContent = '';
                 try {
                     // 创建文件夹成功的话，文件不存在，则不读取
-                    fileContent = await readTextFile(getFileName(group), {
-                        baseDir: BaseDirectory.AppConfig,
-                    });
+                    fileContent = await textFileRead(await getFilePath(group));
                 } catch (error) {
                     appWarn(
-                        `[reloadAppSettings] read file ${getFileName(group)} failed: ${JSON.stringify(error)}`,
+                        `[reloadAppSettings] read file ${await getFilePath(group)} failed: ${JSON.stringify(error)}`,
                     );
                 }
 
@@ -1367,15 +1374,19 @@ const ContextWrapCore: React.FC<{ children: React.ReactNode }> = ({ children }) 
         setAppSettingsLoadingPublisher(false);
     }, [setAppSettingsLoadingPublisher, updateAppSettings, setAppSettings]);
 
-    const initLoading = useRef(false);
+    const initedAppSettings = useRef(false);
     useEffect(() => {
-        if (initLoading.current) {
+        if (initedAppSettings.current) {
             return;
         }
+        initedAppSettings.current = true;
 
-        initLoading.current = true;
-        reloadAppSettings().finally(() => {
-            initLoading.current = false;
+        reloadAppSettings().then(() => {
+            if (appWindowRef.current?.label === 'main') {
+                releaseDrawPage().then(() => {
+                    createDrawWindow();
+                });
+            }
         });
     }, [reloadAppSettings]);
 

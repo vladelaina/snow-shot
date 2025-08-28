@@ -1,13 +1,13 @@
 import { AppSettingsData, AppSettingsGroup } from '@/app/contextWrap';
 import { CaptureHistoryItem, CaptureHistoryStore } from './appStore';
 import { ElementRect, ImageBuffer, ImageEncoder } from '@/commands';
-import { BaseDirectory, copyFile, exists, mkdir, remove, writeFile } from '@tauri-apps/plugin-fs';
-import { appConfigDir } from '@tauri-apps/api/path';
+import { BaseDirectory, copyFile, remove, writeFile } from '@tauri-apps/plugin-fs';
 import { join as joinPath } from '@tauri-apps/api/path';
 import path from 'path';
 import { NonDeletedExcalidrawElement, Ordered } from '@mg-chao/excalidraw/element/types';
 import { AppState } from '@mg-chao/excalidraw/types';
 import { appError, appWarn } from './log';
+import { createDir, getAppConfigDir } from '@/commands/file';
 
 const captureHistoryImagesDir = 'captureHistoryImages';
 
@@ -16,7 +16,7 @@ const getCaptureImageFilePath = (fileName: string) => {
 };
 
 export const getCaptureHistoryImageAbsPath = async (fileName: string) => {
-    return joinPath(await appConfigDir(), getCaptureImageFilePath(fileName));
+    return joinPath(await getAppConfigDir(), getCaptureImageFilePath(fileName));
 };
 
 const dayDuration = 24 * 60 * 60 * 1000;
@@ -93,14 +93,7 @@ export class CaptureHistory {
         );
 
         try {
-            const isDirExists = await exists(captureHistoryImagesDir, {
-                baseDir: BaseDirectory.AppConfig,
-            });
-            if (!isDirExists) {
-                await mkdir(captureHistoryImagesDir, {
-                    baseDir: BaseDirectory.AppConfig,
-                });
-            }
+            await createDir(await getCaptureHistoryImageAbsPath(''));
 
             if ('encoder' in imageData) {
                 await writeFile(
