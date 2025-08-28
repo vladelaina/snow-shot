@@ -14,10 +14,10 @@ async fn main() {
     #[cfg(feature = "dhat-heap")]
     PROFILER.lock().await.replace(dhat::Profiler::new_heap());
 
-    app_lib::run();
+    snow_shot_lib::run();
 }
 
 #[cfg(not(feature = "dhat-heap"))]
 fn main() {
-    app_lib::run();
+    snow_shot_lib::run();
 }

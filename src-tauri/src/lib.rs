@@ -78,6 +78,7 @@ pub fn run() {
             app.handle().plugin(
                 tauri_plugin_log::Builder::default()
                     .rotation_strategy(tauri_plugin_log::RotationStrategy::KeepAll)
+                    .timezone_strategy(tauri_plugin_log::TimezoneStrategy::UseLocal)
                     .targets([
                         Target::new(TargetKind::Stdout),
                         Target::new(TargetKind::LogDir {
