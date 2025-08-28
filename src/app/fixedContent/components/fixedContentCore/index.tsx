@@ -521,7 +521,7 @@ export const FixedContentCore: React.FC<{
         | undefined
     >(undefined); // 切换缩略图的动画
 
-    const switchThumbnail = useCallback(async () => {
+    const switchThumbnailCore = useCallback(async () => {
         if (!switchThumbnailAnimationRef.current) {
             switchThumbnailAnimationRef.current = new TweenAnimation<{
                 width: number;
@@ -626,6 +626,15 @@ export const FixedContentCore: React.FC<{
             setIsThumbnail(true);
         }
     }, [scaleRef, setIsThumbnail, setScale]);
+    const switchThumbnailLockRef = useRef<boolean>(false);
+    const switchThumbnail = useCallback(async () => {
+        if (switchThumbnailLockRef.current) {
+            return;
+        }
+        switchThumbnailLockRef.current = true;
+        await switchThumbnailCore();
+        switchThumbnailLockRef.current = false;
+    }, [switchThumbnailCore]);
 
     const [showOpacityInfo, showOpacityInfoTemporary] = useTempInfo();
     const changeContentOpacity = useCallback(
@@ -1117,8 +1126,8 @@ export const FixedContentCore: React.FC<{
         switchThumbnail,
         useMemo(
             () => ({
-                keyup: false,
-                keydown: true,
+                keyup: true,
+                keydown: false,
                 enabled: !disabled,
                 preventDefault: true,
             }),
@@ -1373,8 +1382,14 @@ export const FixedContentCore: React.FC<{
                 }
 
                 .fixed-image-container-inner {
-                    width: calc(${windowSize.width / contentScaleFactor}px - 4px);
-                    height: calc(${windowSize.height / contentScaleFactor}px - 4px);
+                    width: calc(
+                        ${isThumbnail ? '100vw' : `${windowSize.width / contentScaleFactor}px`} -
+                            4px
+                    );
+                    height: calc(
+                        ${isThumbnail ? '100vh' : `${windowSize.height / contentScaleFactor}px`} -
+                            4px
+                    );
                     position: absolute;
                     top: 0;
                     left: 0;

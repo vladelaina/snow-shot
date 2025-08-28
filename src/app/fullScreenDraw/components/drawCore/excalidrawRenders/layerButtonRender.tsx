@@ -28,13 +28,16 @@ const DeleteSelectedElementsButton: NonNullable<
         () => {
             props.onClick?.();
         },
-        {
-            keydown: true,
-            keyup: false,
-            preventDefault: true,
-            enabled: hotkey !== '',
-            scopes: HotkeysScope.DrawTool,
-        },
+        useMemo(
+            () => ({
+                keydown: true,
+                keyup: false,
+                preventDefault: true,
+                enabled: hotkey !== '',
+                scopes: HotkeysScope.DrawTool,
+            }),
+            [hotkey],
+        ),
     );
 
     const buttonTitle = useMemo(() => {

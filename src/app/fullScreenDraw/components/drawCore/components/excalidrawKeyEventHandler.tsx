@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import React from 'react';
 import { useStateSubscriber } from '@/hooks/useStateSubscriber';
 import { ExcalidrawKeyEvent, ExcalidrawKeyEventPublisher } from '../extra';
@@ -65,59 +65,107 @@ const ExcalidrawKeyEventHandlerCore = () => {
     useHotkeysApp(
         hotKeys.rotateWithDiscreteAngle,
         switchKeyEvent('rotateWithDiscreteAngle', true),
-        {
-            preventDefault: true,
-            keyup: false,
-            keydown: true,
-            scopes: HotkeysScope.DrawTool,
-        },
+        useMemo(
+            () => ({
+                preventDefault: true,
+                keyup: false,
+                keydown: true,
+                scopes: HotkeysScope.DrawTool,
+            }),
+            [],
+        ),
     );
     useHotkeysApp(
         hotKeys.rotateWithDiscreteAngle,
         switchKeyEvent('rotateWithDiscreteAngle', false),
-        {
-            preventDefault: true,
-            keyup: true,
-            keydown: false,
-            scopes: HotkeysScope.DrawTool,
-        },
+        useMemo(
+            () => ({
+                preventDefault: true,
+                keyup: true,
+                keydown: false,
+                scopes: HotkeysScope.DrawTool,
+            }),
+            [],
+        ),
     );
-    useHotkeysApp(hotKeys.maintainAspectRatio, switchKeyEvent('maintainAspectRatio', true), {
-        preventDefault: true,
-        keyup: false,
-        keydown: true,
-        scopes: HotkeysScope.DrawTool,
-    });
-    useHotkeysApp(hotKeys.maintainAspectRatio, switchKeyEvent('maintainAspectRatio', false), {
-        preventDefault: true,
-        keyup: true,
-        keydown: false,
-        scopes: HotkeysScope.DrawTool,
-    });
-    useHotkeysApp(hotKeys.resizeFromCenter, switchKeyEvent('resizeFromCenter', true), {
-        preventDefault: true,
-        keyup: false,
-        keydown: true,
-        scopes: HotkeysScope.DrawTool,
-    });
-    useHotkeysApp(hotKeys.resizeFromCenter, switchKeyEvent('resizeFromCenter', false), {
-        preventDefault: true,
-        keyup: true,
-        keydown: false,
-        scopes: HotkeysScope.DrawTool,
-    });
-    useHotkeysApp(hotKeys.autoAlign, switchKeyEvent('autoAlign', true), {
-        preventDefault: true,
-        keyup: false,
-        keydown: true,
-        scopes: HotkeysScope.DrawTool,
-    });
-    useHotkeysApp(hotKeys.autoAlign, switchKeyEvent('autoAlign', false), {
-        preventDefault: true,
-        keyup: true,
-        keydown: false,
-        scopes: HotkeysScope.DrawTool,
-    });
+    useHotkeysApp(
+        hotKeys.maintainAspectRatio,
+        switchKeyEvent('maintainAspectRatio', true),
+        useMemo(
+            () => ({
+                preventDefault: true,
+                keyup: false,
+                keydown: true,
+                scopes: HotkeysScope.DrawTool,
+            }),
+            [],
+        ),
+    );
+    useHotkeysApp(
+        hotKeys.maintainAspectRatio,
+        switchKeyEvent('maintainAspectRatio', false),
+        useMemo(
+            () => ({
+                preventDefault: true,
+                keyup: true,
+                keydown: false,
+                scopes: HotkeysScope.DrawTool,
+            }),
+            [],
+        ),
+    );
+    useHotkeysApp(
+        hotKeys.resizeFromCenter,
+        switchKeyEvent('resizeFromCenter', true),
+        useMemo(
+            () => ({
+                preventDefault: true,
+                keyup: false,
+                keydown: true,
+                scopes: HotkeysScope.DrawTool,
+            }),
+            [],
+        ),
+    );
+    useHotkeysApp(
+        hotKeys.resizeFromCenter,
+        switchKeyEvent('resizeFromCenter', false),
+        useMemo(
+            () => ({
+                preventDefault: true,
+                keyup: true,
+                keydown: false,
+                scopes: HotkeysScope.DrawTool,
+            }),
+            [],
+        ),
+    );
+    useHotkeysApp(
+        hotKeys.autoAlign,
+        switchKeyEvent('autoAlign', true),
+        useMemo(
+            () => ({
+                preventDefault: true,
+                keyup: false,
+                keydown: true,
+                scopes: HotkeysScope.DrawTool,
+            }),
+            [],
+        ),
+    );
+    useHotkeysApp(
+        hotKeys.autoAlign,
+        switchKeyEvent('autoAlign', false),
+        useMemo(
+            () => ({
+                preventDefault: true,
+                keyup: true,
+                keydown: false,
+                scopes: HotkeysScope.DrawTool,
+            }),
+            [],
+        ),
+    );
 
     return <></>;
 };

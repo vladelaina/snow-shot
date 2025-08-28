@@ -23,7 +23,7 @@ import {
 } from '@mg-chao/excalidraw/element/types';
 import { AppState } from '@mg-chao/excalidraw/types';
 import Color from 'color';
-import React, { useCallback, useContext, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 
 const generateSerialNumber = (
     position: { x: number; y: number },
@@ -422,12 +422,15 @@ export const SerialNumberTool: React.FC = () => {
                 false,
             );
         }, [disableArrowRef, enableRef, updateAppSettings]),
-        {
-            preventDefault: true,
-            keyup: true,
-            keydown: false,
-            scopes: HotkeysScope.DrawTool,
-        },
+        useMemo(
+            () => ({
+                preventDefault: true,
+                keyup: true,
+                keydown: false,
+                scopes: HotkeysScope.DrawTool,
+            }),
+            [],
+        ),
     );
 
     const updateActiveTool = useCallback(() => {
