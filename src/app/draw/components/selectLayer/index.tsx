@@ -11,10 +11,11 @@ import {
     initUiElementsCache,
 } from '@/commands';
 import {
+    AppContext,
     AppSettingsData,
     AppSettingsGroup,
     AppSettingsPublisher,
-    isDarkMode,
+    AppSettingsTheme,
 } from '@/app/contextWrap';
 import Flatbush from 'flatbush';
 import { useCallbackRender, useCallbackRenderSlow } from '@/hooks/useCallbackRender';
@@ -361,6 +362,8 @@ const SelectLayerCore: React.FC<SelectLayerProps> = ({ actionRef }) => {
     );
     const resizeToolbarUpdateStyleRenderCallback = useCallbackRenderSlow(resizeToolbarUpdateStyle);
 
+    const { currentTheme } = useContext(AppContext);
+
     const drawCanvasSelectRect = useCallback(
         (
             rect: ElementRect,
@@ -379,7 +382,7 @@ const SelectLayerCore: React.FC<SelectLayerProps> = ({ actionRef }) => {
                 captureBoundingBoxInfo.height,
                 rect,
                 selectLayerCanvasContextRef.current!,
-                isDarkMode(getAppSettings()[AppSettingsGroup.Common].theme),
+                currentTheme === AppSettingsTheme.Dark,
                 window.devicePixelRatio,
                 getScreenshotType(),
                 drawElementMask,
@@ -405,7 +408,7 @@ const SelectLayerCore: React.FC<SelectLayerProps> = ({ actionRef }) => {
             // 和 canvas 同步下
             resizeToolbarUpdateStyleRenderCallback(rect);
         },
-        [getAppSettings, getScreenshotType, resizeToolbarUpdateStyleRenderCallback],
+        [currentTheme, getScreenshotType, resizeToolbarUpdateStyleRenderCallback],
     );
 
     const initAnimation = useCallback(

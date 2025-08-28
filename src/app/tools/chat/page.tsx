@@ -35,11 +35,12 @@ import RSC, { Scrollbar } from 'react-scrollbars-custom';
 import { appFetch, getUrl, ServiceResponse } from '@/services/tools';
 import { ChatModel, getChatModels } from '@/services/tools/chat';
 import {
+    AppContext,
     AppSettingsActionContext,
     AppSettingsData,
     AppSettingsGroup,
     AppSettingsPublisher,
-    isDarkMode,
+    AppSettingsTheme,
 } from '@/app/contextWrap';
 import Markdown, { ExtraProps } from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -287,13 +288,12 @@ const Chat = () => {
     >([]);
 
     const { updateAppSettings } = useContext(AppSettingsActionContext);
-    const [darkMode, setDarkMode] = useState(false);
+    const { currentTheme } = useContext(AppContext);
     const [getAppSettings] = useStateSubscriber(
         AppSettingsPublisher,
         useCallback(
             (settings: AppSettingsData) => {
                 setSelectedModel(settings[AppSettingsGroup.Cache].chatModel);
-                setDarkMode(isDarkMode(settings[AppSettingsGroup.Common].theme));
                 setCustomModelConfigList(settings[AppSettingsGroup.FunctionChat].chatApiConfigList);
             },
             [setSelectedModel],
@@ -782,7 +782,7 @@ const Chat = () => {
                         ? () => {
                               return (
                                   <MarkdownContent
-                                      darkMode={darkMode}
+                                      darkMode={currentTheme === AppSettingsTheme.Dark}
                                       content={content}
                                       clipboardContent={content}
                                   />
@@ -804,7 +804,7 @@ const Chat = () => {
         }
 
         return list;
-    }, [darkMode, loading, messages, token.colorPrimary]);
+    }, [currentTheme, loading, messages, token.colorPrimary]);
 
     useEffect(() => {
         if (chatHistoryStoreRef.current) {

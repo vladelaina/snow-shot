@@ -199,6 +199,7 @@ export const settings = {
     'settings.commonSettings.trayIconSettings.iconPath.tip': '建议 32x32 或 64x64 的图标',
     'settings.hotKeySettings.fixedContent': '固定到屏幕',
     'settings.hotKeySettings.fixedContent.fixedContentSwitchThumbnail': '缩略模式',
+    'settings.hotKeySettings.fixedContent.fixedContentSetOpacity': '设置透明度',
     'settings.hotKeySettings.fixedContent.scaleInfo': '缩放比例: {scale}%',
     'settings.hotKeySettings.fixedContent.opacityInfo': '透明度: {opacity}%',
     'settings.hotKeySettings.fixedContent.scale': '缩放比例',

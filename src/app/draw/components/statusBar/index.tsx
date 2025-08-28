@@ -2,7 +2,12 @@ import { Descriptions, Space, theme } from 'antd';
 import { CaptureStep, DrawContext } from '../../types';
 import Color from 'color';
 import { FormattedMessage } from 'react-intl';
-import { AppSettingsGroup, AppSettingsPublisher, isDarkMode } from '@/app/contextWrap';
+import {
+    AppContext,
+    AppSettingsGroup,
+    AppSettingsPublisher,
+    AppSettingsTheme,
+} from '@/app/contextWrap';
 import { useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { KeyboardIcon, MouseIcon } from '@/components/icons';
 import { DescriptionsItemType } from 'antd/es/descriptions';
@@ -48,11 +53,10 @@ const KeyLabel: React.FC<{
 const StatusBar: React.FC = () => {
     const { token } = theme.useToken();
 
-    const [darkMode, setDarkMode] = useState(false);
+    const { currentTheme } = useContext(AppContext);
     const [hotKeyTipOpacity, setHotKeyTipOpacity] = useState(100);
     useAppSettingsLoad(
         useCallback((settings) => {
-            setDarkMode(isDarkMode(settings[AppSettingsGroup.Common].theme));
             setHotKeyTipOpacity(settings[AppSettingsGroup.Screenshot].hotKeyTipOpacity);
         }, []),
         true,
@@ -340,7 +344,9 @@ const StatusBar: React.FC = () => {
                 }
 
                 .status-bar-content {
-                    background-color: ${Color(getMaskBackgroundColor(darkMode))
+                    background-color: ${Color(
+                        getMaskBackgroundColor(currentTheme === AppSettingsTheme.Dark),
+                    )
                         .alpha(0.42)
                         .toString()};
                     display: inline-block;
