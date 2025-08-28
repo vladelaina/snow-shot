@@ -23,13 +23,12 @@ const { Content, Sider } = Layout;
 import { usePathname } from 'next/navigation';
 import RSC from 'react-scrollbars-custom';
 import {
+    AppContext,
     AppSettingsActionContext,
     AppSettingsData,
     AppSettingsGroup,
     AppSettingsLanguage,
-    AppSettingsPublisher,
-    defaultAppSettingsData,
-    isDarkMode,
+    AppSettingsTheme,
 } from './contextWrap';
 import { Header } from 'antd/es/layout/layout';
 import { getCurrentWindow, Window as AppWindow } from '@tauri-apps/api/window';
@@ -43,7 +42,6 @@ import { zhHant } from '@/messages/zhHant';
 import { en } from '@/messages/en';
 import { ItemType, MenuItemType } from 'antd/es/menu/interface';
 import { PageNav, PageNavActionType } from './components/pageNav';
-import { useStateSubscriber } from '@/hooks/useStateSubscriber';
 import { GlobalEventHandler } from './components/globalEventHandler';
 import { withStatePublisher } from '@/hooks/useStatePublisher';
 import { CheckVersion } from '@/components/checkVersion';
@@ -371,16 +369,8 @@ const MenuLayoutCore: React.FC<{ children: React.ReactNode }> = ({ children }) =
 
     const intl = useIntl();
     const appSettings = useContext(AppSettingsActionContext);
+    const { currentTheme } = useContext(AppContext);
     const { updateAppSettings } = appSettings;
-    const [darkMode, setDarkMode] = useState(
-        isDarkMode(defaultAppSettingsData[AppSettingsGroup.Common].theme),
-    );
-    useStateSubscriber(
-        AppSettingsPublisher,
-        useCallback((settings: AppSettingsData) => {
-            setDarkMode(isDarkMode(settings[AppSettingsGroup.Common].theme));
-        }, []),
-    );
 
     const pathname = usePathname() || '/';
     useAppSettingsLoad(
@@ -701,7 +691,11 @@ const MenuLayoutCore: React.FC<{ children: React.ReactNode }> = ({ children }) =
             <CheckVersion />
             <div className="menu-layout-wrap">
                 <Layout>
-                    <MenuSider menuItems={menuItems} darkMode={darkMode} pathname={pathname} />
+                    <MenuSider
+                        menuItems={menuItems}
+                        darkMode={currentTheme === AppSettingsTheme.Dark}
+                        pathname={pathname}
+                    />
                     <MenuContent pathname={pathname} routeTabsMap={routeTabsMap}>
                         <GlobalShortcut>{children}</GlobalShortcut>
                     </MenuContent>

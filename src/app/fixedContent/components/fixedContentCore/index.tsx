@@ -181,6 +181,14 @@ export const FixedContentCore: React.FC<{
     const [isAlwaysOnTop, setIsAlwaysOnTop] = useStateRef(true);
     const dragRegionMouseDownMousePositionRef = useRef<MousePosition>(undefined);
 
+    const textScaleFactor = useTextScaleFactor();
+    const contentScaleFactor = useMemo(() => {
+        if (canvasImageUrl || imageUrl) {
+            return textScaleFactor;
+        }
+        return 1;
+    }, [canvasImageUrl, imageUrl, textScaleFactor]);
+
     const [htmlBlobUrl, setHtmlBlobUrl] = useState<string | undefined>(undefined);
     const originHtmlContentRef = useRef<string | undefined>(undefined);
     const htmlContentContainerRef = useRef<HTMLIFrameElement>(null);
@@ -722,6 +730,103 @@ export const FixedContentCore: React.FC<{
         setIsAlwaysOnTop((isAlwaysOnTop) => !isAlwaysOnTop);
     }, [setIsAlwaysOnTop]);
 
+    const [showScaleInfo, showScaleInfoTemporary] = useTempInfo();
+    const scaleWindow = useCallback(
+        async (scaleDelta: number, ignoreMouse: boolean = false) => {
+            const appWindow = appWindowRef.current;
+            if (!appWindow) {
+                return;
+            }
+
+            if (!windowSizeRef.current.width) {
+                return;
+            }
+
+            if (originWindowSizeAndPositionRef.current) {
+                switchThumbnail();
+                return;
+            }
+
+            const zoomWithMouse =
+                getAppSettings()[AppSettingsGroup.FunctionFixedContent].zoomWithMouse;
+
+            let targetScale = scaleRef.current.x + scaleDelta;
+
+            if (targetScale <= 20) {
+                targetScale = 20;
+            } else if (targetScale >= 500) {
+                targetScale = 500;
+            }
+
+            if (targetScale === scaleRef.current.x) {
+                return;
+            }
+
+            setDrawWindowStyle();
+
+            // 计算新的窗口尺寸
+            const newWidth = Math.round(
+                ((canvasPropsRef.current.width * targetScale) / 100) *
+                    (window.devicePixelRatio /
+                        (canvasPropsRef.current.scaleFactor * textScaleFactor)),
+            );
+            const newHeight = Math.round(
+                ((canvasPropsRef.current.height * targetScale) / 100) *
+                    (window.devicePixelRatio /
+                        (canvasPropsRef.current.scaleFactor * textScaleFactor)),
+            );
+
+            if (zoomWithMouse && !ignoreMouse) {
+                try {
+                    // 获取当前鼠标位置和窗口位置
+                    const [[mouseX, mouseY], currentPosition, currentSize] = await Promise.all([
+                        getMousePosition(),
+                        appWindow.outerPosition(),
+                        appWindow.outerSize(),
+                    ]);
+
+                    // 计算鼠标相对于窗口的位置（比例）
+                    const mouseRelativeX = (mouseX - currentPosition.x) / currentSize.width;
+                    const mouseRelativeY = (mouseY - currentPosition.y) / currentSize.height;
+
+                    // 计算缩放后窗口的新位置，使鼠标在窗口中的相对位置保持不变
+                    const newX = Math.round(mouseX - newWidth * mouseRelativeX);
+                    const newY = Math.round(mouseY - newHeight * mouseRelativeY);
+
+                    // 同时设置窗口大小和位置
+                    await Promise.all([
+                        appWindow.setSize(new PhysicalSize(newWidth, newHeight)),
+                        appWindow.setPosition(new PhysicalPosition(newX, newY)),
+                    ]);
+                } catch (error) {
+                    appError('[scaleWindow] Error during mouse-centered scaling', error);
+                    // 如果出错，回退到普通缩放
+                    await Promise.all([appWindow.setSize(new PhysicalSize(newWidth, newHeight))]);
+                }
+            } else {
+                // 普通缩放，只改变窗口大小
+                await Promise.all([appWindow.setSize(new PhysicalSize(newWidth, newHeight))]);
+            }
+
+            setScale({
+                x: targetScale,
+                y: targetScale,
+            });
+            ocrResultActionRef.current?.setScale(targetScale);
+            showScaleInfoTemporary();
+        },
+        [
+            getAppSettings,
+            scaleRef,
+            setScale,
+            showScaleInfoTemporary,
+            switchThumbnail,
+            textScaleFactor,
+            windowSizeRef,
+        ],
+    );
+    const scaleWindowRender = useCallbackRender(scaleWindow);
+
     const initMenuCore = useCallback(async () => {
         if (disabled) {
             return;
@@ -887,18 +992,20 @@ export const FixedContentCore: React.FC<{
         });
         rightClickMenu = menu;
     }, [
-        disabled,
-        intl,
-        hotkeys,
+        changeContentOpacity,
         copyToClipboard,
-        saveToFile,
+        disabled,
         fixedContentType,
-        switcSelectText,
-        isThumbnail,
+        hotkeys,
+        intl,
         isAlwaysOnTop,
+        isThumbnail,
+        saveToFile,
+        scaleRef,
+        scaleWindow,
+        switcSelectText,
         switchAlwaysOnTop,
         switchThumbnail,
-        changeContentOpacity,
     ]);
     const initMenu = useCallbackRender(initMenuCore);
 
@@ -909,112 +1016,6 @@ export const FixedContentCore: React.FC<{
             closeRightClickMenu();
         };
     }, [initMenu]);
-
-    const [showScaleInfo, showScaleInfoTemporary] = useTempInfo();
-
-    const textScaleFactor = useTextScaleFactor();
-    const contentScaleFactor = useMemo(() => {
-        if (canvasImageUrl || imageUrl) {
-            return textScaleFactor;
-        }
-        return 1;
-    }, [canvasImageUrl, imageUrl, textScaleFactor]);
-
-    const scaleWindow = useCallback(
-        async (scaleDelta: number, ignoreMouse: boolean = false) => {
-            const appWindow = appWindowRef.current;
-            if (!appWindow) {
-                return;
-            }
-
-            if (!windowSizeRef.current.width) {
-                return;
-            }
-
-            if (originWindowSizeAndPositionRef.current) {
-                switchThumbnail();
-                return;
-            }
-
-            const zoomWithMouse =
-                getAppSettings()[AppSettingsGroup.FunctionFixedContent].zoomWithMouse;
-
-            let targetScale = scaleRef.current.x + scaleDelta;
-
-            if (targetScale <= 20) {
-                targetScale = 20;
-            } else if (targetScale >= 500) {
-                targetScale = 500;
-            }
-
-            if (targetScale === scaleRef.current.x) {
-                return;
-            }
-
-            setDrawWindowStyle();
-
-            // 计算新的窗口尺寸
-            const newWidth = Math.round(
-                ((canvasPropsRef.current.width * targetScale) / 100) *
-                    (window.devicePixelRatio /
-                        (canvasPropsRef.current.scaleFactor * textScaleFactor)),
-            );
-            const newHeight = Math.round(
-                ((canvasPropsRef.current.height * targetScale) / 100) *
-                    (window.devicePixelRatio /
-                        (canvasPropsRef.current.scaleFactor * textScaleFactor)),
-            );
-
-            if (zoomWithMouse && !ignoreMouse) {
-                try {
-                    // 获取当前鼠标位置和窗口位置
-                    const [[mouseX, mouseY], currentPosition, currentSize] = await Promise.all([
-                        getMousePosition(),
-                        appWindow.outerPosition(),
-                        appWindow.outerSize(),
-                    ]);
-
-                    // 计算鼠标相对于窗口的位置（比例）
-                    const mouseRelativeX = (mouseX - currentPosition.x) / currentSize.width;
-                    const mouseRelativeY = (mouseY - currentPosition.y) / currentSize.height;
-
-                    // 计算缩放后窗口的新位置，使鼠标在窗口中的相对位置保持不变
-                    const newX = Math.round(mouseX - newWidth * mouseRelativeX);
-                    const newY = Math.round(mouseY - newHeight * mouseRelativeY);
-
-                    // 同时设置窗口大小和位置
-                    await Promise.all([
-                        appWindow.setSize(new PhysicalSize(newWidth, newHeight)),
-                        appWindow.setPosition(new PhysicalPosition(newX, newY)),
-                    ]);
-                } catch (error) {
-                    appError('[scaleWindow] Error during mouse-centered scaling', error);
-                    // 如果出错，回退到普通缩放
-                    await Promise.all([appWindow.setSize(new PhysicalSize(newWidth, newHeight))]);
-                }
-            } else {
-                // 普通缩放，只改变窗口大小
-                await Promise.all([appWindow.setSize(new PhysicalSize(newWidth, newHeight))]);
-            }
-
-            setScale({
-                x: targetScale,
-                y: targetScale,
-            });
-            ocrResultActionRef.current?.setScale(targetScale);
-            showScaleInfoTemporary();
-        },
-        [
-            getAppSettings,
-            scaleRef,
-            setScale,
-            showScaleInfoTemporary,
-            switchThumbnail,
-            textScaleFactor,
-            windowSizeRef,
-        ],
-    );
-    const scaleWindowRender = useCallbackRender(scaleWindow);
 
     useEffect(() => {
         ocrResultActionRef.current?.setEnable(false);

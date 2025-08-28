@@ -286,18 +286,6 @@ export enum AppSettingsTheme {
     System = 'system',
 }
 
-export const isDarkMode = (theme: AppSettingsTheme) => {
-    if (typeof window === 'undefined') {
-        return false;
-    }
-
-    if (theme === AppSettingsTheme.System) {
-        return window.matchMedia('(prefers-color-scheme: dark)').matches;
-    }
-
-    return theme === AppSettingsTheme.Dark;
-};
-
 export const defaultAppSettingsData: AppSettingsData = {
     [AppSettingsGroup.Common]: {
         theme: AppSettingsTheme.System,
@@ -481,28 +469,50 @@ const getFileName = (group: AppSettingsGroup) => {
 
 export type AppContextType = {
     appWindowRef: RefObject<AppWindow | undefined>;
+    currentTheme: AppSettingsTheme;
 };
 
 export const AppContext = createContext<AppContextType>({
     appWindowRef: { current: undefined },
+    currentTheme: AppSettingsTheme.Light,
 });
 
 const ContextWrapCore: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     const appWindowRef = useRef<AppWindow>(undefined);
-    useEffect(() => {
+    const [currentSystemTheme, setCurrentSystemTheme] = useState<AppSettingsTheme>(
+        AppSettingsTheme.Light,
+    );
+    const themeUnlisten = useRef<() => void>(() => {});
+    const InitedAppContext = useRef<boolean>(false);
+    const initAppContext = useCallback(async () => {
+        if (InitedAppContext.current) {
+            return;
+        }
+        InitedAppContext.current = true;
+
         appWindowRef.current = getCurrentWindow();
+        appWindowRef.current.theme().then((theme) => {
+            setCurrentSystemTheme(
+                theme === 'dark' ? AppSettingsTheme.Dark : AppSettingsTheme.Light,
+            );
+        });
+        themeUnlisten.current = await appWindowRef.current.onThemeChanged(({ payload: theme }) => {
+            setCurrentSystemTheme(
+                theme === 'dark' ? AppSettingsTheme.Dark : AppSettingsTheme.Light,
+            );
+        });
     }, []);
+    useEffect(() => {
+        initAppContext();
+
+        return () => {
+            themeUnlisten.current();
+        };
+    }, [initAppContext]);
 
     const [appSettings, _setAppSettings] = useState<AppSettingsData>(defaultAppSettingsData);
     const appSettingsRef = useRef<AppSettingsData>(defaultAppSettingsData);
-    const [, setAppSettingsStatePublisher] = useStateSubscriber(
-        AppSettingsPublisher,
-        useCallback((settings: AppSettingsData) => {
-            document.body.className = isDarkMode(settings[AppSettingsGroup.Common].theme)
-                ? 'app-dark'
-                : 'app-light';
-        }, []),
-    );
+    const [, setAppSettingsStatePublisher] = useStateSubscriber(AppSettingsPublisher, undefined);
     const [, setAppSettingsLoadingPublisher] = useStateSubscriber(
         AppSettingsLoadingPublisher,
         undefined,
@@ -1389,11 +1399,18 @@ const ContextWrapCore: React.FC<{ children: React.ReactNode }> = ({ children }) 
         };
     }, [appSettings, updateAppSettings, reloadAppSettings]);
 
+    const appSettingsTheme = useMemo(() => {
+        return appSettings[AppSettingsGroup.Common].theme;
+    }, [appSettings]);
     const appContextValue = useMemo(() => {
         return {
             appWindowRef,
+            currentTheme:
+                appSettingsTheme === AppSettingsTheme.System
+                    ? currentSystemTheme
+                    : appSettingsTheme,
         };
-    }, [appWindowRef]);
+    }, [appSettingsTheme, currentSystemTheme]);
 
     useEffect(() => {
         const handleUnhandledRejection = (event: PromiseRejectionEvent) => {
@@ -1417,16 +1434,22 @@ const ContextWrapCore: React.FC<{ children: React.ReactNode }> = ({ children }) 
         };
     }, []);
 
+    const antdTheme = useMemo(() => {
+        return {
+            algorithm:
+                appContextValue.currentTheme === AppSettingsTheme.Dark
+                    ? theme.darkAlgorithm
+                    : theme.defaultAlgorithm,
+        };
+    }, [appContextValue.currentTheme]);
+    useEffect(() => {
+        document.body.className =
+            appContextValue.currentTheme === AppSettingsTheme.Dark ? 'app-dark' : 'app-light';
+    }, [appContextValue.currentTheme]);
+
     return (
         <AppSettingsActionContext.Provider value={appSettingsContextValue}>
-            <ConfigProvider
-                theme={{
-                    algorithm: isDarkMode(appSettings[AppSettingsGroup.Common].theme)
-                        ? theme.darkAlgorithm
-                        : theme.defaultAlgorithm,
-                }}
-                locale={antdLocale}
-            >
+            <ConfigProvider theme={antdTheme} locale={antdLocale}>
                 <IntlProvider
                     locale={appSettings[AppSettingsGroup.Common].language}
                     messages={messages[appSettings[AppSettingsGroup.Common].language]}
