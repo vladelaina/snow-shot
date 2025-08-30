@@ -31,6 +31,7 @@ export default function FixedContentPage() {
 
     const init = useCallback(async () => {
         const urlParams = new URLSearchParams(window.location.search);
+
         if (urlParams.get('scroll_screenshot') === 'true') {
             const imageBlob = await scrollScreenshotGetImageData();
             scrollScreenshotClear();

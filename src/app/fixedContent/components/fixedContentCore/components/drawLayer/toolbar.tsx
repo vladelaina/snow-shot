@@ -5,8 +5,6 @@ import {
     ArrowSelectIcon,
     CircleIcon,
     EraserIcon,
-    LaserPointerIcon,
-    MouseThroughIcon,
     PenIcon,
     RectIcon,
     SerialNumberIcon,
@@ -18,7 +16,7 @@ import {
     DrawStatePublisher,
     ExcalidrawEventPublisher,
     ExcalidrawEventParams,
-} from '../drawCore/extra';
+} from '@/app/fullScreenDraw/components/drawCore/extra';
 import {
     useCallback,
     useContext,
@@ -29,25 +27,27 @@ import {
     useState,
 } from 'react';
 import { useStateSubscriber } from '@/hooks/useStateSubscriber';
-import { CloseOutlined, LockOutlined } from '@ant-design/icons';
-import { getCurrentWindow } from '@tauri-apps/api/window';
-import { useIntl } from 'react-intl';
+import { LockOutlined } from '@ant-design/icons';
 import { AppSettingsActionContext, AppSettingsData, AppSettingsGroup } from '@/app/contextWrap';
-import { fullScreenDrawChangeMouseThrough, closeFullScreenDraw } from '@/functions/fullScreenDraw';
 import { useStateRef } from '@/hooks/useStateRef';
 import { zIndexs } from '@/utils/zIndex';
 import { useAppSettingsLoad } from '@/hooks/useAppSettingsLoad';
-import * as tauriOs from '@tauri-apps/plugin-os';
-import { useDrawContext } from '../../extra';
+import { DrawToolbarActionType } from '@/app/fullScreenDraw/components/toolbar';
+import { useDrawContext } from '@/app/fullScreenDraw/extra';
+import { FixedContentWindowSize } from '../..';
+import { HistoryControls } from '@/app/draw/components/drawToolbar/components/historyControls';
 
-export type DrawToolbarActionType = {
-    setTool: (drawState: DrawState) => void;
-};
+export type FixedContentCoreDrawToolbarActionType = {
+    getSize: () => { width: number; height: number };
+} & DrawToolbarActionType;
 
-export const FullScreenDrawToolbar: React.FC<{
-    actionRef: React.RefObject<DrawToolbarActionType | undefined>;
-}> = ({ actionRef }) => {
-    const intl = useIntl();
+const BOX_SHADOW_WIDTH = 3;
+
+export const FixedContentCoreDrawToolbar: React.FC<{
+    actionRef: React.RefObject<FixedContentCoreDrawToolbarActionType | undefined>;
+    documentSize: FixedContentWindowSize;
+    disabled?: boolean;
+}> = ({ actionRef, documentSize, disabled }) => {
     const { token } = theme.useToken();
 
     const { updateAppSettings } = useContext(AppSettingsActionContext);
@@ -56,7 +56,8 @@ export const FullScreenDrawToolbar: React.FC<{
 
     const [showLockDrawTool, setShowLockDrawTool, showLockDrawToolRef] = useStateRef(false);
     const [enableLockDrawTool, setEnableLockDrawTool, enableLockDrawToolRef] = useStateRef(false);
-    const [mouseThroughHotkey, setMouseThroughHotkey] = useState('');
+
+    const toolbarElementRef = useRef<HTMLDivElement>(null);
 
     const onToolClick = useCallback(
         (drawState: DrawState) => {
@@ -182,10 +183,6 @@ export const FullScreenDrawToolbar: React.FC<{
                 // 是否启用锁定绘制工具
                 setEnableLockDrawTool(settings[AppSettingsGroup.Cache].enableLockDrawTool);
 
-                setMouseThroughHotkey(
-                    settings[AppSettingsGroup.AppFunction].fullScreenDraw.shortcutKey,
-                );
-
                 appSettingsDefaultToolRef.current =
                     settings[AppSettingsGroup.FunctionFullScreenDraw].defaultTool;
 
@@ -218,45 +215,46 @@ export const FullScreenDrawToolbar: React.FC<{
         ),
     );
 
+    const getSize = useCallback(() => {
+        return {
+            width: (toolbarElementRef.current?.clientWidth ?? 0) + BOX_SHADOW_WIDTH * 2,
+            height:
+                (toolbarElementRef.current?.clientHeight ?? 0) +
+                BOX_SHADOW_WIDTH * 2 +
+                token.marginXXS,
+        };
+    }, [token.marginXXS]);
+
     useImperativeHandle(
         actionRef,
         useCallback(() => {
             return {
                 setTool: onToolClick,
+                getSize,
             };
-        }, [onToolClick]),
+        }, [getSize, onToolClick]),
     );
 
-    const toolButtonProps = useMemo<ButtonProps>(() => {
-        return {
-            size: 'large',
-        };
-    }, []);
+    const [currentSize, setCurrentSize] = useState({
+        width: 0,
+        height: 0,
+    });
 
-    const mouseThroughButtonTitle = useMemo(() => {
-        if (!mouseThroughHotkey) {
-            return intl.formatMessage({ id: 'draw.mouseThroughTool' });
-        }
-
-        return intl.formatMessage(
-            {
-                id: 'draw.keyEventTooltip',
-            },
-            {
-                message: intl.formatMessage({ id: 'draw.mouseThroughTool' }),
-                key: mouseThroughHotkey,
-            },
-        );
-    }, [intl, mouseThroughHotkey]);
-
-    const [currentPlatform, setCurrentPlatform] = useState<tauriOs.Platform>();
     useEffect(() => {
-        setCurrentPlatform(tauriOs.platform());
+        if (disabled) {
+            onToolClick(DrawState.Select);
+        } else {
+            setCurrentSize(getSize());
+        }
+    }, [disabled, getSize, onToolClick]);
+
+    const toolButtonProps = useMemo<ButtonProps>(() => {
+        return {};
     }, []);
 
     return (
-        <div className="full-screen-draw-toolbar-container">
-            <div className="full-screen-draw-toolbar">
+        <div className="fixed-content-draw-toolbar-container">
+            <div className="fixed-content-draw-toolbar" ref={toolbarElementRef}>
                 <Flex align="center" gap={token.paddingXS}>
                     {/* 选择状态 */}
                     <ToolButton
@@ -387,94 +385,43 @@ export const FullScreenDrawToolbar: React.FC<{
                         }}
                     />
 
-                    {/* 激光笔 */}
-                    <ToolButton
-                        componentKey={KeyEventKey.LaserPointerTool}
-                        icon={
-                            <LaserPointerIcon
-                                style={{
-                                    fontSize: '1.1em',
-                                }}
-                            />
-                        }
-                        buttonProps={toolButtonProps}
-                        drawState={DrawState.LaserPointer}
-                        onClick={() => {
-                            onToolClick(DrawState.LaserPointer);
-                        }}
-                    />
-
                     <div className="draw-toolbar-splitter" />
 
-                    {/* 取消截图 */}
-                    <ToolButton
-                        componentKey={KeyEventKey.CancelTool}
-                        icon={
-                            <CloseOutlined
-                                style={{
-                                    fontSize: '0.9em',
-                                    color: token.colorError,
-                                }}
-                            />
-                        }
-                        buttonProps={toolButtonProps}
-                        drawState={DrawState.Cancel}
-                        onClick={() => {
-                            getCurrentWindow().close();
-                            closeFullScreenDraw();
-                        }}
-                    />
-
-                    <ToolButton
-                        icon={
-                            <MouseThroughIcon
-                                style={{
-                                    fontSize: '0.95em',
-                                }}
-                            />
-                        }
-                        drawState={DrawState.MouseThrough}
-                        buttonProps={{
-                            ...toolButtonProps,
-                            title: mouseThroughButtonTitle,
-                        }}
-                        onClick={() => {
-                            fullScreenDrawChangeMouseThrough();
-                        }}
-                    />
+                    <HistoryControls disable={disabled ?? false} />
                 </Flex>
             </div>
 
             <style jsx>{`
-                .full-screen-draw-toolbar-container {
+                .fixed-content-draw-toolbar-container {
                     position: fixed;
-                    top: 0;
-                    left: 0;
+                    left: ${BOX_SHADOW_WIDTH}px;
+                    width: ${documentSize.width - BOX_SHADOW_WIDTH * 2}px;
+                    top: ${documentSize.height + token.marginXXS}px;
                     pointer-events: none;
-                    width: 100%;
-                    display: flex;
-                    justify-content: center;
                     z-index: ${zIndexs.FullScreenDraw_Toolbar};
+                    opacity: ${disabled ? 0 : 1};
+                    display: flex;
+                    transition: opacity ${token.motionDurationFast} ${token.motionEaseInOut};
+                    justify-content: ${currentSize.width >= documentSize.width
+                        ? 'flex-start'
+                        : 'flex-end'};
                 }
 
-                .full-screen-draw-toolbar-container:hover {
+                .fixed-content-draw-toolbar-container:hover {
                     z-index: ${zIndexs.FullScreenDraw_ToolbarHover};
                 }
 
-                .full-screen-draw-toolbar :global(.ant-btn) :global(.ant-btn-icon) {
+                .fixed-content-draw-toolbar :global(.ant-btn) :global(.ant-btn-icon) {
                     font-size: 24px;
                     display: flex;
                     align-items: center;
                 }
 
-                .full-screen-draw-toolbar {
-                    pointer-events: auto;
-                    /* macOS 下加上 menu bar 的高度 */
-                    margin-top: ${token.marginLG + (currentPlatform === 'macos' ? 24 : 0)}px;
-                    z-index: ${zIndexs.FullScreenDraw_Toolbar};
+                .fixed-content-draw-toolbar {
+                    pointer-events: ${disabled ? 'none' : 'auto'};
                 }
 
-                .full-screen-draw-toolbar {
+                .fixed-content-draw-toolbar {
                     padding: ${token.paddingXXS}px ${token.paddingSM}px;
                     box-sizing: border-box;
                     background-color: ${token.colorBgContainer};
@@ -485,7 +432,7 @@ export const FullScreenDrawToolbar: React.FC<{
                     transition: opacity ${token.motionDurationMid} ${token.motionEaseInOut};
                 }
 
-                .full-screen-draw-toolbar :global(.draw-toolbar-splitter),
+                .fixed-content-draw-toolbar :global(.draw-toolbar-splitter),
                 .draw-toolbar-splitter {
                     width: 1px;
                     height: 1.6em;
