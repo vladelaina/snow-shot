@@ -27,7 +27,7 @@ export enum KeyEventKey {
     FixedContentAlwaysOnTop = 'fixedContentAlwaysOnTop',
     FixedContentCloseWindow = 'fixedContentCloseWindow',
     FixedContentCopyToClipboard = 'fixedContentCopyToClipboard',
-    FixedContentCopyRawToClipboard = 'fixedContentCopyRawToClipboard',
+    // FixedContentCopyRawToClipboard = 'fixedContentCopyRawToClipboard',
     FixedContentSaveToFile = 'fixedContentSaveToFile',
     FixedContentSelectText = 'fixedContentSelectText',
     FixedContentSetOpacity = 'fixedContentSetOpacity',
@@ -74,10 +74,10 @@ export const defaultKeyEventSettings: Record<KeyEventKey, KeyEventValue> = {
         hotKey: getPlatformValue('Ctrl+C', 'Meta+C'),
         group: KeyEventGroup.FixedContent,
     },
-    [KeyEventKey.FixedContentCopyRawToClipboard]: {
-        hotKey: getPlatformValue('Ctrl+Shift+C', 'Meta+Shift+C'),
-        group: KeyEventGroup.FixedContent,
-    },
+    // [KeyEventKey.FixedContentCopyRawToClipboard]: {
+    //     hotKey: getPlatformValue('Ctrl+Shift+C', 'Meta+Shift+C'),
+    //     group: KeyEventGroup.FixedContent,
+    // },
     [KeyEventKey.FixedContentSaveToFile]: {
         hotKey: getPlatformValue('Ctrl+S', 'Meta+S'),
         group: KeyEventGroup.FixedContent,

@@ -165,16 +165,6 @@ export const FixedContentCoreDrawToolbar: React.FC<{
         ],
     );
 
-    const appSettingsDefaultToolRef = useRef<DrawState | undefined>(undefined);
-    const excalidrawReadyRef = useRef(false);
-    const initDefaultTool = useCallback(() => {
-        if (!appSettingsDefaultToolRef.current || !excalidrawReadyRef.current) {
-            return;
-        }
-
-        onToolClick(appSettingsDefaultToolRef.current);
-    }, [onToolClick]);
-
     useAppSettingsLoad(
         useCallback(
             (settings: AppSettingsData) => {
@@ -182,13 +172,8 @@ export const FixedContentCoreDrawToolbar: React.FC<{
                 setShowLockDrawTool(!settings[AppSettingsGroup.FunctionScreenshot].lockDrawTool);
                 // 是否启用锁定绘制工具
                 setEnableLockDrawTool(settings[AppSettingsGroup.Cache].enableLockDrawTool);
-
-                appSettingsDefaultToolRef.current =
-                    settings[AppSettingsGroup.FunctionFullScreenDraw].defaultTool;
-
-                initDefaultTool();
             },
-            [initDefaultTool, setEnableLockDrawTool, setShowLockDrawTool],
+            [setEnableLockDrawTool, setShowLockDrawTool],
         ),
     );
 
@@ -205,13 +190,8 @@ export const FixedContentCoreDrawToolbar: React.FC<{
                         onToolClick(DrawState.Select);
                     }
                 }
-
-                if (params?.event === 'onDraw') {
-                    excalidrawReadyRef.current = true;
-                    initDefaultTool();
-                }
             },
-            [getDrawState, initDefaultTool, onToolClick],
+            [getDrawState, onToolClick],
         ),
     );
 
@@ -241,9 +221,7 @@ export const FixedContentCoreDrawToolbar: React.FC<{
     });
 
     useEffect(() => {
-        if (disabled) {
-            onToolClick(DrawState.Select);
-        } else {
+        if (!disabled) {
             setCurrentSize(getSize());
         }
     }, [disabled, getSize, onToolClick]);

@@ -975,9 +975,6 @@ export const FixedContentCore: React.FC<{
                 {
                     id: `${appWindow.label}-copyRawContentTool`,
                     text: intl.formatMessage({ id: 'draw.copyRawContent' }),
-                    accelerator: formatKey(
-                        hotkeys?.[KeyEventKey.FixedContentCopyRawToClipboard]?.hotKey,
-                    ),
                     action: copyRawToClipboard,
                 },
                 {
@@ -1297,19 +1294,6 @@ export const FixedContentCore: React.FC<{
                 preventDefault: true,
             }),
             [disabled, enableSelectText],
-        ),
-    );
-    useHotkeys(
-        hotkeys?.[KeyEventKey.FixedContentCopyRawToClipboard]?.hotKey ?? '',
-        copyRawToClipboard,
-        useMemo(
-            () => ({
-                keyup: false,
-                keydown: true,
-                enabled: !disabled,
-                preventDefault: true,
-            }),
-            [disabled],
         ),
     );
     useHotkeys(
