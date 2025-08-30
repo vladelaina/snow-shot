@@ -11,6 +11,7 @@ import {
     DrawCoreActionType,
     DrawCoreContext,
     DrawCoreContextValue,
+    DrawState,
     DrawStatePublisher,
     ExcalidrawEventPublisher,
 } from '@/app/fullScreenDraw/components/drawCore/extra';
@@ -180,6 +181,7 @@ const DrawLayerCore: React.FC<{
     useEffect(() => {
         if (disabled) {
             drawCoreActionRef.current?.finishDraw();
+            drawToolbarActionRef.current?.setTool(DrawState.Select);
         }
     }, [drawCoreActionRef, disabled]);
 
