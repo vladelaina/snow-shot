@@ -185,13 +185,14 @@ export const FixedContentCore: React.FC<{
         FixedContentType | undefined
     >(undefined);
     const [showBorder, setShowBorder] = useState(true);
+    const [borderRadius, setBorderRadius] = useState(0);
     const [enableDraw, setEnableDraw, enableDrawRef] = useStateRef(false);
     const [enableSelectText, setEnableSelectText, enableSelectTextRef] = useStateRef(false);
     const [contentOpacity, setContentOpacity, contentOpacityRef] = useStateRef(1);
     const [isAlwaysOnTop, setIsAlwaysOnTop] = useStateRef(true);
     const dragRegionMouseDownMousePositionRef = useRef<MousePosition>(undefined);
 
-    const textScaleFactor = useTextScaleFactor();
+    const [textScaleFactor] = useTextScaleFactor();
     const contentScaleFactor = useMemo(() => {
         if (canvasImageUrl || imageUrl) {
             return textScaleFactor;
@@ -391,6 +392,8 @@ export const FixedContentCore: React.FC<{
 
     const initDraw = useCallback(
         async (params: FixedContentInitDrawParams) => {
+            ocrResultActionRef.current?.setEnable(false);
+
             setFixedContentType(FixedContentType.DrawCanvas);
 
             const { canvas, captureBoundingBoxInfo, selectRectParams } = params;
@@ -427,6 +430,11 @@ export const FixedContentCore: React.FC<{
                 height: canvas.height,
                 scaleFactor: scaleFactor,
             };
+
+            if (selectRectParams.radius > 0) {
+                setBorderRadius(selectRectParams.radius / scaleFactor);
+            }
+
             setCanvasImageUrl(
                 await new Promise<string | undefined>((resolve) => {
                     canvas.toBlob(
@@ -459,7 +467,6 @@ export const FixedContentCore: React.FC<{
                     setEnableSelectText(true);
                     ocrResultActionRef.current.setEnable(true);
                 } else if (getAppSettings()[AppSettingsGroup.FunctionFixedContent].autoOcr) {
-                    ocrResultActionRef.current.setEnable(false);
                     ocrResultActionRef.current.init({
                         selectRect: {
                             min_x: 0,
@@ -476,6 +483,12 @@ export const FixedContentCore: React.FC<{
         },
         [getAppSettings, setEnableSelectText, setFixedContentType, setWindowSize],
     );
+
+    useEffect(() => {
+        if (ocrResultActionRef.current) {
+            ocrResultActionRef.current.setEnable(false);
+        }
+    }, []);
 
     useEffect(() => {
         if (isAlwaysOnTop) {
@@ -1578,7 +1591,6 @@ export const FixedContentCore: React.FC<{
                 <DrawLayer
                     actionRef={drawActionRef}
                     documentSize={documentSize}
-                    contentScaleFactor={contentScaleFactor}
                     scaleInfo={scale}
                     disabled={!enableDraw}
                     hidden={enableSelectText}
@@ -1639,28 +1651,28 @@ export const FixedContentCore: React.FC<{
                 }
 
                 .fixed-image-container-inner {
-                    width: calc(${isThumbnail ? '100vw' : `${documentSize.width}px`} - 4px);
-                    height: calc(${isThumbnail ? '100vh' : `${documentSize.height}px`} - 4px);
+                    width: calc(${isThumbnail ? '100vw' : `${documentSize.width}px`});
+                    height: calc(${isThumbnail ? '100vh' : `${documentSize.height}px`});
                     position: absolute;
                     top: 0;
                     left: 0;
                     cursor: grab;
                     box-sizing: border-box;
-                    margin: 2px;
                     pointer-events: ${enableSelectText ? 'none' : 'auto'};
                 }
 
                 .fixed-image-container-inner-border {
-                    content: '';
-                    position: absolute;
+                    position: fixed;
                     top: 0;
                     left: 0;
-                    width: 100%;
-                    height: 100%;
-                    box-shadow: 0 0 2px 2px ${fixedBorderColor ?? token.colorBorder};
+                    width: calc(${isThumbnail ? '100vw' : `${documentSize.width}px`});
+                    height: calc(${isThumbnail ? '100vh' : `${documentSize.height}px`});
+                    border: 2px solid ${fixedBorderColor ?? token.colorBorder};
+                    box-sizing: border-box;
                     pointer-events: none;
                     z-index: ${zIndexs.FixedToScreen_Border};
                     display: ${showBorder ? 'block' : 'none'};
+                    border-radius: ${(borderRadius * (scale.x / 100)) / textScaleFactor}px;
                 }
 
                 .fixed-image-container-inner:active {
