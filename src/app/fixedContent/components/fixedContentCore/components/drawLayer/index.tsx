@@ -47,14 +47,13 @@ const DRAW_MENU_HEIGHT = 300;
 const DrawLayerCore: React.FC<{
     actionRef: React.RefObject<FixedContentCoreDrawActionType | undefined>;
     documentSize: FixedContentWindowSize;
-    contentScaleFactor: number;
     scaleInfo: {
         x: number;
         y: number;
     };
     disabled?: boolean;
     hidden?: boolean;
-}> = ({ actionRef, documentSize, contentScaleFactor, scaleInfo, disabled, hidden }) => {
+}> = ({ actionRef, documentSize, scaleInfo, disabled, hidden }) => {
     const { token } = theme.useToken();
 
     const drawToolbarActionRef = useRef<FixedContentCoreDrawToolbarActionType | undefined>(
@@ -96,12 +95,12 @@ const DrawLayerCore: React.FC<{
                 return {
                     min_x: 0,
                     min_y: 0,
-                    max_x: documentSize.width * contentScaleFactor,
-                    max_y: documentSize.height * contentScaleFactor,
+                    max_x: documentSize.width * window.devicePixelRatio,
+                    max_y: documentSize.height * window.devicePixelRatio,
                 };
             },
             getDevicePixelRatio: () => {
-                return contentScaleFactor;
+                return window.devicePixelRatio;
             },
             getBaseOffset: (limitRect: ElementRect, devicePixelRatio: number) => {
                 return {
@@ -116,7 +115,7 @@ const DrawLayerCore: React.FC<{
                 return mousePositionRef.current;
             },
         };
-    }, [contentScaleFactor, documentSize.height, documentSize.width, token.marginXXS]);
+    }, [documentSize.height, documentSize.width, token.marginXXS]);
 
     useImperativeHandle(actionRef, () => {
         return {

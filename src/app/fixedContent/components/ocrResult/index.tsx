@@ -14,7 +14,6 @@ import { AppSettingsGroup, AppSettingsPublisher } from '@/app/contextWrap';
 import { writeTextToClipboard } from '@/utils/clipboard';
 import { getPlatformValue } from '@/utils';
 import { releaseOcrSession } from '@/functions/ocr';
-import { useStateRef } from '@/hooks/useStateRef';
 
 // 定义角度阈值常量（以度为单位）
 const ROTATION_THRESHOLD = 3; // 小于3度的旋转被视为误差，不进行旋转

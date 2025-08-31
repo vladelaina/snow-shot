@@ -67,10 +67,10 @@ export const zIndexs = {
     // VideoRecord 视频录制窗口 END
 
     // 固定到屏幕窗口 BEGIN
-    /** 缩放提示 */
-    FixedToScreen_ScaleInfo: 205,
     /** 边框 */
-    FixedToScreen_Border: 206,
+    FixedToScreen_Border: 205,
+    /** 缩放提示 */
+    FixedToScreen_ScaleInfo: 206,
     /** 关闭按钮 */
     FixedToScreen_CloseButton: 207,
     // 固定到屏幕窗口 END

@@ -20,10 +20,12 @@ function listenDevicePixelRatio(callback: (ratio: number) => void) {
  */
 export const useTextScaleFactor = () => {
     const [textScaleFactor, setTextScaleFactor] = useState(1);
+    const [devicePixelRatio, setDevicePixelRatio] = useState(1);
 
     const initTextScaleFactor = async (devicePixelRatio: number) => {
         const scaleFactor = await getCurrentWindow().scaleFactor();
         setTextScaleFactor(devicePixelRatio / scaleFactor);
+        setDevicePixelRatio(devicePixelRatio);
     };
 
     useEffect(() => {
@@ -36,5 +38,5 @@ export const useTextScaleFactor = () => {
         };
     }, []);
 
-    return textScaleFactor;
+    return [textScaleFactor, devicePixelRatio];
 };
