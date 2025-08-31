@@ -81,32 +81,26 @@ export const OcrResult: React.FC<{
 
     const currentOcrResultRef = useRef<AppOcrResult | undefined>(undefined);
 
-    const [enable, _setEnable, enableRef] = useStateRef<boolean>(false);
-    const setEnable = useCallback(
-        (enable: boolean | ((enable: boolean) => boolean)) => {
-            if (!containerElementRef.current) {
-                return;
-            }
+    const enableRef = useRef<boolean>(false);
+    const setEnable = useCallback((enable: boolean | ((enable: boolean) => boolean)) => {
+        if (!containerElementRef.current) {
+            return;
+        }
 
-            let newValue = false;
-            if (typeof enable === 'function') {
-                newValue = enable(enableRef.current);
-            } else {
-                newValue = enable;
-            }
+        if (typeof enable === 'function') {
+            enableRef.current = enable(enableRef.current);
+        } else {
+            enableRef.current = enable;
+        }
 
-            if (newValue) {
-                containerElementRef.current.style.opacity = '1';
-                containerElementRef.current.style.pointerEvents = 'auto';
-            } else {
-                containerElementRef.current.style.opacity = '0';
-                containerElementRef.current.style.pointerEvents = 'none';
-            }
-
-            _setEnable(newValue);
-        },
-        [_setEnable, enableRef],
-    );
+        if (enableRef.current) {
+            containerElementRef.current.style.opacity = '1';
+            containerElementRef.current.style.pointerEvents = 'auto';
+        } else {
+            containerElementRef.current.style.opacity = '0';
+            containerElementRef.current.style.pointerEvents = 'none';
+        }
+    }, []);
 
     const selectRectRef = useRef<ElementRect>(undefined);
     const monitorScaleFactorRef = useRef<number>(undefined);
@@ -281,14 +275,9 @@ export const OcrResult: React.FC<{
                 selectRectRef.current = selectRect;
                 updateOcrTextElements(ocrResult.result, ocrResult.ignoreScale);
                 onOcrDetect?.(ocrResult.result);
-
-                // 如果已有的 OCR 结果不为空，则直接显示
-                if (params.ocrResult) {
-                    setEnable(true);
-                }
             }
         },
-        [getAppSettings, onOcrDetect, setEnable, updateOcrTextElements],
+        [getAppSettings, onOcrDetect, updateOcrTextElements],
     );
 
     const initImage = useCallback(

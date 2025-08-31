@@ -443,20 +443,35 @@ export const FixedContentCore: React.FC<{
                     );
                 }),
             );
-
-            if (params.ocrResult && ocrResultActionRef.current) {
-                ocrResultActionRef.current.init({
-                    selectRect: {
-                        min_x: 0,
-                        min_y: 0,
-                        max_x: canvas.width,
-                        max_y: canvas.height,
-                    },
-                    captureBoundingBoxInfo,
-                    canvas,
-                    ocrResult: params.ocrResult,
-                });
-                setEnableSelectText(true);
+            if (ocrResultActionRef.current) {
+                if (params.ocrResult) {
+                    ocrResultActionRef.current.init({
+                        selectRect: {
+                            min_x: 0,
+                            min_y: 0,
+                            max_x: canvas.width,
+                            max_y: canvas.height,
+                        },
+                        captureBoundingBoxInfo,
+                        canvas,
+                        ocrResult: params.ocrResult,
+                    });
+                    setEnableSelectText(true);
+                    ocrResultActionRef.current.setEnable(true);
+                } else if (getAppSettings()[AppSettingsGroup.FunctionFixedContent].autoOcr) {
+                    ocrResultActionRef.current.setEnable(false);
+                    ocrResultActionRef.current.init({
+                        selectRect: {
+                            min_x: 0,
+                            min_y: 0,
+                            max_x: canvas.width,
+                            max_y: canvas.height,
+                        },
+                        captureBoundingBoxInfo,
+                        canvas,
+                        ocrResult: undefined,
+                    });
+                }
             }
         },
         [getAppSettings, setEnableSelectText, setFixedContentType, setWindowSize],
