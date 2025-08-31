@@ -28,6 +28,7 @@ import {
     createBlurSpriteAction,
     updateBlurSpriteAction,
     deleteBlurSpriteAction,
+    renderToCanvasAction,
 } from './actions';
 import { supportOffscreenCanvas } from '@/utils';
 import { BlurSprite, BlurSpriteProps } from './baseLayerRenderActions';
@@ -152,6 +153,10 @@ export type BaseLayerEventActionType = {
      */
     getImageData: (selectRect: ElementRect) => Promise<ImageData | undefined>;
     /**
+     * 渲染到画布
+     */
+    renderToCanvas: (selectRect: ElementRect) => Promise<PIXI.ICanvas | undefined>;
+    /**
      * 渲染画布
      */
     canvasRender: () => Promise<void>;
@@ -205,6 +210,7 @@ export const defaultBaseLayerActions: BaseLayerActionType = {
     changeCursor: () => 'auto',
     createNewCanvasContainer: () => Promise.resolve(undefined),
     getImageData: () => Promise.resolve(undefined),
+    renderToCanvas: () => Promise.resolve(undefined),
     canvasRender: () => Promise.resolve(),
     addImageToContainer: () => Promise.resolve(),
     clearContainer: () => Promise.resolve(),
@@ -223,6 +229,10 @@ type BaseLayerCoreActionType = {
     getLayerContainerElement: () => HTMLDivElement | null;
     changeCursor: (cursor: Required<React.CSSProperties>['cursor']) => string;
     getImageData: (selectRect: ElementRect) => Promise<ImageData | undefined>;
+    /**
+     * 渲染画布
+     */
+    renderToCanvas: (selectRect: ElementRect) => Promise<PIXI.ICanvas | undefined>;
     /**
      * 渲染画布
      */
@@ -382,6 +392,13 @@ export const BaseLayerCore: React.FC<
         [rendererWorker],
     );
 
+    const renderToCanvas = useCallback<BaseLayerActionType['renderToCanvas']>(
+        async (selectRect: ElementRect) => {
+            return renderToCanvasAction(rendererWorker, canvasAppRef, selectRect);
+        },
+        [rendererWorker],
+    );
+
     const canvasRender = useCallback<BaseLayerActionType['canvasRender']>(async () => {
         await canvasRenderAction(rendererWorker, canvasAppRef);
     }, [rendererWorker]);
@@ -455,6 +472,7 @@ export const BaseLayerCore: React.FC<
             changeCursor,
             createNewCanvasContainer,
             getImageData,
+            renderToCanvas,
             initCanvas,
             canvasRender,
             addImageToContainer,
@@ -470,6 +488,7 @@ export const BaseLayerCore: React.FC<
             changeCursor,
             createNewCanvasContainer,
             getImageData,
+            renderToCanvas,
             initCanvas,
             canvasRender,
             addImageToContainer,

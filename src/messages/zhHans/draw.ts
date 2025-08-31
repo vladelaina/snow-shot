@@ -112,4 +112,11 @@ export const draw = {
     'draw.loadingCaptureHistory': '加载截图历史中',
     'draw.getMousePositionError': '获取鼠标位置失败，请检查应用权限',
     'draw.captureAllMonitorsError': '拖动窗口失败，请检查应用权限',
+    'draw.positionX': '位置 X',
+    'draw.positionY': '位置 Y',
+    'draw.width': '宽度',
+    'draw.height': '高度',
+    'draw.radius': '圆角',
+    'draw.shadowWidth': '阴影宽度',
+    'draw.resizeModal': '调整大小',
 };

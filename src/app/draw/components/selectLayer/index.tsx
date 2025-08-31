@@ -1,6 +1,14 @@
 'use client';
 
-import { useCallback, useContext, useEffect, useImperativeHandle, useRef, useState } from 'react';
+import {
+    useCallback,
+    useContext,
+    useEffect,
+    useImperativeHandle,
+    useMemo,
+    useRef,
+    useState,
+} from 'react';
 import React from 'react';
 import { BaseLayerEventActionType } from '../baseLayer';
 import {
@@ -12,6 +20,7 @@ import {
 } from '@/commands';
 import {
     AppContext,
+    AppSettingsActionContext,
     AppSettingsData,
     AppSettingsGroup,
     AppSettingsPublisher,
@@ -57,9 +66,17 @@ import { useMoveCursor } from '../colorPicker/extra';
 import { CaptureHistoryItem } from '@/utils/appStore';
 import { useStateRef } from '@/hooks/useStateRef';
 import Color from 'color';
+import { debounce } from 'es-toolkit';
+
+export type SelectRectParams = {
+    rect: ElementRect;
+    radius: number;
+    shadowWidth: number;
+};
 
 export type SelectLayerActionType = {
     getSelectRect: () => ElementRect | undefined;
+    getSelectRectParams: () => SelectRectParams | undefined;
     switchCaptureHistory: (captureHistory: CaptureHistoryItem | undefined) => void;
     getSelectState: () => SelectState;
     getWindowId: () => number | undefined;
@@ -84,14 +101,19 @@ const SelectLayerCore: React.FC<SelectLayerProps> = ({ actionRef }) => {
     const [isEnable, setIsEnable] = useState(false);
 
     const [findChildrenElements, setFindChildrenElements] = useState(false);
+    const [selectRectRadiusCache, setSelectRectRadiusCache] = useState(0);
+    const [selectRectShadowWidthCache, setSelectRectShadowWidthCache] = useState(0);
     const fullScreenAuxiliaryLineColorRef = useRef<string | undefined>(undefined);
     const monitorCenterAuxiliaryLineColorRef = useRef<string | undefined>(undefined);
+    const { updateAppSettings } = useContext(AppSettingsActionContext);
     const [getAppSettings] = useStateSubscriber(
         AppSettingsPublisher,
         useCallback((settings: AppSettingsData) => {
             setFindChildrenElements(
                 settings[AppSettingsGroup.FunctionScreenshot].findChildrenElements,
             );
+            setSelectRectRadiusCache(settings[AppSettingsGroup.Cache].selectRectRadius);
+            setSelectRectShadowWidthCache(settings[AppSettingsGroup.Cache].selectRectShadowWidth);
             const fullScreenAuxiliaryLineColor =
                 settings[AppSettingsGroup.Screenshot].fullScreenAuxiliaryLineColor;
             if (new Color(fullScreenAuxiliaryLineColor).alpha() === 0) {
@@ -133,6 +155,8 @@ const SelectLayerCore: React.FC<SelectLayerProps> = ({ actionRef }) => {
 
     const layerContainerElementRef = useRef<HTMLDivElement | null>(null);
     const selectLayerCanvasRef = useRef<HTMLCanvasElement | null>(null);
+    const selectRectRadiusRef = useRef(0); // 选区圆角
+    const selectRectShadowWidthRef = useRef(0); // 选区阴影宽度
     const selectLayerCanvasContextRef = useRef<CanvasRenderingContext2D | null>(null);
     const elementsListRef = useRef<ElementRect[]>([]); // 窗口元素的列表
     const elementsIndexWindowIdMapRef = useRef<Map<number, number>>(new Map()); // 窗口元素对应的窗口 ID
@@ -168,6 +192,7 @@ const SelectLayerCore: React.FC<SelectLayerProps> = ({ actionRef }) => {
     const setSelectState = useCallback(
         (state: SelectState) => {
             selectStateRef.current = state;
+            resizeToolbarActionRef.current?.setSelectState(state);
 
             if (state === SelectState.Selected) {
                 tryEnableToolbar();
@@ -381,10 +406,12 @@ const SelectLayerCore: React.FC<SelectLayerProps> = ({ actionRef }) => {
                 captureBoundingBoxInfo.width,
                 captureBoundingBoxInfo.height,
                 rect,
+                selectRectRadiusRef.current,
                 selectLayerCanvasContextRef.current!,
                 currentTheme === AppSettingsTheme.Dark,
                 window.devicePixelRatio,
-                getScreenshotType(),
+                getScreenshotType() === ScreenshotType.TopWindow ||
+                    selectStateRef.current === SelectState.Auto,
                 drawElementMask,
                 enableScrollScreenshot,
                 enableAuxiliaryLine &&
@@ -674,10 +701,7 @@ const SelectLayerCore: React.FC<SelectLayerProps> = ({ actionRef }) => {
                         getAppSettings()[AppSettingsGroup.Screenshot].disableAnimation,
                 );
             }
-            resizeToolbarActionRef.current?.setSize(
-                rect.max_x - rect.min_x,
-                rect.max_y - rect.min_y,
-            );
+            resizeToolbarActionRef.current?.setSelectedRect(rect);
 
             updateMonitorRectRenderCallback(rect);
         },
@@ -1115,6 +1139,18 @@ const SelectLayerCore: React.FC<SelectLayerProps> = ({ actionRef }) => {
             getWindowId: () => selectedWindowIdRef.current,
             onCaptureFinish,
             getSelectRect,
+            getSelectRectParams: () => {
+                const selectRect = getSelectRect();
+                if (!selectRect) {
+                    return undefined;
+                }
+
+                return {
+                    rect: selectRect,
+                    radius: selectRectRadiusRef.current,
+                    shadowWidth: selectRectShadowWidthRef.current,
+                };
+            },
             setEnable: (enable: boolean) => {
                 setIsEnable(enable);
             },
@@ -1248,9 +1284,104 @@ const SelectLayerCore: React.FC<SelectLayerProps> = ({ actionRef }) => {
         updateLayerPointerEvents,
     ]);
 
+    const onSelectedRectChangeCompleted = useMemo(() => {
+        return debounce(() => {
+            setSelectState(SelectState.Selected);
+        }, 256);
+    }, [setSelectState]);
+    const onSelectedRectChange = useCallback(
+        (rect: ElementRect) => {
+            setSelectState(SelectState.ScrollResize);
+            setSelectRect(
+                limitRect(rect, {
+                    min_x: 0,
+                    min_y: 0,
+                    max_x: captureBoundingBoxInfoRef.current!.width,
+                    max_y: captureBoundingBoxInfoRef.current!.height,
+                }),
+                true,
+            );
+            onSelectedRectChangeCompleted();
+        },
+        [setSelectRect, setSelectState, onSelectedRectChangeCompleted],
+    );
+    const onRadiusChange = useCallback(
+        (radius: number) => {
+            selectRectRadiusRef.current = radius;
+            resizeToolbarActionRef.current?.setRadius(radius);
+
+            const selectRect = getSelectRect();
+            if (selectRect) {
+                drawCanvasSelectRect(
+                    selectRect,
+                    captureBoundingBoxInfoRef.current!,
+                    undefined,
+                    false,
+                );
+                updateAppSettings(
+                    AppSettingsGroup.Cache,
+                    { selectRectRadius: radius },
+                    true,
+                    true,
+                    false,
+                    true,
+                    true,
+                );
+            }
+        },
+        [drawCanvasSelectRect, getSelectRect, updateAppSettings],
+    );
+    useEffect(() => {
+        if (selectRectRadiusRef.current !== selectRectRadiusCache) {
+            onRadiusChange(selectRectRadiusCache);
+        }
+    }, [selectRectRadiusCache, onRadiusChange]);
+
+    const onShadowWidthChange = useCallback(
+        (shadowWidth: number) => {
+            selectRectShadowWidthRef.current = shadowWidth;
+            resizeToolbarActionRef.current?.setShadowWidth(shadowWidth);
+
+            const selectRect = getSelectRect();
+            if (selectRect) {
+                drawCanvasSelectRect(
+                    selectRect,
+                    captureBoundingBoxInfoRef.current!,
+                    undefined,
+                    false,
+                );
+                updateAppSettings(
+                    AppSettingsGroup.Cache,
+                    { selectRectShadowWidth: shadowWidth },
+                    true,
+                    true,
+                    false,
+                    true,
+                    true,
+                );
+            }
+        },
+        [drawCanvasSelectRect, getSelectRect, updateAppSettings],
+    );
+    useEffect(() => {
+        if (selectRectShadowWidthRef.current !== selectRectShadowWidthCache) {
+            onShadowWidthChange(selectRectShadowWidthCache);
+        }
+    }, [selectRectShadowWidthCache, onShadowWidthChange]);
+
+    const getCaptureBoundingBoxInfo = useCallback(
+        () => captureBoundingBoxInfoRef.current,
+        [captureBoundingBoxInfoRef],
+    );
     return (
         <>
-            <ResizeToolbar actionRef={resizeToolbarActionRef} />
+            <ResizeToolbar
+                actionRef={resizeToolbarActionRef}
+                onSelectedRectChange={onSelectedRectChange}
+                onRadiusChange={onRadiusChange}
+                onShadowWidthChange={onShadowWidthChange}
+                getCaptureBoundingBoxInfo={getCaptureBoundingBoxInfo}
+            />
 
             <div className="select-layer-container" ref={layerContainerElementRef}>
                 <canvas className="select-layer-canvas" ref={selectLayerCanvasRef} />

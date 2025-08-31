@@ -1,6 +1,7 @@
 import { ElementRect } from '@/commands';
 import { ApplicationOptions } from 'pixi.js';
 import { BlurSpriteProps } from '../baseLayerRenderActions';
+import * as PIXI from 'pixi.js';
 
 export type RefWrap<T> = {
     current: T;
@@ -13,6 +14,7 @@ export enum BaseLayerRenderMessageType {
     ResizeCanvas = 'resizeCanvas',
     ClearCanvas = 'clearCanvas',
     GetImageData = 'getImageData',
+    RenderToCanvas = 'renderToCanvas',
     CanvasRender = 'canvasRender',
     AddImageToContainer = 'addImageToContainer',
     ClearContainer = 'clearContainer',
@@ -53,6 +55,13 @@ export type BaseLayerRenderClearCanvasData = {
 
 export type BaseLayerRenderGetImageDataData = {
     type: BaseLayerRenderMessageType.GetImageData;
+    payload: {
+        selectRect: ElementRect;
+    };
+};
+
+export type BaseLayerRenderRenderToCanvasData = {
+    type: BaseLayerRenderMessageType.RenderToCanvas;
     payload: {
         selectRect: ElementRect;
     };
@@ -108,6 +117,7 @@ export type BaseLayerRenderData =
     | BaseLayerRenderResizeCanvasData
     | BaseLayerRenderClearCanvasData
     | BaseLayerRenderGetImageDataData
+    | BaseLayerRenderRenderToCanvasData
     | BaseLayerRenderCanvasRenderData
     | BaseLayerRenderAddImageToContainerData
     | BaseLayerRenderClearContainerData
@@ -146,6 +156,13 @@ export type RenderGetImageDataResult = {
     type: BaseLayerRenderMessageType.GetImageData;
     payload: {
         imageData: ImageData | undefined;
+    };
+};
+
+export type RenderRenderToCanvasResult = {
+    type: BaseLayerRenderMessageType.RenderToCanvas;
+    payload: {
+        canvas: PIXI.ICanvas | undefined;
     };
 };
 
@@ -191,6 +208,7 @@ export type RenderResult =
     | RenderResizeCanvasResult
     | RenderClearCanvasResult
     | RenderGetImageDataResult
+    | RenderRenderToCanvasResult
     | RenderCanvasRenderResult
     | RenderAddImageToContainerResult
     | RenderClearContainerResult

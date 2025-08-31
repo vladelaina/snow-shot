@@ -88,18 +88,39 @@ export const renderGetImageDataAction = (
         return;
     }
 
-    return canvasApp.renderer.extract
-        .canvas(canvasApp.stage)
-        .getContext('2d')
-        ?.getImageData(
+    const pixels = canvasApp.renderer.extract.pixels({
+        target: canvasApp.stage,
+        frame: new PIXI.Rectangle(
             selectRect.min_x,
             selectRect.min_y,
             selectRect.max_x - selectRect.min_x,
             selectRect.max_y - selectRect.min_y,
-            {
-                colorSpace: 'srgb',
-            },
-        );
+        ),
+    });
+
+    const res = new ImageData(pixels.pixels as ImageDataArray, pixels.width, pixels.height);
+
+    return res;
+};
+
+export const renderRenderToCanvasAction = (
+    canvasAppRef: RefType<Application | undefined>,
+    selectRect: ElementRect,
+): PIXI.ICanvas | undefined => {
+    const canvasApp = canvasAppRef.current;
+    if (!canvasApp) {
+        return;
+    }
+
+    return canvasApp.renderer.extract.canvas({
+        target: canvasApp.stage,
+        frame: new PIXI.Rectangle(
+            selectRect.min_x,
+            selectRect.min_y,
+            selectRect.max_x - selectRect.min_x,
+            selectRect.max_y - selectRect.min_y,
+        ),
+    });
 };
 
 export const renderCanvasRenderAction = (canvasAppRef: RefType<Application | undefined>) => {
