@@ -1,6 +1,6 @@
 {
     "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
-    "productName": "snow-shot",
+    "productName": "Snow Shot",
     "mainBinaryName": "snowshot",
     "version": "0.2.2-beta-20250831",
     "identifier": "com.chao.snowshot",
