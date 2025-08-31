@@ -553,7 +553,7 @@ const DrawPageCore: React.FC<{
             }
 
             const imageCanvas = await getCanvas(
-                selectLayerActionRef.current.getSelectRect(),
+                selectLayerActionRef.current.getSelectRectParams(),
                 drawLayerActionRef.current,
                 drawCacheLayerActionRef.current,
             );
@@ -708,7 +708,7 @@ const DrawPageCore: React.FC<{
             }
 
             const imageCanvas = await getCanvas(
-                selectLayerActionRef.current.getSelectRect(),
+                selectLayerActionRef.current.getSelectRectParams(),
                 drawLayerActionRef.current,
                 drawCacheLayerActionRef.current,
             );

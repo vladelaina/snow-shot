@@ -154,6 +154,10 @@ export type AppSettingsData = {
         enableLockDrawTool: boolean;
         /** 序列号工具是否禁用箭头 */
         disableArrowPicker: boolean;
+        /** 截图选区圆角 */
+        selectRectRadius: number;
+        /** 截图选区阴影宽度 */
+        selectRectShadowWidth: number;
     };
     [AppSettingsGroup.DrawToolbarKeyEvent]: Record<
         DrawToolbarKeyEventKey,
@@ -346,6 +350,8 @@ export const defaultAppSettingsData: AppSettingsData = {
         enableMicrophone: false,
         enableLockDrawTool: false,
         disableArrowPicker: true,
+        selectRectRadius: 0,
+        selectRectShadowWidth: 0,
     },
     [AppSettingsGroup.DrawToolbarKeyEvent]: defaultDrawToolbarKeyEventSettings,
     [AppSettingsGroup.KeyEvent]: defaultKeyEventSettings,
@@ -703,6 +709,16 @@ const ContextWrapCore: React.FC<{ children: React.ReactNode }> = ({ children }) 
                         typeof newSettings?.disableArrowPicker === 'boolean'
                             ? newSettings.disableArrowPicker
                             : (prevSettings?.disableArrowPicker ?? true),
+                    selectRectRadius:
+                        typeof newSettings?.selectRectRadius === 'number'
+                            ? Math.min(Math.max(newSettings.selectRectRadius, 0), 256)
+                            : (prevSettings?.selectRectRadius ??
+                              defaultAppSettingsData[group].selectRectRadius),
+                    selectRectShadowWidth:
+                        typeof newSettings?.selectRectShadowWidth === 'number'
+                            ? Math.min(Math.max(newSettings.selectRectShadowWidth, 0), 32)
+                            : (prevSettings?.selectRectShadowWidth ??
+                              defaultAppSettingsData[group].selectRectShadowWidth),
                 };
             } else if (group === AppSettingsGroup.Screenshot) {
                 newSettings = newSettings as AppSettingsData[typeof group];

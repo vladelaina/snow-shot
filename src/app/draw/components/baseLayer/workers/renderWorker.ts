@@ -16,6 +16,7 @@ import {
     renderUpdateBlurSpriteAction,
     renderDeleteBlurSpriteAction,
     BlurSprite,
+    renderRenderToCanvasAction,
 } from '../baseLayerRenderActions';
 import {
     BaseLayerRenderAddImageToContainerData,
@@ -31,6 +32,7 @@ import {
     BaseLayerRenderCreateBlurSpriteData,
     BaseLayerRenderUpdateBlurSpriteData,
     BaseLayerRenderDeleteBlurSpriteData,
+    BaseLayerRenderRenderToCanvasData,
 } from './renderWorkerTypes';
 
 const canvasAppRef: RefWrap<Application | undefined> = { current: undefined };
@@ -67,6 +69,10 @@ const handleClearCanvas = () => {
 
 const handleGetImageData = (data: BaseLayerRenderGetImageDataData) => {
     return renderGetImageDataAction(canvasAppRef, data.payload.selectRect);
+};
+
+const handleRenderToCanvas = (data: BaseLayerRenderRenderToCanvasData) => {
+    return renderRenderToCanvasAction(canvasAppRef, data.payload.selectRect);
 };
 
 const handleCanvasRender = () => {
@@ -152,6 +158,13 @@ self.onmessage = async ({ data }: MessageEvent<BaseLayerRenderData>) => {
             message = {
                 type: BaseLayerRenderMessageType.GetImageData,
                 payload: { imageData },
+            };
+            break;
+        case BaseLayerRenderMessageType.RenderToCanvas:
+            const canvas = handleRenderToCanvas(data);
+            message = {
+                type: BaseLayerRenderMessageType.RenderToCanvas,
+                payload: { canvas },
             };
             break;
         case BaseLayerRenderMessageType.CanvasRender:

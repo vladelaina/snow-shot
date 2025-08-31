@@ -55,12 +55,15 @@ import { appError } from '@/utils/log';
 import { formatKey } from '@/utils/format';
 import { useTempInfo } from '@/hooks/useTempInfo';
 import { DrawLayer, FixedContentCoreDrawActionType } from './components/drawLayer';
+import { SelectRectParams } from '@/app/draw/components/selectLayer';
 
 export type FixedContentInitDrawParams = {
     captureBoundingBoxInfo: CaptureBoundingBoxInfo;
     canvas: HTMLCanvasElement;
     /** 已有的 OCR 结果 */
     ocrResult: AppOcrResult | undefined;
+    /** 选择区域参数 */
+    selectRectParams: SelectRectParams;
 };
 
 export type FixedContentInitHtmlParams = {
@@ -181,6 +184,7 @@ export const FixedContentCore: React.FC<{
     const [fixedContentType, setFixedContentType, fixedContentTypeRef] = useStateRef<
         FixedContentType | undefined
     >(undefined);
+    const [showBorder, setShowBorder] = useState(true);
     const [enableDraw, setEnableDraw, enableDrawRef] = useStateRef(false);
     const [enableSelectText, setEnableSelectText, enableSelectTextRef] = useStateRef(false);
     const [contentOpacity, setContentOpacity, contentOpacityRef] = useStateRef(1);
@@ -389,7 +393,11 @@ export const FixedContentCore: React.FC<{
         async (params: FixedContentInitDrawParams) => {
             setFixedContentType(FixedContentType.DrawCanvas);
 
-            const { canvas, captureBoundingBoxInfo } = params;
+            const { canvas, captureBoundingBoxInfo, selectRectParams } = params;
+
+            if (selectRectParams.shadowWidth > 0) {
+                setShowBorder(false);
+            }
 
             const ocrRect = {
                 min_x: 0,
@@ -1637,6 +1645,7 @@ export const FixedContentCore: React.FC<{
                     box-shadow: 0 0 2px 2px ${fixedBorderColor ?? token.colorBorder};
                     pointer-events: none;
                     z-index: ${zIndexs.FixedToScreen_Border};
+                    display: ${showBorder ? 'block' : 'none'};
                 }
 
                 .fixed-image-container-inner:active {

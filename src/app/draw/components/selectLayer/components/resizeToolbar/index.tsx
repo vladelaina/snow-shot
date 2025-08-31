@@ -1,29 +1,61 @@
 import { MousePosition } from '@/utils/mousePosition';
 import { zIndexs } from '@/utils/zIndex';
-import { Flex, theme } from 'antd';
+import { Flex, Space, theme } from 'antd';
 import React, { useCallback, useImperativeHandle, useMemo, useRef, useState } from 'react';
 import { updateElementPosition } from '../../../drawToolbar/components/dragButton/extra';
 import { ElementRect } from '@/commands';
-import { CaptureEvent, CaptureEventPublisher, ScreenshotTypePublisher } from '@/app/draw/extra';
+import {
+    CaptureBoundingBoxInfo,
+    CaptureEvent,
+    CaptureEventPublisher,
+    ScreenshotTypePublisher,
+} from '@/app/draw/extra';
 import { useStateSubscriber } from '@/hooks/useStateSubscriber';
 import { ScreenshotType } from '@/functions/screenshot';
 import { debounce } from 'es-toolkit';
 import { DrawState, DrawStatePublisher } from '@/app/fullScreenDraw/components/drawCore/extra';
+import { RadiusIcon, ShadowIcon } from '@/components/icons';
+import { useStateRef } from '@/hooks/useStateRef';
+import { useCallbackRender } from '@/hooks/useCallbackRender';
+import { SelectState } from '../../extra';
+import { ResizeModal, ResizeModalActionType, ResizeModalParams } from './components/resizeModal';
+import { useIntl } from 'react-intl';
 
 export type ResizeToolbarActionType = {
     updateStyle: (selectedRect: ElementRect) => void;
-    setSize: (width: number, height: number) => void;
+    setSelectedRect: (selectedRect: ElementRect) => void;
+    setRadius: (radius: number) => void;
+    setShadowWidth: (shadowWidth: number) => void;
+    setSelectState: (selectState: SelectState) => void;
 };
 
 export const ResizeToolbar: React.FC<{
     actionRef: React.RefObject<ResizeToolbarActionType | undefined>;
-}> = ({ actionRef }) => {
+    onSelectedRectChange: (selectedRect: ElementRect) => void;
+    onRadiusChange: (radius: number) => void;
+    onShadowWidthChange: (shadowWidth: number) => void;
+    getCaptureBoundingBoxInfo: () => CaptureBoundingBoxInfo | undefined;
+}> = ({
+    actionRef,
+    onSelectedRectChange,
+    onRadiusChange,
+    onShadowWidthChange,
+    getCaptureBoundingBoxInfo,
+}) => {
     const { token } = theme.useToken();
+    const intl = useIntl();
 
     const resizeToolbarRef = useRef<HTMLDivElement>(null);
 
-    const [width, setWidth] = useState(0);
-    const [height, setHeight] = useState(0);
+    const [selectedRect, setSelectedRect, selectedRectRef] = useStateRef<ElementRect>({
+        min_x: 0,
+        min_y: 0,
+        max_x: 0,
+        max_y: 0,
+    });
+    const [radius, setRadius, radiusRef] = useStateRef(0);
+    const [shadowWidth, setShadowWidth, shadowWidthRef] = useStateRef(0);
+    const [selectState, setSelectState] = useState(SelectState.Auto);
 
     const updateStyle = useCallback(
         (selectedRect: ElementRect) => {
@@ -113,16 +145,229 @@ export const ResizeToolbar: React.FC<{
     useImperativeHandle(actionRef, () => {
         return {
             updateStyle,
-            setSize: (width: number, height: number) => {
-                setWidth(width);
-                setHeight(height);
+            setSelectedRect: (selectedRect: ElementRect) => {
+                setSelectedRect(selectedRect);
+            },
+            setRadius: (radius: number) => {
+                setRadius(radius);
+            },
+            setShadowWidth: (shadowWidth: number) => {
+                setShadowWidth(shadowWidth);
+            },
+            setSelectState: (selectState: SelectState) => {
+                setSelectState(selectState);
             },
         };
-    }, [updateStyle]);
+    }, [setRadius, setSelectedRect, setShadowWidth, updateStyle]);
 
+    const updateSelectedRectCore = useCallback(
+        (delta: ElementRect) => {
+            const newSelectedRect = {
+                min_x: selectedRectRef.current.min_x + delta.min_x,
+                min_y: selectedRectRef.current.min_y + delta.min_y,
+                max_x: selectedRectRef.current.max_x + delta.max_x,
+                max_y: selectedRectRef.current.max_y + delta.max_y,
+            };
+            onSelectedRectChange(newSelectedRect);
+        },
+        [onSelectedRectChange, selectedRectRef],
+    );
+    const updateSelectedRect = useCallbackRender(updateSelectedRectCore);
+
+    const changeMinX = useCallback(
+        (event: React.WheelEvent<HTMLDivElement>) => {
+            const deltaValue = event.deltaY > 0 ? -1 : 1;
+
+            updateSelectedRect({
+                min_x: deltaValue,
+                min_y: 0,
+                max_x: deltaValue,
+                max_y: 0,
+            });
+        },
+        [updateSelectedRect],
+    );
+    const changeMinY = useCallback(
+        (event: React.WheelEvent<HTMLDivElement>) => {
+            const deltaValue = event.deltaY > 0 ? -1 : 1;
+            updateSelectedRect({
+                min_x: 0,
+                min_y: deltaValue,
+                max_x: 0,
+                max_y: deltaValue,
+            });
+        },
+        [updateSelectedRect],
+    );
+    const changeWidth = useCallback(
+        (event: React.WheelEvent<HTMLDivElement>) => {
+            const deltaValue = event.deltaY > 0 ? -1 : 1;
+            updateSelectedRect({
+                min_x: 0,
+                min_y: 0,
+                max_x: deltaValue,
+                max_y: 0,
+            });
+        },
+        [updateSelectedRect],
+    );
+    const changeHeight = useCallback(
+        (event: React.WheelEvent<HTMLDivElement>) => {
+            const deltaValue = event.deltaY > 0 ? -1 : 1;
+            updateSelectedRect({
+                min_x: 0,
+                min_y: 0,
+                max_x: 0,
+                max_y: deltaValue,
+            });
+        },
+        [updateSelectedRect],
+    );
+    const changeRadiusCore = useCallback(
+        (event: React.WheelEvent<HTMLDivElement>) => {
+            const deltaValue = event.deltaY > 0 ? -1 : 1;
+            onRadiusChange(Math.min(Math.max(0, radiusRef.current + deltaValue), 256));
+        },
+        [onRadiusChange, radiusRef],
+    );
+    const changeRadius = useCallbackRender(changeRadiusCore);
+
+    const changeShadowWidthCore = useCallback(
+        (event: React.WheelEvent<HTMLDivElement>) => {
+            const deltaValue = event.deltaY > 0 ? -1 : 1;
+            onShadowWidthChange(Math.min(Math.max(0, shadowWidthRef.current + deltaValue), 32));
+        },
+        [onShadowWidthChange, shadowWidthRef],
+    );
+    const changeShadowWidth = useCallbackRender(changeShadowWidthCore);
+
+    const resizeModalActionRef = useRef<ResizeModalActionType | undefined>(undefined);
+    const showResizeModal = useCallback(() => {
+        const captureBoundingBoxInfo = getCaptureBoundingBoxInfo();
+        if (!captureBoundingBoxInfo) {
+            return;
+        }
+
+        resizeModalActionRef.current?.show(
+            selectedRect,
+            radius,
+            shadowWidth,
+            captureBoundingBoxInfo,
+        );
+    }, [getCaptureBoundingBoxInfo, selectedRect, radius, shadowWidth]);
+
+    const onFinish = useCallback(
+        async (params: ResizeModalParams) => {
+            onSelectedRectChange({
+                min_x: params.minX,
+                min_y: params.minY,
+                max_x: params.minX + params.width,
+                max_y: params.minY + params.height,
+            });
+            onRadiusChange(params.radius);
+            onShadowWidthChange(params.shadowWidth);
+
+            return true;
+        },
+        [onRadiusChange, onSelectedRectChange, onShadowWidthChange],
+    );
     return (
-        <div className="draw-resize-toolbar" ref={resizeToolbarRef}>
-            <Flex align="center">{`${width} x ${height}`}</Flex>
+        <div className="draw-resize-toolbar" ref={resizeToolbarRef} onClick={showResizeModal}>
+            <ResizeModal actionRef={resizeModalActionRef} onFinish={onFinish} />
+
+            <Flex align="center">
+                {selectState !== SelectState.Auto && (
+                    <>
+                        <Flex align="center">
+                            <div
+                                className="draw-resize-toolbar-scroll-value"
+                                style={{ cursor: 'col-resize' }}
+                                onWheel={changeMinX}
+                                title={intl.formatMessage({ id: 'draw.positionX' })}
+                            >
+                                {selectedRect.min_x}
+                            </div>
+                            <div className="draw-resize-toolbar-symbol">{`,`}</div>
+                            <div
+                                className="draw-resize-toolbar-scroll-value"
+                                style={{ cursor: 'row-resize' }}
+                                onWheel={changeMinY}
+                                title={intl.formatMessage({ id: 'draw.positionY' })}
+                            >
+                                {selectedRect.min_y}
+                            </div>
+                            <div className="draw-resize-toolbar-unit">{`px`}</div>
+                        </Flex>
+                        <div className="draw-resize-toolbar-splitter" />
+                    </>
+                )}
+                <Flex align="center">
+                    <div
+                        className="draw-resize-toolbar-scroll-value"
+                        style={{ cursor: 'col-resize' }}
+                        onWheel={changeWidth}
+                        title={intl.formatMessage({ id: 'draw.width' })}
+                    >
+                        {selectedRect.max_x - selectedRect.min_x}
+                    </div>
+                    <div className="draw-resize-toolbar-symbol">{`x`}</div>
+                    <div
+                        className="draw-resize-toolbar-scroll-value"
+                        style={{ cursor: 'row-resize' }}
+                        onWheel={changeHeight}
+                        title={intl.formatMessage({ id: 'draw.height' })}
+                    >
+                        {selectedRect.max_y - selectedRect.min_y}
+                    </div>
+                    <div className="draw-resize-toolbar-unit">{`px`}</div>
+                </Flex>
+                {selectState !== SelectState.Auto && (
+                    <>
+                        <div className="draw-resize-toolbar-splitter" />
+                        <Space align="center">
+                            <div>
+                                <div
+                                    className="draw-resize-toolbar-scroll-value"
+                                    style={{ cursor: 'row-resize' }}
+                                    onWheel={changeRadius}
+                                    title={intl.formatMessage({ id: 'draw.radius' })}
+                                >
+                                    <RadiusIcon
+                                        style={{
+                                            fontSize: '1.28em',
+                                            marginRight: token.marginXXS,
+                                            position: 'relative',
+                                            top: '0.08em',
+                                        }}
+                                    />
+                                    {radius}
+                                </div>
+                                <div className="draw-resize-toolbar-unit">{`px`}</div>
+                            </div>
+
+                            <div>
+                                <div
+                                    className="draw-resize-toolbar-scroll-value"
+                                    style={{ cursor: 'row-resize' }}
+                                    onWheel={changeShadowWidth}
+                                    title={intl.formatMessage({ id: 'draw.shadowWidth' })}
+                                >
+                                    <ShadowIcon
+                                        style={{
+                                            fontSize: '1.28em',
+                                            marginRight: token.marginXXS,
+                                            position: 'relative',
+                                            top: '0.08em',
+                                        }}
+                                    />
+                                    {shadowWidth}
+                                </div>
+                                <div className="draw-resize-toolbar-unit">{`px`}</div>
+                            </div>
+                        </Space>
+                    </>
+                )}
+            </Flex>
             <style jsx>{`
                 .draw-resize-toolbar {
                     box-shadow: 0 0 1px 0px ${token.colorPrimaryHover};
@@ -134,12 +379,59 @@ export const ResizeToolbar: React.FC<{
                     background-color: ${token.colorBgMask};
                     z-index: ${zIndexs.Draw_ResizeToolbar};
                     color: ${token.colorWhite};
-                    pointer-events: none;
-                    opacity: 0;
+                    cursor: pointer;
+                    transition: box-shadow ${token.motionDurationFast} ${token.motionEaseInOut};
+                    pointer-events: ${selectState === SelectState.Selected ||
+                    selectState === SelectState.ScrollResize
+                        ? 'auto'
+                        : 'none'};
                 }
 
                 .draw-resize-toolbar:hover {
-                    opacity: 0 !important;
+                    box-shadow: 0 0 6px 0px ${token.colorPrimaryHover};
+                }
+
+                .draw-resize-toolbar-splitter {
+                    width: 1px;
+                    height: 0.8em;
+                    background-color: ${token.colorBorder};
+                    opacity: 0.42;
+                    margin: 0 ${token.marginXS + token.marginXXS}px;
+                }
+
+                .draw-resize-toolbar-scroll-value {
+                    display: inline-block;
+                    position: relative;
+                }
+
+                .draw-resize-toolbar-scroll-value::before {
+                    content: '';
+                    position: absolute;
+                    top: 0;
+                    left: -2px;
+                    width: calc(100% + 4px);
+                    height: calc(100% - 2px);
+                    margin-top: 1px;
+                    border-radius: ${token.borderRadius}px;
+                    background-color: ${token.colorPrimary};
+                    opacity: 0;
+                    transition: opacity ${token.motionDurationFast} ${token.motionEaseInOut};
+                }
+
+                .draw-resize-toolbar-scroll-value:hover::before {
+                    opacity: 0.42;
+                }
+
+                .draw-resize-toolbar-symbol {
+                    display: inline-block;
+                    position: relative;
+                    margin: 0 ${token.marginXXS}px;
+                }
+
+                .draw-resize-toolbar-unit {
+                    display: inline-block;
+                    position: relative;
+                    margin-left: ${token.marginXXS}px;
                 }
             `}</style>
         </div>

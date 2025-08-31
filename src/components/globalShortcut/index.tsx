@@ -89,38 +89,17 @@ const GlobalShortcutCore = ({ children }: { children: React.ReactNode }) => {
                 let buttonOnClick: () => void | Promise<void>;
                 switch (key) {
                     case AppFunction.ScreenshotFixed:
-                        buttonTitle = (
-                            <FormattedMessage
-                                id="home.screenshotAfter"
-                                values={{
-                                    text: <FormattedMessage id="draw.fixedTool" />,
-                                }}
-                            />
-                        );
+                        buttonTitle = <FormattedMessage id="draw.fixedTool" />;
                         buttonIcon = <FixedIcon style={{ fontSize: '1.3em' }} />;
                         buttonOnClick = () => executeScreenshot(ScreenshotType.Fixed);
                         break;
                     case AppFunction.ScreenshotOcr:
-                        buttonTitle = (
-                            <FormattedMessage
-                                id="home.screenshotAfter"
-                                values={{
-                                    text: <FormattedMessage id="draw.ocrDetectTool" />,
-                                }}
-                            />
-                        );
+                        buttonTitle = <FormattedMessage id="draw.ocrDetectTool" />;
                         buttonIcon = <OcrDetectIcon />;
                         buttonOnClick = () => executeScreenshot(ScreenshotType.OcrDetect);
                         break;
                     case AppFunction.ScreenshotOcrTranslate:
-                        buttonTitle = (
-                            <FormattedMessage
-                                id="home.screenshotAfter"
-                                values={{
-                                    text: <FormattedMessage id="draw.ocrTranslateTool" />,
-                                }}
-                            />
-                        );
+                        buttonTitle = <FormattedMessage id="draw.ocrTranslateTool" />;
                         buttonIcon = <OcrTranslateIcon style={{ fontSize: '1.1em' }} />;
                         buttonOnClick = () => executeScreenshot(ScreenshotType.OcrTranslate);
                         break;

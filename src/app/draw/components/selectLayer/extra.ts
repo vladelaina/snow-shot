@@ -1,5 +1,4 @@
 import { ElementRect } from '@/commands';
-import { ScreenshotType } from '@/functions/screenshot';
 import { MousePosition } from '@/utils/mousePosition';
 import Color from 'color';
 
@@ -10,6 +9,8 @@ export enum SelectState {
     Manual = 1,
     /** 拖动 */
     Drag = 2,
+    /** Scroll Resize */
+    ScrollResize = 3,
     /** 已选择 */
     Selected = 10,
 }
@@ -79,10 +80,11 @@ export const drawSelectRect = (
     monitorWidth: number,
     monitorHeight: number,
     selectRect: ElementRect,
+    radius: number,
     canvasContext: CanvasRenderingContext2D,
     darkMode: boolean,
     scaleFactor: number,
-    screenshotType: ScreenshotType,
+    hideControls: boolean,
     drawElementMask?: {
         imageData: ImageData;
     },
@@ -122,7 +124,23 @@ export const drawSelectRect = (
     canvasContext.fillStyle = fillColor;
     canvasContext.fillRect(0, 0, monitorWidth, monitorHeight);
 
-    canvasContext.clearRect(rectMinX, rectMinY, rectWidth, rectHeight);
+    if (radius > 0 && !enableScrollScreenshot) {
+        // 清除圆角矩形区域
+        // 保存当前上下文状态
+        canvasContext.save();
+
+        // 创建圆角矩形路径
+        canvasContext.beginPath();
+        canvasContext.roundRect(rectMinX, rectMinY, rectWidth, rectHeight, radius);
+        canvasContext.clip();
+
+        canvasContext.clearRect(rectMinX, rectMinY, rectWidth, rectHeight);
+
+        // 恢复上下文状态
+        canvasContext.restore();
+    } else {
+        canvasContext.clearRect(rectMinX, rectMinY, rectWidth, rectHeight);
+    }
 
     if (enableScrollScreenshot) {
         return;
@@ -176,46 +194,51 @@ export const drawSelectRect = (
 
     canvasContext.strokeStyle = MASK_CONTROL_BORDER_STROKE_COLOR;
     canvasContext.lineWidth = maskControlBorderStrokeWidth;
-    canvasContext.strokeRect(rectMinX, rectMinY, rectWidth, rectHeight);
-
-    if (screenshotType === ScreenshotType.TopWindow) {
-        return;
-    }
-
-    const controlFillColor = MASK_CIRCLE_CONTROL_COLOR;
-    const controlStrokeColor = MASK_CIRCLE_CONTROL_STROKE_COLOR;
 
     canvasContext.beginPath();
-    if (minWidth > maskCircleControlShowEndWidth) {
-        // 左上角
-        drawCircleControl(canvasContext, rectMinX, rectMinY, maskCircleControlWidth);
-        // 右上角
-        drawCircleControl(canvasContext, rectMaxX, rectMinY, maskCircleControlWidth);
-        // 左下角
-        drawCircleControl(canvasContext, rectMinX, rectMaxY, maskCircleControlWidth);
-        // 右下角
-        drawCircleControl(canvasContext, rectMaxX, rectMaxY, maskCircleControlWidth);
+    if (radius > 0 && !enableScrollScreenshot) {
+        canvasContext.roundRect(rectMinX, rectMinY, rectWidth, rectHeight, radius);
+    } else {
+        canvasContext.rect(rectMinX, rectMinY, rectWidth, rectHeight);
     }
-
-    if (minWidth > maskCircleControlShowMidWidth) {
-        const centerX = rectMinX + Math.floor((rectMaxX - rectMinX) / 2);
-        const centerY = rectMinY + Math.floor((rectMaxY - rectMinY) / 2);
-
-        // 上边中点
-        drawCircleControl(canvasContext, centerX, rectMinY, maskCircleControlWidth);
-        // 下边中点
-        drawCircleControl(canvasContext, centerX, rectMaxY, maskCircleControlWidth);
-        // 左边中点
-        drawCircleControl(canvasContext, rectMinX, centerY, maskCircleControlWidth);
-        // 右边中点
-        drawCircleControl(canvasContext, rectMaxX, centerY, maskCircleControlWidth);
-    }
-
-    canvasContext.fillStyle = controlFillColor;
-    canvasContext.fill();
-    canvasContext.strokeStyle = controlStrokeColor;
-    canvasContext.lineWidth = maskCircleControlStrokeWidth;
     canvasContext.stroke();
+
+    if (!hideControls) {
+        const controlFillColor = MASK_CIRCLE_CONTROL_COLOR;
+        const controlStrokeColor = MASK_CIRCLE_CONTROL_STROKE_COLOR;
+
+        canvasContext.beginPath();
+        if (minWidth > maskCircleControlShowEndWidth) {
+            // 左上角
+            drawCircleControl(canvasContext, rectMinX, rectMinY, maskCircleControlWidth);
+            // 右上角
+            drawCircleControl(canvasContext, rectMaxX, rectMinY, maskCircleControlWidth);
+            // 左下角
+            drawCircleControl(canvasContext, rectMinX, rectMaxY, maskCircleControlWidth);
+            // 右下角
+            drawCircleControl(canvasContext, rectMaxX, rectMaxY, maskCircleControlWidth);
+        }
+
+        if (minWidth > maskCircleControlShowMidWidth) {
+            const centerX = rectMinX + Math.floor((rectMaxX - rectMinX) / 2);
+            const centerY = rectMinY + Math.floor((rectMaxY - rectMinY) / 2);
+
+            // 上边中点
+            drawCircleControl(canvasContext, centerX, rectMinY, maskCircleControlWidth);
+            // 下边中点
+            drawCircleControl(canvasContext, centerX, rectMaxY, maskCircleControlWidth);
+            // 左边中点
+            drawCircleControl(canvasContext, rectMinX, centerY, maskCircleControlWidth);
+            // 右边中点
+            drawCircleControl(canvasContext, rectMaxX, centerY, maskCircleControlWidth);
+        }
+
+        canvasContext.fillStyle = controlFillColor;
+        canvasContext.fill();
+        canvasContext.strokeStyle = controlStrokeColor;
+        canvasContext.lineWidth = maskCircleControlStrokeWidth;
+        canvasContext.stroke();
+    }
 };
 
 export const convertDragModeToCursor = (dragMode: DragMode) => {

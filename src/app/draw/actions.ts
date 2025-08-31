@@ -1,7 +1,7 @@
 import { DrawLayerActionType } from './components/drawLayer';
-import { SelectLayerActionType } from './components/selectLayer';
+import { SelectLayerActionType, SelectRectParams } from './components/selectLayer';
 import { DrawCacheLayerActionType } from './components/drawCacheLayer/extra';
-import { createDrawWindow, ElementRect, saveFile } from '@/commands';
+import { createDrawWindow, saveFile } from '@/commands';
 import { Window as AppWindow } from '@tauri-apps/api/window';
 import { CaptureStep } from './types';
 import { FixedContentActionType } from '../fixedContent/components/fixedContentCore';
@@ -15,13 +15,19 @@ import { setWindowRect } from '@/utils/window';
 import { appError } from '@/utils/log';
 
 export const getCanvas = async (
-    selectRect: ElementRect | undefined,
+    selectRectParams: SelectRectParams | undefined,
     drawLayerAction: DrawLayerActionType,
     drawCacheLayerAction: DrawCacheLayerActionType,
 ): Promise<HTMLCanvasElement | undefined> => {
-    if (!selectRect) {
+    if (!selectRectParams) {
         return;
     }
+
+    const {
+        rect: selectRect,
+        radius: selectRectRadius,
+        shadowWidth: selectRectShadowWidth,
+    } = selectRectParams;
 
     drawCacheLayerAction.finishDraw();
 
@@ -33,16 +39,64 @@ export const getCanvas = async (
         return;
     }
 
+    const offsetX = selectRectShadowWidth;
+    const offsetY = selectRectShadowWidth;
+
     const tempCanvas = document.createElement('canvas');
-    tempCanvas.width = selectRect.max_x - selectRect.min_x;
-    tempCanvas.height = selectRect.max_y - selectRect.min_y;
+
+    const contentWidth = selectRect.max_x - selectRect.min_x;
+    const contentHeight = selectRect.max_y - selectRect.min_y;
+
+    tempCanvas.width = contentWidth + selectRectShadowWidth * 2;
+    tempCanvas.height = contentHeight + selectRectShadowWidth * 2;
     const tempCtx = tempCanvas.getContext('2d');
     if (!tempCtx) {
         return;
     }
 
-    tempCtx.putImageData(drawLayerImageData, 0, 0);
-    tempCtx.drawImage(drawCacheLayerCanvas, -selectRect.min_x, -selectRect.min_y);
+    tempCtx.putImageData(drawLayerImageData, offsetX, offsetY);
+    tempCtx.drawImage(
+        drawCacheLayerCanvas,
+        -selectRect.min_x + offsetX,
+        -selectRect.min_y + offsetY,
+    );
+
+    if (selectRectRadius > 0) {
+        tempCtx.save();
+
+        tempCtx.beginPath();
+        tempCtx.rect(offsetX, offsetY, contentWidth, contentHeight);
+        tempCtx.roundRect(offsetX, offsetY, contentWidth, contentHeight, selectRectRadius);
+        tempCtx.clip('evenodd');
+        tempCtx.clearRect(0, 0, tempCanvas.width, tempCanvas.height);
+
+        tempCtx.restore();
+    }
+
+    if (selectRectShadowWidth > 0) {
+        tempCtx.beginPath();
+        tempCtx.rect(0, 0, tempCanvas.width, tempCanvas.height);
+        if (selectRectRadius > 0) {
+            tempCtx.roundRect(offsetX, offsetY, contentWidth, contentHeight, selectRectRadius);
+        } else {
+            tempCtx.rect(offsetX, offsetY, contentWidth, contentHeight);
+        }
+        tempCtx.clip('evenodd');
+
+        tempCtx.shadowBlur = selectRectShadowWidth;
+        tempCtx.shadowColor = 'rgba(169, 169, 169)';
+        tempCtx.fillStyle = '#000000';
+
+        tempCtx.beginPath();
+
+        if (selectRectRadius > 0) {
+            tempCtx.roundRect(offsetX, offsetY, contentWidth, contentHeight, selectRectRadius);
+        } else {
+            tempCtx.rect(offsetX, offsetY, contentWidth, contentHeight);
+        }
+
+        tempCtx.fill();
+    }
 
     return tempCanvas;
 };
@@ -121,13 +175,13 @@ export const fixedToScreen = async (
     /** 已有的 OCR 结果 */
     ocrResult: AppOcrResult | undefined,
 ) => {
-    const selectRect = selectLayerAction.getSelectRect();
-    if (!selectRect) {
+    const selectRectParams = selectLayerAction.getSelectRectParams();
+    if (!selectRectParams) {
         return;
     }
 
     // 创建一个固定的图片
-    const imageCanvasPromise = getCanvas(selectRect, drawLayerAction, drawCacheLayerAction);
+    const imageCanvasPromise = getCanvas(selectRectParams, drawLayerAction, drawCacheLayerAction);
 
     setCaptureStep(CaptureStep.Fixed);
     createDrawWindow();
@@ -147,11 +201,19 @@ export const fixedToScreen = async (
         return;
     }
 
-    await setWindowRect(appWindow, captureBoundingBoxInfo.transformWindowRect(selectRect));
+    await setWindowRect(
+        appWindow,
+        captureBoundingBoxInfo.transformWindowRect({
+            min_x: selectRectParams.rect.min_x - selectRectParams.shadowWidth,
+            min_y: selectRectParams.rect.min_y - selectRectParams.shadowWidth,
+            max_x: selectRectParams.rect.max_x + selectRectParams.shadowWidth,
+            max_y: selectRectParams.rect.max_y + selectRectParams.shadowWidth,
+        }),
+    );
     await Promise.all([
         appWindow.show(),
         appWindow.setAlwaysOnTop(true),
-        fixedContentAction.init({ canvas: imageCanvas, captureBoundingBoxInfo, ocrResult }),
+        fixedContentAction.init({ canvas: imageCanvas, captureBoundingBoxInfo, ocrResult, selectRectParams }),
     ]);
 
     // 简单加个过渡效果
@@ -199,12 +261,18 @@ export const handleOcrDetect = async (
     drawCacheLayerAction: DrawCacheLayerActionType,
     ocrBlocksAction: OcrBlocksActionType,
 ) => {
-    const selectRect = selectLayerAction.getSelectRect();
+    const selectRectParams = selectLayerAction.getSelectRectParams();
+    if (!selectRectParams) {
+        return;
+    }
+
+    const { rect: selectRect } = selectRectParams;
+
     if (!selectRect) {
         return;
     }
 
-    const imageCanvas = await getCanvas(selectRect, drawLayerAction, drawCacheLayerAction);
+    const imageCanvas = await getCanvas(selectRectParams, drawLayerAction, drawCacheLayerAction);
     if (!imageCanvas) {
         return;
     }

@@ -1,4 +1,4 @@
-import { Application, ApplicationOptions, Container, Texture } from 'pixi.js';
+import { Application, ApplicationOptions, Container, Texture, ICanvas } from 'pixi.js';
 import { RefObject } from 'react';
 import {
     renderClearCanvasAction,
@@ -15,6 +15,7 @@ import {
     BlurSpriteProps,
     renderUpdateBlurSpriteAction,
     renderDeleteBlurSpriteAction,
+    renderRenderToCanvasAction,
 } from './baseLayerRenderActions';
 import {
     BaseLayerRenderDisposeData,
@@ -31,6 +32,7 @@ import {
     BaseLayerRenderCreateBlurSpriteData,
     BaseLayerRenderUpdateBlurSpriteData,
     BaseLayerRenderDeleteBlurSpriteData,
+    BaseLayerRenderRenderToCanvasData,
 } from './workers/renderWorkerTypes';
 import { ElementRect } from '@/commands';
 
@@ -194,6 +196,37 @@ export const clearCanvasAction = async (
                 canvasContainerChildCountRef,
             );
             resolve(undefined);
+        }
+    });
+};
+
+export const renderToCanvasAction = async (
+    renderWorker: Worker | undefined,
+    canvasAppRef: RefObject<Application | undefined>,
+    selectRect: ElementRect,
+): Promise<ICanvas | undefined> => {
+    return new Promise((resolve) => {
+        if (renderWorker) {
+            const handleMessage = (event: MessageEvent<RenderResult>) => {
+                const { type, payload } = event.data;
+                if (type === BaseLayerRenderMessageType.RenderToCanvas) {
+                    resolve(payload.canvas);
+                    renderWorker.removeEventListener('message', handleMessage);
+                }
+            };
+            renderWorker.addEventListener('message', handleMessage);
+
+            const RenderToCanvasData: BaseLayerRenderRenderToCanvasData = {
+                type: BaseLayerRenderMessageType.RenderToCanvas,
+                payload: {
+                    selectRect: selectRect,
+                },
+            };
+
+            renderWorker.postMessage(RenderToCanvasData);
+        } else {
+            const result = renderRenderToCanvasAction(canvasAppRef, selectRect);
+            resolve(result);
         }
     });
 };

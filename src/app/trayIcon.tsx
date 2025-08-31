@@ -198,12 +198,7 @@ const TrayIconLoaderComponent = () => {
                     },
                     {
                         id: `${appWindow.label}-screenshot-fixedTool`,
-                        text: intl.formatMessage(
-                            { id: 'home.screenshotAfter' },
-                            {
-                                text: intl.formatMessage({ id: 'draw.fixedTool' }),
-                            },
-                        ),
+                        text: intl.formatMessage({ id: 'draw.fixedTool' }),
                         accelerator: disableShortcut
                             ? undefined
                             : formatKey(shortcutKeys[AppFunction.ScreenshotFixed].shortcutKey),
@@ -213,12 +208,7 @@ const TrayIconLoaderComponent = () => {
                     },
                     {
                         id: `${appWindow.label}-screenshot-ocr`,
-                        text: intl.formatMessage(
-                            { id: 'home.screenshotAfter' },
-                            {
-                                text: intl.formatMessage({ id: 'draw.ocrDetectTool' }),
-                            },
-                        ),
+                        text: intl.formatMessage({ id: 'draw.ocrDetectTool' }),
                         accelerator: disableShortcut
                             ? undefined
                             : formatKey(shortcutKeys[AppFunction.ScreenshotOcr].shortcutKey),
@@ -228,12 +218,7 @@ const TrayIconLoaderComponent = () => {
                     },
                     {
                         id: `${appWindow.label}-screenshot-ocr-translate`,
-                        text: intl.formatMessage(
-                            { id: 'home.screenshotAfter' },
-                            {
-                                text: intl.formatMessage({ id: 'draw.ocrTranslateTool' }),
-                            },
-                        ),
+                        text: intl.formatMessage({ id: 'draw.ocrTranslateTool' }),
                         accelerator: disableShortcut
                             ? undefined
                             : formatKey(
