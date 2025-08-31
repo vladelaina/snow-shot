@@ -65,7 +65,7 @@ export const getCanvas = async (
         tempCtx.save();
 
         tempCtx.beginPath();
-        tempCtx.rect(offsetX, offsetY, contentWidth, contentHeight);
+        tempCtx.rect(0, 0, tempCanvas.width, tempCanvas.height);
         tempCtx.roundRect(offsetX, offsetY, contentWidth, contentHeight, selectRectRadius);
         tempCtx.clip('evenodd');
         tempCtx.clearRect(0, 0, tempCanvas.width, tempCanvas.height);
