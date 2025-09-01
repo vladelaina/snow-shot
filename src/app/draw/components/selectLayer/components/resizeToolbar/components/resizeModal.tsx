@@ -1,7 +1,8 @@
 import { CaptureBoundingBoxInfo } from '@/app/draw/extra';
 import { ElementRect } from '@/commands';
-import ProForm, { ModalForm, ProFormDigit } from '@ant-design/pro-form';
-import { Col, Row, theme } from 'antd';
+import { useStateRef } from '@/hooks/useStateRef';
+import { ModalForm, ProFormDigit } from '@ant-design/pro-form';
+import { Col, Form, Row, theme } from 'antd';
 import { useImperativeHandle, useState } from 'react';
 import { FormattedMessage } from 'react-intl';
 
@@ -28,7 +29,7 @@ export const ResizeModal: React.FC<{
     onFinish: (params: ResizeModalParams) => Promise<boolean>;
 }> = ({ actionRef, onFinish }) => {
     const { token } = theme.useToken();
-    const [open, setOpen] = useState(false);
+    const [open, setOpen, openRef] = useStateRef<boolean>(false);
 
     const [selectRectLimit, setSelectRectLimit] = useState<ElementRect>({
         min_x: 0,
@@ -37,7 +38,7 @@ export const ResizeModal: React.FC<{
         max_y: 128,
     });
 
-    const [form] = ProForm.useForm();
+    const [form] = Form.useForm();
 
     useImperativeHandle(actionRef, () => {
         return {
@@ -47,6 +48,10 @@ export const ResizeModal: React.FC<{
                 shadowWidth: number,
                 captureBoundingBoxInfo: CaptureBoundingBoxInfo,
             ) => {
+                if (openRef.current) {
+                    return;
+                }
+
                 setSelectRectLimit(
                     captureBoundingBoxInfo.transformMonitorRect(captureBoundingBoxInfo.rect),
                 );
@@ -61,7 +66,7 @@ export const ResizeModal: React.FC<{
                 setOpen(true);
             },
         };
-    }, [form]);
+    }, [form, openRef, setOpen]);
 
     return (
         <ModalForm
