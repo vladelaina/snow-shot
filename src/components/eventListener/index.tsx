@@ -23,6 +23,12 @@ import { AntdContext } from '../globalLayoutExtra';
 import { appError } from '@/utils/log';
 import { debounce } from 'es-toolkit';
 import { ocrRelease } from '@/commands/ocr';
+import {
+    FIXED_CONTENT_FOCUS_MODE_CLOSE_ALL_WINDOW,
+    FIXED_CONTENT_FOCUS_MODE_CLOSE_OTHER_WINDOW,
+    FIXED_CONTENT_FOCUS_MODE_HIDE_OTHER_WINDOW,
+    FIXED_CONTENT_FOCUS_MODE_SHOW_ALL_WINDOW,
+} from '@/functions/fixedContent';
 
 type Listener = {
     event: string;
@@ -249,6 +255,23 @@ const EventListenerCore: React.FC<{ children: React.ReactNode }> = ({ children }
                 },
             });
         } else {
+            defaultListener.push({
+                event: FIXED_CONTENT_FOCUS_MODE_SHOW_ALL_WINDOW,
+                callback: async () => {},
+            });
+            defaultListener.push({
+                event: FIXED_CONTENT_FOCUS_MODE_HIDE_OTHER_WINDOW,
+                callback: async () => {},
+            });
+            defaultListener.push({
+                event: FIXED_CONTENT_FOCUS_MODE_CLOSE_OTHER_WINDOW,
+                callback: async () => {},
+            });
+            defaultListener.push({
+                event: FIXED_CONTENT_FOCUS_MODE_CLOSE_ALL_WINDOW,
+                callback: async () => {},
+            });
+
             defaultListener.push({
                 event: 'reload-app-settings',
                 callback: async () => {
