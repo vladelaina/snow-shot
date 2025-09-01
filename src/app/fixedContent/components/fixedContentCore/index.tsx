@@ -56,6 +56,13 @@ import { formatKey } from '@/utils/format';
 import { useTempInfo } from '@/hooks/useTempInfo';
 import { DrawLayer, FixedContentCoreDrawActionType } from './components/drawLayer';
 import { SelectRectParams } from '@/app/draw/components/selectLayer';
+import {
+    fixedContentFocusModeCloseAllWindow,
+    fixedContentFocusModeCloseOtherWindow,
+    fixedContentFocusModeHideOtherWindow,
+    fixedContentFocusModeShowAllWindow,
+} from '@/functions/fixedContent';
+import { HandleFocusMode } from './components/handleFocusMode';
 
 export type FixedContentInitDrawParams = {
     captureBoundingBoxInfo: CaptureBoundingBoxInfo;
@@ -1046,9 +1053,6 @@ export const FixedContentCore: React.FC<{
                     accelerator: formatKey(hotkeys?.[KeyEventKey.FixedContentEnableDraw]?.hotKey),
                     action: switchDraw,
                 },
-                {
-                    item: 'Separator',
-                },
                 enableDraw
                     ? undefined
                     : {
@@ -1062,6 +1066,32 @@ export const FixedContentCore: React.FC<{
                               switchThumbnail();
                           },
                       },
+                await Submenu.new({
+                    id: `${appWindow.label}-focusModeTool`,
+                    text: intl.formatMessage({ id: 'draw.focusMode' }),
+                    items: [
+                        {
+                            id: `${appWindow.label}-focusModeToolShowAllWindow`,
+                            text: intl.formatMessage({ id: 'draw.focusMode.showAllWindow' }),
+                            action: fixedContentFocusModeShowAllWindow,
+                        },
+                        {
+                            id: `${appWindow.label}-focusModeToolHideOtherWindow`,
+                            text: intl.formatMessage({ id: 'draw.focusMode.hideOtherWindow' }),
+                            action: fixedContentFocusModeHideOtherWindow,
+                        },
+                        {
+                            id: `${appWindow.label}-focusModeToolCloseOtherWindow`,
+                            text: intl.formatMessage({ id: 'draw.focusMode.closeOtherWindow' }),
+                            action: fixedContentFocusModeCloseOtherWindow,
+                        },
+                        {
+                            id: `${appWindow.label}-focusModeToolCloseAllWindow`,
+                            text: intl.formatMessage({ id: 'draw.focusMode.closeAllWindow' }),
+                            action: fixedContentFocusModeCloseAllWindow,
+                        },
+                    ],
+                }),
                 {
                     id: `${appWindow.label}-switchAlwaysOnTopTool`,
                     text: intl.formatMessage({
@@ -1070,6 +1100,9 @@ export const FixedContentCore: React.FC<{
                     checked: isAlwaysOnTop,
                     accelerator: formatKey(hotkeys?.[KeyEventKey.FixedContentAlwaysOnTop]?.hotKey),
                     action: switchAlwaysOnTop,
+                },
+                {
+                    item: 'Separator',
                 },
                 await Submenu.new({
                     id: `${appWindow.label}-setOpacityTool`,
@@ -1502,6 +1535,8 @@ export const FixedContentCore: React.FC<{
             onMouseMove={onDragRegionMouseMove}
             onMouseUp={onDragRegionMouseUp}
         >
+            <HandleFocusMode disabled={disabled} />
+
             <OcrResult
                 actionRef={ocrResultActionRef}
                 zIndex={1}
