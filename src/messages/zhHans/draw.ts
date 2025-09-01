@@ -128,4 +128,5 @@ export const draw = {
     'draw.radius': '圆角',
     'draw.shadowWidth': '阴影宽度',
     'draw.resizeModal': '调整大小',
+    'draw.confirm': '确定',
 };

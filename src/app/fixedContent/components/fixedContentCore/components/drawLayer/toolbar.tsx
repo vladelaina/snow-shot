@@ -37,6 +37,8 @@ import { useDrawContext } from '@/app/fullScreenDraw/extra';
 import { FixedContentWindowSize } from '../..';
 import { HistoryControls } from '@/app/draw/components/drawToolbar/components/historyControls';
 import { getButtonTypeByState } from '@/app/draw/components/drawToolbar/extra';
+import { useIntl } from 'react-intl';
+import { formatKey } from '@/utils/format';
 
 export type FixedContentCoreDrawToolbarActionType = {
     getSize: () => { width: number; height: number };
@@ -51,6 +53,7 @@ export const FixedContentCoreDrawToolbar: React.FC<{
     onConfirm: () => void;
 }> = ({ actionRef, documentSize, disabled, onConfirm }) => {
     const { token } = theme.useToken();
+    const intl = useIntl();
 
     const { updateAppSettings } = useContext(AppSettingsActionContext);
     const { getDrawCoreAction } = useDrawContext();
@@ -58,6 +61,7 @@ export const FixedContentCoreDrawToolbar: React.FC<{
 
     const [showLockDrawTool, setShowLockDrawTool, showLockDrawToolRef] = useStateRef(false);
     const [enableLockDrawTool, setEnableLockDrawTool, enableLockDrawToolRef] = useStateRef(false);
+    const [switchDrawHotKey, setSwitchDrawHotKey] = useState('');
 
     const toolbarElementRef = useRef<HTMLDivElement>(null);
 
@@ -180,8 +184,11 @@ export const FixedContentCoreDrawToolbar: React.FC<{
                 setShowLockDrawTool(!settings[AppSettingsGroup.FunctionScreenshot].lockDrawTool);
                 // 是否启用锁定绘制工具
                 setEnableLockDrawTool(settings[AppSettingsGroup.Cache].enableLockDrawTool);
+                setSwitchDrawHotKey(
+                    settings[AppSettingsGroup.KeyEvent].fixedContentEnableDraw.hotKey,
+                );
             },
-            [setEnableLockDrawTool, setShowLockDrawTool],
+            [setEnableLockDrawTool, setShowLockDrawTool, setSwitchDrawHotKey],
         ),
     );
 
@@ -237,6 +244,20 @@ export const FixedContentCoreDrawToolbar: React.FC<{
     const toolButtonProps = useMemo<ButtonProps>(() => {
         return {};
     }, []);
+
+    const confirmButtonTitle = useMemo(() => {
+        return intl.formatMessage(
+            {
+                id: 'draw.keyEventTooltip',
+            },
+            {
+                message: intl.formatMessage({
+                    id: 'draw.confirm',
+                }),
+                key: formatKey(switchDrawHotKey),
+            },
+        );
+    }, [intl, switchDrawHotKey]);
 
     return (
         <div className="fixed-content-draw-toolbar-container">
@@ -387,6 +408,7 @@ export const FixedContentCoreDrawToolbar: React.FC<{
                             />
                         }
                         type={getButtonTypeByState(false)}
+                        title={confirmButtonTitle}
                         onClick={() => {
                             onToolClick(DrawState.Confirm);
                         }}
