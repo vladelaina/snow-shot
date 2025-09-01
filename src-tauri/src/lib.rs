@@ -112,20 +112,20 @@ pub fn run() {
             {
                 // macOS 下不在 dock 显示
                 app.set_activation_policy(tauri::ActivationPolicy::Accessory);
-
-                // 监听窗口关闭事件，拦截关闭按钮
-                let window_clone = main_window.clone();
-                main_window.on_window_event(move |event| {
-                    if let tauri::WindowEvent::CloseRequested { api, .. } = event {
-                        api.prevent_close();
-
-                        // 隐藏窗口而不是关闭
-                        if let Err(e) = window_clone.hide() {
-                            log::error!("[macos] hide window error: {:?}", e);
-                        }
-                    }
-                });
             }
+
+            // 监听窗口关闭事件，拦截关闭按钮
+            let window_clone = main_window.clone();
+            main_window.on_window_event(move |event| {
+                if let tauri::WindowEvent::CloseRequested { api, .. } = event {
+                    api.prevent_close();
+
+                    // 隐藏窗口而不是关闭
+                    if let Err(e) = window_clone.hide() {
+                        log::error!("[macos] hide window error: {:?}", e);
+                    }
+                }
+            });
 
             // 如果不是自动启动，则显示窗口
             if !std::env::args().any(|arg| arg == "--auto_start") {
