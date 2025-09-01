@@ -53,7 +53,8 @@ const DrawLayerCore: React.FC<{
     };
     disabled?: boolean;
     hidden?: boolean;
-}> = ({ actionRef, documentSize, scaleInfo, disabled, hidden }) => {
+    onConfirm: () => void;
+}> = ({ actionRef, documentSize, scaleInfo, disabled, hidden, onConfirm }) => {
     const { token } = theme.useToken();
 
     const drawToolbarActionRef = useRef<FixedContentCoreDrawToolbarActionType | undefined>(
@@ -203,6 +204,9 @@ const DrawLayerCore: React.FC<{
                         actionRef={drawToolbarActionRef}
                         disabled={disabled}
                         documentSize={documentSize}
+                        onConfirm={() => {
+                            onConfirm();
+                        }}
                     />
                 </DrawCoreContext.Provider>
 

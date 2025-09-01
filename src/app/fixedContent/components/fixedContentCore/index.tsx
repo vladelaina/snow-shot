@@ -1633,6 +1633,7 @@ export const FixedContentCore: React.FC<{
                     scaleInfo={scale}
                     disabled={!enableDraw}
                     hidden={enableSelectText}
+                    onConfirm={switchDraw}
                 />
             )}
 

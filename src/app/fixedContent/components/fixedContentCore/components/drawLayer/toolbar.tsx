@@ -10,7 +10,7 @@ import {
     SerialNumberIcon,
     TextIcon,
 } from '@/components/icons';
-import { ButtonProps, Flex, theme } from 'antd';
+import { Button, ButtonProps, Flex, theme } from 'antd';
 import {
     DrawState,
     DrawStatePublisher,
@@ -27,7 +27,7 @@ import {
     useState,
 } from 'react';
 import { useStateSubscriber } from '@/hooks/useStateSubscriber';
-import { LockOutlined } from '@ant-design/icons';
+import { CheckOutlined, LockOutlined } from '@ant-design/icons';
 import { AppSettingsActionContext, AppSettingsData, AppSettingsGroup } from '@/app/contextWrap';
 import { useStateRef } from '@/hooks/useStateRef';
 import { zIndexs } from '@/utils/zIndex';
@@ -36,6 +36,7 @@ import { DrawToolbarActionType } from '@/app/fullScreenDraw/components/toolbar';
 import { useDrawContext } from '@/app/fullScreenDraw/extra';
 import { FixedContentWindowSize } from '../..';
 import { HistoryControls } from '@/app/draw/components/drawToolbar/components/historyControls';
+import { getButtonTypeByState } from '@/app/draw/components/drawToolbar/extra';
 
 export type FixedContentCoreDrawToolbarActionType = {
     getSize: () => { width: number; height: number };
@@ -47,7 +48,8 @@ export const FixedContentCoreDrawToolbar: React.FC<{
     actionRef: React.RefObject<FixedContentCoreDrawToolbarActionType | undefined>;
     documentSize: FixedContentWindowSize;
     disabled?: boolean;
-}> = ({ actionRef, documentSize, disabled }) => {
+    onConfirm: () => void;
+}> = ({ actionRef, documentSize, disabled, onConfirm }) => {
     const { token } = theme.useToken();
 
     const { updateAppSettings } = useContext(AppSettingsActionContext);
@@ -76,6 +78,11 @@ export const FixedContentCoreDrawToolbar: React.FC<{
                     false,
                 );
 
+                return;
+            }
+
+            if (drawState === DrawState.Confirm) {
+                onConfirm();
                 return;
             }
 
@@ -159,6 +166,7 @@ export const FixedContentCoreDrawToolbar: React.FC<{
             enableLockDrawToolRef,
             getDrawCoreAction,
             getDrawState,
+            onConfirm,
             setDrawState,
             showLockDrawToolRef,
             updateAppSettings,
@@ -366,6 +374,23 @@ export const FixedContentCoreDrawToolbar: React.FC<{
                     <div className="draw-toolbar-splitter" />
 
                     <HistoryControls disable={disabled ?? false} />
+
+                    <div className="draw-toolbar-splitter" />
+
+                    <Button
+                        {...toolButtonProps}
+                        icon={
+                            <CheckOutlined
+                                style={{
+                                    color: token.colorPrimary,
+                                }}
+                            />
+                        }
+                        type={getButtonTypeByState(false)}
+                        onClick={() => {
+                            onToolClick(DrawState.Confirm);
+                        }}
+                    />
                 </Flex>
             </div>
 

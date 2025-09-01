@@ -161,6 +161,8 @@ export enum DrawState {
     Fixed = 106,
     // 复制
     Copy = 107,
+    // Confirm
+    Confirm = 107001,
     // OCR
     OcrDetect = 108,
     // OCR 翻译
