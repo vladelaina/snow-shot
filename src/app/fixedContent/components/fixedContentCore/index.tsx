@@ -597,6 +597,10 @@ export const FixedContentCore: React.FC<{
             );
         }
 
+        if (!switchThumbnailAnimationRef.current.isDone()) {
+            return;
+        }
+
         const appWindow = appWindowRef.current;
         if (!appWindow) {
             return;
