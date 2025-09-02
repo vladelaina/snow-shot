@@ -1,8 +1,8 @@
 import { CaptureBoundingBoxInfo } from '@/app/draw/extra';
 import { ElementRect } from '@/commands';
 import { useStateRef } from '@/hooks/useStateRef';
-import { ModalForm, ProFormDigit } from '@ant-design/pro-form';
-import { Col, Form, Row, theme } from 'antd';
+import ProForm, { ModalForm, ProFormDigit } from '@ant-design/pro-form';
+import { Col, ColorPicker, Form, Row, theme } from 'antd';
 import { useImperativeHandle, useState } from 'react';
 import { FormattedMessage } from 'react-intl';
 
@@ -10,7 +10,7 @@ export type ResizeModalActionType = {
     show: (
         selectedRect: ElementRect,
         radius: number,
-        shadowWidth: number,
+        shadowConfig: { shadowWidth: number; shadowColor: string },
         captureBoundingBoxInfo: CaptureBoundingBoxInfo,
     ) => void;
 };
@@ -22,6 +22,7 @@ export type ResizeModalParams = {
     height: number;
     radius: number;
     shadowWidth: number;
+    shadowColor: unknown;
 };
 
 export const ResizeModal: React.FC<{
@@ -45,7 +46,7 @@ export const ResizeModal: React.FC<{
             show: (
                 selectedRect: ElementRect,
                 radius: number,
-                shadowWidth: number,
+                shadowConfig: { shadowWidth: number; shadowColor: string },
                 captureBoundingBoxInfo: CaptureBoundingBoxInfo,
             ) => {
                 if (openRef.current) {
@@ -61,7 +62,8 @@ export const ResizeModal: React.FC<{
                     width: selectedRect.max_x - selectedRect.min_x,
                     height: selectedRect.max_y - selectedRect.min_y,
                     radius,
-                    shadowWidth,
+                    shadowWidth: shadowConfig.shadowWidth,
+                    shadowColor: shadowConfig.shadowColor,
                 });
                 setOpen(true);
             },
@@ -136,6 +138,9 @@ export const ResizeModal: React.FC<{
                         fieldProps={{ precision: 0 }}
                     />
                 </Col>
+            </Row>
+
+            <Row gutter={token.margin}>
                 <Col span={12}>
                     <ProFormDigit
                         name="shadowWidth"
@@ -145,6 +150,14 @@ export const ResizeModal: React.FC<{
                         fieldProps={{ precision: 0 }}
                     />
                 </Col>
+
+                <ProForm.Item
+                    name="shadowColor"
+                    label={<FormattedMessage id="draw.shadowColor" />}
+                    required={false}
+                >
+                    <ColorPicker showText placement="bottom" disabledAlpha />
+                </ProForm.Item>
             </Row>
         </ModalForm>
     );

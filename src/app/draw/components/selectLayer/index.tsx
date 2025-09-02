@@ -72,6 +72,7 @@ export type SelectRectParams = {
     rect: ElementRect;
     radius: number;
     shadowWidth: number;
+    shadowColor: string;
 };
 
 export type SelectLayerActionType = {
@@ -102,7 +103,10 @@ const SelectLayerCore: React.FC<SelectLayerProps> = ({ actionRef }) => {
 
     const [findChildrenElements, setFindChildrenElements] = useState(false);
     const [selectRectRadiusCache, setSelectRectRadiusCache] = useState(0);
-    const [selectRectShadowWidthCache, setSelectRectShadowWidthCache] = useState(0);
+    const [selectRectShadowConfigCache, setSelectRectShadowConfigCache] = useState({
+        shadowWidth: 0,
+        shadowColor: '#00000000',
+    });
     const fullScreenAuxiliaryLineColorRef = useRef<string | undefined>(undefined);
     const monitorCenterAuxiliaryLineColorRef = useRef<string | undefined>(undefined);
     const { updateAppSettings } = useContext(AppSettingsActionContext);
@@ -113,7 +117,10 @@ const SelectLayerCore: React.FC<SelectLayerProps> = ({ actionRef }) => {
                 settings[AppSettingsGroup.FunctionScreenshot].findChildrenElements,
             );
             setSelectRectRadiusCache(settings[AppSettingsGroup.Cache].selectRectRadius);
-            setSelectRectShadowWidthCache(settings[AppSettingsGroup.Cache].selectRectShadowWidth);
+            setSelectRectShadowConfigCache({
+                shadowWidth: settings[AppSettingsGroup.Cache].selectRectShadowWidth,
+                shadowColor: settings[AppSettingsGroup.Cache].selectRectShadowColor,
+            });
             const fullScreenAuxiliaryLineColor =
                 settings[AppSettingsGroup.Screenshot].fullScreenAuxiliaryLineColor;
             if (new Color(fullScreenAuxiliaryLineColor).alpha() === 0) {
@@ -156,7 +163,10 @@ const SelectLayerCore: React.FC<SelectLayerProps> = ({ actionRef }) => {
     const layerContainerElementRef = useRef<HTMLDivElement | null>(null);
     const selectLayerCanvasRef = useRef<HTMLCanvasElement | null>(null);
     const selectRectRadiusRef = useRef(0); // 选区圆角
-    const selectRectShadowWidthRef = useRef(0); // 选区阴影宽度
+    const selectRectShadowConfigRef = useRef({
+        shadowWidth: 0,
+        shadowColor: '#00000000',
+    }); // 选区阴影宽度
     const selectLayerCanvasContextRef = useRef<CanvasRenderingContext2D | null>(null);
     const elementsListRef = useRef<ElementRect[]>([]); // 窗口元素的列表
     const elementsIndexWindowIdMapRef = useRef<Map<number, number>>(new Map()); // 窗口元素对应的窗口 ID
@@ -1148,7 +1158,8 @@ const SelectLayerCore: React.FC<SelectLayerProps> = ({ actionRef }) => {
                 return {
                     rect: selectRect,
                     radius: selectRectRadiusRef.current,
-                    shadowWidth: selectRectShadowWidthRef.current,
+                    shadowWidth: selectRectShadowConfigRef.current.shadowWidth,
+                    shadowColor: selectRectShadowConfigRef.current.shadowColor,
                 };
             },
             setEnable: (enable: boolean) => {
@@ -1337,10 +1348,10 @@ const SelectLayerCore: React.FC<SelectLayerProps> = ({ actionRef }) => {
         }
     }, [selectRectRadiusCache, onRadiusChange]);
 
-    const onShadowWidthChange = useCallback(
-        (shadowWidth: number) => {
-            selectRectShadowWidthRef.current = shadowWidth;
-            resizeToolbarActionRef.current?.setShadowWidth(shadowWidth);
+    const onShadowConfigChange = useCallback(
+        (shadowConfig: { shadowWidth: number; shadowColor: string }) => {
+            selectRectShadowConfigRef.current = shadowConfig;
+            resizeToolbarActionRef.current?.setShadowConfig(shadowConfig);
 
             const selectRect = getSelectRect();
             if (selectRect) {
@@ -1352,7 +1363,10 @@ const SelectLayerCore: React.FC<SelectLayerProps> = ({ actionRef }) => {
                 );
                 updateAppSettings(
                     AppSettingsGroup.Cache,
-                    { selectRectShadowWidth: shadowWidth },
+                    {
+                        selectRectShadowWidth: shadowConfig.shadowWidth,
+                        selectRectShadowColor: shadowConfig.shadowColor,
+                    },
                     true,
                     true,
                     false,
@@ -1364,10 +1378,15 @@ const SelectLayerCore: React.FC<SelectLayerProps> = ({ actionRef }) => {
         [drawCanvasSelectRect, getSelectRect, updateAppSettings],
     );
     useEffect(() => {
-        if (selectRectShadowWidthRef.current !== selectRectShadowWidthCache) {
-            onShadowWidthChange(selectRectShadowWidthCache);
+        if (
+            selectRectShadowConfigRef.current.shadowWidth !==
+                selectRectShadowConfigCache.shadowWidth ||
+            selectRectShadowConfigRef.current.shadowColor !==
+                selectRectShadowConfigCache.shadowColor
+        ) {
+            onShadowConfigChange(selectRectShadowConfigCache);
         }
-    }, [selectRectShadowWidthCache, onShadowWidthChange]);
+    }, [selectRectShadowConfigCache, onShadowConfigChange]);
 
     const getCaptureBoundingBoxInfo = useCallback(
         () => captureBoundingBoxInfoRef.current,
@@ -1379,7 +1398,7 @@ const SelectLayerCore: React.FC<SelectLayerProps> = ({ actionRef }) => {
                 actionRef={resizeToolbarActionRef}
                 onSelectedRectChange={onSelectedRectChange}
                 onRadiusChange={onRadiusChange}
-                onShadowWidthChange={onShadowWidthChange}
+                onShadowConfigChange={onShadowConfigChange}
                 getCaptureBoundingBoxInfo={getCaptureBoundingBoxInfo}
             />
 

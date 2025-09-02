@@ -158,6 +158,8 @@ export type AppSettingsData = {
         selectRectRadius: number;
         /** 截图选区阴影宽度 */
         selectRectShadowWidth: number;
+        /** 截图选区阴影颜色 */
+        selectRectShadowColor: string;
     };
     [AppSettingsGroup.DrawToolbarKeyEvent]: Record<
         DrawToolbarKeyEventKey,
@@ -352,6 +354,7 @@ export const defaultAppSettingsData: AppSettingsData = {
         disableArrowPicker: true,
         selectRectRadius: 0,
         selectRectShadowWidth: 0,
+        selectRectShadowColor: '#8c8c8c',
     },
     [AppSettingsGroup.DrawToolbarKeyEvent]: defaultDrawToolbarKeyEventSettings,
     [AppSettingsGroup.KeyEvent]: defaultKeyEventSettings,
@@ -719,6 +722,11 @@ const ContextWrapCore: React.FC<{ children: React.ReactNode }> = ({ children }) 
                             ? Math.min(Math.max(newSettings.selectRectShadowWidth, 0), 32)
                             : (prevSettings?.selectRectShadowWidth ??
                               defaultAppSettingsData[group].selectRectShadowWidth),
+                    selectRectShadowColor:
+                        typeof newSettings?.selectRectShadowColor === 'string'
+                            ? newSettings.selectRectShadowColor
+                            : (prevSettings?.selectRectShadowColor ??
+                              defaultAppSettingsData[group].selectRectShadowColor),
                 };
             } else if (group === AppSettingsGroup.Screenshot) {
                 newSettings = newSettings as AppSettingsData[typeof group];

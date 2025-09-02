@@ -27,6 +27,7 @@ export const getCanvas = async (
         rect: selectRect,
         radius: selectRectRadius,
         shadowWidth: selectRectShadowWidth,
+        shadowColor: selectRectShadowColor,
     } = selectRectParams;
 
     drawCacheLayerAction.finishDraw();
@@ -84,8 +85,8 @@ export const getCanvas = async (
         tempCtx.clip('evenodd');
 
         tempCtx.shadowBlur = selectRectShadowWidth;
-        tempCtx.shadowColor = 'rgba(169, 169, 169)';
-        tempCtx.fillStyle = '#000000';
+        tempCtx.shadowColor = selectRectShadowColor;
+        tempCtx.fillStyle = selectRectShadowColor;
 
         tempCtx.beginPath();
 
@@ -213,7 +214,12 @@ export const fixedToScreen = async (
     await Promise.all([
         appWindow.show(),
         appWindow.setAlwaysOnTop(true),
-        fixedContentAction.init({ canvas: imageCanvas, captureBoundingBoxInfo, ocrResult, selectRectParams }),
+        fixedContentAction.init({
+            canvas: imageCanvas,
+            captureBoundingBoxInfo,
+            ocrResult,
+            selectRectParams,
+        }),
     ]);
 
     // 简单加个过渡效果

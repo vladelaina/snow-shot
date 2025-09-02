@@ -20,12 +20,13 @@ import { useCallbackRender } from '@/hooks/useCallbackRender';
 import { SelectState } from '../../extra';
 import { ResizeModal, ResizeModalActionType, ResizeModalParams } from './components/resizeModal';
 import { useIntl } from 'react-intl';
+import { AggregationColor } from 'antd/es/color-picker/color';
 
 export type ResizeToolbarActionType = {
     updateStyle: (selectedRect: ElementRect) => void;
     setSelectedRect: (selectedRect: ElementRect) => void;
     setRadius: (radius: number) => void;
-    setShadowWidth: (shadowWidth: number) => void;
+    setShadowConfig: (shadowConfig: { shadowWidth: number; shadowColor: string }) => void;
     setSelectState: (selectState: SelectState) => void;
 };
 
@@ -33,13 +34,13 @@ export const ResizeToolbar: React.FC<{
     actionRef: React.RefObject<ResizeToolbarActionType | undefined>;
     onSelectedRectChange: (selectedRect: ElementRect) => void;
     onRadiusChange: (radius: number) => void;
-    onShadowWidthChange: (shadowWidth: number) => void;
+    onShadowConfigChange: (shadowConfig: { shadowWidth: number; shadowColor: string }) => void;
     getCaptureBoundingBoxInfo: () => CaptureBoundingBoxInfo | undefined;
 }> = ({
     actionRef,
     onSelectedRectChange,
     onRadiusChange,
-    onShadowWidthChange,
+    onShadowConfigChange,
     getCaptureBoundingBoxInfo,
 }) => {
     const { token } = theme.useToken();
@@ -54,7 +55,10 @@ export const ResizeToolbar: React.FC<{
         max_y: 0,
     });
     const [radius, setRadius, radiusRef] = useStateRef(0);
-    const [shadowWidth, setShadowWidth, shadowWidthRef] = useStateRef(0);
+    const [shadowConfig, setShadowConfig, shadowConfigRef] = useStateRef({
+        shadowWidth: 0,
+        shadowColor: '#00000000',
+    });
     const [selectState, setSelectState] = useState(SelectState.Auto);
 
     const updateStyle = useCallback(
@@ -151,14 +155,14 @@ export const ResizeToolbar: React.FC<{
             setRadius: (radius: number) => {
                 setRadius(radius);
             },
-            setShadowWidth: (shadowWidth: number) => {
-                setShadowWidth(shadowWidth);
+            setShadowConfig: (shadowConfig: { shadowWidth: number; shadowColor: string }) => {
+                setShadowConfig(shadowConfig);
             },
             setSelectState: (selectState: SelectState) => {
                 setSelectState(selectState);
             },
         };
-    }, [setRadius, setSelectedRect, setShadowWidth, updateStyle]);
+    }, [setRadius, setSelectedRect, setShadowConfig, updateStyle]);
 
     const updateSelectedRectCore = useCallback(
         (delta: ElementRect) => {
@@ -235,9 +239,15 @@ export const ResizeToolbar: React.FC<{
     const changeShadowWidthCore = useCallback(
         (event: React.WheelEvent<HTMLDivElement>) => {
             const deltaValue = event.deltaY > 0 ? -1 : 1;
-            onShadowWidthChange(Math.min(Math.max(0, shadowWidthRef.current + deltaValue), 32));
+            onShadowConfigChange({
+                shadowWidth: Math.min(
+                    Math.max(0, shadowConfigRef.current.shadowWidth + deltaValue),
+                    32,
+                ),
+                shadowColor: shadowConfigRef.current.shadowColor,
+            });
         },
-        [onShadowWidthChange, shadowWidthRef],
+        [onShadowConfigChange, shadowConfigRef],
     );
     const changeShadowWidth = useCallbackRender(changeShadowWidthCore);
 
@@ -251,13 +261,17 @@ export const ResizeToolbar: React.FC<{
         resizeModalActionRef.current?.show(
             selectedRect,
             radius,
-            shadowWidth,
+            shadowConfig,
             captureBoundingBoxInfo,
         );
-    }, [getCaptureBoundingBoxInfo, selectedRect, radius, shadowWidth]);
+    }, [getCaptureBoundingBoxInfo, selectedRect, radius, shadowConfig]);
 
     const onFinish = useCallback(
         async (params: ResizeModalParams) => {
+            if (typeof params.shadowColor === 'object') {
+                params.shadowColor = (params.shadowColor as AggregationColor).toHexString();
+            }
+
             onSelectedRectChange({
                 min_x: params.minX,
                 min_y: params.minY,
@@ -265,11 +279,14 @@ export const ResizeToolbar: React.FC<{
                 max_y: params.minY + params.height,
             });
             onRadiusChange(params.radius);
-            onShadowWidthChange(params.shadowWidth);
+            onShadowConfigChange({
+                shadowWidth: params.shadowWidth,
+                shadowColor: params.shadowColor as string,
+            });
 
             return true;
         },
-        [onRadiusChange, onSelectedRectChange, onShadowWidthChange],
+        [onRadiusChange, onSelectedRectChange, onShadowConfigChange],
     );
     return (
         <div className="draw-resize-toolbar" ref={resizeToolbarRef} onClick={showResizeModal}>
@@ -360,7 +377,7 @@ export const ResizeToolbar: React.FC<{
                                             top: '0.08em',
                                         }}
                                     />
-                                    {shadowWidth}
+                                    {shadowConfig.shadowWidth}
                                 </div>
                                 <div className="draw-resize-toolbar-unit">{`px`}</div>
                             </div>

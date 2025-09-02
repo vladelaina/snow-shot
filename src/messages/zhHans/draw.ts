@@ -127,6 +127,7 @@ export const draw = {
     'draw.height': '高度',
     'draw.radius': '圆角',
     'draw.shadowWidth': '阴影宽度',
+    'draw.shadowColor': '阴影颜色',
     'draw.resizeModal': '调整大小',
     'draw.confirm': '确定',
 };
