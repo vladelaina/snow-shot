@@ -39,6 +39,7 @@ import { zIndexs } from '@/utils/zIndex';
 import { useAppSettingsLoad } from '@/hooks/useAppSettingsLoad';
 import * as tauriOs from '@tauri-apps/plugin-os';
 import { useDrawContext } from '../../extra';
+import { HistoryControls } from '@/app/draw/components/drawToolbar/components/historyControls';
 
 export type DrawToolbarActionType = {
     setTool: (drawState: DrawState) => void;
@@ -105,6 +106,12 @@ export const FullScreenDrawToolbar: React.FC<{
                         locked: toolLocked,
                     });
                     break;
+                case DrawState.Diamond:
+                    drawCoreAction?.setActiveTool({
+                        type: 'diamond',
+                        locked: toolLocked,
+                    });
+                    break;
                 case DrawState.Ellipse:
                     drawCoreAction?.setActiveTool({
                         type: 'ellipse',
@@ -114,6 +121,12 @@ export const FullScreenDrawToolbar: React.FC<{
                 case DrawState.Arrow:
                     drawCoreAction?.setActiveTool({
                         type: 'arrow',
+                        locked: toolLocked,
+                    });
+                    break;
+                case DrawState.Line:
+                    drawCoreAction?.setActiveTool({
+                        type: 'line',
                         locked: toolLocked,
                     });
                     break;
@@ -443,6 +456,8 @@ export const FullScreenDrawToolbar: React.FC<{
                             fullScreenDrawChangeMouseThrough();
                         }}
                     />
+
+                    <HistoryControls hidden={true} disable={false} />
                 </Flex>
             </div>
 
