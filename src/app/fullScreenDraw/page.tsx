@@ -115,6 +115,9 @@ const FullScreenDrawPage = () => {
     const drawContextValue = useMemo<DrawContextType>(() => {
         return {
             getDrawCoreAction: () => drawCoreActionRef.current,
+            setTool: (drawState: DrawState) => {
+                toolbarActionRef.current?.setTool(drawState);
+            },
         };
     }, []);
 

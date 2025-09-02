@@ -1,6 +1,7 @@
 import { AppState, ExcalidrawActionType } from '@mg-chao/excalidraw/types';
 import { ExcalidrawImperativeAPI } from '@mg-chao/excalidraw/types';
 import { ElementRect } from '@/commands';
+import { DrawCoreActionType } from '@/app/fullScreenDraw/components/drawCore/extra';
 
 export type DrawCacheLayerActionType = {
     setActiveTool: ExcalidrawImperativeAPI['setActiveTool'];
@@ -16,4 +17,5 @@ export type DrawCacheLayerActionType = {
     getExcalidrawAPI: () => ExcalidrawImperativeAPI | undefined;
     finishDraw: () => void;
     clearHistory: () => void;
+    getDrawCoreAction: () => DrawCoreActionType | undefined;
 };

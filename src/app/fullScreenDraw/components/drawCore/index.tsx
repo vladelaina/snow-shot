@@ -667,6 +667,15 @@ const DrawCoreComponent: React.FC<{
                             align-items: center;
                         }
 
+                        .draw-core-layer :global(.excalidraw .subtool-radio-button-icon) {
+                            height: 100%;
+                            display: flex;
+                            align-items: center;
+                            padding-inline: ${token.paddingXS}px;
+                            width: var(--default-icon-size);
+                            font-size: var(--default-icon-size);
+                        }
+
                         .draw-core-layer :global(.excalidraw .ant-radio-button-wrapper) {
                             padding-inline: ${0}px;
                         }
