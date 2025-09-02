@@ -117,6 +117,12 @@ export const FixedContentCoreDrawToolbar: React.FC<{
                         locked: toolLocked,
                     });
                     break;
+                case DrawState.Diamond:
+                    drawCoreAction?.setActiveTool({
+                        type: 'diamond',
+                        locked: toolLocked,
+                    });
+                    break;
                 case DrawState.Ellipse:
                     drawCoreAction?.setActiveTool({
                         type: 'ellipse',
@@ -126,6 +132,12 @@ export const FixedContentCoreDrawToolbar: React.FC<{
                 case DrawState.Arrow:
                     drawCoreAction?.setActiveTool({
                         type: 'arrow',
+                        locked: toolLocked,
+                    });
+                    break;
+                case DrawState.Line:
+                    drawCoreAction?.setActiveTool({
+                        type: 'line',
                         locked: toolLocked,
                     });
                     break;
