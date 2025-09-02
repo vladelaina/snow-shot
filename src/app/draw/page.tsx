@@ -83,6 +83,10 @@ import { CaptureHistoryActionType, CaptureHistoryController } from './components
 import { AntdContext } from '@/components/globalLayoutExtra';
 import { appError } from '@/utils/log';
 import { NonDeletedExcalidrawElement } from '@mg-chao/excalidraw/element/types';
+import {
+    DrawContext as CommonDrawContext,
+    DrawContextType as CommonDrawContextType,
+} from '../fullScreenDraw/extra';
 
 const DrawCacheLayer = dynamic(
     async () => (await import('./components/drawCacheLayer')).DrawCacheLayer,
@@ -818,6 +822,14 @@ const DrawPageCore: React.FC<{
             captureHistoryActionRef,
         };
     }, [finishCapture]);
+    const commonDrawContextValue = useMemo<CommonDrawContextType>(() => {
+        return {
+            getDrawCoreAction: () => drawCacheLayerActionRef.current?.getDrawCoreAction(),
+            setTool: (drawState: DrawState) => {
+                drawToolbarActionRef.current?.onToolClick(drawState);
+            },
+        };
+    }, []);
 
     useEffect(() => {
         const handleMouseMove = (e: MouseEvent) => {
@@ -932,48 +944,50 @@ const DrawPageCore: React.FC<{
     }, []);
 
     return (
-        <DrawContext.Provider value={drawContextValue}>
-            <div
-                className={styles.layerContainer}
-                ref={layerContainerRef}
-                onDoubleClick={onDoubleClick}
-                onClick={onDoubleClickFirstClick}
-            >
-                <CaptureHistoryController actionRef={captureHistoryActionRef} />
-
-                <ExtraTool finishCapture={finishCapture} />
-
-                <OcrBlocks actionRef={ocrBlocksActionRef} finishCapture={finishCapture} />
-
-                <div className={styles.drawLayerWrap} ref={drawLayerWrapRef}>
-                    <DrawLayer actionRef={drawLayerActionRef} />
-                    <DrawCacheLayer actionRef={drawCacheLayerActionRef} />
-                </div>
-                <SelectLayer actionRef={selectLayerActionRef} />
-                <DrawToolbar
-                    actionRef={drawToolbarActionRef}
-                    onCancel={finishCapture}
-                    onSave={onSave}
-                    onFixed={onFixed}
-                    onCopyToClipboard={onCopyToClipboard}
-                    onOcrDetect={onOcrDetect}
-                    onTopWindow={onTopWindow}
-                />
-                <ColorPicker
-                    onCopyColor={() => {
-                        finishCapture();
-                    }}
-                    actionRef={colorPickerActionRef}
-                />
-                <StatusBar />
-
+        <CommonDrawContext.Provider value={commonDrawContextValue}>
+            <DrawContext.Provider value={drawContextValue}>
                 <div
-                    ref={circleCursorRef}
-                    className={styles.drawToolbarCursor}
-                    style={{ zIndex: zIndexs.Draw_Cursor }}
-                />
-            </div>
-        </DrawContext.Provider>
+                    className={styles.layerContainer}
+                    ref={layerContainerRef}
+                    onDoubleClick={onDoubleClick}
+                    onClick={onDoubleClickFirstClick}
+                >
+                    <CaptureHistoryController actionRef={captureHistoryActionRef} />
+
+                    <ExtraTool finishCapture={finishCapture} />
+
+                    <OcrBlocks actionRef={ocrBlocksActionRef} finishCapture={finishCapture} />
+
+                    <div className={styles.drawLayerWrap} ref={drawLayerWrapRef}>
+                        <DrawLayer actionRef={drawLayerActionRef} />
+                        <DrawCacheLayer actionRef={drawCacheLayerActionRef} />
+                    </div>
+                    <SelectLayer actionRef={selectLayerActionRef} />
+                    <DrawToolbar
+                        actionRef={drawToolbarActionRef}
+                        onCancel={finishCapture}
+                        onSave={onSave}
+                        onFixed={onFixed}
+                        onCopyToClipboard={onCopyToClipboard}
+                        onOcrDetect={onOcrDetect}
+                        onTopWindow={onTopWindow}
+                    />
+                    <ColorPicker
+                        onCopyColor={() => {
+                            finishCapture();
+                        }}
+                        actionRef={colorPickerActionRef}
+                    />
+                    <StatusBar />
+
+                    <div
+                        ref={circleCursorRef}
+                        className={styles.drawToolbarCursor}
+                        style={{ zIndex: zIndexs.Draw_Cursor }}
+                    />
+                </div>
+            </DrawContext.Provider>
+        </CommonDrawContext.Provider>
     );
 };
 

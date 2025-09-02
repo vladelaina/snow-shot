@@ -144,6 +144,9 @@ const DrawLayerCore: React.FC<{
     const drawContextValue = useMemo<DrawContextType>(() => {
         return {
             getDrawCoreAction: () => drawCoreActionRef.current,
+            setTool: (drawState: DrawState) => {
+                drawToolbarActionRef.current?.setTool(drawState);
+            },
         };
     }, []);
 

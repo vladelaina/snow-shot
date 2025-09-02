@@ -291,6 +291,7 @@ export const FullScreenDrawToolbar: React.FC<{
                         icon={<RectIcon style={{ fontSize: '1.08em' }} />}
                         drawState={DrawState.Rect}
                         buttonProps={toolButtonProps}
+                        extraDrawState={[DrawState.Diamond]}
                         onClick={() => {
                             onToolClick(DrawState.Rect);
                         }}

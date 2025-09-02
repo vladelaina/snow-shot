@@ -105,6 +105,9 @@ const DrawCacheLayerCore: React.FC<{
                 return drawCoreActionRef.current?.getExcalidrawAPI();
             },
             clearHistory,
+            getDrawCoreAction: () => {
+                return drawCoreActionRef.current;
+            },
         }),
         [clearHistory, finishDraw, setExcalidrawEvent],
     );

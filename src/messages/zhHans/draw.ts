@@ -131,4 +131,5 @@ export const draw = {
     'draw.resizeModal': '调整大小',
     'draw.confirm': '确定',
     'draw.serialNumber': '序号',
+    'draw.drawStyleTool': '绘制样式',
 };

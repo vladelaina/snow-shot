@@ -57,7 +57,6 @@ import {
     AppSettingsPublisher,
     CanHiddenToolSet,
 } from '@/app/contextWrap';
-import { DrawSubTools } from './components/tools/drawSubTools';
 import { debounce } from 'es-toolkit';
 import {
     DrawState,
@@ -539,8 +538,6 @@ const DrawToolbarCore: React.FC<DrawToolbarProps> = ({
         >
             <DrawToolbarContext.Provider value={drawToolbarContextValue}>
                 <div ref={drawToolbarOpacityWrapRef}>
-                    <DrawSubTools onToolClick={onToolClick} />
-
                     <div
                         onMouseEnter={() => {
                             setDrawToolbarState({ ...getDrawToolbarState(), mouseHover: true });

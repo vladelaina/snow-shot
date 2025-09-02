@@ -9,6 +9,7 @@ import { layerButtonRender } from './layerButtonRender';
 import { ButtonList } from './buttonList';
 import { RadioSelection } from './radioSelection';
 import SerialNumberEditor from './serialNumberEditor';
+import SubToolEditor from './SubToolEditor';
 
 export const pickerRenders: ExcalidrawPropsCustomOptions['pickerRenders'] = {
     colorPickerTopPickesButtonRender,
@@ -22,6 +23,7 @@ export const pickerRenders: ExcalidrawPropsCustomOptions['pickerRenders'] = {
     elementBackgroundColors: ['transparent', '#ffccc7', '#d9f7be', '#bae0ff', '#fff1b8'],
     ButtonList: ButtonList,
     SerialNumberEditor,
+    SubToolEditor,
 };
 
 export const layoutRenders: ExcalidrawPropsCustomOptions['layoutRenders'] = {
