@@ -16,6 +16,7 @@
     "global-shortcut:allow-unregister-all",
     "autostart:default",
     "autostart:default",
-    "autostart:default"
+    "autostart:default",
+    "window-state:default"
   ]
 }
