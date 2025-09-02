@@ -175,7 +175,6 @@ const DrawCacheLayerCore: React.FC<{
                 zIndex={zIndexs.Draw_DrawCacheLayer}
                 layoutMenuZIndex={zIndexs.Draw_ExcalidrawToolbar}
                 excalidrawCustomOptions={excalidrawCustomOptions}
-                appStateStorageKey={'draw-cache-layer'}
             />
         </DrawCoreContext.Provider>
     );

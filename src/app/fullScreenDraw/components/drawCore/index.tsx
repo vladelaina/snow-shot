@@ -34,7 +34,10 @@ import { ElementRect } from '@/commands';
 import { ExcalidrawAppStateStore } from '@/utils/appStore';
 import { debounce } from 'es-toolkit';
 import { useHistory } from './components/historyContext';
-import { SerialNumberTool } from '@/app/fullScreenDraw/components/drawCore/components/serialNumberTool';
+import {
+    SerialNumberContextProvider,
+    SerialNumberTool,
+} from '@/app/fullScreenDraw/components/drawCore/components/serialNumberTool';
 import { ExcalidrawElement } from '@mg-chao/excalidraw/element/types';
 import { usePlatform } from '@/hooks/usePlatform';
 
@@ -451,10 +454,10 @@ const DrawCoreComponent: React.FC<{
                 storageAppState[item as keyof AppState] = value;
             });
 
-        await excalidrawAppStateStoreRef.current!.set(storageKey, {
+        await excalidrawAppStateStoreRef.current!.set(appStateStorageKey, {
             appState: storageAppState,
         });
-    }, []);
+    }, [appStateStorageKey]);
     const saveAppStateDebounce = useMemo(() => debounce(saveAppState, 1000), [saveAppState]);
 
     const getExtraTools = useCallback<
@@ -571,122 +574,124 @@ const DrawCoreComponent: React.FC<{
 
     return (
         <>
-            <div ref={drawCacheLayerElementRef} className="draw-core-layer">
-                <Excalidraw
-                    actionRef={excalidrawActionRef}
-                    initialData={initialData}
-                    handleKeyboardGlobally
-                    onPointerDown={onPointerDown}
-                    onPointerUp={onPointerUp}
-                    excalidrawAPI={excalidrawAPICallback}
-                    customOptions={excalidrawCustomOptions}
-                    onChange={excalidrawOnChange}
-                    langCode={excalidrawLangCode}
-                />
-                {/* macOS 下 Ctrl、Shift、Command 等键浏览器不会响应，特殊处理下 */}
-                {currentPlatform !== 'macos' && <ExcalidrawKeyEventHandler />}
+            <SerialNumberContextProvider>
+                <div ref={drawCacheLayerElementRef} className="draw-core-layer">
+                    <Excalidraw
+                        actionRef={excalidrawActionRef}
+                        initialData={initialData}
+                        handleKeyboardGlobally
+                        onPointerDown={onPointerDown}
+                        onPointerUp={onPointerUp}
+                        excalidrawAPI={excalidrawAPICallback}
+                        customOptions={excalidrawCustomOptions}
+                        onChange={excalidrawOnChange}
+                        langCode={excalidrawLangCode}
+                    />
+                    {/* macOS 下 Ctrl、Shift、Command 等键浏览器不会响应，特殊处理下 */}
+                    {currentPlatform !== 'macos' && <ExcalidrawKeyEventHandler />}
 
-                <SerialNumberTool />
+                    <SerialNumberTool />
 
-                <style jsx>{`
-                    .draw-core-layer {
-                        top: 0;
-                        left: 0;
-                        width: 100%;
-                        height: 100%;
-                    }
-
-                    .draw-core-layer :global(.excalidraw .layer-ui__wrapper) {
-                        z-index: unset !important;
-                    }
-
-                    .draw-core-layer :global(.excalidraw .layout-menu-render) {
-                        --popup-bg-color: ${token.colorBgContainer};
-                    }
-
-                    .draw-core-layer :global(.excalidraw .layout-menu-render .picker) {
-                        box-shadow: 0 0 3px 0px ${token.colorInfoHover};
-                    }
-
-                    .draw-core-layer :global(.excalidraw .layout-menu-render) {
-                        position: fixed;
-                        z-index: ${layoutMenuZIndex};
-                        left: 0;
-                        top: 0;
-                        box-sizing: border-box;
-                        background-color: ${token.colorBgContainer};
-                        transition: opacity ${token.motionDurationFast} ${token.motionEaseInOut};
-                        box-shadow: 0 0 3px 0px ${token.colorPrimaryHover};
-                        color: ${token.colorText};
-                        border-radius: ${token.borderRadiusLG}px;
-                        animation: slideIn ${token.motionDurationFast} ${token.motionEaseInOut};
-                    }
-
-                    @keyframes slideIn {
-                        from {
-                            opacity: 0;
+                    <style jsx>{`
+                        .draw-core-layer {
+                            top: 0;
+                            left: 0;
+                            width: 100%;
+                            height: 100%;
                         }
-                        to {
-                            opacity: 1;
+
+                        .draw-core-layer :global(.excalidraw .layer-ui__wrapper) {
+                            z-index: unset !important;
                         }
-                    }
 
-                    .draw-core-layer :global(.layout-menu-render-drag-button) {
-                        text-align: center;
-                        margin-top: ${token.marginXS}px;
-                        margin-bottom: -${token.marginXS}px;
-                    }
+                        .draw-core-layer :global(.excalidraw .layout-menu-render) {
+                            --popup-bg-color: ${token.colorBgContainer};
+                        }
 
-                    .draw-core-layer :global(.layout-menu-render-drag-button > span) {
-                        transform: rotate(90deg);
-                    }
+                        .draw-core-layer :global(.excalidraw .layout-menu-render .picker) {
+                            box-shadow: 0 0 3px 0px ${token.colorInfoHover};
+                        }
 
-                    .draw-core-layer :global(.Island.App-menu__left) {
-                        --text-primary-color: ${token.colorText};
+                        .draw-core-layer :global(.excalidraw .layout-menu-render) {
+                            position: fixed;
+                            z-index: ${layoutMenuZIndex};
+                            left: 0;
+                            top: 0;
+                            box-sizing: border-box;
+                            background-color: ${token.colorBgContainer};
+                            transition: opacity ${token.motionDurationFast} ${token.motionEaseInOut};
+                            box-shadow: 0 0 3px 0px ${token.colorPrimaryHover};
+                            color: ${token.colorText};
+                            border-radius: ${token.borderRadiusLG}px;
+                            animation: slideIn ${token.motionDurationFast} ${token.motionEaseInOut};
+                        }
 
-                        background-color: unset !important;
-                        box-shadow: unset !important;
-                        position: relative !important;
-                        padding: ${token.paddingSM}px ${token.paddingSM}px !important;
-                    }
+                        @keyframes slideIn {
+                            from {
+                                opacity: 0;
+                            }
+                            to {
+                                opacity: 1;
+                            }
+                        }
 
-                    .draw-core-layer :global(.excalidraw-container-inner) {
-                        z-index: ${zIndex};
-                        position: fixed;
-                    }
+                        .draw-core-layer :global(.layout-menu-render-drag-button) {
+                            text-align: center;
+                            margin-top: ${token.marginXS}px;
+                            margin-bottom: -${token.marginXS}px;
+                        }
 
-                    .draw-core-layer :global(.excalidraw .radio-button-icon) {
-                        width: var(--default-icon-size);
-                        height: 100%;
-                        display: flex;
-                        align-items: center;
-                    }
+                        .draw-core-layer :global(.layout-menu-render-drag-button > span) {
+                            transform: rotate(90deg);
+                        }
 
-                    .draw-core-layer :global(.excalidraw .ant-radio-button-wrapper) {
-                        padding-inline: ${0}px;
-                    }
+                        .draw-core-layer :global(.Island.App-menu__left) {
+                            --text-primary-color: ${token.colorText};
 
-                    .draw-core-layer
-                        :global(.excalidraw .ant-radio-button-wrapper .radio-button-icon) {
-                        padding-inline: ${token.paddingXS}px;
-                    }
+                            background-color: unset !important;
+                            box-shadow: unset !important;
+                            position: relative !important;
+                            padding: ${token.paddingSM}px ${token.paddingSM}px !important;
+                        }
 
-                    .draw-core-layer :global(.drag-button) {
-                        color: ${token.colorTextQuaternary};
-                        cursor: move;
-                    }
+                        .draw-core-layer :global(.excalidraw-container-inner) {
+                            z-index: ${zIndex};
+                            position: fixed;
+                        }
 
-                    .draw-core-layer :global(.draw-toolbar-drag) {
-                        font-size: 18px;
-                        margin-right: -3px;
-                        margin-left: -3px;
-                    }
+                        .draw-core-layer :global(.excalidraw .radio-button-icon) {
+                            width: var(--default-icon-size);
+                            height: 100%;
+                            display: flex;
+                            align-items: center;
+                        }
 
-                    .draw-core-layer :global(.excalidraw .scroll-back-to-content) {
-                        display: none;
-                    }
-                `}</style>
-            </div>
+                        .draw-core-layer :global(.excalidraw .ant-radio-button-wrapper) {
+                            padding-inline: ${0}px;
+                        }
+
+                        .draw-core-layer
+                            :global(.excalidraw .ant-radio-button-wrapper .radio-button-icon) {
+                            padding-inline: ${token.paddingXS}px;
+                        }
+
+                        .draw-core-layer :global(.drag-button) {
+                            color: ${token.colorTextQuaternary};
+                            cursor: move;
+                        }
+
+                        .draw-core-layer :global(.draw-toolbar-drag) {
+                            font-size: 18px;
+                            margin-right: -3px;
+                            margin-left: -3px;
+                        }
+
+                        .draw-core-layer :global(.excalidraw .scroll-back-to-content) {
+                            display: none;
+                        }
+                    `}</style>
+                </div>
+            </SerialNumberContextProvider>
         </>
     );
 };
