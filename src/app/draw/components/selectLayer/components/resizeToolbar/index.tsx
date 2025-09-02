@@ -292,7 +292,7 @@ export const ResizeToolbar: React.FC<{
         <div className="draw-resize-toolbar" ref={resizeToolbarRef} onClick={showResizeModal}>
             <ResizeModal actionRef={resizeModalActionRef} onFinish={onFinish} />
 
-            <Flex align="center">
+            <Flex align="center" style={{ userSelect: 'none' }}>
                 {selectState !== SelectState.Auto && (
                     <>
                         <Flex align="center">

@@ -126,8 +126,18 @@ const LayoutMenuRender: React.FC<{
         };
     }, [handleMouseMove, handleMouseUp]);
 
+    const handleDoubleClick = useCallback<React.MouseEventHandler<HTMLDivElement>>((event) => {
+        event.preventDefault();
+        event.stopPropagation();
+    }, []);
+
     return (
-        <div ref={layoutMenuRenderRef} className="layout-menu-render" id="layout-menu-render">
+        <div
+            ref={layoutMenuRenderRef}
+            className="layout-menu-render"
+            id="layout-menu-render"
+            onDoubleClick={handleDoubleClick}
+        >
             <div
                 className="drag-button layout-menu-render-drag-button"
                 title={dragTitle}

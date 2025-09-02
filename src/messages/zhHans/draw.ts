@@ -130,4 +130,5 @@ export const draw = {
     'draw.shadowColor': '阴影颜色',
     'draw.resizeModal': '调整大小',
     'draw.confirm': '确定',
+    'draw.serialNumber': '序号',
 };

@@ -25,8 +25,73 @@ import { AppState } from '@mg-chao/excalidraw/types';
 import Color from 'color';
 import React, { useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 
-export const isSerialNumberElement = (element: ExcalidrawElement) => {
+export const isSerialNumberElement = (element: ExcalidrawElement | undefined) => {
+    if (!element) {
+        return false;
+    }
+
     return element.id.startsWith('snow-shot_serial-number_');
+};
+
+export const isSerialNumberTextElement = (element: ExcalidrawElement | undefined) => {
+    return isSerialNumberElement(element) && element!.type === 'text';
+};
+
+export const limitSerialNumber = (serialNumber: number) => {
+    if (isNaN(serialNumber)) {
+        return 1;
+    }
+
+    return Math.min(999, Math.max(serialNumber ?? 0, 1));
+};
+
+export type SerialNumberContextType = {
+    selectedSerialNumber: number | undefined;
+    selectedSerialNumberRef: React.RefObject<number | undefined>;
+    setSelectedSerialNumber: (selectedSerialNumber: number | undefined) => void;
+    serialNumber: number;
+    serialNumberRef: React.RefObject<number>;
+    setSerialNumber: (serialNumber: number) => void;
+};
+
+export const SerialNumberContext = React.createContext<SerialNumberContextType>({
+    selectedSerialNumber: undefined,
+    selectedSerialNumberRef: { current: undefined },
+    setSelectedSerialNumber: () => {},
+    serialNumber: 1,
+    serialNumberRef: { current: 1 },
+    setSerialNumber: () => {},
+});
+
+export const SerialNumberContextProvider: React.FC<{
+    children: React.ReactNode;
+}> = ({ children }) => {
+    const [selectedSerialNumber, setSelectedSerialNumber, selectedSerialNumberRef] = useStateRef<
+        number | undefined
+    >(undefined);
+    const [serialNumber, setSerialNumber, serialNumberRef] = useStateRef(1);
+
+    const contextValue = useMemo<SerialNumberContextType>(() => {
+        return {
+            selectedSerialNumber,
+            selectedSerialNumberRef,
+            setSelectedSerialNumber,
+            serialNumber,
+            setSerialNumber,
+            serialNumberRef,
+        };
+    }, [
+        selectedSerialNumber,
+        selectedSerialNumberRef,
+        setSelectedSerialNumber,
+        serialNumber,
+        setSerialNumber,
+        serialNumberRef,
+    ]);
+
+    return (
+        <SerialNumberContext.Provider value={contextValue}>{children}</SerialNumberContext.Provider>
+    );
 };
 
 const generateSerialNumber = (
@@ -193,6 +258,7 @@ const generateSerialNumber = (
 
 export const SerialNumberTool: React.FC = () => {
     const { getAction, getMousePosition } = useContext(DrawCoreContext);
+    const { setSerialNumber, serialNumberRef } = useContext(SerialNumberContext);
 
     const arrowElementIdsRef = useRef<Set<string>>(new Set());
     const [enable, setEnable, enableRef] = useStateRef(false);
@@ -285,12 +351,7 @@ export const SerialNumberTool: React.FC = () => {
             return;
         }
 
-        let currentNumber = 1;
-        sceneElements.forEach((item) => {
-            if (item.type === 'text' && isSerialNumberElement(item)) {
-                currentNumber = Math.max(currentNumber, parseInt(item.text) + 1);
-            }
-        });
+        const currentNumber = serialNumberRef.current;
 
         // 将屏幕坐标转换为画布坐标
         const canvasX = mousePosition.mouseX / appState.zoom.value - appState.scrollX;
@@ -304,6 +365,8 @@ export const SerialNumberTool: React.FC = () => {
             currentNumber,
             appState,
         );
+
+        setSerialNumber(limitSerialNumber(currentNumber + 1));
 
         // 判断是否有新增的 arrow 元素
         const newArrowElement = sceneElements.find((item) => {
@@ -346,7 +409,7 @@ export const SerialNumberTool: React.FC = () => {
             elements: [...sceneElements, ...serialNumberElement],
             captureUpdate: 'IMMEDIATELY',
         });
-    }, [disableArrowRef, getAction, getMousePosition]);
+    }, [disableArrowRef, getAction, getMousePosition, serialNumberRef, setSerialNumber]);
 
     const onMouseUp = useCallback(() => {
         if (!lockTool()) {
@@ -391,6 +454,11 @@ export const SerialNumberTool: React.FC = () => {
         ExcalidrawEventPublisher,
         useCallback(
             (params: ExcalidrawEventParams | undefined) => {
+                if (params?.event === 'onDraw') {
+                    latestSerialNumberElementListRef.current = [];
+                    setSerialNumber(1);
+                }
+
                 if (!enableRef.current) {
                     return;
                 }
@@ -407,11 +475,9 @@ export const SerialNumberTool: React.FC = () => {
                     onMouseDown();
                 } else if (params?.event === 'onPointerUp') {
                     onMouseUp();
-                } else if (params?.event === 'onDraw') {
-                    latestSerialNumberElementListRef.current = [];
                 }
             },
-            [enableRef, onMouseDown, onMouseUp],
+            [enableRef, onMouseDown, onMouseUp, setSerialNumber],
         ),
     );
 

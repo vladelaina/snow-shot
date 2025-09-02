@@ -1,0 +1,141 @@
+import { FormattedMessage } from 'react-intl';
+import { ExcalidrawPropsCustomOptions } from '@mg-chao/excalidraw/types';
+import { InputNumber } from 'antd';
+import { useCallback, useContext, useEffect, useState } from 'react';
+import {
+    isSerialNumberElement,
+    isSerialNumberTextElement,
+    limitSerialNumber,
+    SerialNumberContext,
+} from '../components/serialNumberTool';
+import { ExcalidrawTextElement } from '@mg-chao/excalidraw/element/types';
+import { DrawCoreContext } from '../extra';
+
+const getSelectedElementSerialNumber = (textElement: ExcalidrawTextElement | undefined) => {
+    if (!textElement) {
+        return undefined;
+    }
+
+    return limitSerialNumber(parseInt(textElement.originalText));
+};
+
+const SerialNumberEditor: NonNullable<
+    NonNullable<ExcalidrawPropsCustomOptions['pickerRenders']>['SerialNumberEditor']
+> = ({ appState, targetElements }) => {
+    const {
+        serialNumber,
+        setSerialNumber,
+        selectedSerialNumber,
+        setSelectedSerialNumber,
+        selectedSerialNumberRef,
+    } = useContext(SerialNumberContext);
+    const { getAction } = useContext(DrawCoreContext);
+
+    const [selectedSerialNumberTextElement, setselectedSerialNumberTextElement] = useState<
+        ExcalidrawTextElement | undefined
+    >();
+
+    const getSelectedSerialNumberTextElement = useCallback(():
+        | ExcalidrawTextElement
+        | undefined => {
+        if (appState.activeTool.type !== 'ellipse' && appState.activeTool.type !== 'arrow') {
+            return;
+        }
+
+        if (!isSerialNumberElement(targetElements[0])) {
+            return;
+        }
+
+        const textElement = targetElements.find(isSerialNumberTextElement);
+
+        if (!textElement || textElement.type !== 'text') {
+            return;
+        }
+
+        return textElement;
+    }, [appState.activeTool.type, targetElements]);
+    useEffect(() => {
+        const textElement = getSelectedSerialNumberTextElement();
+        setSelectedSerialNumber(getSelectedElementSerialNumber(textElement));
+        setselectedSerialNumberTextElement(textElement);
+    }, [getSelectedSerialNumberTextElement, setSelectedSerialNumber]);
+
+    useEffect(() => {
+        const currentSelectedSerialNumber = selectedSerialNumberRef.current;
+        if (!currentSelectedSerialNumber || !selectedSerialNumberTextElement) {
+            return;
+        }
+
+        if (
+            getSelectedElementSerialNumber(selectedSerialNumberTextElement) ===
+            currentSelectedSerialNumber
+        ) {
+            return;
+        }
+
+        const excalidrawAPI = getAction()?.getExcalidrawAPI();
+        if (!excalidrawAPI) {
+            return;
+        }
+
+        const sceneElements = excalidrawAPI?.getSceneElements();
+        if (!sceneElements) {
+            return;
+        }
+
+        excalidrawAPI.updateScene({
+            elements: sceneElements.map((item) => {
+                if (item.id === selectedSerialNumberTextElement.id) {
+                    return {
+                        ...item,
+                        text: currentSelectedSerialNumber.toString(),
+                        originalText: currentSelectedSerialNumber.toString(),
+                    };
+                }
+                return item;
+            }),
+            captureUpdate: 'IMMEDIATELY',
+        });
+    }, [
+        selectedSerialNumberTextElement,
+        selectedSerialNumberRef,
+        setSelectedSerialNumber,
+        selectedSerialNumber,
+        getAction,
+    ]);
+
+    const onChange = useCallback(
+        (value: number | null) => {
+            if (!value) {
+                return;
+            }
+
+            if (selectedSerialNumber) {
+                setSelectedSerialNumber(value);
+            } else {
+                setSerialNumber(value);
+            }
+        },
+        [setSerialNumber, selectedSerialNumber, setSelectedSerialNumber],
+    );
+
+    return (
+        <fieldset>
+            <legend>
+                <FormattedMessage id="draw.serialNumber" />
+            </legend>
+            <div>
+                <InputNumber
+                    value={selectedSerialNumber ?? serialNumber}
+                    onChange={onChange}
+                    min={1}
+                    max={999}
+                    changeOnWheel
+                    controls={true}
+                />
+            </div>
+        </fieldset>
+    );
+};
+
+export default SerialNumberEditor;
