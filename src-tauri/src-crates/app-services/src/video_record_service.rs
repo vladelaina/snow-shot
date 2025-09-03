@@ -788,6 +788,7 @@ impl VideoRecordService {
     pub fn stop(
         &mut self,
         convert_to_gif: bool,
+        enable_apng_format: bool,
         gif_frame_rate: u32,
         gif_max_width: i32,
         gif_max_height: i32,
@@ -822,6 +823,7 @@ impl VideoRecordService {
         // 如果需要转换为GIF格式
         if convert_to_gif && self.recording_params.as_ref().unwrap().format == VideoFormat::Mp4 {
             final_filename = self.convert_to_gif(
+                enable_apng_format,
                 &final_filename,
                 gif_frame_rate,
                 gif_max_width,
@@ -896,6 +898,7 @@ impl VideoRecordService {
 
     fn convert_to_gif(
         &self,
+        enable_apng_format: bool,
         mp4_filename: &str,
         gif_frame_rate: u32,
         gif_max_width: i32,
@@ -903,16 +906,21 @@ impl VideoRecordService {
     ) -> Result<String> {
         let params = self.recording_params.as_ref().unwrap();
 
-        // 生成GIF文件名
-        let gif_filename = format!("{}.gif", params.output_file);
+        // 生成输出文件名
+        let output_filename = if enable_apng_format {
+            format!("{}.png", params.output_file)
+        } else {
+            format!("{}.gif", params.output_file)
+        };
 
+        let format_name = if enable_apng_format { "APNG" } else { "GIF" };
         println!(
-            "[FFmpeg] Converting MP4 to GIF: {} -> {}",
-            mp4_filename, gif_filename
+            "[FFmpeg] Converting MP4 to {}: {} -> {}",
+            format_name, mp4_filename, output_filename
         );
 
         // 确保输出文件的目录存在
-        if let Some(parent_dir) = std::path::Path::new(&gif_filename).parent() {
+        if let Some(parent_dir) = std::path::Path::new(&output_filename).parent() {
             if let Err(e) = std::fs::create_dir_all(parent_dir) {
                 return Err(std::io::Error::new(
                     std::io::ErrorKind::Other,
@@ -933,31 +941,47 @@ impl VideoRecordService {
             format!("scale=-1:-1:flags=lanczos")
         };
 
-        // 构建FFmpeg命令进行MP4到GIF的转换
+        // 构建FFmpeg命令进行MP4到GIF/APNG的转换
         let mut command = self.get_ffmpeg_command();
 
-        command
-            .arg("-i")
-            .arg(mp4_filename)
-            .arg("-vf")
-            .arg(format!(
-                "fps={},{},split[s0][s1];[s0]palettegen[p];[s1][p]paletteuse",
-                gif_frame_rate, scale_filter,
-            ))
-            .arg("-loop")
-            .arg("0")
-            .arg("-y")
-            .arg(&gif_filename);
+        if enable_apng_format {
+            // APNG格式转换
+            command
+                .arg("-i")
+                .arg(mp4_filename)
+                .arg("-vf")
+                .arg(format!("fps={},{}", gif_frame_rate, scale_filter))
+                .arg("-f")
+                .arg("apng")
+                .arg("-plays")
+                .arg("0")  // 无限循环
+                .arg("-y")
+                .arg(&output_filename);
+        } else {
+            // GIF格式转换
+            command
+                .arg("-i")
+                .arg(mp4_filename)
+                .arg("-vf")
+                .arg(format!(
+                    "fps={},{},split[s0][s1];[s0]palettegen[p];[s1][p]paletteuse",
+                    gif_frame_rate, scale_filter,
+                ))
+                .arg("-loop")
+                .arg("0")
+                .arg("-y")
+                .arg(&output_filename);
+        }
 
-        println!("FFmpeg GIF conversion command: {:?}", command);
+        println!("FFmpeg {} conversion command: {:?}", format_name, command);
 
         match command.spawn() {
             Ok(mut child) => {
                 let _ = child.wait();
 
-                // 检查GIF文件是否成功生成
-                if std::path::Path::new(&gif_filename).exists() {
-                    println!("GIF conversion completed successfully: {}", gif_filename);
+                // 检查输出文件是否成功生成
+                if std::path::Path::new(&output_filename).exists() {
+                    println!("{} conversion completed successfully: {}", format_name, output_filename);
 
                     // 删除原始MP4文件
                     if let Err(e) = std::fs::remove_file(mp4_filename) {
@@ -967,19 +991,19 @@ impl VideoRecordService {
                         );
                     }
 
-                    Ok(gif_filename)
+                    Ok(output_filename)
                 } else {
                     Err(std::io::Error::new(
                         std::io::ErrorKind::Other,
-                        "GIF conversion failed - output file not found",
+                        format!("{} conversion failed - output file not found", format_name),
                     ))
                 }
             }
             Err(e) => {
-                println!("Failed to convert MP4 to GIF: {}", e);
+                println!("Failed to convert MP4 to {}: {}", format_name, e);
                 Err(std::io::Error::new(
                     std::io::ErrorKind::Other,
-                    format!("Failed to convert MP4 to GIF: {}", e),
+                    format!("Failed to convert MP4 to {}: {}", format_name, e),
                 ))
             }
         }

@@ -1208,6 +1208,16 @@ export default function SystemSettings() {
                                 ]}
                             />
                         </Col>
+
+                        <Col span={12}>
+                            <ProFormSwitch
+                                name="enableApngFormat"
+                                layout="horizontal"
+                                label={
+                                    <FormattedMessage id="settings.functionSettings.videoRecordSettings.enableApngFormat" />
+                                }
+                            />
+                        </Col>
                     </Row>
                     <Row gutter={token.padding}>
                         <Col span={12}>

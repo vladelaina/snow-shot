@@ -147,6 +147,7 @@ export const settings = {
     'settings.functionSettings.videoRecordSettings': '视频录制',
     'settings.functionSettings.videoRecordSettings.frameRate': '帧率',
     'settings.functionSettings.videoRecordSettings.gifFrameRate': 'GIF 帧率',
+    'settings.functionSettings.videoRecordSettings.enableApngFormat': '启用 APNG 格式',
     'settings.functionSettings.videoRecordSettings.microphoneDeviceName': '麦克风设备',
     'settings.functionSettings.videoRecordSettings.microphoneDeviceName.default': '默认设备',
     'settings.functionSettings.videoRecordSettings.encoder': '编码器',
