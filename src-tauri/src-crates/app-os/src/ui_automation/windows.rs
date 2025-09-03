@@ -127,6 +127,10 @@ impl UIElements {
      * 初始化窗口元素缓存
      */
     pub fn init_cache(&mut self) -> Result<(), UIAutomationError> {
+        drop(self.automation.take());
+        drop(self.automation_walker.take());
+        drop(self.root_element.take());
+
         let automation = UIAutomation::new()?;
         let automation_walker = automation.get_content_view_walker()?;
         let root_element = automation.get_root_element()?;
