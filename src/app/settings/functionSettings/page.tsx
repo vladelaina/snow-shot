@@ -329,7 +329,14 @@ export default function SystemSettings() {
                         <Col span={12}>
                             <ProFormSwitch
                                 label={
-                                    <FormattedMessage id="settings.functionSettings.screenshotSettings.shortcutCanleTip" />
+                                    <IconLabel
+                                        label={
+                                            <FormattedMessage id="settings.functionSettings.screenshotSettings.shortcutCanleTip" />
+                                        }
+                                        tooltipTitle={
+                                            <FormattedMessage id="settings.functionSettings.screenshotSettings.shortcutCanleTip.tip" />
+                                        }
+                                    />
                                 }
                                 name="shortcutCanleTip"
                                 layout="horizontal"
