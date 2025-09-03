@@ -566,7 +566,7 @@ export const FixedContentCore: React.FC<{
     const [scrollAction, setscrollAction, scrollActionRef] = useStateRef<FixedContentScrollAction>(
         FixedContentScrollAction.Zoom,
     );
-    const [rotateAngles, setrotateAngle, rotateAnglesRef] = useStateRef({
+    const [rotateAngles, setRotateAngles, rotateAnglesRef] = useStateRef({
         x: 0,
         y: 0,
         z: 0,
@@ -1308,6 +1308,10 @@ export const FixedContentCore: React.FC<{
 
     const onWheel = useCallback(
         (event: React.WheelEvent<HTMLDivElement>) => {
+            if (enableDrawRef.current) {
+                return;
+            }
+
             const { deltaY } = event;
 
             if (isHotkeyPressed(hotkeys?.[KeyEventKey.FixedContentSetOpacity]?.hotKey ?? '')) {
@@ -1324,17 +1328,17 @@ export const FixedContentCore: React.FC<{
             if (scrollActionRef.current === FixedContentScrollAction.Zoom) {
                 scaleWindowRender(delta * 10);
             } else if (scrollActionRef.current === FixedContentScrollAction.RotateX) {
-                setrotateAngle({
+                setRotateAngles({
                     ...rotateAnglesRef.current,
                     x: rotateAnglesRef.current.x + delta * 3,
                 });
             } else if (scrollActionRef.current === FixedContentScrollAction.RotateY) {
-                setrotateAngle({
+                setRotateAngles({
                     ...rotateAnglesRef.current,
                     y: rotateAnglesRef.current.y + delta * 3,
                 });
             } else if (scrollActionRef.current === FixedContentScrollAction.RotateZ) {
-                setrotateAngle({
+                setRotateAngles({
                     ...rotateAnglesRef.current,
                     z: rotateAnglesRef.current.z + delta * 3,
                 });
@@ -1343,11 +1347,12 @@ export const FixedContentCore: React.FC<{
         [
             changeContentOpacity,
             contentOpacityRef,
+            enableDrawRef,
             hotkeys,
             rotateAnglesRef,
             scaleWindowRender,
             scrollActionRef,
-            setrotateAngle,
+            setRotateAngles,
         ],
     );
 
