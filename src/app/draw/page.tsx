@@ -924,11 +924,11 @@ const DrawPageCore: React.FC<{
         (e) => {
             if (
                 e.button === 0 &&
-                // 如果存在创建时间大于300ms的在编辑中的元素，则认为是对箭头的双击
+                // 如果存在创建时间大于 200ms 的在编辑中的元素，则认为是对箭头的双击
                 !(
                     (latestExcalidrawNewElementRef.current &&
                         'created' in latestExcalidrawNewElementRef.current &&
-                        latestExcalidrawNewElementRef.current.created < Date.now() - 300) ||
+                        latestExcalidrawNewElementRef.current.created < Date.now() - 200) ||
                     (latestExcalidrawNewElementRef.current &&
                         'editingTextElement' in latestExcalidrawNewElementRef.current)
                 )
