@@ -131,6 +131,13 @@ export type FixedContentWindowSize = {
     height: number;
 };
 
+export enum FixedContentScrollAction {
+    Zoom = 'zoom',
+    RotateX = 'rotateX',
+    RotateY = 'rotateY',
+    RotateZ = 'rotateZ',
+}
+
 export const FixedContentCore: React.FC<{
     actionRef: React.RefObject<FixedContentActionType | undefined>;
     onDrawLoad?: () => void;
@@ -555,6 +562,15 @@ export const FixedContentCore: React.FC<{
             }
         };
     }, [htmlBlobUrl]);
+
+    const [scrollAction, setscrollAction, scrollActionRef] = useStateRef<FixedContentScrollAction>(
+        FixedContentScrollAction.Zoom,
+    );
+    const [rotateAngles, setrotateAngle, rotateAnglesRef] = useStateRef({
+        x: 0,
+        y: 0,
+        z: 0,
+    });
 
     const [isThumbnail, setIsThumbnail, isThumbnailRef] = useStateRef(false);
     const originWindowSizeAndPositionRef = useRef<
@@ -1204,6 +1220,46 @@ export const FixedContentCore: React.FC<{
                               },
                           ],
                       }),
+                enableDraw
+                    ? undefined
+                    : {
+                          id: `${appWindow.label}-scrollActionTool`,
+                          text: intl.formatMessage({ id: 'draw.scrollAction' }),
+                          items: [
+                              {
+                                  id: `${appWindow.label}-scrollActionToolZoom`,
+                                  text: intl.formatMessage({ id: 'draw.scrollAction.zoom' }),
+                                  checked: scrollAction === FixedContentScrollAction.Zoom,
+                                  action: () => {
+                                      setscrollAction(FixedContentScrollAction.Zoom);
+                                  },
+                              },
+                              {
+                                  id: `${appWindow.label}-scrollActionToolRotateX`,
+                                  text: intl.formatMessage({ id: 'draw.scrollAction.rotateX' }),
+                                  checked: scrollAction === FixedContentScrollAction.RotateX,
+                                  action: () => {
+                                      setscrollAction(FixedContentScrollAction.RotateX);
+                                  },
+                              },
+                              {
+                                  id: `${appWindow.label}-scrollActionToolRotateY`,
+                                  text: intl.formatMessage({ id: 'draw.scrollAction.rotateY' }),
+                                  checked: scrollAction === FixedContentScrollAction.RotateY,
+                                  action: () => {
+                                      setscrollAction(FixedContentScrollAction.RotateY);
+                                  },
+                              },
+                              {
+                                  id: `${appWindow.label}-scrollActionToolRotateZ`,
+                                  text: intl.formatMessage({ id: 'draw.scrollAction.rotateZ' }),
+                                  checked: scrollAction === FixedContentScrollAction.RotateZ,
+                                  action: () => {
+                                      setscrollAction(FixedContentScrollAction.RotateZ);
+                                  },
+                              },
+                          ],
+                      },
                 {
                     item: 'Separator',
                 },
@@ -1233,10 +1289,12 @@ export const FixedContentCore: React.FC<{
         isThumbnail,
         isAlwaysOnTop,
         switchAlwaysOnTop,
+        scrollAction,
         switchThumbnail,
         changeContentOpacity,
         scaleWindow,
         scaleRef,
+        setscrollAction,
     ]);
     const initMenu = useCallbackRender(initMenuCore);
 
@@ -1261,9 +1319,36 @@ export const FixedContentCore: React.FC<{
                 return;
             }
 
-            scaleWindowRender((deltaY > 0 ? -1 : 1) * 10);
+            const delta = deltaY > 0 ? -1 : 1;
+
+            if (scrollActionRef.current === FixedContentScrollAction.Zoom) {
+                scaleWindowRender(delta * 10);
+            } else if (scrollActionRef.current === FixedContentScrollAction.RotateX) {
+                setrotateAngle({
+                    ...rotateAnglesRef.current,
+                    x: rotateAnglesRef.current.x + delta * 3,
+                });
+            } else if (scrollActionRef.current === FixedContentScrollAction.RotateY) {
+                setrotateAngle({
+                    ...rotateAnglesRef.current,
+                    y: rotateAnglesRef.current.y + delta * 3,
+                });
+            } else if (scrollActionRef.current === FixedContentScrollAction.RotateZ) {
+                setrotateAngle({
+                    ...rotateAnglesRef.current,
+                    z: rotateAnglesRef.current.z + delta * 3,
+                });
+            }
         },
-        [changeContentOpacity, contentOpacityRef, hotkeys, scaleWindowRender],
+        [
+            changeContentOpacity,
+            contentOpacityRef,
+            hotkeys,
+            rotateAnglesRef,
+            scaleWindowRender,
+            scrollActionRef,
+            setrotateAngle,
+        ],
     );
 
     const handleContextMenu = useCallback(async (e: React.MouseEvent<HTMLDivElement>) => {
@@ -1547,94 +1632,96 @@ export const FixedContentCore: React.FC<{
         >
             <HandleFocusMode disabled={disabled} />
 
-            <OcrResult
-                actionRef={ocrResultActionRef}
-                zIndex={1}
-                onWheel={onWheel}
-                onContextMenu={handleContextMenu}
-            />
-
-            {(canvasImageUrl || imageUrl) && (
-                <>
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                        src={canvasImageUrl || imageUrl || ''}
-                        ref={imageRef}
-                        style={{
-                            objectFit: 'contain',
-                            width: `${(windowSize.width * scale.x) / 100 / contentScaleFactor}px`,
-                            height: `${(windowSize.height * scale.y) / 100 / contentScaleFactor}px`,
-                        }}
-                        crossOrigin="anonymous"
-                        alt="fixed-canvas-image"
-                        onLoad={async (event) => {
-                            if (imageUrl) {
-                                const image = event.target as HTMLImageElement;
-                                const monitorInfo = await getCurrentMonitorInfo();
-                                onImageLoad?.(image, monitorInfo);
-
-                                const imageWidth =
-                                    image.naturalWidth / monitorInfo.monitor_scale_factor;
-                                const imageHeight =
-                                    image.naturalHeight / monitorInfo.monitor_scale_factor;
-
-                                setWindowSize({
-                                    width: imageWidth,
-                                    height: imageHeight,
-                                });
-                                canvasPropsRef.current = {
-                                    width: image.naturalWidth,
-                                    height: image.naturalHeight,
-                                    scaleFactor: monitorInfo.monitor_scale_factor,
-                                    ignoreTextScaleFactor: false,
-                                };
-                            } else {
-                                onDrawLoad?.();
-                            }
-                        }}
-                    />
-                </>
-            )}
-
-            {htmlBlobUrl && (
-                <iframe
-                    style={{
-                        transformOrigin: 'top left',
-                        transform: `scale(${scale.x / 100 / contentScaleFactor}, ${scale.y / 100 / contentScaleFactor})`,
-                        zIndex: enableSelectText ? 1 : 'unset',
-                        position: 'absolute',
-                    }}
-                    ref={htmlContentContainerRef}
-                    src={htmlBlobUrl}
-                    className="fixed-html-content"
+            <div className="fixed-image-container-content">
+                <OcrResult
+                    actionRef={ocrResultActionRef}
+                    zIndex={1}
+                    onWheel={onWheel}
+                    onContextMenu={handleContextMenu}
                 />
-            )}
 
-            {textContent && (
-                <div
-                    style={{
-                        transformOrigin: 'top left',
-                        transform: `scale(${scale.x / 100 / contentScaleFactor}, ${scale.y / 100 / contentScaleFactor})`,
-                        zIndex: enableSelectText ? 1 : 'unset',
-                        position: 'absolute',
-                    }}
-                    onMouseDown={(event) => {
-                        event.stopPropagation();
-                    }}
-                    onMouseMove={(event) => {
-                        event.stopPropagation();
-                    }}
-                    onMouseUp={(event) => {
-                        event.stopPropagation();
-                    }}
-                >
-                    <div ref={textContentContainerRef} className="fixed-text-content">
-                        <div style={{ userSelect: 'text', display: 'inline-block' }}>
-                            {textContent}
+                {(canvasImageUrl || imageUrl) && (
+                    <>
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                            src={canvasImageUrl || imageUrl || ''}
+                            ref={imageRef}
+                            style={{
+                                objectFit: 'contain',
+                                width: `${(windowSize.width * scale.x) / 100 / contentScaleFactor}px`,
+                                height: `${(windowSize.height * scale.y) / 100 / contentScaleFactor}px`,
+                            }}
+                            crossOrigin="anonymous"
+                            alt="fixed-canvas-image"
+                            onLoad={async (event) => {
+                                if (imageUrl) {
+                                    const image = event.target as HTMLImageElement;
+                                    const monitorInfo = await getCurrentMonitorInfo();
+                                    onImageLoad?.(image, monitorInfo);
+
+                                    const imageWidth =
+                                        image.naturalWidth / monitorInfo.monitor_scale_factor;
+                                    const imageHeight =
+                                        image.naturalHeight / monitorInfo.monitor_scale_factor;
+
+                                    setWindowSize({
+                                        width: imageWidth,
+                                        height: imageHeight,
+                                    });
+                                    canvasPropsRef.current = {
+                                        width: image.naturalWidth,
+                                        height: image.naturalHeight,
+                                        scaleFactor: monitorInfo.monitor_scale_factor,
+                                        ignoreTextScaleFactor: false,
+                                    };
+                                } else {
+                                    onDrawLoad?.();
+                                }
+                            }}
+                        />
+                    </>
+                )}
+
+                {htmlBlobUrl && (
+                    <iframe
+                        style={{
+                            transformOrigin: 'top left',
+                            transform: `scale(${scale.x / 100 / contentScaleFactor}, ${scale.y / 100 / contentScaleFactor})`,
+                            zIndex: enableSelectText ? 1 : 'unset',
+                            position: 'absolute',
+                        }}
+                        ref={htmlContentContainerRef}
+                        src={htmlBlobUrl}
+                        className="fixed-html-content"
+                    />
+                )}
+
+                {textContent && (
+                    <div
+                        style={{
+                            transformOrigin: 'top left',
+                            transform: `scale(${scale.x / 100 / contentScaleFactor}, ${scale.y / 100 / contentScaleFactor})`,
+                            zIndex: enableSelectText ? 1 : 'unset',
+                            position: 'absolute',
+                        }}
+                        onMouseDown={(event) => {
+                            event.stopPropagation();
+                        }}
+                        onMouseMove={(event) => {
+                            event.stopPropagation();
+                        }}
+                        onMouseUp={(event) => {
+                            event.stopPropagation();
+                        }}
+                    >
+                        <div ref={textContentContainerRef} className="fixed-text-content">
+                            <div style={{ userSelect: 'text', display: 'inline-block' }}>
+                                {textContent}
+                            </div>
                         </div>
                     </div>
-                </div>
-            )}
+                )}
+            </div>
 
             {!disabled && (
                 <DrawLayer
@@ -1690,6 +1777,12 @@ export const FixedContentCore: React.FC<{
             <style jsx>{`
                 .fixed-image-container {
                     display: ${disabled ? 'none' : 'block'};
+                }
+
+                .fixed-image-container-content {
+                    transformorigin: center center;
+                    transform: rotateX(${rotateAngles.x}deg) rotateY(${rotateAngles.y}deg)
+                        rotateZ(${rotateAngles.z}deg);
                 }
 
                 .fixed-image-container:hover :global(.ant-btn.fixed-image-close-button) {
