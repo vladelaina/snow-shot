@@ -317,89 +317,73 @@ export const dragRect = (
     originRect: ElementRect,
     originMousePosition: MousePosition,
     mousePosition: MousePosition,
+    lockWidthHeight: boolean = false,
 ): ElementRect => {
     // 计算鼠标移动的偏移量
     const deltaX = mousePosition.mouseX - originMousePosition.mouseX;
     const deltaY = mousePosition.mouseY - originMousePosition.mouseY;
 
-    const { min_x, min_y, max_x, max_y } = originRect;
-
-    let newMinX = min_x,
-        newMinY = min_y,
-        newMaxX = max_x,
-        newMaxY = max_y;
-
     // 根据拖动模式更新相应的坐标
+    let startMousePosition: MousePosition | undefined;
+    let controlMousePosition: MousePosition | undefined;
     switch (dragMode) {
         case DragMode.All:
-            // 整体移动，所有点同时偏移
-            newMinX += deltaX;
-            newMinY += deltaY;
-            newMaxX += deltaX;
-            newMaxY += deltaY;
-            break;
-        case DragMode.TopLeft:
-            newMinX += deltaX;
-            newMinY += deltaY;
+            startMousePosition = new MousePosition(
+                originRect.min_x + deltaX,
+                originRect.min_y + deltaY,
+            );
+            controlMousePosition = new MousePosition(
+                originRect.max_x + deltaX,
+                originRect.max_y + deltaY,
+            );
             break;
         case DragMode.Top:
-            newMinY += deltaY;
-            break;
-        case DragMode.TopRight:
-            newMaxX += deltaX;
-            newMinY += deltaY;
-            break;
-        case DragMode.Right:
-            newMaxX += deltaX;
-            break;
-        case DragMode.BottomRight:
-            newMaxX += deltaX;
-            newMaxY += deltaY;
+            startMousePosition = new MousePosition(originRect.min_x, originRect.max_y);
+            controlMousePosition = new MousePosition(originRect.max_x, originRect.min_y + deltaY);
             break;
         case DragMode.Bottom:
-            newMaxY += deltaY;
-            break;
-        case DragMode.BottomLeft:
-            newMinX += deltaX;
-            newMaxY += deltaY;
+            startMousePosition = new MousePosition(originRect.min_x, originRect.min_y);
+            controlMousePosition = new MousePosition(originRect.max_x, originRect.max_y + deltaY);
             break;
         case DragMode.Left:
-            newMinX += deltaX;
+            startMousePosition = new MousePosition(originRect.max_x, originRect.min_y);
+            controlMousePosition = new MousePosition(originRect.min_x + deltaX, originRect.max_y);
+            break;
+        case DragMode.Right:
+            startMousePosition = new MousePosition(originRect.min_x, originRect.min_y);
+            controlMousePosition = new MousePosition(originRect.max_x + deltaX, originRect.max_y);
+            break;
+        case DragMode.TopLeft:
+            startMousePosition = new MousePosition(originRect.max_x, originRect.max_y);
+            controlMousePosition = new MousePosition(
+                originRect.min_x + deltaX,
+                originRect.min_y + deltaY,
+            );
+            break;
+        case DragMode.TopRight:
+            startMousePosition = new MousePosition(originRect.min_x, originRect.max_y);
+            controlMousePosition = new MousePosition(
+                originRect.max_x + deltaX,
+                originRect.min_y + deltaY,
+            );
+            break;
+        case DragMode.BottomLeft:
+            startMousePosition = new MousePosition(originRect.max_x, originRect.min_y);
+            controlMousePosition = new MousePosition(
+                originRect.min_x + deltaX,
+                originRect.max_y + deltaY,
+            );
+            break;
+        case DragMode.BottomRight:
+            startMousePosition = new MousePosition(originRect.min_x, originRect.min_y);
+            controlMousePosition = new MousePosition(
+                originRect.max_x + deltaX,
+                originRect.max_y + deltaY,
+            );
             break;
     }
 
-    const finalRect: ElementRect = {
-        min_x: 0,
-        min_y: 0,
-        max_x: 0,
-        max_y: 0,
-    };
-
-    if (newMinX < newMaxX) {
-        finalRect.min_x = newMinX;
-        finalRect.max_x = newMaxX;
-    } else {
-        finalRect.min_x = newMaxX;
-        finalRect.max_x = newMinX;
-    }
-
-    if (newMinY < newMaxY) {
-        finalRect.min_y = newMinY;
-        finalRect.max_y = newMaxY;
-    } else {
-        finalRect.min_y = newMaxY;
-        finalRect.max_y = newMinY;
-    }
-
-    // 应用最小尺寸限制
-    if (finalRect.max_x - finalRect.min_x < MIN_RECT_SIZE) {
-        finalRect.max_x = finalRect.min_x + MIN_RECT_SIZE;
-    }
-    if (finalRect.max_y - finalRect.min_y < MIN_RECT_SIZE) {
-        finalRect.max_y = finalRect.min_y + MIN_RECT_SIZE;
-    }
-
-    return finalRect;
+    return startMousePosition.toElementRect(controlMousePosition, lockWidthHeight);
 };
 
 export const limitRect = (

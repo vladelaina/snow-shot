@@ -909,6 +909,11 @@ const SelectLayerCore: React.FC<SelectLayerProps> = ({ actionRef }) => {
                         dragRectRef.current!,
                         mouseDownPositionRef.current,
                         mousePosition,
+                        isHotkeyPressed(
+                            getAppSettings()[AppSettingsGroup.DrawToolbarKeyEvent][
+                                KeyEventKey.LockWidthHeightPicker
+                            ].hotKey,
+                        ),
                     ),
                     true,
                 );
