@@ -25,25 +25,55 @@ export class MousePosition {
         return Math.sqrt(width * width + height * height);
     };
 
-    public toElementRect = (other: MousePosition) => {
-        let minX;
-        let maxX;
-        if (this.mouseX < other.mouseX) {
-            minX = this.mouseX;
-            maxX = other.mouseX;
-        } else {
-            minX = other.mouseX;
-            maxX = this.mouseX;
-        }
+    /**
+     * 计算两个鼠标位置之间的矩形区域
+     * @param other 另一个鼠标位置
+     * @param lockWidthHeight 是否锁定宽高比
+     * @returns 包含最小和最大坐标值的对象
+     */
+    public toElementRect = (other: MousePosition, lockWidthHeight: boolean = false) => {
+        let minX: number;
+        let maxX: number;
+        let minY: number;
+        let maxY: number;
 
-        let minY;
-        let maxY;
-        if (this.mouseY < other.mouseY) {
+        if (lockWidthHeight) {
+            // 锁定宽高比且保持起始点不变
+            const width = Math.abs(this.mouseX - other.mouseX);
+            const height = Math.abs(this.mouseY - other.mouseY);
+            const maxSide = Math.max(width, height);
+
+            minX = this.mouseX;
+            maxX = this.mouseX + (this.mouseX < other.mouseX ? maxSide : -maxSide);
             minY = this.mouseY;
-            maxY = other.mouseY;
+            maxY = this.mouseY + (this.mouseY < other.mouseY ? maxSide : -maxSide);
+
+            if (maxX < minX) {
+                const temp = minX;
+                minX = maxX;
+                maxX = temp;
+            }
+            if (maxY < minY) {
+                const temp = minY;
+                minY = maxY;
+                maxY = temp;
+            }
         } else {
-            minY = other.mouseY;
-            maxY = this.mouseY;
+            if (this.mouseX < other.mouseX) {
+                minX = this.mouseX;
+                maxX = other.mouseX;
+            } else {
+                minX = other.mouseX;
+                maxX = this.mouseX;
+            }
+
+            if (this.mouseY < other.mouseY) {
+                minY = this.mouseY;
+                maxY = other.mouseY;
+            } else {
+                minY = other.mouseY;
+                maxY = this.mouseY;
+            }
         }
 
         return {
