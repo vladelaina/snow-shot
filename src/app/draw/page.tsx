@@ -58,6 +58,7 @@ import { AppSettingsActionContext, AppSettingsGroup } from '../contextWrap';
 import { AppSettingsPublisher } from '../contextWrap';
 import { ExtraTool } from './components/drawToolbar/components/tools/extraTool';
 import {
+    closeWindowAfterDelay,
     createFixedContentWindow,
     getMonitorsBoundingBox,
     setCurrentWindowAlwaysOnTop,
@@ -81,7 +82,7 @@ import Flatbush from 'flatbush';
 import { isOcrTool } from './components/drawToolbar/components/tools/ocrTool';
 import { CaptureHistoryActionType, CaptureHistoryController } from './components/captureHistory';
 import { AntdContext } from '@/components/globalLayoutExtra';
-import { appError } from '@/utils/log';
+import { appError, appInfo } from '@/utils/log';
 import { NonDeletedExcalidrawElement } from '@mg-chao/excalidraw/element/types';
 import {
     DrawContext as CommonDrawContext,
@@ -333,11 +334,7 @@ const DrawPageCore: React.FC<{
             await Promise.all([
                 createDrawWindow(),
                 // 隔一段时间释放，防止释放中途用户唤起
-                new Promise((resolve) => {
-                    setTimeout(resolve, 1000 * 8);
-                }).then(() => {
-                    appWindowRef.current.close();
-                }),
+                closeWindowAfterDelay(1000 * 3),
             ]);
         }, 1000 * 16);
     }, []);
@@ -744,7 +741,13 @@ const DrawPageCore: React.FC<{
     useEffect(() => {
         // 监听截图命令
         const listenerId = addListener('execute-screenshot', (args) => {
-            const payload = (args as { payload: { type: ScreenshotType } }).payload;
+            const payload = (args as { payload: { type: ScreenshotType; windowLabel?: string } })
+                .payload;
+
+            // 防止循环调用
+            if (payload.windowLabel === appWindowRef.current?.label) {
+                return;
+            }
 
             if (capturingRef.current) {
                 return;
@@ -759,7 +762,7 @@ const DrawPageCore: React.FC<{
                 }
                 releaseExecuteScreenshotTimerRef.current = {
                     timer: setInterval(() => {
-                        executeScreenshotFunc(payload.type);
+                        executeScreenshotFunc(payload.type, appWindowRef.current?.label);
                     }, 128),
                     type: payload.type,
                 };
