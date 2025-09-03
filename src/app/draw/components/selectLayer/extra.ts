@@ -402,16 +402,31 @@ export const dragRect = (
     return finalRect;
 };
 
-export const limitRect = (currentRect: ElementRect, limitRect: ElementRect) => {
+export const limitRect = (
+    currentRect: ElementRect,
+    limitRect: ElementRect,
+    checkMinRectSize: boolean = false,
+) => {
     const { min_x, min_y, max_x, max_y } = currentRect;
     const { min_x: limitMinX, min_y: limitMinY, max_x: limitMaxX, max_y: limitMaxY } = limitRect;
 
-    return {
+    const result: ElementRect = {
         min_x: Math.max(min_x, limitMinX),
         min_y: Math.max(min_y, limitMinY),
         max_x: Math.min(max_x, limitMaxX),
         max_y: Math.min(max_y, limitMaxY),
     };
+
+    if (checkMinRectSize) {
+        if (result.max_x - result.min_x < MIN_RECT_SIZE) {
+            result.max_x = result.min_x + MIN_RECT_SIZE;
+        }
+        if (result.max_y - result.min_y < MIN_RECT_SIZE) {
+            result.max_y = result.min_y + MIN_RECT_SIZE;
+        }
+    }
+
+    return result;
 };
 
 export const positoinInRect = (rect: ElementRect, mousePosition: MousePosition) => {

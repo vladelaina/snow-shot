@@ -876,7 +876,26 @@ const SelectLayerCore: React.FC<SelectLayerProps> = ({ actionRef }) => {
                     return;
                 }
 
-                setSelectRect(mouseDownPositionRef.current.toElementRect(mousePosition), true);
+                setSelectRect(
+                    limitRect(
+                        mouseDownPositionRef.current.toElementRect(
+                            mousePosition,
+                            isHotkeyPressed(
+                                getAppSettings()[AppSettingsGroup.DrawToolbarKeyEvent][
+                                    KeyEventKey.LockWidthHeightPicker
+                                ].hotKey,
+                            ),
+                        ),
+                        {
+                            min_x: 0,
+                            min_y: 0,
+                            max_x: captureBoundingBoxInfoRef.current!.width,
+                            max_y: captureBoundingBoxInfoRef.current!.height,
+                        },
+                        true,
+                    ),
+                    true,
+                );
             } else if (selectStateRef.current === SelectState.Selected) {
                 updateDragMode(mousePosition);
             } else if (selectStateRef.current === SelectState.Drag) {
@@ -900,6 +919,7 @@ const SelectLayerCore: React.FC<SelectLayerProps> = ({ actionRef }) => {
             getScreenshotType,
             onMouseMoveAutoSelect,
             setSelectState,
+            getAppSettings,
             setSelectRect,
             updateDragMode,
         ],

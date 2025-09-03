@@ -96,6 +96,7 @@ const StatusBar: React.FC = () => {
             switchColorFormat: { hotKey: switchColorFormatHotKey },
             serialNumberDisableArrow: { hotKey: serialNumberDisableArrowHotKey },
             selectPrevRectTool: { hotKey: selectPrevRectToolHotKey },
+            lockWidthHeightPicker: { hotKey: lockWidthHeightPickerHotKey },
             previousCapture: { hotKey: previousCaptureHotKey },
             nextCapture: { hotKey: nextCaptureHotKey },
         } = getAppSettings()[AppSettingsGroup.DrawToolbarKeyEvent];
@@ -152,6 +153,11 @@ const StatusBar: React.FC = () => {
                     key: 'selectPrevRectTool',
                     label: <FormattedMessage id="draw.selectPrevRectTool" />,
                     children: <KeyLabel hotKey={selectPrevRectToolHotKey} />,
+                },
+                {
+                    key: 'lockWidthHeightPicker',
+                    label: <FormattedMessage id="draw.lockWidthHeightPicker" />,
+                    children: <KeyLabel hotKey={lockWidthHeightPickerHotKey} />,
                 },
                 {
                     key: 'switchCapture',
