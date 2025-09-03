@@ -61,6 +61,37 @@ import { appError } from '@/utils/log';
 
 dayjs.extend(duration);
 
+const convertVideoMaxSizeToWidthAndHeight = (
+    videoMaxSize: VideoMaxSize,
+): { width: number; height: number } => {
+    let videoMaxWidth = 1920;
+    let videoMaxHeight = 1080;
+    switch (videoMaxSize) {
+        case VideoMaxSize.P2160:
+            videoMaxWidth = 3840;
+            videoMaxHeight = 2160;
+            break;
+        case VideoMaxSize.P1440:
+            videoMaxWidth = 2560;
+            videoMaxHeight = 1440;
+            break;
+        case VideoMaxSize.P1080:
+            videoMaxWidth = 1920;
+            videoMaxHeight = 1080;
+            break;
+        case VideoMaxSize.P720:
+            videoMaxWidth = 1280;
+            videoMaxHeight = 720;
+            break;
+        case VideoMaxSize.P480:
+            videoMaxWidth = 640;
+            videoMaxHeight = 480;
+            break;
+    }
+
+    return { width: videoMaxWidth, height: videoMaxHeight };
+};
+
 export default function VideoRecordToolbar() {
     const { token } = theme.useToken();
     const intl = useIntl();
@@ -255,7 +286,17 @@ export default function VideoRecordToolbar() {
 
             let outputFile: string | null | undefined = undefined;
             try {
-                outputFile = await videoRecordStop(convertToGif);
+                const { width: gifMaxWidth, height: gifMaxHeight } =
+                    convertVideoMaxSizeToWidthAndHeight(
+                        getAppSettings()[AppSettingsGroup.FunctionVideoRecord].gifMaxSize,
+                    );
+
+                outputFile = await videoRecordStop(
+                    convertToGif,
+                    getAppSettings()[AppSettingsGroup.FunctionVideoRecord].gifFrameRate,
+                    gifMaxWidth,
+                    gifMaxHeight,
+                );
 
                 setVideoRecordState(VideoRecordState.Idle);
 
@@ -269,7 +310,7 @@ export default function VideoRecordToolbar() {
 
             return outputFile;
         },
-        [setVideoRecordState, stopDurationTimer, updateDurationFormat],
+        [getAppSettings, setVideoRecordState, stopDurationTimer, updateDurationFormat],
     );
 
     const enableStopRecord =
@@ -305,33 +346,11 @@ export default function VideoRecordToolbar() {
 
                                     const appSettings = getAppSettings();
 
-                                    let videoMaxWidth = 1920;
-                                    let videoMaxHeight = 1080;
-                                    switch (
-                                        appSettings[AppSettingsGroup.FunctionVideoRecord]
-                                            .videoMaxSize
-                                    ) {
-                                        case VideoMaxSize.P2160:
-                                            videoMaxWidth = 3840;
-                                            videoMaxHeight = 2160;
-                                            break;
-                                        case VideoMaxSize.P1440:
-                                            videoMaxWidth = 2560;
-                                            videoMaxHeight = 1440;
-                                            break;
-                                        case VideoMaxSize.P1080:
-                                            videoMaxWidth = 1920;
-                                            videoMaxHeight = 1080;
-                                            break;
-                                        case VideoMaxSize.P720:
-                                            videoMaxWidth = 1280;
-                                            videoMaxHeight = 720;
-                                            break;
-                                        case VideoMaxSize.P480:
-                                            videoMaxWidth = 640;
-                                            videoMaxHeight = 480;
-                                            break;
-                                    }
+                                    const { width: videoMaxWidth, height: videoMaxHeight } =
+                                        convertVideoMaxSizeToWidthAndHeight(
+                                            appSettings[AppSettingsGroup.FunctionVideoRecord]
+                                                .videoMaxSize,
+                                        );
 
                                     videoRecordStart(
                                         selectRectRef.current?.min_x ?? 0,

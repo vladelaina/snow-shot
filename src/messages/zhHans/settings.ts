@@ -146,6 +146,7 @@ export const settings = {
     'settings.functionSettings.fullScreenDrawSettings.defaultTool.laserPointer': '激光笔',
     'settings.functionSettings.videoRecordSettings': '视频录制',
     'settings.functionSettings.videoRecordSettings.frameRate': '帧率',
+    'settings.functionSettings.videoRecordSettings.gifFrameRate': 'GIF 帧率',
     'settings.functionSettings.videoRecordSettings.microphoneDeviceName': '麦克风设备',
     'settings.functionSettings.videoRecordSettings.microphoneDeviceName.default': '默认设备',
     'settings.functionSettings.videoRecordSettings.encoder': '编码器',
@@ -162,6 +163,7 @@ export const settings = {
     'settings.functionSettings.videoRecordSettings.hwaccel': '启用硬件加速',
     'settings.functionSettings.videoRecordSettings.saveDirectory': '保存目录',
     'settings.functionSettings.videoRecordSettings.videoMaxSize': '视频清晰度',
+    'settings.functionSettings.videoRecordSettings.gifMaxSize': 'GIF 清晰度',
     'settings.functionSettings.videoRecordSettings.videoMaxSize.tip':
         '视频录制时，视频的最大尺寸，如果超出该尺寸，将进行等比例缩放',
     'settings.functionSettings.videoRecordSettings.videoMaxSize.p2160': '4K',
