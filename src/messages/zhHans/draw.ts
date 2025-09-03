@@ -132,4 +132,9 @@ export const draw = {
     'draw.confirm': '确定',
     'draw.serialNumber': '序号',
     'draw.drawStyleTool': '绘制样式',
+    'draw.scrollAction': '滚动行为',
+    'draw.scrollAction.zoom': '缩放',
+    'draw.scrollAction.rotateX': 'X 轴旋转',
+    'draw.scrollAction.rotateY': 'Y 轴旋转',
+    'draw.scrollAction.rotateZ': 'Z 轴旋转',
 };
