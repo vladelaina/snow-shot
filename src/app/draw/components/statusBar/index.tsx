@@ -335,7 +335,8 @@ const StatusBar: React.FC = () => {
             <style jsx>{`
                 {/* 在这里处理下 antd message 的样式*/}
                 :global(.app-global-message) {
-                    top: ${monitorRect.min_y}px !important;
+                    {/* 刘海屏可能会被遮挡，加个 margin */}
+                    top: calc(${monitorRect.min_y}px + ${token.marginLG}px) !important;
                     left: ${monitorRect.min_x}px !important;
                     width: ${monitorRect.max_x - monitorRect.min_x}px !important;
                     transform: unset !important;
