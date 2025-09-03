@@ -243,6 +243,8 @@ export type AppSettingsData = {
         saveDirectory: string;
         /** 帧率 */
         frameRate: number;
+        /** GIF 帧率 */
+        gifFrameRate: number;
         /** 麦克风设备 */
         microphoneDeviceName: string;
         /** 硬件加速 */
@@ -253,6 +255,8 @@ export type AppSettingsData = {
         encoderPreset: string;
         /** 视频最大尺寸 */
         videoMaxSize: VideoMaxSize;
+        /** GIF 最大尺寸 */
+        gifMaxSize: VideoMaxSize;
     };
     [AppSettingsGroup.SystemScreenshot]: {
         historyValidDuration: HistoryValidDuration;
@@ -423,11 +427,13 @@ export const defaultAppSettingsData: AppSettingsData = {
     [AppSettingsGroup.FunctionVideoRecord]: {
         saveDirectory: '',
         frameRate: 24,
+        gifFrameRate: 10,
         microphoneDeviceName: '',
         hwaccel: true,
         encoder: 'libx264',
         encoderPreset: 'ultrafast',
         videoMaxSize: VideoMaxSize.P1080,
+        gifMaxSize: VideoMaxSize.P1080,
     },
     [AppSettingsGroup.SystemScreenshot]: {
         ocrModel: OcrModel.RapidOcrV4,
@@ -1266,6 +1272,16 @@ const ContextWrapCore: React.FC<{ children: React.ReactNode }> = ({ children }) 
                             ? (newSettings.videoMaxSize as VideoMaxSize)
                             : (prevSettings?.videoMaxSize ??
                               defaultAppSettingsData[group].videoMaxSize),
+                    gifFrameRate:
+                        typeof newSettings?.gifFrameRate === 'number'
+                            ? Math.min(Math.max(newSettings.gifFrameRate, 1), 24)
+                            : (prevSettings?.gifFrameRate ??
+                              defaultAppSettingsData[group].gifFrameRate),
+                    gifMaxSize:
+                        typeof newSettings?.gifMaxSize === 'string'
+                            ? (newSettings.gifMaxSize as VideoMaxSize)
+                            : (prevSettings?.gifMaxSize ??
+                              defaultAppSettingsData[group].gifMaxSize),
                 };
             } else if (group === AppSettingsGroup.FunctionFixedContent) {
                 newSettings = newSettings as AppSettingsData[typeof group];

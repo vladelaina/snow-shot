@@ -263,6 +263,29 @@ export default function SystemSettings() {
         ];
     }, [intl]);
 
+    const gifMaxSizeOptions = useMemo(() => {
+        return [
+            {
+                label: intl.formatMessage({
+                    id: 'settings.functionSettings.videoRecordSettings.videoMaxSize.p1080',
+                }),
+                value: VideoMaxSize.P1080,
+            },
+            {
+                label: intl.formatMessage({
+                    id: 'settings.functionSettings.videoRecordSettings.videoMaxSize.p720',
+                }),
+                value: VideoMaxSize.P720,
+            },
+            {
+                label: intl.formatMessage({
+                    id: 'settings.functionSettings.videoRecordSettings.videoMaxSize.p480',
+                }),
+                value: VideoMaxSize.P480,
+            },
+        ];
+    }, [intl]);
+
     const trayIconClickActionOptions = useMemo(() => {
         return [
             {
@@ -1085,7 +1108,7 @@ export default function SystemSettings() {
                             values,
                             true,
                             true,
-                            false,
+                            true,
                             true,
                             false,
                         );
@@ -1144,6 +1167,43 @@ export default function SystemSettings() {
                                     {
                                         label: '42',
                                         value: 42,
+                                    },
+                                ]}
+                            />
+                        </Col>
+                    </Row>
+
+                    <Row gutter={token.padding}>
+                        <Col span={12}>
+                            <ProFormSelect
+                                name="gifMaxSize"
+                                layout="horizontal"
+                                label={
+                                    <FormattedMessage id="settings.functionSettings.videoRecordSettings.gifMaxSize" />
+                                }
+                                options={gifMaxSizeOptions}
+                            />
+                        </Col>
+
+                        <Col span={12}>
+                            <ProFormSelect
+                                name="gifFrameRate"
+                                layout="horizontal"
+                                label={
+                                    <FormattedMessage id="settings.functionSettings.videoRecordSettings.gifFrameRate" />
+                                }
+                                options={[
+                                    {
+                                        label: '10',
+                                        value: 10,
+                                    },
+                                    {
+                                        label: '15',
+                                        value: 15,
+                                    },
+                                    {
+                                        label: '24',
+                                        value: 24,
                                     },
                                 ]}
                             />

@@ -56,6 +56,7 @@ pub struct VideoRecordService {
     segments: Vec<String>,                     // 存储所有片段文件路径
     segment_counter: u32,                      // 片段计数器
     recording_params: Option<RecordingParams>, // 录制参数，用于恢复录制
+    record_video_size: Option<(i32, i32)>,     // 录制视频大小
     ffmpeg_path: Option<PathBuf>,
 }
 
@@ -82,6 +83,7 @@ impl VideoRecordService {
             segments: Vec::new(),
             segment_counter: 0,
             recording_params: None,
+            record_video_size: None,
             ffmpeg_path: None,
         }
     }
@@ -137,6 +139,39 @@ impl VideoRecordService {
         )
     }
 
+    fn get_actual_video_size(
+        &self,
+        width: i32,
+        height: i32,
+        video_max_width: i32,
+        video_max_height: i32,
+    ) -> (i32, i32) {
+        if width > video_max_width || height > video_max_height {
+            // 计算保持宽高比的最大尺寸
+            let max_width = video_max_width;
+            let max_height = video_max_height;
+
+            let scale_x = max_width as f64 / width as f64;
+            let scale_y = max_height as f64 / height as f64;
+
+            let target_size_scale = scale_x.min(scale_y);
+
+            let mut target_width = (width as f64 * target_size_scale) as i32;
+            let mut target_height = (height as f64 * target_size_scale) as i32;
+
+            if target_width % 2 == 1 {
+                target_width -= 1;
+            }
+            if target_height % 2 == 1 {
+                target_height -= 1;
+            }
+
+            (target_width, target_height)
+        } else {
+            (width, height)
+        }
+    }
+
     pub fn start(
         &mut self,
         min_x: i32,
@@ -184,6 +219,7 @@ impl VideoRecordService {
         // 重置片段相关状态
         self.segments.clear();
         self.segment_counter = 0;
+        self.record_video_size = None;
 
         // 开始第一个片段的录制
         self.start_segment()
@@ -368,32 +404,20 @@ impl VideoRecordService {
         }
 
         let mut video_filter = String::new();
-        if width > params.video_max_width || height > params.video_max_height {
-            // 计算保持宽高比的最大尺寸
-            let max_width = params.video_max_width;
-            let max_height = params.video_max_height;
-
-            let scale_x = max_width as f64 / width as f64;
-            let scale_y = max_height as f64 / height as f64;
-
-            let target_size_scale = scale_x.min(scale_y);
-
-            let mut target_width = (width as f64 * target_size_scale) as i32;
-            let mut target_height = (height as f64 * target_size_scale) as i32;
-
-            if target_width % 2 == 1 {
-                target_width -= 1;
-            }
-            if target_height % 2 == 1 {
-                target_height -= 1;
-            }
-
+        let (target_width, target_height) = self.get_actual_video_size(
+            width,
+            height,
+            params.video_max_width,
+            params.video_max_height,
+        );
+        if target_width != width || target_height != height {
             video_filter = format!("scale={}:{}:flags=lanczos", target_width, target_height);
             println!(
                 "Scaling video from {}x{} to {}x{}",
                 width, height, target_width, target_height
             );
         }
+        self.record_video_size = Some((target_width, target_height));
 
         // 根据格式设置不同的参数
         match params.format {
@@ -761,7 +785,13 @@ impl VideoRecordService {
         format!("{}.{}", params.output_file, params.format.extension())
     }
 
-    pub fn stop(&mut self, convert_to_gif: bool) -> Result<Option<String>> {
+    pub fn stop(
+        &mut self,
+        convert_to_gif: bool,
+        gif_frame_rate: u32,
+        gif_max_width: i32,
+        gif_max_height: i32,
+    ) -> Result<Option<String>> {
         if self.state != VideoRecordState::Recording && self.state != VideoRecordState::Paused {
             return Ok(None);
         }
@@ -791,7 +821,12 @@ impl VideoRecordService {
 
         // 如果需要转换为GIF格式
         if convert_to_gif && self.recording_params.as_ref().unwrap().format == VideoFormat::Mp4 {
-            final_filename = self.convert_to_gif(&final_filename)?;
+            final_filename = self.convert_to_gif(
+                &final_filename,
+                gif_frame_rate,
+                gif_max_width,
+                gif_max_height,
+            )?;
         }
 
         self.cleanup();
@@ -859,7 +894,13 @@ impl VideoRecordService {
         }
     }
 
-    fn convert_to_gif(&self, mp4_filename: &str) -> Result<String> {
+    fn convert_to_gif(
+        &self,
+        mp4_filename: &str,
+        gif_frame_rate: u32,
+        gif_max_width: i32,
+        gif_max_height: i32,
+    ) -> Result<String> {
         let params = self.recording_params.as_ref().unwrap();
 
         // 生成GIF文件名
@@ -880,6 +921,18 @@ impl VideoRecordService {
             }
         }
 
+        let video_width = self.record_video_size.as_ref().unwrap().0;
+        let video_height = self.record_video_size.as_ref().unwrap().1;
+
+        let (target_width, target_height) =
+            self.get_actual_video_size(video_width, video_height, gif_max_width, gif_max_height);
+
+        let scale_filter = if target_width != video_width || target_height != video_height {
+            format!("scale={}:{}:flags=lanczos", target_width, target_height)
+        } else {
+            format!("scale=-1:-1:flags=lanczos")
+        };
+
         // 构建FFmpeg命令进行MP4到GIF的转换
         let mut command = self.get_ffmpeg_command();
 
@@ -888,7 +941,8 @@ impl VideoRecordService {
             .arg(mp4_filename)
             .arg("-vf")
             .arg(format!(
-                "fps=10,scale=-1:-1:flags=lanczos,split[s0][s1];[s0]palettegen[p];[s1][p]paletteuse",
+                "fps={},{},split[s0][s1];[s0]palettegen[p];[s1][p]paletteuse",
+                gif_frame_rate, scale_filter,
             ))
             .arg("-loop")
             .arg("0")
