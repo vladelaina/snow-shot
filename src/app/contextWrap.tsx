@@ -257,6 +257,8 @@ export type AppSettingsData = {
         videoMaxSize: VideoMaxSize;
         /** GIF 最大尺寸 */
         gifMaxSize: VideoMaxSize;
+        /** 启用 APNG 格式 */
+        enableApngFormat: boolean;
     };
     [AppSettingsGroup.SystemScreenshot]: {
         historyValidDuration: HistoryValidDuration;
@@ -434,6 +436,7 @@ export const defaultAppSettingsData: AppSettingsData = {
         encoderPreset: 'ultrafast',
         videoMaxSize: VideoMaxSize.P1080,
         gifMaxSize: VideoMaxSize.P1080,
+        enableApngFormat: false,
     },
     [AppSettingsGroup.SystemScreenshot]: {
         ocrModel: OcrModel.RapidOcrV4,
@@ -1282,6 +1285,11 @@ const ContextWrapCore: React.FC<{ children: React.ReactNode }> = ({ children }) 
                             ? (newSettings.gifMaxSize as VideoMaxSize)
                             : (prevSettings?.gifMaxSize ??
                               defaultAppSettingsData[group].gifMaxSize),
+                    enableApngFormat:
+                        typeof newSettings?.enableApngFormat === 'boolean'
+                            ? newSettings.enableApngFormat
+                            : (prevSettings?.enableApngFormat ??
+                              defaultAppSettingsData[group].enableApngFormat),
                 };
             } else if (group === AppSettingsGroup.FunctionFixedContent) {
                 newSettings = newSettings as AppSettingsData[typeof group];

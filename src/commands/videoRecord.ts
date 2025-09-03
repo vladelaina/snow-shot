@@ -52,12 +52,14 @@ export const videoRecordStart = async (
 
 export const videoRecordStop = async (
     convertToGif: boolean,
+    enableApngFormat: boolean,
     gifFrameRate: number,
     gifMaxWidth: number,
     gifMaxHeight: number,
 ): Promise<string | null | undefined> => {
     const result = await invoke<string | null | undefined>('video_record_stop', {
         convertToGif,
+        enableApngFormat,
         gifFrameRate,
         gifMaxWidth,
         gifMaxHeight,
