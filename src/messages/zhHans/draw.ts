@@ -66,7 +66,7 @@ export const draw = {
     'draw.showOrHideOcrResult': '显示 OCR 结果',
     'draw.fixedTool': '固定到屏幕',
     'draw.extraToolsTool': '额外工具',
-    'draw.lockWidthHeightPicker': '锁定选区宽高比',
+    'draw.lockWidthHeightPicker': '保持选区宽高一致',
     'draw.lockAnglePicker': '切换锁定角度',
     'draw.removeTool': '删除选中元素',
     'draw.colorPickerCopy': '复制颜色',
