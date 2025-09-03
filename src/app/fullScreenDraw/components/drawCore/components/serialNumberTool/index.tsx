@@ -323,8 +323,6 @@ export const SerialNumberTool: React.FC = () => {
             appState,
         );
 
-        setSerialNumber(limitSerialNumber(currentNumber + 1));
-
         // 判断是否有新增的 arrow 元素
         const newArrowElement = sceneElements.find((item) => {
             return item.type === 'arrow' && !arrowElementIdsRef.current.has(item.id);
@@ -366,6 +364,8 @@ export const SerialNumberTool: React.FC = () => {
             elements: [...sceneElements, ...serialNumberElement],
             captureUpdate: 'IMMEDIATELY',
         });
+
+        setSerialNumber(limitSerialNumber(currentNumber + 1));
     }, [disableArrowRef, getAction, getMousePosition, serialNumberRef, setSerialNumber]);
 
     const onMouseUp = useCallback(() => {
