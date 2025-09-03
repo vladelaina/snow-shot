@@ -223,10 +223,12 @@ export const settings = {
     'settings.hotKeySettings.fixedContent.fixedContentSelectText': '选取文本/拖拽窗口',
     'settings.functionSettings.fixedContentSettings': '固定到屏幕',
     'settings.functionSettings.fixedContentSettings.zoomWithMouse': '以鼠标为中心缩放',
-    'settings.functionSettings.fixedContentSettings.autoOcr': '自动 OCR',
     'settings.functionSettings.fixedContentSettings.initialPosition': '窗口初始位置',
     'settings.functionSettings.fixedContentSettings.initialPosition.tip':
         '截图的固定到屏幕不受影响',
+    'settings.functionSettings.fixedContentSettings.autoOcr': '自动 OCR',
+    'settings.functionSettings.fixedContentSettings.autoCopyToClipboard':
+        '固定截图后自动复制到剪贴板',
     'settings.functionSettings.fixedContentSettings.initialPosition.monitorCenter': '显示器居中',
     'settings.functionSettings.fixedContentSettings.initialPosition.mousePosition': '鼠标位置',
     'settings.printScreen.tip':

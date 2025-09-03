@@ -717,7 +717,10 @@ const ColorPickerCore: React.FC<{
                     }
 
                     // 手动框选时，会触发固定宽高，忽略切换颜色格式
-                    if (selectLayerActionRef.current?.getSelectState() === SelectState.Manual) {
+                    if (
+                        selectLayerActionRef.current?.getSelectState() === SelectState.Manual ||
+                        selectLayerActionRef.current?.getSelectState() === SelectState.Drag
+                    ) {
                         return;
                     }
 

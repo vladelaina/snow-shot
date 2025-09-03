@@ -533,16 +533,6 @@ export default function SystemSettings() {
                         </Col>
 
                         <Col span={12}>
-                            <ProFormSwitch
-                                label={
-                                    <FormattedMessage id="settings.functionSettings.fixedContentSettings.autoOcr" />
-                                }
-                                name="autoOcr"
-                                layout="horizontal"
-                            />
-                        </Col>
-
-                        <Col span={12}>
                             <ProFormSelect
                                 name="initialPosition"
                                 layout="horizontal"
@@ -563,6 +553,26 @@ export default function SystemSettings() {
                                         value: AppSettingsFixedContentInitialPosition.MousePosition,
                                     },
                                 ]}
+                            />
+                        </Col>
+
+                        <Col span={12}>
+                            <ProFormSwitch
+                                label={
+                                    <FormattedMessage id="settings.functionSettings.fixedContentSettings.autoOcr" />
+                                }
+                                name="autoOcr"
+                                layout="horizontal"
+                            />
+                        </Col>
+
+                        <Col span={12}>
+                            <ProFormSwitch
+                                label={
+                                    <FormattedMessage id="settings.functionSettings.fixedContentSettings.autoCopyToClipboard" />
+                                }
+                                name="autoCopyToClipboard"
+                                layout="horizontal"
                             />
                         </Col>
                     </Row>

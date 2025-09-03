@@ -404,6 +404,102 @@ export const FixedContentCore: React.FC<{
         [setFixedContentType],
     );
 
+    const renderToCanvas = useCallback(
+        async (ignoreDrawCanvas: boolean = false) => {
+            let canvas: HTMLCanvasElement | undefined = undefined;
+
+            if (
+                fixedContentTypeRef.current === FixedContentType.DrawCanvas ||
+                fixedContentTypeRef.current === FixedContentType.Image
+            ) {
+                if (!imageRef.current) {
+                    appError('[renderToCanvas] imageRef.current is undefined');
+                    return;
+                }
+
+                canvas = document.createElement('canvas');
+                canvas.width = imageRef.current.naturalWidth;
+                canvas.height = imageRef.current.naturalHeight;
+
+                const context = canvas.getContext('2d');
+                if (!context) {
+                    return;
+                }
+
+                context.drawImage(imageRef.current, 0, 0);
+            } else {
+                let htmlElement: HTMLElement | undefined | null;
+                if (fixedContentTypeRef.current === FixedContentType.Html) {
+                    htmlElement = htmlContentContainerRef.current?.contentWindow?.document.body;
+                } else if (fixedContentTypeRef.current === FixedContentType.Text) {
+                    htmlElement = textContentContainerRef.current;
+                }
+
+                if (!htmlElement) {
+                    appError('[renderToCanvas] htmlElement is undefined');
+                    return;
+                }
+
+                canvas = await htmlToImage.toCanvas(htmlElement);
+            }
+
+            const context = canvas.getContext('2d');
+            if (!context) {
+                appError('[renderToCanvas] context is undefined');
+                return;
+            }
+
+            const drawCanvas = drawActionRef.current?.getCanvas();
+            if (drawCanvas && !ignoreDrawCanvas) {
+                context.drawImage(drawCanvas, 0, 0, canvas.width, canvas.height);
+            }
+
+            return canvas;
+        },
+        [fixedContentTypeRef],
+    );
+
+    const renderToBlob = useCallback(
+        async (ignoreDrawCanvas: boolean = false) => {
+            const canvas = await renderToCanvas(ignoreDrawCanvas);
+            if (!canvas) {
+                return;
+            }
+
+            return new Promise<Blob | null>((resolve) => {
+                canvas.toBlob(resolve, 'image/png', 1);
+            });
+        },
+        [renderToCanvas],
+    );
+
+    const copyRawToClipboard = useCallback(async () => {
+        if (fixedContentTypeRef.current === FixedContentType.DrawCanvas) {
+            if (!blobRef.current) {
+                return;
+            }
+
+            await writeImageToClipboard(blobRef.current);
+        } else if (
+            fixedContentTypeRef.current === FixedContentType.Html &&
+            originHtmlContentRef.current
+        ) {
+            await writeHtmlToClipboard(originHtmlContentRef.current);
+        } else if (
+            fixedContentTypeRef.current === FixedContentType.Text &&
+            textContentRef.current
+        ) {
+            await writeTextToClipboard(textContentRef.current);
+        } else if (fixedContentTypeRef.current === FixedContentType.Image) {
+            const canvasBlob = await renderToBlob(true);
+            if (!canvasBlob) {
+                return;
+            }
+
+            await clipboard.writeImage(await canvasBlob.arrayBuffer());
+        }
+    }, [fixedContentTypeRef, textContentRef, renderToBlob]);
+
     const initDraw = useCallback(
         async (params: FixedContentInitDrawParams) => {
             ocrResultActionRef.current?.setEnable(false);
@@ -504,8 +600,18 @@ export const FixedContentCore: React.FC<{
                     });
                 }
             }
+
+            if (getAppSettings()[AppSettingsGroup.FunctionFixedContent].autoCopyToClipboard) {
+                copyRawToClipboard();
+            }
         },
-        [getAppSettings, setEnableSelectText, setFixedContentType, setWindowSize],
+        [
+            copyRawToClipboard,
+            getAppSettings,
+            setEnableSelectText,
+            setFixedContentType,
+            setWindowSize,
+        ],
     );
 
     useEffect(() => {
@@ -749,101 +855,6 @@ export const FixedContentCore: React.FC<{
         },
         [canvasPropsRef, textScaleFactor],
     );
-
-    const renderToCanvas = useCallback(
-        async (ignoreDrawCanvas: boolean = false) => {
-            let canvas: HTMLCanvasElement | undefined = undefined;
-
-            if (
-                fixedContentTypeRef.current === FixedContentType.DrawCanvas ||
-                fixedContentTypeRef.current === FixedContentType.Image
-            ) {
-                if (!imageRef.current) {
-                    appError('[renderToCanvas] imageRef.current is undefined');
-                    return;
-                }
-
-                canvas = document.createElement('canvas');
-                canvas.width = imageRef.current.naturalWidth;
-                canvas.height = imageRef.current.naturalHeight;
-
-                const context = canvas.getContext('2d');
-                if (!context) {
-                    return;
-                }
-
-                context.drawImage(imageRef.current, 0, 0);
-            } else {
-                let htmlElement: HTMLElement | undefined | null;
-                if (fixedContentTypeRef.current === FixedContentType.Html) {
-                    htmlElement = htmlContentContainerRef.current?.contentWindow?.document.body;
-                } else if (fixedContentTypeRef.current === FixedContentType.Text) {
-                    htmlElement = textContentContainerRef.current;
-                }
-
-                if (!htmlElement) {
-                    appError('[renderToCanvas] htmlElement is undefined');
-                    return;
-                }
-
-                canvas = await htmlToImage.toCanvas(htmlElement);
-            }
-
-            const context = canvas.getContext('2d');
-            if (!context) {
-                appError('[renderToCanvas] context is undefined');
-                return;
-            }
-
-            const drawCanvas = drawActionRef.current?.getCanvas();
-            if (drawCanvas && !ignoreDrawCanvas) {
-                context.drawImage(drawCanvas, 0, 0, canvas.width, canvas.height);
-            }
-
-            return canvas;
-        },
-        [fixedContentTypeRef],
-    );
-    const renderToBlob = useCallback(
-        async (ignoreDrawCanvas: boolean = false) => {
-            const canvas = await renderToCanvas(ignoreDrawCanvas);
-            if (!canvas) {
-                return;
-            }
-
-            return new Promise<Blob | null>((resolve) => {
-                canvas.toBlob(resolve, 'image/png', 1);
-            });
-        },
-        [renderToCanvas],
-    );
-
-    const copyRawToClipboard = useCallback(async () => {
-        if (fixedContentTypeRef.current === FixedContentType.DrawCanvas) {
-            if (!blobRef.current) {
-                return;
-            }
-
-            await writeImageToClipboard(blobRef.current);
-        } else if (
-            fixedContentTypeRef.current === FixedContentType.Html &&
-            originHtmlContentRef.current
-        ) {
-            await writeHtmlToClipboard(originHtmlContentRef.current);
-        } else if (
-            fixedContentTypeRef.current === FixedContentType.Text &&
-            textContentRef.current
-        ) {
-            await writeTextToClipboard(textContentRef.current);
-        } else if (fixedContentTypeRef.current === FixedContentType.Image) {
-            const canvasBlob = await renderToBlob(true);
-            if (!canvasBlob) {
-                return;
-            }
-
-            await clipboard.writeImage(await canvasBlob.arrayBuffer());
-        }
-    }, [fixedContentTypeRef, textContentRef, renderToBlob]);
 
     const copyToClipboard = useCallback(async () => {
         const canvasBlob = await renderToBlob();

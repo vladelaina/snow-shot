@@ -229,6 +229,8 @@ export type AppSettingsData = {
         zoomWithMouse: boolean;
         /** 固定屏幕后自动 OCR */
         autoOcr: boolean;
+        /** 固定截图后自动复制到剪贴板 */
+        autoCopyToClipboard: boolean;
         /** 窗口初始位置 */
         initialPosition: AppSettingsFixedContentInitialPosition;
     };
@@ -405,6 +407,7 @@ export const defaultAppSettingsData: AppSettingsData = {
     [AppSettingsGroup.FunctionFixedContent]: {
         zoomWithMouse: true,
         autoOcr: true,
+        autoCopyToClipboard: false,
         initialPosition: AppSettingsFixedContentInitialPosition.MousePosition,
     },
     [AppSettingsGroup.FunctionOutput]: {
@@ -1279,6 +1282,11 @@ const ContextWrapCore: React.FC<{ children: React.ReactNode }> = ({ children }) 
                         typeof newSettings?.autoOcr === 'boolean'
                             ? newSettings.autoOcr
                             : (prevSettings?.autoOcr ?? defaultAppSettingsData[group].autoOcr),
+                    autoCopyToClipboard:
+                        typeof newSettings?.autoCopyToClipboard === 'boolean'
+                            ? newSettings.autoCopyToClipboard
+                            : (prevSettings?.autoCopyToClipboard ??
+                              defaultAppSettingsData[group].autoCopyToClipboard),
                     initialPosition:
                         typeof newSettings?.initialPosition === 'string'
                             ? (newSettings.initialPosition as AppSettingsFixedContentInitialPosition)
