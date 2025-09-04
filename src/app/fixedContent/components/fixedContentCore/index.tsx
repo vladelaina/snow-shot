@@ -1369,8 +1369,9 @@ export const FixedContentCore: React.FC<{
 
     const handleContextMenu = useCallback(async (e: React.MouseEvent<HTMLDivElement>) => {
         e.preventDefault();
+        e.stopPropagation();
 
-        await rightClickMenu?.popup(new LogicalPosition(e.clientX, e.clientY));
+        await rightClickMenu?.popup();
     }, []);
 
     useEffect(() => {

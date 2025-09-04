@@ -352,8 +352,14 @@ export const OcrResult: React.FC<{
     const menuRef = useRef<Menu>(undefined);
 
     const initMenu = useCallback(async () => {
+        if (menuRef.current) {
+            await menuRef.current.close();
+            menuRef.current = undefined;
+            return;
+        }
         const appWindow = getCurrentWindow();
         const menu = await Menu.new({
+            id: `${appWindow.label}-ocrResultMenu`,
             items: [
                 {
                     id: `${appWindow.label}-copySelectedText`,
@@ -409,7 +415,7 @@ export const OcrResult: React.FC<{
             e.stopPropagation();
 
             if (window.getSelection()?.toString()) {
-                menuRef.current?.popup(new LogicalPosition(e.clientX, e.clientY));
+                menuRef.current?.popup();
                 return;
             }
 
