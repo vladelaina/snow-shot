@@ -34,8 +34,6 @@ export const OcrBlocks: React.FC<{
     actionRef: React.RefObject<OcrBlocksActionType | undefined>;
     finishCapture: () => void;
 }> = ({ actionRef, finishCapture }) => {
-    const intl = useIntl();
-
     const ocrResultActionRef = useRef<OcrResultActionType>(undefined);
 
     const [getAppSettings] = useStateSubscriber(AppSettingsPublisher, undefined);
@@ -73,33 +71,6 @@ export const OcrBlocks: React.FC<{
         }),
         [],
     );
-
-    const menuRef = useRef<Menu>(undefined);
-
-    const initMenu = useCallback(async () => {
-        const appWindow = getCurrentWindow();
-        const menu = await Menu.new({
-            items: [
-                {
-                    id: `${appWindow.label}-copySelectedText`,
-                    text: intl.formatMessage({ id: 'draw.copySelectedText' }),
-                    action: async () => {
-                        writeTextToClipboard(window.getSelection()?.toString() || '');
-                    },
-                },
-            ],
-        });
-        menuRef.current = menu;
-    }, [intl]);
-
-    useEffect(() => {
-        initMenu();
-
-        return () => {
-            menuRef.current?.close();
-            menuRef.current = undefined;
-        };
-    }, [initMenu]);
 
     const onReplace = useCallback((result: OcrDetectResult, ignoreScale?: boolean) => {
         ocrResultActionRef.current?.updateOcrTextElements(result, ignoreScale);

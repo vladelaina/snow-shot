@@ -185,6 +185,7 @@ const TrayIconLoaderComponent = () => {
                 }
             },
             menu: await Menu.new({
+                id: `${appWindow.label}-trayIconMenu`,
                 items: [
                     {
                         id: `${appWindow.label}-screenshot`,
