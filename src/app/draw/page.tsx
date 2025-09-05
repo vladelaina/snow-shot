@@ -871,7 +871,7 @@ const DrawPageCore: React.FC<{
             latestExcalidrawNewElementRef.current = undefined;
         }, 512);
     }, []);
-    const onDoubleClickFirstClickCore = useCallback(() => {
+    const onDoubleClickFirstClick = useCallback(() => {
         // 判断 excalidraw 是否在绘制中
         const excalidrawAPI = drawCacheLayerActionRef.current?.getExcalidrawAPI();
         const sceneElements = excalidrawAPI?.getSceneElements();
@@ -885,17 +885,18 @@ const DrawPageCore: React.FC<{
             (id) => currentAppState?.selectedGroupIds[id],
         );
 
-        if (selectedElements && selectedGroupIds && selectedGroupIds.length === 1) {
+
+        if (editingTextElement) {
             latestExcalidrawNewElementRef.current = {
-                editingTextElement: selectedElements[0],
+                editingTextElement: editingTextElement,
             };
         } else if (selectedElements?.length === 1 && selectedElements[0].type === 'text') {
             latestExcalidrawNewElementRef.current = {
                 editingTextElement: selectedElements[0],
             };
-        } else if (editingTextElement) {
+        } else if (selectedElements && selectedGroupIds && selectedGroupIds.length === 1) {
             latestExcalidrawNewElementRef.current = {
-                editingTextElement: editingTextElement,
+                editingTextElement: selectedElements[0],
             };
         } else if (newElement && 'updated' in newElement) {
             let created = newElement.updated;
@@ -915,11 +916,6 @@ const DrawPageCore: React.FC<{
             unsetLatestExcalidrawNewElement();
         }
     }, [unsetLatestExcalidrawNewElement]);
-    const onDoubleClickFirstClick = useMemo(() => {
-        return debounce(() => {
-            onDoubleClickFirstClickCore();
-        }, 17);
-    }, [onDoubleClickFirstClickCore]);
     const onDoubleClick = useCallback<React.MouseEventHandler<HTMLDivElement>>(
         (e) => {
             if (
