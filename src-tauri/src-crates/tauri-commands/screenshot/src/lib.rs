@@ -113,7 +113,10 @@ where
                 && !w.title().unwrap_or_default().starts_with("Item-")
         });
 
-        focused_window_app_name = window.app_name().unwrap_or_default();
+        focused_window_app_name = match window {
+            Some(window) => window.app_name().unwrap_or_default(),
+            None => "".to_string(),
+        };
 
         let window_image = match window {
             Some(window) => match window.capture_image() {
@@ -150,8 +153,11 @@ where
     };
 
     // 简单处理下 FOCUS_WINDOW_APP_NAME 的变量占位
-    let file_path = PathBuf::from(file_path.replace(focus_window_app_name_variable_name.as_str(), &focused_window_app_name));
- 
+    let file_path = PathBuf::from(file_path.replace(
+        focus_window_app_name_variable_name.as_str(),
+        &focused_window_app_name,
+    ));
+
     let image = Arc::new(image::DynamicImage::ImageRgba8(image));
 
     // 并行执行保存文件和写入剪贴板
