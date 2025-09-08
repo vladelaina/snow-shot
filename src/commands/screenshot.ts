@@ -13,10 +13,20 @@ export const setDrawWindowStyle = async () => {
     return result;
 };
 
-export const captureFocusedWindow = async (filePath: string, copyToClipboard: boolean) => {
+/**
+ * 捕获焦点窗口
+ * @param filePath 文件路径
+ * @param copyToClipboard 是否复制到剪贴板
+ */
+export const captureFocusedWindow = async (
+    filePath: string,
+    copyToClipboard: boolean,
+    focusWindowAppNameVariableName: string,
+) => {
     const result = await invoke('capture_focused_window', {
         filePath,
         copyToClipboard,
+        focusWindowAppNameVariableName,
     });
     return result;
 };

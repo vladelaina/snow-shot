@@ -51,17 +51,23 @@ pub async fn capture_focused_window<F>(
     write_image_to_clipboard: F,
     file_path: String,
     copy_to_clipboard: bool,
+    focus_window_app_name_variable_name: String,
 ) -> Result<(), String>
 where
     F: Fn(&image::DynamicImage) -> Result<(), String> + Send + 'static,
 {
     let image;
 
+    // 截取窗口的应用名称
+    let focused_window_app_name;
+
     #[cfg(target_os = "windows")]
     {
         let hwnd = snow_shot_app_os::utils::get_focused_window();
 
         let focused_window = xcap::Window::new(xcap::ImplWindow::new(hwnd));
+
+        focused_window_app_name = focused_window.app_name().unwrap_or_default();
 
         image = match focused_window.capture_image() {
             Ok(image) => image,
@@ -107,6 +113,8 @@ where
                 && !w.title().unwrap_or_default().starts_with("Item-")
         });
 
+        focused_window_app_name = window.app_name().unwrap_or_default();
+
         let window_image = match window {
             Some(window) => match window.capture_image() {
                 Ok(image) => Some(image),
@@ -135,6 +143,15 @@ where
         };
     }
 
+    let focused_window_app_name = if focused_window_app_name == "" {
+        "unknown".to_string()
+    } else {
+        focused_window_app_name
+    };
+
+    // 简单处理下 FOCUS_WINDOW_APP_NAME 的变量占位
+    let file_path = PathBuf::from(file_path.replace(focus_window_app_name_variable_name.as_str(), &focused_window_app_name));
+ 
     let image = Arc::new(image::DynamicImage::ImageRgba8(image));
 
     // 并行执行保存文件和写入剪贴板

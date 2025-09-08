@@ -125,6 +125,9 @@ export const settings = {
     'settings.functionSettings.screenshotSettings.autoSaveFileMode.directory': '文件保存目录',
     'settings.functionSettings.screenshotSettings.autoSaveFileMode.saveFileFormat': '保存文件格式',
     'settings.functionSettings.outputSettings': '输出',
+    'settings.functionSettings.outputSettings.variables': '支持的变量',
+    'settings.functionSettings.outputSettings.variables.focusedWindowAppName': '截图当前具有焦点的窗口的程序名',
+    'settings.functionSettings.outputSettings.variables.date': '日期',
     'settings.functionSettings.outputSettings.fileNameFormat': '文件名格式',
     'settings.functionSettings.outputSettings.manualSaveFileNameFormat': '手动保存文件名格式',
     'settings.functionSettings.outputSettings.manualSaveFileNameFormatPreview':

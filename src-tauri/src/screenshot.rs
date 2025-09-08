@@ -20,11 +20,15 @@ pub async fn capture_all_monitors(window: tauri::Window) -> Result<Response, Str
     snow_shot_tauri_commands_screenshot::capture_all_monitors(window).await
 }
 
+/**
+ * 捕获当前焦点窗口
+ */
 #[command]
 pub async fn capture_focused_window(
     app: tauri::AppHandle,
     file_path: String,
     copy_to_clipboard: bool,
+    focus_window_app_name_variable_name: String,
 ) -> Result<(), String> {
     snow_shot_tauri_commands_screenshot::capture_focused_window(
         move |image| match app.clipboard().write_image(&tauri::image::Image::new(
@@ -40,6 +44,7 @@ pub async fn capture_focused_window(
         },
         file_path,
         copy_to_clipboard,
+        focus_window_app_name_variable_name,
     )
     .await
 }

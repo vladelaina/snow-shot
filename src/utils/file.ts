@@ -6,7 +6,7 @@ import { createDir } from '@/commands/file';
 import { platform } from '@tauri-apps/plugin-os';
 
 const parseTemplate = (template: string): string => {
-    const regex = /\{([^}]+)\}/g;
+    const regex = /\{\{([^}]+)\}\}/g;
 
     return template.replace(regex, (match, content) => {
         if (content.match(/^[YMDHmsAa\-_:\s\/\.]+$/)) {

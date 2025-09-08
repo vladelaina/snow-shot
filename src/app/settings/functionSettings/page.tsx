@@ -47,7 +47,7 @@ import {
     getVideoRecordSaveDirectory,
     ImageFormat,
 } from '@/utils/file';
-import { TranslationApiType } from './extra';
+import { FOCUS_WINDOW_APP_NAME_ENV_VARIABLE, TranslationApiType } from './extra';
 import { TestChat } from './components/testChat';
 import { DrawState } from '@/app/fullScreenDraw/components/drawCore/extra';
 import { VideoMaxSize, videoRecordGetMicrophoneDeviceNames } from '@/commands/videoRecord';
@@ -1408,6 +1408,28 @@ export default function SystemSettings() {
             >
                 <FormattedMessage id="settings.functionSettings.outputSettings" />
             </GroupTitle>
+
+            <Alert
+                message={
+                    <Typography>
+                        <Row>
+                            <Col span={24}>
+                                <FormattedMessage id="settings.functionSettings.outputSettings.variables" />
+                            </Col>
+                            <Col span={12}>
+                                <FormattedMessage id="settings.functionSettings.outputSettings.variables.date" />
+                                <code>{'{{YYYY-MM-DD_HH-mm-ss}}'}</code>
+                            </Col>
+                            <Col span={12}>
+                                <FormattedMessage id="settings.functionSettings.outputSettings.variables.focusedWindowAppName" />
+                                <code>{FOCUS_WINDOW_APP_NAME_ENV_VARIABLE}</code>
+                            </Col>
+                        </Row>
+                    </Typography>
+                }
+                type="info"
+                style={{ marginBottom: token.margin }}
+            />
 
             <Spin spinning={appSettingsLoading}>
                 <ProForm

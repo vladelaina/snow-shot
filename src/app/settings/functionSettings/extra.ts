@@ -1,3 +1,5 @@
+export const FOCUS_WINDOW_APP_NAME_ENV_VARIABLE = '{{FOCUS_WINDOW_APP_NAME}}';
+
 export type ChatApiConfig = {
     api_uri: string;
     api_key: string;

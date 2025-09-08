@@ -25,7 +25,11 @@ import * as appAutostart from '@tauri-apps/plugin-autostart';
 import { defaultKeyEventSettings, KeyEventKey, KeyEventValue } from '@/core/hotKeys';
 import { TranslationDomain, TranslationType } from '@/services/tools/translation';
 import { setEnableProxy } from '@/commands/core';
-import { ChatApiConfig, TranslationApiConfig } from './settings/functionSettings/extra';
+import {
+    ChatApiConfig,
+    FOCUS_WINDOW_APP_NAME_ENV_VARIABLE,
+    TranslationApiConfig,
+} from './settings/functionSettings/extra';
 import { defaultTranslationPrompt } from './tools/translation/extra';
 import { ColorPickerShowMode } from './draw/components/colorPicker';
 import { ImageFormat } from '@/utils/file';
@@ -66,7 +70,7 @@ export enum AppSettingsGroup {
     FunctionTranslation = 'functionTranslation',
     FunctionScreenshot = 'functionScreenshot',
     FunctionFullScreenDraw = 'functionFullScreenDraw',
-    FunctionOutput = 'functionOutput',
+    FunctionOutput = 'functionOutput_20250908',
     FunctionFixedContent = 'functionFixedContent',
     FunctionVideoRecord = 'functionVideoRecord',
     FunctionTrayIcon = 'functionTrayIcon',
@@ -417,11 +421,11 @@ export const defaultAppSettingsData: AppSettingsData = {
         initialPosition: AppSettingsFixedContentInitialPosition.MousePosition,
     },
     [AppSettingsGroup.FunctionOutput]: {
-        manualSaveFileNameFormat: `SnowShot_{YYYY-MM-DD_HH-mm-ss}`,
-        autoSaveFileNameFormat: `SnowShot_{YYYY-MM-DD_HH-mm-ss}`,
-        fastSaveFileNameFormat: `SnowShot_{YYYY-MM-DD_HH-mm-ss}`,
-        focusedWindowFileNameFormat: `SnowShot_{YYYY-MM-DD_HH-mm-ss}`,
-        videoRecordFileNameFormat: `SnowShot_Video_{YYYY-MM-DD_HH-mm-ss}`,
+        manualSaveFileNameFormat: `SnowShot_{{YYYY-MM-DD_HH-mm-ss}}`,
+        autoSaveFileNameFormat: `SnowShot_{{YYYY-MM-DD_HH-mm-ss}}`,
+        fastSaveFileNameFormat: `SnowShot_{{YYYY-MM-DD_HH-mm-ss}}`,
+        focusedWindowFileNameFormat: `${FOCUS_WINDOW_APP_NAME_ENV_VARIABLE}/SnowShot_{{YYYY-MM-DD_HH-mm-ss}}`,
+        videoRecordFileNameFormat: `SnowShot_Video_{{YYYY-MM-DD_HH-mm-ss}}`,
     },
     [AppSettingsGroup.FunctionFullScreenDraw]: {
         defaultTool: DrawState.Select,
