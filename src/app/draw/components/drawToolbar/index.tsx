@@ -702,7 +702,7 @@ const DrawToolbarCore: React.FC<DrawToolbarProps> = ({
                                 }}
                             />
 
-                            <DrawExtraTool onToolClick={onToolClick} />
+                            <DrawExtraTool onToolClickAction={onToolClick} />
 
                             {!customToolbarToolHiddenMap?.[DrawState.Redo] && (
                                 <div className="draw-toolbar-splitter" />

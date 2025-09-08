@@ -66,7 +66,6 @@ import { writeTextToClipboard } from '@/utils/clipboard';
 import { formatKey } from '@/utils/format';
 import urlJoin from 'url-join';
 import { appError } from '@/utils/log';
-import { getCurrentWindow } from '@tauri-apps/api/window';
 import { EventListenerContext } from '@/components/eventListener';
 
 type BubbleDataType = AntdBubbleDataType & {

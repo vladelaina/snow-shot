@@ -1,6 +1,8 @@
+'use client';
+
 import { Button, Flex, Popover, theme } from 'antd';
 import { useIntl } from 'react-intl';
-import { useState, useCallback, useContext } from 'react';
+import { useState, useCallback, useContext, useMemo } from 'react';
 import { DrawStatePublisher } from '@/app/fullScreenDraw/components/drawCore/extra';
 import { useStateSubscriber } from '@/hooks/useStateSubscriber';
 import { DrawState } from '@/app/fullScreenDraw/components/drawCore/extra';
@@ -15,8 +17,8 @@ import {
 import { WatermarkTool } from './components/watermarkTool';
 
 export const DrawExtraTool: React.FC<{
-    onToolClick: (tool: DrawState) => void;
-}> = ({ onToolClick }) => {
+    onToolClickAction: (tool: DrawState) => void;
+}> = ({ onToolClickAction }) => {
     const intl = useIntl();
     const { token } = theme.useToken();
 
@@ -58,18 +60,20 @@ export const DrawExtraTool: React.FC<{
         [updateAppSettings],
     );
 
-    const watermarkButton = (
-        <Button
-            icon={<WatermarkIcon />}
-            title={intl.formatMessage({ id: 'draw.watermarkTool' })}
-            type={getButtonTypeByState(drawState === DrawState.Watermark)}
-            key="watermark"
-            onClick={() => {
-                onToolClick(DrawState.Watermark);
-                updateLastDrawExtraTool(DrawState.Watermark);
-            }}
-        />
-    );
+    const watermarkButton = useMemo(() => {
+        return (
+            <Button
+                icon={<WatermarkIcon />}
+                title={intl.formatMessage({ id: 'draw.watermarkTool' })}
+                type={getButtonTypeByState(drawState === DrawState.Watermark)}
+                key="watermark"
+                onClick={() => {
+                    onToolClickAction(DrawState.Watermark);
+                    updateLastDrawExtraTool(DrawState.Watermark);
+                }}
+            />
+        );
+    }, [drawState, intl, onToolClickAction, updateLastDrawExtraTool]);
 
     let mainToolbarButton = watermarkButton;
 
