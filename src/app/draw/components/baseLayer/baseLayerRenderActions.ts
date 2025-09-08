@@ -277,6 +277,11 @@ export type WatermarkProps = {
 
 const watermarkTextRotateAngle = Math.PI * (45 / 180);
 const watermarkTextPadding = 32;
+
+const getWatermarkSpriteAlpha = (opacity: number) => {
+    return (opacity / 100) * 0.24;
+};
+
 export const renderUpdateWatermarkSpriteAction = (
     canvasAppRef: RefType<Application | undefined>,
     canvasContainerMapRef: RefType<Map<string, PIXI.Container>>,
@@ -303,10 +308,11 @@ export const renderUpdateWatermarkSpriteAction = (
     // 判断是否创建 watermark 的 sprite
     let watermarkSprite = container.children[0] as PIXI.TilingSprite | undefined;
     if (!watermarkSprite) {
-        watermarkSprite = new PIXI.TilingSprite({
-            texture: PIXI.Texture.WHITE,
-        });
+        watermarkSprite = new PIXI.TilingSprite();
         container.addChild(watermarkSprite);
+        // 重置下 lastWatermarkPropsRef.current 的 text，避免未渲染
+        lastWatermarkPropsRef.current.text = '';
+        lastWatermarkPropsRef.current.opacity = -1;
     }
 
     // 判断是否创建 watermark 的 mask
@@ -369,7 +375,7 @@ export const renderUpdateWatermarkSpriteAction = (
     }
 
     if (lastWatermarkPropsRef.current.opacity !== watermarkProps.opacity) {
-        watermarkSprite.alpha = (watermarkProps.opacity / 100) * 0.24; // 水印保持一定的透明度
+        watermarkSprite.alpha = getWatermarkSpriteAlpha(watermarkProps.opacity); // 水印保持一定的透明度
     }
 
     // 比较耗时，做个节流

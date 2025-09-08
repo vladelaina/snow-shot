@@ -1,4 +1,8 @@
-import { AppSettingsGroup, AppSettingsPublisher } from '@/app/contextWrap';
+import {
+    AppSettingsActionContext,
+    AppSettingsGroup,
+    AppSettingsPublisher,
+} from '@/app/contextWrap';
 import { WatermarkProps } from '@/app/draw/components/baseLayer/baseLayerRenderActions';
 import {
     CaptureEvent,
@@ -21,11 +25,9 @@ import { ExcalidrawWatermarkElement } from '@mg-chao/excalidraw/element/types';
 import { AppState } from '@mg-chao/excalidraw/types';
 import { useCallback, useContext, useRef } from 'react';
 
-export const WATERMARK_ELEMENT_ID = 'snow-shot_watermark';
-
 const generateWatermarkElement = (text: string, appState: AppState): ExcalidrawWatermarkElement => {
     return {
-        id: WATERMARK_ELEMENT_ID,
+        id: `snow-shot_watermark_${new Date().valueOf()}`,
         type: 'watermark',
         x: -Number.MAX_SAFE_INTEGER,
         y: -Number.MAX_SAFE_INTEGER,
@@ -87,11 +89,42 @@ const isEqualWatermarkProps = (a: WatermarkProps, b: WatermarkProps) => {
 };
 
 export const WatermarkTool = () => {
+    const { updateAppSettings } = useContext(AppSettingsActionContext);
     const [getAppSettings] = useStateSubscriber(AppSettingsPublisher, undefined);
     const { drawCacheLayerActionRef, drawLayerActionRef, selectLayerActionRef } =
         useContext(DrawContext);
 
+    // watermark 的绘制所需的属性
     const watermarkPropsRef = useRef<WatermarkProps>(defaultWatermarkProps);
+
+    const createWatermark = useCallback((): boolean => {
+        // 获取当前场景里的元素，判断是否存在 watermark 元素
+        // 如果存在则忽略
+
+        const excalidrawAPI = drawCacheLayerActionRef.current?.getExcalidrawAPI();
+        if (!excalidrawAPI) {
+            return false;
+        }
+
+        const sceneElements = excalidrawAPI.getSceneElements();
+        const appState = excalidrawAPI.getAppState();
+        const existWatermarkElement = sceneElements.find((element) => element.type === 'watermark');
+        if (existWatermarkElement) {
+            return false;
+        }
+
+        // 创建 watermark 元素
+        const watermarkElement = generateWatermarkElement(
+            getAppSettings()[AppSettingsGroup.Cache].lastWatermarkText,
+            appState,
+        );
+        excalidrawAPI.updateScene({
+            elements: [...sceneElements, watermarkElement],
+            captureUpdate: 'IMMEDIATELY',
+        });
+
+        return true;
+    }, [drawCacheLayerActionRef, getAppSettings]);
 
     const updateWatermarkCore = useCallback(
         (appState: AppState) => {
@@ -107,7 +140,7 @@ export const WatermarkTool = () => {
 
             const sceneElements = excalidrawAPI.getSceneElements();
 
-            let targetProps: WatermarkProps | undefined;
+            let targetProps: WatermarkProps;
             const watermarkElement = sceneElements.find((element) => element.type === 'watermark');
             if (!watermarkElement) {
                 targetProps = defaultWatermarkProps;
@@ -153,34 +186,70 @@ export const WatermarkTool = () => {
     );
     const updateWatermark = useCallbackRender(updateWatermarkCore);
 
-    const createWatermark = useCallback(() => {
-        // 获取当前场景里的元素，判断是否存在 watermark 元素
-        // 如果存在则忽略
+    // watermark 的样式
+    // 样式发生变化时，则可能需要重新创建 watermark element
+    const watermarkStyleRef = useRef<{
+        text: string;
+        opacity: number;
+        fontSize: number;
+        color: string;
+    }>({
+        text: defaultWatermarkProps.text,
+        opacity: defaultWatermarkProps.opacity,
+        fontSize: defaultWatermarkProps.fontSize,
+        color: defaultWatermarkProps.color,
+    });
 
-        const excalidrawAPI = drawCacheLayerActionRef.current?.getExcalidrawAPI();
-        if (!excalidrawAPI) {
-            return;
-        }
+    const updateWatermarkText = useCallback(
+        (text: string) => {
+            if (watermarkStyleRef.current.text !== text) {
+                watermarkStyleRef.current.text = text;
+                // 如果 watermark 不存在，则创建 watermark
+                if (createWatermark()) {
+                    return;
+                }
+            }
 
-        const sceneElements = excalidrawAPI.getSceneElements();
-        const appState = excalidrawAPI.getAppState();
-        const existWatermarkElement = sceneElements.find((element) => element.type === 'watermark');
-        if (existWatermarkElement) {
-            return;
-        }
+            const excalidrawAPI = drawCacheLayerActionRef.current?.getExcalidrawAPI();
+            if (!excalidrawAPI) {
+                return;
+            }
 
-        // 创建 watermark 元素
-        const watermarkElement = generateWatermarkElement(
-            getAppSettings()[AppSettingsGroup.Cache].lastWatermarkText,
-            appState,
-        );
-        excalidrawAPI.updateScene({
-            elements: [...sceneElements, watermarkElement],
-            captureUpdate: 'IMMEDIATELY',
-        });
+            const sceneElements = excalidrawAPI.getSceneElements();
+            if (!sceneElements) {
+                return;
+            }
 
-        updateWatermark(appState);
-    }, [drawCacheLayerActionRef, getAppSettings, updateWatermark]);
+            const watermarkElement = sceneElements.find((element) => element.type === 'watermark');
+
+            if (watermarkElement?.watermarkText === text) {
+                return;
+            }
+
+            excalidrawAPI.updateScene({
+                elements: sceneElements.map((element) => {
+                    if (element.type === 'watermark') {
+                        return { ...element, watermarkText: text };
+                    }
+                    return element;
+                }),
+                captureUpdate: 'IMMEDIATELY',
+            });
+
+            updateAppSettings(
+                AppSettingsGroup.Cache,
+                {
+                    lastWatermarkText: text,
+                },
+                true,
+                true,
+                false,
+                true,
+                false,
+            );
+        },
+        [createWatermark, drawCacheLayerActionRef, updateAppSettings],
+    );
 
     useStateSubscriber(
         DrawStatePublisher,
@@ -197,15 +266,32 @@ export const WatermarkTool = () => {
         ExcalidrawEventPublisher,
         useCallback(
             (params: ExcalidrawEventParams | undefined) => {
-                if (
-                    params?.event === 'onChange' &&
-                    params.params.appState.activeTool.type === 'watermark'
-                ) {
-                    console.log('onChange', params.params.appState);
+                if (params?.event === 'onChange') {
+                    if (
+                        watermarkStyleRef.current.opacity !==
+                            params.params.appState.currentItemOpacity ||
+                        watermarkStyleRef.current.fontSize !==
+                            params.params.appState.currentItemFontSize ||
+                        watermarkStyleRef.current.color !==
+                            params.params.appState.currentItemStrokeColor
+                    ) {
+                        watermarkStyleRef.current.opacity =
+                            params.params.appState.currentItemOpacity;
+                        watermarkStyleRef.current.fontSize =
+                            params.params.appState.currentItemFontSize;
+                        watermarkStyleRef.current.color =
+                            params.params.appState.currentItemStrokeColor;
+                        if (createWatermark()) {
+                            return;
+                        }
+                    }
+
                     updateWatermark(params.params.appState);
+                } else if (params?.event === 'onWatermarkTextChange') {
+                    updateWatermarkText(params.params.text);
                 }
             },
-            [updateWatermark],
+            [createWatermark, updateWatermark, updateWatermarkText],
         ),
     );
     useStateSubscriber(
@@ -228,7 +314,7 @@ export const WatermarkTool = () => {
         DrawEventPublisher,
         useCallback(
             (params: DrawEventParams | undefined) => {
-                if (params?.event === DrawEvent.SelectRectParamsChange) {
+                if (params?.event === DrawEvent.SelectRectParamsAnimationChange) {
                     watermarkPropsRef.current = {
                         ...watermarkPropsRef.current,
                         selectRectParams: params.params.selectRectParams,

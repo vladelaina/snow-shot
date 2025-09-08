@@ -471,6 +471,24 @@ const SelectLayerCore: React.FC<SelectLayerProps> = ({ actionRef }) => {
         [currentTheme, getScreenshotType, resizeToolbarUpdateStyleRenderCallback],
     );
 
+    const publishSelectRectAnimationParams = useCallback(
+        (rect: ElementRect) => {
+            setDrawEvent({
+                event: DrawEvent.SelectRectParamsAnimationChange,
+                params: {
+                    selectRectParams: {
+                        rect,
+                        radius: selectRectRadiusRef.current,
+                        shadowWidth: selectRectShadowConfigRef.current.shadowWidth,
+                        shadowColor: selectRectShadowConfigRef.current.shadowColor,
+                    },
+                },
+            });
+            setDrawEvent(undefined);
+        },
+        [setDrawEvent],
+    );
+
     const initAnimation = useCallback(
         (captureBoundingBoxInfo: CaptureBoundingBoxInfo) => {
             if (drawSelectRectAnimationRef.current) {
@@ -488,10 +506,11 @@ const SelectLayerCore: React.FC<SelectLayerProps> = ({ actionRef }) => {
                 100,
                 (rect) => {
                     drawCanvasSelectRect(rect, captureBoundingBoxInfo);
+                    publishSelectRectAnimationParams(rect);
                 },
             );
         },
-        [drawCanvasSelectRect],
+        [drawCanvasSelectRect, publishSelectRectAnimationParams],
     );
 
     const onCaptureBoundingBoxInfoReady = useCallback<
@@ -690,16 +709,6 @@ const SelectLayerCore: React.FC<SelectLayerProps> = ({ actionRef }) => {
     );
     const updateDragModeRenderCallback = useCallbackRender(updateDragMode);
 
-    const publishSelectRectParams = useCallback(() => {
-        setDrawEvent({
-            event: DrawEvent.SelectRectParamsChange,
-            params: {
-                selectRectParams: getSelectRectParams()!,
-            },
-        });
-        setDrawEvent(undefined);
-    }, [getSelectRectParams, setDrawEvent]);
-
     const updateMonitorRect = useCallback(
         (rect: ElementRect) => {
             const captureBoundingBoxInfo = captureBoundingBoxInfoRef.current;
@@ -726,17 +735,8 @@ const SelectLayerCore: React.FC<SelectLayerProps> = ({ actionRef }) => {
                 },
             });
             setDrawEvent(undefined);
-
-            setDrawEvent({
-                event: DrawEvent.SelectRectParamsChange,
-                params: {
-                    selectRectParams: getSelectRectParams()!,
-                },
-            });
-            setDrawEvent(undefined);
-            publishSelectRectParams();
         },
-        [getSelectRectParams, publishSelectRectParams, setDrawEvent],
+        [setDrawEvent],
     );
     const updateMonitorRectRenderCallback = useCallbackRenderSlow(updateMonitorRect);
 
@@ -757,7 +757,7 @@ const SelectLayerCore: React.FC<SelectLayerProps> = ({ actionRef }) => {
 
             updateMonitorRectRenderCallback(rect);
         },
-        [drawCanvasSelectRect, getAppSettings, updateMonitorRectRenderCallback],
+        [updateMonitorRectRenderCallback, drawCanvasSelectRect, getAppSettings],
     );
 
     const previousDrawStateRef = useRef<DrawState | undefined>(undefined);
@@ -1394,10 +1394,10 @@ const SelectLayerCore: React.FC<SelectLayerProps> = ({ actionRef }) => {
                     true,
                     true,
                 );
-                publishSelectRectParams();
+                publishSelectRectAnimationParams(selectRect);
             }
         },
-        [drawCanvasSelectRect, getSelectRect, publishSelectRectParams, updateAppSettings],
+        [drawCanvasSelectRect, getSelectRect, publishSelectRectAnimationParams, updateAppSettings],
     );
     useEffect(() => {
         if (selectRectRadiusRef.current !== selectRectRadiusCache) {
@@ -1430,10 +1430,10 @@ const SelectLayerCore: React.FC<SelectLayerProps> = ({ actionRef }) => {
                     true,
                     true,
                 );
-                publishSelectRectParams();
+                publishSelectRectAnimationParams(selectRect);
             }
         },
-        [drawCanvasSelectRect, getSelectRect, publishSelectRectParams, updateAppSettings],
+        [drawCanvasSelectRect, getSelectRect, publishSelectRectAnimationParams, updateAppSettings],
     );
     useEffect(() => {
         if (

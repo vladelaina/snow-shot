@@ -84,11 +84,22 @@ export type ExcalidrawEventOnDrawParams = {
     params: undefined;
 };
 
+/**
+ * Watermark 文本更新时发生
+ */
+export type ExcalidrawEventOnWatermarkTextChangeParams = {
+    event: 'onWatermarkTextChange';
+    params: {
+        text: string;
+    };
+};
+
 export type ExcalidrawEventParams =
     | ExcalidrawEventOnChangeParams
     | ExcalidrawEventOnPointerDownParams
     | ExcalidrawEventOnPointerUpParams
-    | ExcalidrawEventOnDrawParams;
+    | ExcalidrawEventOnDrawParams
+    | ExcalidrawEventOnWatermarkTextChangeParams;
 
 export const ExcalidrawEventPublisher = createPublisher<ExcalidrawEventParams | undefined>(
     undefined,

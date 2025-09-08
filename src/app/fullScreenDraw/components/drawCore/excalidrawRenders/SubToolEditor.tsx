@@ -1,62 +1,30 @@
 import { FormattedMessage } from 'react-intl';
 import { ExcalidrawPropsCustomOptions } from '@mg-chao/excalidraw/types';
 import { useCallback, useContext, useEffect, useMemo, useState } from 'react';
-import { DrawState, DrawStatePublisher } from '../extra';
+import { DrawState, DrawStatePublisher, ExcalidrawEventPublisher } from '../extra';
 import { useStateSubscriber } from '@/hooks/useStateSubscriber';
 import { Input, Radio } from 'antd';
 import { ArrowIcon, DiamondIcon, LineIcon, RectIcon } from '@/components/icons';
 import { DrawContext } from '@/app/fullScreenDraw/extra';
 import { debounce } from 'es-toolkit';
 import { useStateRef } from '@/hooks/useStateRef';
-import { AppSettingsActionContext, AppSettingsGroup } from '@/app/contextWrap';
 
 const WatermarkTextInput = () => {
+    const [, setDrawEvent] = useStateSubscriber(ExcalidrawEventPublisher, undefined);
     const { getDrawCoreAction } = useContext(DrawContext);
-    const { updateAppSettings } = useContext(AppSettingsActionContext);
     const [watermarkText, setWatermarkText, watermarkTextRef] = useStateRef<string>('');
 
     const updateWatermarkText = useMemo(() => {
         return debounce(() => {
-            if (!watermarkTextRef.current) {
-                return;
-            }
-
-            const sceneElements = getDrawCoreAction()?.getExcalidrawAPI()?.getSceneElements();
-            if (!sceneElements) {
-                return;
-            }
-
-            const watermarkElement = sceneElements.find((element) => element.type === 'watermark');
-
-            if (watermarkElement?.watermarkText === watermarkTextRef.current) {
-                return;
-            }
-
-            getDrawCoreAction()
-                ?.getExcalidrawAPI()
-                ?.updateScene({
-                    elements: sceneElements.map((element) => {
-                        if (element.type === 'watermark') {
-                            return { ...element, watermarkText: watermarkTextRef.current };
-                        }
-                        return element;
-                    }),
-                    captureUpdate: 'IMMEDIATELY',
-                });
-
-            updateAppSettings(
-                AppSettingsGroup.Cache,
-                {
-                    lastWatermarkText: watermarkTextRef.current,
+            setDrawEvent({
+                event: 'onWatermarkTextChange',
+                params: {
+                    text: watermarkTextRef.current,
                 },
-                true,
-                true,
-                false,
-                true,
-                false,
-            );
+            });
+            setDrawEvent(undefined);
         }, 128);
-    }, [getDrawCoreAction, updateAppSettings, watermarkTextRef]);
+    }, [setDrawEvent, watermarkTextRef]);
 
     const refreshWatermarkText = useMemo(() => {
         return debounce(() => {

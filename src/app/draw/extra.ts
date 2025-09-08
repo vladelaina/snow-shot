@@ -84,8 +84,8 @@ export enum DrawEvent {
     MoveCursor = 2,
     /** 选区所在的 monitor 发生变化，可能相同值重复触发 */
     ChangeMonitor = 3,
-    /** 选区参数发生变化 */
-    SelectRectParamsChange = 4,
+    /** 选区参数动画发生变化 */
+    SelectRectParamsAnimationChange = 4,
 }
 
 export type DrawEventParams =
@@ -113,7 +113,7 @@ export type DrawEventParams =
           };
       }
     | {
-          event: DrawEvent.SelectRectParamsChange;
+          event: DrawEvent.SelectRectParamsAnimationChange;
           params: {
               selectRectParams: SelectRectParams;
           };
