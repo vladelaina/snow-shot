@@ -400,6 +400,12 @@ export default function GeneralSettings() {
                         ).toHexString();
                     }
 
+                    if (typeof values.selectRectMaskColor === 'object') {
+                        values.selectRectMaskColor = (
+                            values.selectRectMaskColor as AggregationColor
+                        ).toHexString();
+                    }
+
                     updateAppSettings(
                         AppSettingsGroup.Screenshot,
                         values,
@@ -469,6 +475,22 @@ export default function GeneralSettings() {
                                     },
                                 ]}
                             />
+                        </Col>
+
+                        <Col span={12}>
+                            <ProForm.Item
+                                name="selectRectMaskColor"
+                                label={
+                                    <IconLabel
+                                        label={
+                                            <FormattedMessage id="settings.selectRectMaskColor" />
+                                        }
+                                    />
+                                }
+                                required={false}
+                            >
+                                <ColorPicker showText placement="bottom" />
+                            </ProForm.Item>
                         </Col>
 
                         <Col span={12}>

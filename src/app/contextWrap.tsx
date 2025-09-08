@@ -121,6 +121,8 @@ export type AppSettingsData = {
         colorPickerShowMode: ColorPickerShowMode;
         /** 超出选区范围的元素透明度 */
         beyondSelectRectElementOpacity: number;
+        /** 选区遮罩颜色 */
+        selectRectMaskColor: string;
         /** 快捷键提示透明度 */
         hotKeyTipOpacity: number;
         /** 全屏辅助线颜色 */
@@ -326,6 +328,7 @@ export const defaultAppSettingsData: AppSettingsData = {
         disableAnimation: getPlatformValue(false, true),
         colorPickerShowMode: ColorPickerShowMode.BeyondSelectRect,
         beyondSelectRectElementOpacity: 100,
+        selectRectMaskColor: '#00000080',
         fullScreenAuxiliaryLineColor: '#00000000',
         monitorCenterAuxiliaryLineColor: '#00000000',
         hotKeyTipOpacity: 100,
@@ -800,6 +803,11 @@ const ContextWrapCore: React.FC<{ children: React.ReactNode }> = ({ children }) 
                             ? Math.min(Math.max(newSettings.beyondSelectRectElementOpacity, 0), 100)
                             : (prevSettings?.beyondSelectRectElementOpacity ??
                               defaultAppSettingsData[group].beyondSelectRectElementOpacity),
+                    selectRectMaskColor:
+                        typeof newSettings?.selectRectMaskColor === 'string'
+                            ? newSettings.selectRectMaskColor
+                            : (prevSettings?.selectRectMaskColor ??
+                              defaultAppSettingsData[group].selectRectMaskColor),
                     hotKeyTipOpacity:
                         typeof newSettings?.hotKeyTipOpacity === 'number'
                             ? Math.min(Math.max(newSettings.hotKeyTipOpacity, 0), 100)

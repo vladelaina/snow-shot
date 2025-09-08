@@ -37,6 +37,7 @@ import {
     drawSelectRect,
     EDGE_DETECTION_TOLERANCE,
     getDragModeFromMousePosition,
+    getMaskBackgroundColor,
     limitRect,
     positoinInRect,
     SelectState,
@@ -109,6 +110,7 @@ const SelectLayerCore: React.FC<SelectLayerProps> = ({ actionRef }) => {
     });
     const fullScreenAuxiliaryLineColorRef = useRef<string | undefined>(undefined);
     const monitorCenterAuxiliaryLineColorRef = useRef<string | undefined>(undefined);
+    const selectRectMaskColorRef = useRef<string | undefined>(undefined);
     const { updateAppSettings } = useContext(AppSettingsActionContext);
     const [getAppSettings] = useStateSubscriber(
         AppSettingsPublisher,
@@ -134,6 +136,12 @@ const SelectLayerCore: React.FC<SelectLayerProps> = ({ actionRef }) => {
                 monitorCenterAuxiliaryLineColorRef.current = undefined;
             } else {
                 monitorCenterAuxiliaryLineColorRef.current = monitorCenterAuxiliaryLineColor;
+            }
+            const selectRectMaskColor = settings[AppSettingsGroup.Screenshot].selectRectMaskColor;
+            if (selectRectMaskColor === getMaskBackgroundColor(false)) {
+                selectRectMaskColorRef.current = undefined;
+            } else {
+                selectRectMaskColorRef.current = selectRectMaskColor;
             }
         }, []),
     );
@@ -454,6 +462,7 @@ const SelectLayerCore: React.FC<SelectLayerProps> = ({ actionRef }) => {
                           color: monitorCenterAuxiliaryLineColorRef.current,
                       }
                     : undefined,
+                selectRectMaskColorRef.current,
             );
 
             // 和 canvas 同步下

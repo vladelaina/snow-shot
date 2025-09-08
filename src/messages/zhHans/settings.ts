@@ -12,6 +12,7 @@ export const settings = {
     'settings.disableAnimation': '禁用动画',
     'settings.fixedContentSettings': '固定到屏幕',
     'settings.fixedContentSettings.borderColor': '边框颜色',
+    'settings.selectRectMaskColor': '选区遮罩颜色',
     'settings.fullScreenAuxiliaryLineColor': '全屏辅助线颜色',
     'settings.monitorCenterAuxiliaryLineColor': '显示器中心辅助线颜色',
     'settings.colorPickerCenterAuxiliaryLineColor': '颜色拾取器中心辅助线颜色',
