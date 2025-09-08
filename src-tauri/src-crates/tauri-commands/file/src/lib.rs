@@ -1,4 +1,5 @@
 use base64::prelude::*;
+use std::path::PathBuf;
 use std::{fs, io::Cursor};
 use zune_core::bit_depth::BitDepth;
 use zune_core::colorspace::ColorSpace;
@@ -11,13 +12,25 @@ pub async fn save_file(request: tauri::ipc::Request<'_>) -> Result<(), String> {
         _ => return Err(String::from("[save_file] Invalid request body")),
     };
 
-    let file_path: String = match request.headers().get("x-file-path") {
+    let file_path: PathBuf = match request.headers().get("x-file-path") {
         Some(header) => match BASE64_STANDARD.decode(header.to_str().unwrap()) {
-            Ok(file_path) => String::from_utf8(file_path).unwrap(),
+            Ok(file_path) => PathBuf::from(String::from_utf8(file_path).unwrap()),
             Err(_) => return Err(String::from("[save_file] Invalid file path")),
         },
         None => return Err(String::from("[save_file] Missing file path")),
     };
+
+    if let Some(parent_dir) = file_path.parent() {
+        if !parent_dir.exists() {
+            if let Err(e) = fs::create_dir_all(parent_dir) {
+                return Err(format!(
+                    "[save_file] Failed to create directory: {}",
+                    e.to_string()
+                ));
+            }
+        }
+    }
+
     let file_type: String = match request.headers().get("x-file-type") {
         Some(header) => match BASE64_STANDARD.decode(header.to_str().unwrap()) {
             Ok(file_type) => String::from_utf8(file_type).unwrap(),
