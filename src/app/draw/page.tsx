@@ -152,7 +152,7 @@ const DrawPageCore: React.FC<{
     const [getDrawState, , resetDrawState] = useStateSubscriber(
         DrawStatePublisher,
         useCallback((drawState: DrawState) => {
-            if (drawState === DrawState.Text) {
+            if (drawState === DrawState.Text || drawState === DrawState.Watermark) {
                 setCurrentWindowAlwaysOnTop(true);
             } else {
                 setCurrentWindowAlwaysOnTop(false);
