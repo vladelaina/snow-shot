@@ -71,6 +71,24 @@ pub async fn save_image_to_file(
     image: &image::DynamicImage,
     file_path: PathBuf,
 ) -> Result<(), String> {
+    // 确保文件路径的父目录存在
+    if let Some(parent_dir) = file_path.parent() {
+        if !parent_dir.exists() {
+            match fs::create_dir_all(parent_dir) {
+                Ok(_) => {
+                    log::info!("[save_image_to_file] Created directory: {}", parent_dir.display());
+                }
+                Err(e) => {
+                    return Err(format!(
+                        "[save_image_to_file] Failed to create directory {}: {}",
+                        parent_dir.display(),
+                        e
+                    ));
+                }
+            }
+        }
+    }
+
     let extension = match file_path.extension() {
         Some(extension) => extension,
         None => {
