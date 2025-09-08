@@ -59,7 +59,7 @@ export const MASK_CONTROL_BORDER_STROKE_COLOR = '#4096ff';
 export const AUXILIARY_LINE_WIDTH = 1;
 export const AUXILIARY_LINE_DASH = [10, 3];
 
-const LIGHT_MASK_BACKGROUND_COLOR = Color('#000000').alpha(MASK_OPACITY).toString();
+const LIGHT_MASK_BACKGROUND_COLOR = '#00000080';
 const DARK_MASK_BACKGROUND_COLOR = Color('#434343').alpha(MASK_OPACITY).toString();
 
 export const getMaskBackgroundColor = (darkMode: boolean) => {
@@ -97,6 +97,7 @@ export const drawSelectRect = (
         activeMonitorRect: ElementRect;
         color: string;
     },
+    selectRectMaskColor?: string,
 ) => {
     const { min_x: rectMinX, min_y: rectMinY, max_x: rectMaxX, max_y: rectMaxY } = selectRect;
     const rectWidth = rectMaxX - rectMinX;
@@ -113,15 +114,13 @@ export const drawSelectRect = (
         MASK_CIRCLE_CONTROL_SHOW_MID_CONTROL_WIDTH * scaleFactor,
     );
 
-    const fillColor = getMaskBackgroundColor(darkMode);
-
     canvasContext.clearRect(0, 0, monitorWidth, monitorHeight);
 
     if (drawElementMask) {
         canvasContext.putImageData(drawElementMask.imageData, 0, 0);
     }
 
-    canvasContext.fillStyle = fillColor;
+    canvasContext.fillStyle = selectRectMaskColor ?? getMaskBackgroundColor(darkMode);
     canvasContext.fillRect(0, 0, monitorWidth, monitorHeight);
 
     if (radius > 0 && !enableScrollScreenshot) {
