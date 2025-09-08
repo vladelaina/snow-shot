@@ -117,11 +117,9 @@ const CodeCard: React.FC<{
             <SyntaxHighlighter
                 {...rest}
                 ref={undefined}
-                PreTag="div"
                 language={language}
                 style={darkMode ? oneDark : oneLight}
                 wrapLongLines
-                showLineNumbers
             >
                 {String(children).replace(/\n$/, '')}
             </SyntaxHighlighter>
