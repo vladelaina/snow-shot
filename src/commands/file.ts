@@ -27,8 +27,8 @@ export const createDir = async (dirPath: string) => {
     return result;
 };
 
-export const createLocalConfigDir = async () => {
-    const result = await invoke<void>('create_local_config_dir');
+export const createLocalConfigDir = async (path: string) => {
+    const result = await invoke<void>('create_local_config_dir', { path });
     return result;
 };
 
