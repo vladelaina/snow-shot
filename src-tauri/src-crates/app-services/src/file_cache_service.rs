@@ -1,5 +1,5 @@
 use dashmap::{DashMap, DashSet};
-use std::{env, fs, path::PathBuf};
+use std::{fs, path::PathBuf};
 use tauri::Manager;
 
 /**
@@ -15,6 +15,7 @@ pub struct FileCacheService {
 const APP_CONFIG_DIR: &str = "app_config_dir";
 const APP_CONFIG_BASE_DIR: &str = "app_config_base_dir";
 const APP_CONFIG_DIR_NAME: &str = "configs";
+const APP_CUSTOM_CONFIG_DIR_DATA_FILE_NAME: &str = "__custom_config_dir";
 
 impl FileCacheService {
     pub fn new() -> Self {
@@ -33,65 +34,51 @@ impl FileCacheService {
             .join(APP_CONFIG_DIR_NAME))
     }
 
-    fn get_app_local_config_dir(&self) -> Option<PathBuf> {
-        #[cfg(not(target_os = "windows"))]
-        {
+    fn get_app_custom_config_dir(&self, app: &tauri::AppHandle) -> Option<PathBuf> {
+        let app_data_config_dir = match app.path().app_config_dir() {
+            Ok(path) => path,
+            Err(_) => return None,
+        };
+
+        let custom_config_dir_data_file =
+            app_data_config_dir.join(APP_CUSTOM_CONFIG_DIR_DATA_FILE_NAME);
+
+        let path = match fs::read_to_string(custom_config_dir_data_file) {
+            Ok(path) => path,
+            Err(_) => return None,
+        };
+        let path = PathBuf::from(path);
+
+        if !path.exists() {
             return None;
         }
 
-        let current_exe_path = match env::current_exe() {
-            Ok(path) => Some(path),
-            Err(_) => None,
-        };
-
-        let local_config_dir = match current_exe_path {
-            Some(path) => match path.parent() {
-                Some(parent) => parent.join(APP_CONFIG_DIR_NAME),
-                None => return None,
-            },
-            None => return None,
-        };
-
-        Some(local_config_dir)
+        Some(path.join(APP_CONFIG_DIR_NAME))
     }
 
-    pub fn create_local_config_dir(&self, app: &tauri::AppHandle) -> Result<(), String> {
-        let local_config_dir = match self.get_app_local_config_dir() {
+    pub fn create_custom_config_dir(
+        &self,
+        app: &tauri::AppHandle,
+        path: PathBuf,
+    ) -> Result<(), String> {
+        let local_config_dir = path.join(APP_CONFIG_DIR_NAME);
+
+        if !local_config_dir.exists() {
+            fs::create_dir_all(local_config_dir).map_err(|e| e.to_string())?;
+        }
+
+        let path = match path.to_str() {
             Some(path) => path,
-            None => {
-                return Err(format!(
-                    "[create_local_config_dir] Failed to get current executable directory"
-                ));
-            }
+            None => return Err(String::from("[create_custom_config_dir] Invalid path")),
         };
 
-        if local_config_dir.exists() {
-            return Ok(());
-        }
+        // 写入到文件中记录下路径
+        let app_data_config_dir = app.path().app_config_dir().map_err(|e| e.to_string())?;
 
-        let app_config_dir = self.get_app_global_config_dir(app)?;
-        let copy_success = if app_config_dir.exists() {
-            match fs_extra::dir::copy(
-                &app_config_dir,
-                &local_config_dir.parent().unwrap(),
-                &fs_extra::dir::CopyOptions::default(),
-            ) {
-                Ok(_) => true,
-                Err(error) => {
-                    log::error!(
-                        "[create_local_config_dir] Failed to copy app config directory: {}",
-                        error.to_string()
-                    );
-                    false
-                }
-            }
-        } else {
-            false
-        };
+        let custom_config_dir_data_file =
+            app_data_config_dir.join(APP_CUSTOM_CONFIG_DIR_DATA_FILE_NAME);
 
-        if !copy_success {
-            fs::create_dir_all(&local_config_dir).map_err(|e| e.to_string())?;
-        }
+        fs::write(custom_config_dir_data_file, path.as_bytes()).map_err(|e| e.to_string())?;
 
         Ok(())
     }
@@ -101,7 +88,7 @@ impl FileCacheService {
             return Ok(path.clone());
         }
 
-        let local_config_dir = match self.get_app_local_config_dir() {
+        let local_config_dir = match self.get_app_custom_config_dir(app) {
             Some(path) => {
                 if path.exists() {
                     Some(path)

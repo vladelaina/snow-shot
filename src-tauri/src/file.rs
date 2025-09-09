@@ -59,8 +59,9 @@ pub async fn create_dir(
 pub async fn create_local_config_dir(
     app: tauri::AppHandle,
     text_file_cache_service: tauri::State<'_, Arc<FileCacheService>>,
+    path: PathBuf,
 ) -> Result<(), String> {
-    text_file_cache_service.create_local_config_dir(&app)
+    text_file_cache_service.create_custom_config_dir(&app, path)
 }
 
 #[command]

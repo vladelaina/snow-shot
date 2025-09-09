@@ -264,10 +264,11 @@ export const settings = {
     'settings.functionSettings.trayIconSettings.iconClickAction.screenshot': '截图',
     'settings.functionSettings.trayIconSettings.iconClickAction.showMainWindow': '显示主窗口',
     'settings.systemSettings.dataFile': '软件数据',
+    'settings.systemSettings.dataDirectory': '数据目录',
+    'settings.systemSettings.dataFilePath.setDirectory.tip':
+        '修改后，软件数据将存储该目录下，重启后生效',
+    'settings.systemSettings.dataFilePath.setDirectory': '更换目录',
     'settings.systemSettings.dataFilePath': '配置目录',
-    'settings.systemSettings.dataFilePath.enableLocalConfig': '启用便携目录',
-    'settings.systemSettings.dataFilePath.enableLocalConfig.tip':
-        '启用后，配置目录将存储在软件所在的目录下，重启后生效',
     'settings.systemSettings.dataFilePath.open': '打开目录',
     'settings.systemSettings.dataFile.clearAll': '清除所有数据',
     'settings.systemSettings.dataFile.clearAll.tip':
