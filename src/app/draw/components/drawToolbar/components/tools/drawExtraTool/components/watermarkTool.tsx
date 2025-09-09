@@ -142,17 +142,28 @@ export const WatermarkTool = () => {
 
             let targetProps: WatermarkProps;
             const watermarkElement = sceneElements.find((element) => element.type === 'watermark');
-            if (!watermarkElement) {
-                targetProps = defaultWatermarkProps;
+            if (watermarkElement) {
+                if (appState.activeTool.type === 'watermark') {
+                    targetProps = {
+                        fontSize: appState.currentItemFontSize,
+                        color: appState.currentItemStrokeColor,
+                        opacity: appState.currentItemOpacity,
+                        visible: true,
+                        text: watermarkElement.watermarkText,
+                        selectRectParams,
+                    };
+                } else {
+                    targetProps = {
+                        fontSize: watermarkElement.watermarkFontSize,
+                        color: watermarkElement.strokeColor,
+                        opacity: watermarkElement.opacity,
+                        visible: true,
+                        text: watermarkElement.watermarkText,
+                        selectRectParams,
+                    };
+                }
             } else {
-                targetProps = {
-                    fontSize: appState.currentItemFontSize,
-                    color: appState.currentItemStrokeColor,
-                    opacity: appState.currentItemOpacity,
-                    visible: true,
-                    text: watermarkElement.watermarkText,
-                    selectRectParams,
-                };
+                targetProps = defaultWatermarkProps;
             }
 
             if (isEqualWatermarkProps(targetProps, watermarkPropsRef.current)) {
@@ -166,10 +177,10 @@ export const WatermarkTool = () => {
                         if (element.type === 'watermark') {
                             return {
                                 ...element,
-                                watermarkFontSize: appState.currentItemFontSize,
-                                strokeColor: appState.currentItemStrokeColor,
-                                opacity: appState.currentItemOpacity,
-                                watermarkText: watermarkElement.watermarkText,
+                                watermarkFontSize: targetProps.fontSize,
+                                strokeColor: targetProps.color,
+                                opacity: targetProps.opacity,
+                                watermarkText: targetProps.text,
                             };
                         }
 
@@ -281,7 +292,11 @@ export const WatermarkTool = () => {
                             params.params.appState.currentItemFontSize;
                         watermarkStyleRef.current.color =
                             params.params.appState.currentItemStrokeColor;
-                        if (createWatermark()) {
+
+                        if (
+                            params.params.appState.activeTool.type === 'watermark' &&
+                            createWatermark()
+                        ) {
                             return;
                         }
                     }
