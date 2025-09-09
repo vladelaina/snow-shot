@@ -25,7 +25,8 @@ export enum ExtraToolList {
 
 export const ExtraTool: React.FC<{
     toolIcon: React.ReactNode;
-}> = ({ toolIcon }) => {
+    onToolClickAction: (tool: DrawState) => void;
+}> = ({ toolIcon, onToolClickAction }) => {
     const intl = useIntl();
     const { token } = theme.useToken();
 
@@ -46,7 +47,6 @@ export const ExtraTool: React.FC<{
 
     const [activeTool, setActiveTool] = useState<ExtraToolList>(ExtraToolList.None);
     const [, setEnabled] = useState(false);
-    const [, setDrawState] = useStateSubscriber(DrawStatePublisher, undefined);
 
     const executeScanQrcode = useCallback(() => {
         setActiveTool(ExtraToolList.ScanQrcode);
@@ -135,7 +135,7 @@ export const ExtraTool: React.FC<{
             type={getButtonTypeByState(activeTool === ExtraToolList.ScanQrcode)}
             key="scanQrcode"
             onClick={() => {
-                setDrawState(DrawState.ScanQrcode);
+                onToolClickAction(DrawState.ScanQrcode);
             }}
         />
     );
@@ -147,7 +147,7 @@ export const ExtraTool: React.FC<{
             type={getButtonTypeByState(activeTool === ExtraToolList.VideoRecord)}
             key="videoRecord"
             onClick={() => {
-                setDrawState(DrawState.VideoRecord);
+                onToolClickAction(DrawState.VideoRecord);
             }}
         />
     );
