@@ -1,6 +1,6 @@
 import { AppSettingsData, AppSettingsGroup } from '@/app/contextWrap';
 import { CaptureHistoryItem, CaptureHistoryStore } from './appStore';
-import { ElementRect, ImageBuffer, ImageEncoder, saveFile } from '@/commands';
+import { ElementRect, ImageBuffer, ImageEncoder } from '@/commands';
 import { join as joinPath } from '@tauri-apps/api/path';
 import path from 'path';
 import { NonDeletedExcalidrawElement, Ordered } from '@mg-chao/excalidraw/element/types';
