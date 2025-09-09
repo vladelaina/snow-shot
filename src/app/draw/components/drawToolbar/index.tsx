@@ -346,6 +346,7 @@ const DrawToolbarCore: React.FC<DrawToolbarProps> = ({
                     onOcrDetect();
                     break;
                 case DrawState.VideoRecord:
+                case DrawState.ScanQrcode:
                 case DrawState.ExtraTools:
                     drawCacheLayerActionRef.current?.setActiveTool({
                         type: 'hand',
@@ -716,6 +717,7 @@ const DrawToolbarCore: React.FC<DrawToolbarProps> = ({
                             <div className="draw-toolbar-splitter" />
 
                             <ExtraTool
+                                onToolClickAction={onToolClick}
                                 // 额外工具
                                 toolIcon={
                                     <ToolButton

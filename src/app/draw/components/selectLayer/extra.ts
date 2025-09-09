@@ -89,6 +89,7 @@ export const drawSelectRect = (
         imageData: ImageData;
     },
     enableScrollScreenshot?: boolean,
+    enableScanQrcode?: boolean,
     fullScreenAuxiliaryLine?: {
         mousePosition: MousePosition;
         color: string;
@@ -113,6 +114,10 @@ export const drawSelectRect = (
     const maskCircleControlShowMidWidth = Math.floor(
         MASK_CIRCLE_CONTROL_SHOW_MID_CONTROL_WIDTH * scaleFactor,
     );
+
+    if (enableScanQrcode) {
+        radius = 0;
+    }
 
     canvasContext.clearRect(0, 0, monitorWidth, monitorHeight);
 

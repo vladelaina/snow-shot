@@ -429,6 +429,7 @@ const SelectLayerCore: React.FC<SelectLayerProps> = ({ actionRef }) => {
                 imageData: ImageData;
             },
             enableScrollScreenshot?: boolean,
+            enableScanQrcode?: boolean,
         ) => {
             const enableAuxiliaryLine =
                 selectStateRef.current === SelectState.Auto ||
@@ -446,6 +447,7 @@ const SelectLayerCore: React.FC<SelectLayerProps> = ({ actionRef }) => {
                     selectStateRef.current === SelectState.Auto,
                 drawElementMask,
                 enableScrollScreenshot,
+                enableScanQrcode,
                 enableAuxiliaryLine &&
                     lastMouseMovePositionRef.current &&
                     fullScreenAuxiliaryLineColorRef.current
@@ -1054,12 +1056,16 @@ const SelectLayerCore: React.FC<SelectLayerProps> = ({ actionRef }) => {
                     return;
                 }
 
-                if (drawState === DrawState.ScrollScreenshot) {
+                if (
+                    drawState === DrawState.ScrollScreenshot ||
+                    drawState === DrawState.ScanQrcode
+                ) {
                     drawCanvasSelectRect(
                         getSelectRect()!,
                         captureBoundingBoxInfoRef.current,
                         undefined,
-                        true,
+                        drawState === DrawState.ScrollScreenshot,
+                        drawState === DrawState.ScanQrcode,
                     );
                 } else if (prevDrawState === DrawState.ScrollScreenshot) {
                     drawCanvasSelectRect(
