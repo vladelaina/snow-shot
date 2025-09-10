@@ -8,6 +8,8 @@ use image::codecs::avif::AvifEncoder;
 use image::codecs::jpeg::JpegEncoder;
 use image::codecs::png::{CompressionType, FilterType, PngEncoder};
 use image::codecs::webp::WebPEncoder;
+use rayon::iter::IntoParallelIterator;
+use rayon::iter::ParallelIterator;
 use snow_shot_app_shared::ElementRect;
 use tauri::AppHandle;
 use xcap::Monitor;
@@ -76,7 +78,10 @@ pub async fn save_image_to_file(
         if !parent_dir.exists() {
             match fs::create_dir_all(parent_dir) {
                 Ok(_) => {
-                    log::info!("[save_image_to_file] Created directory: {}", parent_dir.display());
+                    log::info!(
+                        "[save_image_to_file] Created directory: {}",
+                        parent_dir.display()
+                    );
                 }
                 Err(e) => {
                     return Err(format!(
@@ -493,26 +498,29 @@ pub fn overlay_image(
     offset_y: usize,
     channel_count: usize,
 ) {
-    let image_pixels_ptr = image_pixels.as_mut_ptr();
+    let image_pixels_ptr = image_pixels.as_mut_ptr() as usize;
 
     let target_image_width = target_image.width() as usize;
     let target_image_height = target_image.height() as usize;
     let target_image_pixels = target_image.as_bytes();
-    let target_image_pixels_ptr = target_image_pixels.as_ptr();
+    let target_image_pixels_ptr = target_image_pixels.as_ptr() as usize;
 
     let image_base_index = offset_y * image_width * channel_count + offset_x * channel_count;
-    unsafe {
-        for y in 0..target_image_height {
-            let image_row_ptr =
-                image_pixels_ptr.add(image_base_index + y * image_width * channel_count);
+
+    // 多线程提升较小
+    // 先保留
+    (0..target_image_height)
+        .into_par_iter()
+        .for_each(|y| unsafe {
+            let image_row_ptr = (image_pixels_ptr as *mut u8)
+                .add(image_base_index + y * image_width * channel_count);
             let target_image_row_ptr =
-                target_image_pixels_ptr.add(y * target_image_width * channel_count);
+                (target_image_pixels_ptr as *mut u8).add(y * target_image_width * channel_count);
 
             std::ptr::copy_nonoverlapping(
                 target_image_row_ptr,
                 image_row_ptr,
                 target_image_width * channel_count,
             );
-        }
-    }
+        });
 }

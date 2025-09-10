@@ -1,4 +1,5 @@
-use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
+use image::{DynamicImage, ImageBuffer, Rgb, RgbImage};
+use rayon::iter::{IntoParallelIterator, IntoParallelRefIterator, ParallelIterator};
 use snow_shot_app_shared::ElementRect;
 use xcap::Monitor;
 
@@ -135,7 +136,7 @@ impl MonitorList {
     /// 捕获所有显示器，拼接为一个完整的图像
     ///
     /// @param crop_region 显示器的裁剪区域
-    fn capture_core(
+    async fn capture_future(
         &self,
         crop_region: Option<ElementRect>,
         exclude_window: Option<&tauri::Window>,
@@ -289,19 +290,163 @@ impl MonitorList {
         Ok(capture_image)
     }
 
-    pub fn capture(
+    /// 应用 5x5 颜色变换矩阵到 RGB 像素
+    fn apply_color_matrix(pixel: *const u8, output_pixel: *mut u8, matrix: &[f32; 25]) {
+        let (red_f, green_f, blue_f) = unsafe {
+            (
+                *pixel.add(0) as f32 / 255.0,
+                *pixel.add(1) as f32 / 255.0,
+                *pixel.add(2) as f32 / 255.0,
+            )
+        };
+
+        // 前 3 行：矩阵乘法计算 RGB 变换（不处理 alpha 通道）
+        unsafe {
+            for i in 0..3 {
+                let mut current_result = 0.0;
+
+                // 处理 RGB 变换
+                current_result += matrix[i * 5 + 0] * red_f; // 注意 current_output 未初始化
+                current_result += matrix[i * 5 + 1] * green_f;
+                current_result += matrix[i * 5 + 2] * blue_f;
+
+                // 第5行提供平移（相加）操作：直接加上第5行对应的值
+                current_result += matrix[4 * 5 + i];
+
+                // 将结果限制在0.0-1.0范围内
+                current_result = current_result.clamp(0.0, 1.0);
+
+                output_pixel.add(i).write((current_result * 255.0) as u8);
+            }
+        }
+    }
+
+    /// 将颜色矩阵应用到整个图像
+    fn apply_color_effect_to_image(
+        image: &ImageBuffer<Rgb<u8>, Vec<u8>>,
+        matrix: &[f32; 25],
+    ) -> ImageBuffer<Rgb<u8>, Vec<u8>> {
+        let (width, height) = image.dimensions();
+
+        let image_raw = image.as_raw();
+        let mut output_data = unsafe {
+            let mut array: Vec<u8> = Vec::with_capacity(image_raw.len());
+            array.set_len(image_raw.len());
+
+            array
+        };
+        let image_raw_ptr = image_raw.as_ptr() as usize;
+        let output_data_ptr = output_data.as_mut_ptr() as usize;
+
+        let pixel_count = (width * height) as usize;
+
+        (0..pixel_count).into_par_iter().for_each(|pixel_index| {
+            let index = pixel_index * 3;
+            unsafe {
+                Self::apply_color_matrix(
+                    (image_raw_ptr as *const u8).add(index),
+                    (output_data_ptr as *mut u8).add(index),
+                    matrix,
+                );
+            }
+        });
+
+        RgbImage::from_raw(width, height, output_data).unwrap()
+    }
+
+    /**
+     * 获取 Windows 下放大镜的颜色变换举证
+     */
+    async fn get_mag_color_effect() -> Result<Option<[f32; 25]>, String> {
+        #[cfg(not(target_os = "windows"))]
+        {
+            return Ok(None);
+        }
+
+        let init_result = unsafe { windows::Win32::UI::Magnification::MagInitialize() };
+        if !init_result.as_bool() {
+            log::warn!(
+                "[MonitorInfoList::get_mag_color_effect] Failed to initialize magnification library"
+            );
+            return Ok(None);
+        }
+
+        let mut current_effect = windows::Win32::UI::Magnification::MAGCOLOREFFECT::default();
+        let get_effect_result = unsafe {
+            windows::Win32::UI::Magnification::MagGetFullscreenColorEffect(&mut current_effect)
+        };
+
+        // 释放 Mag
+        let uninit_result = unsafe { windows::Win32::UI::Magnification::MagUninitialize() };
+        if !uninit_result.as_bool() {
+            log::warn!(
+                "[MonitorInfoList::get_mag_color_effect] Failed to uninitialize magnification library"
+            );
+        }
+
+        if !get_effect_result.as_bool() {
+            log::warn!(
+                "[MonitorInfoList::get_mag_color_effect] Failed to get magnification color effect"
+            );
+            return Ok(None);
+        }
+
+        let matrix = current_effect.transform;
+        // 无任何效果的默认矩阵
+        const NORMAL_MATRIX: [f32; 25] = [
+            1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0,
+            0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0,
+        ];
+        // 判断 matrix 是否等于 NORMAL_MATRIX
+        if matrix.eq(&NORMAL_MATRIX) {
+            return Ok(None);
+        }
+
+        Ok(Some(matrix))
+    }
+
+    async fn capture_core(
+        &self,
+        crop_region: Option<ElementRect>,
+        exclude_window: Option<&tauri::Window>,
+    ) -> Result<image::DynamicImage, String> {
+        let result = tokio::try_join!(
+            self.capture_future(crop_region, exclude_window),
+            Self::get_mag_color_effect()
+        );
+
+        match result {
+            Ok((image, color_effect)) => {
+                let image = match color_effect {
+                    Some(matrix) => DynamicImage::ImageRgb8(Self::apply_color_effect_to_image(
+                        &image.as_rgb8().unwrap(),
+                        &matrix,
+                    )),
+                    None => image,
+                };
+
+                Ok(image)
+            }
+            Err(e) => {
+                log::error!("[MonitorInfoList::capture_core] failed to capture: {:?}", e);
+                Err(e)
+            }
+        }
+    }
+
+    pub async fn capture(
         &self,
         exclude_window: Option<&tauri::Window>,
     ) -> Result<image::DynamicImage, String> {
-        self.capture_core(None, exclude_window)
+        self.capture_core(None, exclude_window).await
     }
 
-    pub fn capture_region(
+    pub async fn capture_region(
         &self,
         region: ElementRect,
         exclude_window: Option<&tauri::Window>,
     ) -> Result<image::DynamicImage, String> {
-        self.capture_core(Some(region), exclude_window)
+        self.capture_core(Some(region), exclude_window).await
     }
 
     pub fn monitor_rect_list(&self) -> Vec<ElementRect> {
@@ -325,19 +470,19 @@ mod tests {
         println!("monitors: {:?}", monitors);
     }
 
-    #[test]
-    fn test_capture_multi_monitor() {
+    #[tokio::test]
+    async fn test_capture_multi_monitor() {
         let instance = std::time::Instant::now();
 
         let crop_region = ElementRect {
             min_x: -3840,
-            min_y: -2160,
+            min_y: 0,
             max_x: 3840,
             max_y: 2160,
         };
 
         let monitors = MonitorList::get_by_region(crop_region);
-        let image = monitors.capture_region(crop_region, None).unwrap();
+        let image = monitors.capture_region(crop_region, None).await.unwrap();
 
         println!("current_dir: {:?}", env::current_dir().unwrap());
 
@@ -351,8 +496,8 @@ mod tests {
         println!("time: {:?}", instance.elapsed());
     }
 
-    #[test]
-    fn test_capture_single_monitor() {
+    #[tokio::test]
+    async fn test_capture_single_monitor() {
         let instance = std::time::Instant::now();
 
         let crop_region = ElementRect {
@@ -363,7 +508,7 @@ mod tests {
         };
 
         let monitors = MonitorList::get_by_region(crop_region);
-        let image = monitors.capture_region(crop_region, None).unwrap();
+        let image = monitors.capture_region(crop_region, None).await.unwrap();
 
         image
             .save(
