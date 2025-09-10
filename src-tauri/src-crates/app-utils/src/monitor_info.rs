@@ -363,46 +363,49 @@ impl MonitorList {
             return Ok(None);
         }
 
-        let init_result = unsafe { windows::Win32::UI::Magnification::MagInitialize() };
-        if !init_result.as_bool() {
-            log::warn!(
-                "[MonitorInfoList::get_mag_color_effect] Failed to initialize magnification library"
-            );
-            return Ok(None);
+        #[cfg(target_os = "windows")]
+        {
+            let init_result = unsafe { windows::Win32::UI::Magnification::MagInitialize() };
+            if !init_result.as_bool() {
+                log::warn!(
+                    "[MonitorInfoList::get_mag_color_effect] Failed to initialize magnification library"
+                );
+                return Ok(None);
+            }
+
+            let mut current_effect = windows::Win32::UI::Magnification::MAGCOLOREFFECT::default();
+            let get_effect_result = unsafe {
+                windows::Win32::UI::Magnification::MagGetFullscreenColorEffect(&mut current_effect)
+            };
+
+            // 释放 Mag
+            let uninit_result = unsafe { windows::Win32::UI::Magnification::MagUninitialize() };
+            if !uninit_result.as_bool() {
+                log::warn!(
+                    "[MonitorInfoList::get_mag_color_effect] Failed to uninitialize magnification library"
+                );
+            }
+
+            if !get_effect_result.as_bool() {
+                log::warn!(
+                    "[MonitorInfoList::get_mag_color_effect] Failed to get magnification color effect"
+                );
+                return Ok(None);
+            }
+
+            let matrix = current_effect.transform;
+            // 无任何效果的默认矩阵
+            const NORMAL_MATRIX: [f32; 25] = [
+                1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0,
+                0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0,
+            ];
+            // 判断 matrix 是否等于 NORMAL_MATRIX
+            if matrix.eq(&NORMAL_MATRIX) {
+                return Ok(None);
+            }
+
+            Ok(Some(matrix))
         }
-
-        let mut current_effect = windows::Win32::UI::Magnification::MAGCOLOREFFECT::default();
-        let get_effect_result = unsafe {
-            windows::Win32::UI::Magnification::MagGetFullscreenColorEffect(&mut current_effect)
-        };
-
-        // 释放 Mag
-        let uninit_result = unsafe { windows::Win32::UI::Magnification::MagUninitialize() };
-        if !uninit_result.as_bool() {
-            log::warn!(
-                "[MonitorInfoList::get_mag_color_effect] Failed to uninitialize magnification library"
-            );
-        }
-
-        if !get_effect_result.as_bool() {
-            log::warn!(
-                "[MonitorInfoList::get_mag_color_effect] Failed to get magnification color effect"
-            );
-            return Ok(None);
-        }
-
-        let matrix = current_effect.transform;
-        // 无任何效果的默认矩阵
-        const NORMAL_MATRIX: [f32; 25] = [
-            1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0,
-            0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0,
-        ];
-        // 判断 matrix 是否等于 NORMAL_MATRIX
-        if matrix.eq(&NORMAL_MATRIX) {
-            return Ok(None);
-        }
-
-        Ok(Some(matrix))
     }
 
     async fn capture_core(
