@@ -205,6 +205,11 @@ pub async fn auto_start_disable(app: tauri::AppHandle) -> Result<(), String> {
         }
     }
 
+    #[cfg(not(target_os = "windows"))]
+    {
+        return Ok(());
+    }
+
     #[cfg(target_os = "windows")]
     {
         // 判断是否是管理员模式
