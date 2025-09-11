@@ -490,15 +490,15 @@ pub fn encode_image(image: &image::DynamicImage, encoder: ImageEncoder) -> Vec<u
 /// - `offset_y` (`i64`) - 待合并的图像在合并后的图像上的偏移量
 ///
 /// ```
-pub fn overlay_image(
-    image_pixels: &mut Vec<u8>,
+pub fn overlay_image_ptr(
+    image_pixels: *mut u8,
     image_width: usize,
     target_image: &image::DynamicImage,
     offset_x: usize,
     offset_y: usize,
     channel_count: usize,
 ) {
-    let image_pixels_ptr = image_pixels.as_mut_ptr() as usize;
+    let image_pixels_ptr = image_pixels as usize;
 
     let target_image_width = target_image.width() as usize;
     let target_image_height = target_image.height() as usize;
@@ -523,4 +523,22 @@ pub fn overlay_image(
                 target_image_width * channel_count,
             );
         });
+}
+
+pub fn overlay_image(
+    image_pixels: &mut Vec<u8>,
+    image_width: usize,
+    target_image: &image::DynamicImage,
+    offset_x: usize,
+    offset_y: usize,
+    channel_count: usize,
+) {
+    overlay_image_ptr(
+        image_pixels.as_mut_ptr(),
+        image_width,
+        target_image,
+        offset_x,
+        offset_y,
+        channel_count,
+    );
 }
