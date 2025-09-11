@@ -60,6 +60,10 @@ impl UIElements {
     }
 
     pub fn init(&mut self) -> Result<(), UIAutomationError> {
+        if self.automation.is_some() {
+            return Ok(());
+        }
+
         let automation = UIAutomation::new()?;
         let automation_walker = automation.get_content_view_walker()?;
 
@@ -138,9 +142,9 @@ impl UIElements {
 
         let root_element = self.root_element.as_ref().unwrap();
 
+        self.element_rect_tree = Arena::new();
         self.element_cache = RTree::new();
         self.element_level_map.clear();
-        self.element_rect_tree = Arena::new();
         self.element_children_next_sibling_cache.clear();
         self.window_rect_map.clear();
         self.window_index_level_map.clear();

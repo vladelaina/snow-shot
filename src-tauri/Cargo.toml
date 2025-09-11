@@ -50,7 +50,7 @@ zune-core = "^0.4"
 scap = { git = "https://github.com/mg-chao/scap", branch = "20250712_custom" }
 objc2 = "0.6.1"
 objc2-app-kit = { version = "0.3.1" }
-uiautomation = "0.22.2"
+uiautomation = "0.23.1"
 macos-accessibility-client = "0.0.1"
 dashmap = "6.1.0"
 

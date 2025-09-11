@@ -1081,8 +1081,6 @@ const SelectLayerCore: React.FC<SelectLayerProps> = ({ actionRef }) => {
     );
 
     useEffect(() => {
-        initUiElements();
-
         return () => {
             drawSelectRectAnimationRef.current?.dispose();
         };

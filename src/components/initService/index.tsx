@@ -1,11 +1,12 @@
 'use client';
 
 import { AppSettingsData, AppSettingsGroup } from '@/app/contextWrap';
+import { initUiElements } from '@/commands';
 import { ocrInit } from '@/commands/ocr';
 import { videoRecordInit } from '@/commands/videoRecord';
 import { useAppSettingsLoad } from '@/hooks/useAppSettingsLoad';
 import { CaptureHistory } from '@/utils/captureHistory';
-import { useCallback, useEffect } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 
 export const InitService = () => {
     // 清除无效的截图历史
@@ -27,7 +28,15 @@ export const InitService = () => {
         true,
     );
 
+    const inited = useRef(false);
+
     useEffect(() => {
+        if (inited.current) {
+            return;
+        }
+        inited.current = true;
+
+        initUiElements();
         videoRecordInit();
     }, []);
 
