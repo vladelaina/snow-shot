@@ -6,13 +6,11 @@ pub mod screenshot;
 pub mod scroll_screenshot;
 pub mod video_record;
 
-use chrono::Local;
 use std::sync::Arc;
 use tauri::Emitter;
 use tokio::sync::Mutex;
 
 use tauri::Manager;
-use tauri_plugin_log::{Target, TargetKind};
 
 use snow_shot_app_os::ui_automation::UIElements;
 use snow_shot_app_scroll_screenshot_service::scroll_screenshot_capture_service;
@@ -86,12 +84,14 @@ pub fn run() {
         .plugin(tauri_plugin_notification::init())
         .plugin(tauri_plugin_process::init())
         .setup(|app| {
-            let current_date = Local::now().format("%Y-%m-%d").to_string();
-
             // log 文件可能因为某些异常情况不断输出，造成日志文件过大
             // 先在 release 下屏蔽日志输出
             #[cfg(debug_assertions)]
             {
+                use tauri_plugin_log::{Target, TargetKind};
+
+                let current_date = chrono::Local::now().format("%Y-%m-%d").to_string();
+
                 app.handle().plugin(
                     tauri_plugin_log::Builder::default()
                         .rotation_strategy(tauri_plugin_log::RotationStrategy::KeepAll)
@@ -142,8 +142,9 @@ pub fn run() {
                 }
             });
 
-            // 如果不是自动启动，则显示窗口
-            if !std::env::args().any(|arg| arg == "--auto_start") {
+            // 如果是调试模式，则显示窗口
+            #[cfg(debug_assertions)]
+            {
                 main_window.show().unwrap();
             }
 
@@ -198,6 +199,9 @@ pub fn run() {
             core::send_new_version_notification,
             core::create_video_record_window,
             core::set_current_window_always_on_top,
+            core::auto_start_enable,
+            core::auto_start_disable,
+            core::restart_with_admin,
             scroll_screenshot::scroll_screenshot_get_image_data,
             scroll_screenshot::scroll_screenshot_init,
             scroll_screenshot::scroll_screenshot_capture,

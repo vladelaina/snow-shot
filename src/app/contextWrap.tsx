@@ -20,10 +20,9 @@ import {
     KeyEventValue as DrawToolbarKeyEventValue,
 } from './draw/components/drawToolbar/components/keyEventWrap/extra';
 import React from 'react';
-import * as appAutostart from '@tauri-apps/plugin-autostart';
 import { defaultKeyEventSettings, KeyEventKey, KeyEventValue } from '@/core/hotKeys';
 import { TranslationDomain, TranslationType } from '@/services/tools/translation';
-import { setEnableProxy } from '@/commands/core';
+import { autoStartDisable, autoStartEnable, setEnableProxy } from '@/commands/core';
 import {
     ChatApiConfig,
     FOCUS_WINDOW_APP_NAME_ENV_VARIABLE,
@@ -607,6 +606,7 @@ const ContextWrapCore: React.FC<{ children: React.ReactNode }> = ({ children }) 
         [writeAppSettings],
     );
 
+    const hasInitAutoStart = useRef(false);
     const updateAppSettings = useCallback(
         (
             group: AppSettingsGroup,
@@ -1009,14 +1009,18 @@ const ContextWrapCore: React.FC<{ children: React.ReactNode }> = ({ children }) 
                 if (process.env.NODE_ENV === 'development') {
                 }
 
-                if (saveToFile && process.env.NODE_ENV !== 'development') {
+                if (
+                    saveToFile &&
+                    process.env.NODE_ENV !== 'development' &&
+                    (!hasInitAutoStart.current || prevSettings?.autoStart !== settings.autoStart)
+                ) {
+                    hasInitAutoStart.current = true;
+
                     (async () => {
                         // 每次启动都重新注册一下
-                        await appAutostart.enable();
-                        if (settings.autoStart) {
-                            // await appAutostart.enable();
-                        } else {
-                            await appAutostart.disable();
+                        await autoStartEnable();
+                        if (!settings.autoStart) {
+                            await autoStartDisable();
                         }
                     })();
                 }
