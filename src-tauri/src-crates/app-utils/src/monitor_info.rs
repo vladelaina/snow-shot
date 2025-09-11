@@ -1,5 +1,7 @@
 use image::{DynamicImage, ImageBuffer, Rgb, RgbImage};
-use rayon::iter::{IntoParallelIterator, IntoParallelRefIterator, ParallelIterator};
+use rayon::iter::{
+    IndexedParallelIterator, IntoParallelIterator, IntoParallelRefIterator, ParallelIterator,
+};
 use snow_shot_app_shared::ElementRect;
 use xcap::Monitor;
 
@@ -245,38 +247,41 @@ impl MonitorList {
             vec
         };
 
-        // 将每个显示器的截图绘制到合并图像上
-        for (index, (monitor_image, monitor_crop_region)) in monitor_image_list.iter().enumerate() {
-            let monitor = &monitors[index];
+        let capture_image_pixels_ptr = capture_image_pixels.as_mut_ptr() as usize;
 
-            // 计算显示器在合并图像中的位置
-            let offset_x: i64;
-            let offset_y: i64;
+        monitor_image_list.par_iter().enumerate().for_each(
+            |(index, (monitor_image, monitor_crop_region))| {
+                let monitor = &monitors[index];
 
-            if let Some(monitor_crop_region) = monitor_crop_region {
-                let crop_region = crop_region.unwrap();
+                // 计算显示器在合并图像中的位置
+                let offset_x: i64;
+                let offset_y: i64;
 
-                // 将单个显示器的坐标转为整个显示器的坐标
-                // 得到图像相对整个显示器的坐标后，再减去裁剪区域的坐标，得到图像相对裁剪区域的坐标
-                offset_x =
-                    (monitor_crop_region.min_x + monitor.rect.min_x - crop_region.min_x) as i64;
-                offset_y =
-                    (monitor_crop_region.min_y + monitor.rect.min_y - crop_region.min_y) as i64;
-            } else {
-                offset_x = (monitor.rect.min_x - monitors_bounding_box.min_x) as i64;
-                offset_y = (monitor.rect.min_y - monitors_bounding_box.min_y) as i64;
-            }
+                if let Some(monitor_crop_region) = monitor_crop_region {
+                    let crop_region = crop_region.unwrap();
 
-            // 将显示器图像绘制到合并图像上
-            super::overlay_image(
-                &mut capture_image_pixels,
-                capture_image_width,
-                monitor_image,
-                offset_x as usize,
-                offset_y as usize,
-                RGB_CHANNEL_COUNT,
-            );
-        }
+                    // 将单个显示器的坐标转为整个显示器的坐标
+                    // 得到图像相对整个显示器的坐标后，再减去裁剪区域的坐标，得到图像相对裁剪区域的坐标
+                    offset_x =
+                        (monitor_crop_region.min_x + monitor.rect.min_x - crop_region.min_x) as i64;
+                    offset_y =
+                        (monitor_crop_region.min_y + monitor.rect.min_y - crop_region.min_y) as i64;
+                } else {
+                    offset_x = (monitor.rect.min_x - monitors_bounding_box.min_x) as i64;
+                    offset_y = (monitor.rect.min_y - monitors_bounding_box.min_y) as i64;
+                }
+
+                // 将显示器图像绘制到合并图像上
+                super::overlay_image_ptr(
+                    capture_image_pixels_ptr as *mut u8,
+                    capture_image_width,
+                    monitor_image,
+                    offset_x as usize,
+                    offset_y as usize,
+                    RGB_CHANNEL_COUNT,
+                );
+            },
+        );
 
         let capture_image = image::DynamicImage::ImageRgb8(
             image::RgbImage::from_raw(

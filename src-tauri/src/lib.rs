@@ -88,20 +88,25 @@ pub fn run() {
         .setup(|app| {
             let current_date = Local::now().format("%Y-%m-%d").to_string();
 
-            app.handle().plugin(
-                tauri_plugin_log::Builder::default()
-                    .rotation_strategy(tauri_plugin_log::RotationStrategy::KeepAll)
-                    .timezone_strategy(tauri_plugin_log::TimezoneStrategy::UseLocal)
-                    .targets([
-                        Target::new(TargetKind::Stdout),
-                        Target::new(TargetKind::LogDir {
-                            file_name: Some(format!("snow-shot-{}", current_date)),
-                        }),
-                        Target::new(TargetKind::Webview),
-                    ])
-                    .level(log::LevelFilter::Info)
-                    .build(),
-            )?;
+            // log 文件可能因为某些异常情况不断输出，造成日志文件过大
+            // 先在 release 下屏蔽日志输出
+            #[cfg(debug_assertions)]
+            {
+                app.handle().plugin(
+                    tauri_plugin_log::Builder::default()
+                        .rotation_strategy(tauri_plugin_log::RotationStrategy::KeepAll)
+                        .timezone_strategy(tauri_plugin_log::TimezoneStrategy::UseLocal)
+                        .targets([
+                            Target::new(TargetKind::Stdout),
+                            Target::new(TargetKind::LogDir {
+                                file_name: Some(format!("snow-shot-{}", current_date)),
+                            }),
+                            Target::new(TargetKind::Webview),
+                        ])
+                        .level(log::LevelFilter::Info)
+                        .build(),
+                )?;
+            }
 
             let main_window = app
                 .get_webview_window("main")
