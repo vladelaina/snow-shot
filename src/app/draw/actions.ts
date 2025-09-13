@@ -2,7 +2,7 @@ import { DrawLayerActionType } from './components/drawLayer';
 import { SelectLayerActionType, SelectRectParams } from './components/selectLayer';
 import { DrawCacheLayerActionType } from './components/drawCacheLayer/extra';
 import { createDrawWindow, saveFile } from '@/commands';
-import { Window as AppWindow, getCurrentWindow } from '@tauri-apps/api/window';
+import { Window as AppWindow } from '@tauri-apps/api/window';
 import { CaptureStep } from './types';
 import { FixedContentActionType } from '../fixedContent/components/fixedContentCore';
 import { OcrBlocksActionType } from './components/ocrBlocks';
