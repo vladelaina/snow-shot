@@ -75,6 +75,11 @@ export const OcrBlocks: React.FC<{
 
     const onOcrDetect = useCallback(
         (ocrResult: OcrDetectResult) => {
+            // 判断是否是 OCR 工具
+            if (!isOcrTool(getDrawState())) {
+                return;
+            }
+
             // 只在 OCR 检测时启用 OCR 后操作,截图翻译时不启用
             if (getDrawState() === DrawState.OcrDetect) {
                 const ocrAfterAction =

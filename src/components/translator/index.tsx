@@ -131,7 +131,7 @@ type TranslationServiceConfig =
 
 export type TranslatorActionType = {
     getTranslatedContentRef: () => string;
-    setSourceContent: (content: string, ignoreDebounce?: boolean) => void;
+    setSourceContent: (content: string, ignoreDebounce?: boolean, requestId?: number) => void;
     getSourceContentRef: () => InputRef | null;
     stopTranslate: () => void;
     getTranslationType: () => TranslationType | string;
@@ -139,7 +139,7 @@ export type TranslatorActionType = {
 
 const TranslatorCore: React.FC<{
     actionRef: React.RefObject<TranslatorActionType | undefined>;
-    onTranslateComplete?: (result: string) => void;
+    onTranslateComplete?: (result: string, requestId?: number) => void;
     disableInput?: boolean;
     tryCatchTranslation?: boolean;
 }> = ({ actionRef, onTranslateComplete, disableInput, tryCatchTranslation }) => {
@@ -340,6 +340,9 @@ const TranslatorCore: React.FC<{
 
     const sourceContentRef = useRef<InputRef | null>(null);
     const [sourceContent, setSourceContent] = useState<string>('');
+    const [sourceContentRequestId, setSourceContentRequestId] = useState<number | undefined>(
+        undefined,
+    );
     const [translatedContent, setTranslatedContent, translatedContentRef] = useStateRef<string>('');
     const [autoLanguage, setAutoLanguage] = useState<string | undefined>(undefined);
 
@@ -353,6 +356,7 @@ const TranslatorCore: React.FC<{
         async (params: {
             requestSign: number;
             sourceContent: string;
+            sourceContentRequestId: number | undefined;
             sourceLanguage: string;
             targetLanguage: string;
             translationType: string;
@@ -412,7 +416,7 @@ const TranslatorCore: React.FC<{
 
                 setStartLoading(false);
 
-                onTranslateComplete?.(translatedContentRef.current);
+                onTranslateComplete?.(translatedContentRef.current, params.sourceContentRequestId);
                 return true;
             }
 
@@ -472,7 +476,7 @@ const TranslatorCore: React.FC<{
             }
 
             setLoading(false);
-            onTranslateComplete?.(translatedContentRef.current);
+            onTranslateComplete?.(translatedContentRef.current, params.sourceContentRequestId);
 
             return true;
         },
@@ -494,6 +498,7 @@ const TranslatorCore: React.FC<{
     const requestTranslate = useCallback(
         async (params: {
             sourceContent: string;
+            sourceContentRequestId: number | undefined;
             sourceLanguage: string;
             targetLanguage: string;
             translationType: TranslationType | string;
@@ -541,7 +546,10 @@ const TranslatorCore: React.FC<{
                     },
                     onComplete: () => {
                         setLoading(false);
-                        onTranslateComplete?.(translatedContentRef.current);
+                        onTranslateComplete?.(
+                            translatedContentRef.current,
+                            params.sourceContentRequestId,
+                        );
                     },
                 },
                 {
@@ -580,6 +588,7 @@ const TranslatorCore: React.FC<{
             ignoreDebounceRef.current = false;
             requestTranslate({
                 sourceContent: sourceContent,
+                sourceContentRequestId: sourceContentRequestId,
                 sourceLanguage: sourceLanguage,
                 targetLanguage: targetLanguage,
                 translationType,
@@ -588,6 +597,7 @@ const TranslatorCore: React.FC<{
         } else {
             requestTranslateDebounce({
                 sourceContent: sourceContent,
+                sourceContentRequestId: sourceContentRequestId,
                 sourceLanguage: sourceLanguage,
                 targetLanguage: targetLanguage,
                 translationType,
@@ -596,6 +606,7 @@ const TranslatorCore: React.FC<{
         }
     }, [
         sourceContent,
+        sourceContentRequestId,
         sourceLanguage,
         targetLanguage,
         requestTranslateDebounce,
@@ -634,9 +645,14 @@ const TranslatorCore: React.FC<{
         useCallback(
             () => ({
                 getTranslatedContentRef: () => translatedContentRef.current,
-                setSourceContent: (content: string, ignoreDebounce?: boolean) => {
+                setSourceContent: (
+                    content: string,
+                    ignoreDebounce?: boolean,
+                    requestId?: number,
+                ) => {
                     setSourceContent(content);
                     ignoreDebounceRef.current = ignoreDebounce ?? false;
+                    setSourceContentRequestId(requestId);
                 },
                 getSourceContentRef: () => sourceContentRef.current,
                 stopTranslate: () => {
