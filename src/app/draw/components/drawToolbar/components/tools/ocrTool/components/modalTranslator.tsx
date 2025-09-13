@@ -4,6 +4,7 @@ import {
     AppSettingsGroup,
     AppSettingsPublisher,
 } from '@/app/contextWrap';
+import { DrawState, DrawStatePublisher } from '@/app/fullScreenDraw/components/drawCore/extra';
 import { TranslationApiType } from '@/app/settings/functionSettings/extra';
 import { OcrDetectResult } from '@/commands/ocr';
 import { AntdContext, HotkeysScope } from '@/components/globalLayoutExtra';
@@ -55,6 +56,8 @@ export const ModalTranslator: React.FC<{
 
     const [open, setOpen] = useState(false);
 
+    const requestIdRef = useRef<number>(0);
+    const lastSourceContentRef = useRef<string>(undefined);
     const startTranslate = useCallback(() => {
         setOpen(true);
 
@@ -71,8 +74,25 @@ export const ModalTranslator: React.FC<{
             sourceContent = ocrResult?.text_blocks.map((block) => block.text).join('\n') ?? '';
         }
 
-        translatorActionRef.current?.setSourceContent(sourceContent);
+        if (lastSourceContentRef.current === sourceContent) {
+            return;
+        }
+        lastSourceContentRef.current = sourceContent;
+
+        requestIdRef.current = new Date().valueOf();
+        const currentRequestId = requestIdRef.current;
+
+        translatorActionRef.current?.setSourceContent(sourceContent, undefined, currentRequestId);
     }, [keepLayoutRef, ocrResult?.text_blocks]);
+
+    // 切换工具时重置请求 ID
+    useStateSubscriber(
+        DrawStatePublisher,
+        useCallback(() => {
+            lastSourceContentRef.current = undefined;
+            requestIdRef.current = 0;
+        }, []),
+    );
 
     useImperativeHandle(
         actionRef,
@@ -217,7 +237,11 @@ export const ModalTranslator: React.FC<{
     }, [open, disableScope, enableScope]);
 
     const onTranslateComplete = useCallback(
-        (result: string) => {
+        (result: string, requestId?: number) => {
+            if (requestId !== requestIdRef.current) {
+                return;
+            }
+
             translateResult.current = result;
             if (autoReplaceRef.current) {
                 replaceOcrResult();
@@ -234,6 +258,7 @@ export const ModalTranslator: React.FC<{
 
         return () => {
             getTranslatorAction()?.stopTranslate();
+            lastSourceContentRef.current = undefined;
         };
     }, []);
 

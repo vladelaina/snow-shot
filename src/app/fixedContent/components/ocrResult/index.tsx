@@ -250,8 +250,13 @@ export const OcrResult: React.FC<{
         textContainerElementRef.current.style.transform = `scale(${scale / 100})`;
     }, []);
 
+    /** 请求 ID，避免 OCR 检测中切换工具后任然触发 OCR 结果 */
+    const requestIdRef = useRef<number>(0);
     const initDrawCanvas = useCallback(
         async (params: OcrResultInitDrawCanvasParams) => {
+            requestIdRef.current++;
+            const currentRequestId = requestIdRef.current;
+
             const { selectRect, canvas } = params;
 
             const imageBlob = await new Promise<Blob | null>((resolve) => {
@@ -270,6 +275,11 @@ export const OcrResult: React.FC<{
                     }),
                     ignoreScale: false,
                 };
+
+                // 如果请求 ID 不一致，说明 OCR 检测中切换工具了，不进行更新
+                if (currentRequestId !== requestIdRef.current) {
+                    return;
+                }
 
                 selectRectRef.current = selectRect;
                 updateOcrTextElements(ocrResult.result, ocrResult.ignoreScale);

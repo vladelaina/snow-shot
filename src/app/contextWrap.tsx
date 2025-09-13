@@ -417,7 +417,7 @@ export const defaultAppSettingsData: AppSettingsData = {
         saveFileDirectory: '',
         saveFileFormat: ImageFormat.PNG,
         ocrAfterAction: OcrDetectAfterAction.None,
-        ocrCopyText: false,
+        ocrCopyText: true,
         lockDrawTool: true,
     },
     [AppSettingsGroup.SystemScrollScreenshot]: {
