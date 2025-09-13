@@ -57,7 +57,14 @@ export default function FixedContentPage() {
             } catch {}
 
             try {
-                const textContent = await clipboard.readText();
+                let textContent = await extraClipboard.readText();
+                if (textContent === '') {
+                    textContent = await clipboard.readText();
+                }
+                if (textContent === '' && 'readText' in navigator.clipboard) {
+                    textContent = await navigator.clipboard.readText();
+                }
+
                 if (textContent) {
                     fixedContentActionRef.current?.init({ textContent });
                     return;
