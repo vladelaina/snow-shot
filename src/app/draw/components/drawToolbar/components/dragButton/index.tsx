@@ -17,6 +17,7 @@ import { ElementRect } from '@/commands';
 import { updateElementPosition } from './extra';
 import { useStateSubscriber } from '@/hooks/useStateSubscriber';
 import { DrawState, DrawStatePublisher } from '@/app/fullScreenDraw/components/drawCore/extra';
+import { useMonitorRect } from '../../../statusBar';
 
 export type DragButtonActionType = {
     setEnable: (enable: boolean) => void;
@@ -44,6 +45,12 @@ const DragButtonCore: React.FC<{
         max_y: 0,
     });
     const toolbarPreviousRectRef = useRef<ElementRect>(undefined);
+
+    const {
+        contentScale: [, , contentScaleRef],
+        calculatedBoundaryRect,
+    } = useMonitorRect();
+
     const updateDrawToolbarStyle = useCallback(() => {
         const drawToolbar = drawToolbarRef.current;
         if (!drawToolbar) {
@@ -55,8 +62,12 @@ const DragButtonCore: React.FC<{
             return;
         }
 
-        const baseOffsetX = selectedRect.max_x / window.devicePixelRatio - drawToolbar.clientWidth;
-        const baseOffsetY = selectedRect.max_y / window.devicePixelRatio + token.marginXXS;
+        const baseOffsetX =
+            selectedRect.max_x / window.devicePixelRatio -
+            drawToolbar.clientWidth * contentScaleRef.current;
+        const baseOffsetY =
+            selectedRect.max_y / window.devicePixelRatio +
+            token.marginXXS * contentScaleRef.current;
 
         const dragRes = updateElementPosition(
             drawToolbar,
@@ -65,11 +76,20 @@ const DragButtonCore: React.FC<{
             mouseOriginPositionRef.current,
             mouseCurrentPositionRef.current,
             toolbarPreviousRectRef.current,
+            undefined,
+            contentScaleRef.current,
+            calculatedBoundaryRect,
         );
 
         toolbarCurrentRectRef.current = dragRes.rect;
         mouseOriginPositionRef.current = dragRes.originPosition;
-    }, [drawToolbarRef, selectLayerActionRef, token.marginXXS]);
+    }, [
+        drawToolbarRef,
+        selectLayerActionRef,
+        contentScaleRef,
+        token.marginXXS,
+        calculatedBoundaryRect,
+    ]);
     const updateDrawToolbarStyleRender = useCallbackRender(updateDrawToolbarStyle);
 
     const handleMouseDown = useCallback(
