@@ -415,7 +415,9 @@ const DrawPageCore: React.FC<{
         );
 
         await Promise.all([
-            await showWindow(captureBoundingBoxInfoRef.current.rect),
+            getScreenshotType() === ScreenshotType.Delay
+                ? Promise.resolve()
+                : showWindow(captureBoundingBoxInfoRef.current.rect),
             selectLayerActionRef.current?.onCaptureBoundingBoxInfoReady(
                 captureBoundingBoxInfoRef.current!,
             ),
@@ -423,7 +425,34 @@ const DrawPageCore: React.FC<{
                 captureBoundingBoxInfoRef.current!,
             ),
         ]);
-    }, [message, showWindow]);
+    }, [getScreenshotType, message, showWindow]);
+
+    const captureAllMonitorsAction = useCallback(
+        async (excuteScreenshotType: ScreenshotType) => {
+            if (excuteScreenshotType === ScreenshotType.Delay) {
+                await new Promise((resolve) => {
+                    setTimeout(() => {
+                        resolve(undefined);
+                    }, 1000 * getAppSettings()[AppSettingsGroup.Cache].delayScreenshotSeconds);
+                });
+            }
+
+            const result = await captureAllMonitors().catch((error) => {
+                appError('[DrawPageCore] captureAllMonitors error', error);
+                return undefined;
+            });
+
+            if (
+                excuteScreenshotType === ScreenshotType.Delay &&
+                captureBoundingBoxInfoRef.current
+            ) {
+                showWindow(captureBoundingBoxInfoRef.current.rect);
+            }
+
+            return result;
+        },
+        [getAppSettings, showWindow],
+    );
 
     /** 执行截图 */
     const excuteScreenshot = useCallback(
@@ -432,10 +461,7 @@ const DrawPageCore: React.FC<{
             drawToolbarActionRef.current?.setEnable(false);
 
             const initCaptureBoundingBoxInfoPromise = initCaptureBoundingBoxInfoAndShowWindow();
-            const captureAllMonitorsPromise = captureAllMonitors().catch((error) => {
-                appError('[DrawPageCore] captureAllMonitors error', error);
-                return undefined;
-            });
+            const captureAllMonitorsPromise = captureAllMonitorsAction(excuteScreenshotType);
 
             setScreenshotType(excuteScreenshotType);
             const layerOnExecuteScreenshotPromise = Promise.all([
@@ -485,9 +511,10 @@ const DrawPageCore: React.FC<{
             }
         },
         [
+            initCaptureBoundingBoxInfoAndShowWindow,
+            captureAllMonitorsAction,
             setScreenshotType,
             setCaptureEvent,
-            initCaptureBoundingBoxInfoAndShowWindow,
             getCaptureEvent,
             intl,
             finishCapture,

@@ -81,6 +81,7 @@ const TrayIconLoaderComponent = () => {
         ),
     );
 
+    const [delayScreenshotSeconds, setDelayScreenshotSeconds] = useState(0);
     const [shortcutKeys, setShortcutKeys, shortcutKeysRef] = useStateRef<
         Record<AppFunction, AppFunctionConfig> | undefined
     >(undefined);
@@ -104,6 +105,7 @@ const TrayIconLoaderComponent = () => {
 
                 setIconPath(settings[AppSettingsGroup.CommonTrayIcon].iconPath);
                 setDefaultIcon(settings[AppSettingsGroup.CommonTrayIcon].defaultIcons);
+                setDelayScreenshotSeconds(settings[AppSettingsGroup.Cache].delayScreenshotSeconds);
             },
             [setShortcutKeys, shortcutKeysRef, setIconPath, setDefaultIcon],
         ),
@@ -195,6 +197,30 @@ const TrayIconLoaderComponent = () => {
                             : formatKey(shortcutKeys[AppFunction.Screenshot].shortcutKey),
                         action: async () => {
                             executeScreenshot();
+                        },
+                    },
+                    {
+                        id: `${appWindow.label}-screenshot-delay`,
+                        text: intl.formatMessage(
+                            {
+                                id: 'home.screenshotFunction.screenshotDelay',
+                            },
+                            {
+                                seconds: intl.formatMessage(
+                                    {
+                                        id: 'home.screenshotFunction.screenshotDelay.seconds',
+                                    },
+                                    {
+                                        seconds: delayScreenshotSeconds,
+                                    },
+                                ),
+                            },
+                        ),
+                        accelerator: disableShortcut
+                            ? undefined
+                            : formatKey(shortcutKeys[AppFunction.ScreenshotDelay].shortcutKey),
+                        action: async () => {
+                            executeScreenshot(ScreenshotType.Delay);
                         },
                     },
                     {
@@ -420,6 +446,7 @@ const TrayIconLoaderComponent = () => {
         message,
         setTrayIconState,
         shortcutKeys,
+        delayScreenshotSeconds,
     ]);
 
     useEffect(() => {

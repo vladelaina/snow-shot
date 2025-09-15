@@ -171,6 +171,8 @@ export type AppSettingsData = {
         lastDrawExtraTool: DrawState;
         // 上一次水印内容
         lastWatermarkText: string;
+        /** 延迟截图秒数 */
+        delayScreenshotSeconds: number;
     };
     [AppSettingsGroup.DrawToolbarKeyEvent]: Record<
         DrawToolbarKeyEventKey,
@@ -382,6 +384,7 @@ export const defaultAppSettingsData: AppSettingsData = {
         lastExtraTool: ExtraToolList.None,
         lastDrawExtraTool: DrawState.Idle,
         lastWatermarkText: '',
+        delayScreenshotSeconds: 0,
     },
     [AppSettingsGroup.DrawToolbarKeyEvent]: defaultDrawToolbarKeyEventSettings,
     [AppSettingsGroup.KeyEvent]: defaultKeyEventSettings,
@@ -774,6 +777,11 @@ const ContextWrapCore: React.FC<{ children: React.ReactNode }> = ({ children }) 
                         typeof newSettings?.lastDrawExtraTool === 'number'
                             ? newSettings.lastDrawExtraTool
                             : (prevSettings?.lastDrawExtraTool ?? DrawState.Idle),
+                    delayScreenshotSeconds:
+                        typeof newSettings?.delayScreenshotSeconds === 'number'
+                            ? newSettings.delayScreenshotSeconds
+                            : (prevSettings?.delayScreenshotSeconds ??
+                              defaultAppSettingsData[group].delayScreenshotSeconds),
                 };
             } else if (group === AppSettingsGroup.Screenshot) {
                 newSettings = newSettings as AppSettingsData[typeof group];

@@ -47,6 +47,9 @@ import {
     defaultAppFunctionConfigs,
     ShortcutKeyStatus,
 } from '@/app/extra';
+import { FieldTimeOutlined } from '@ant-design/icons';
+import { ChangeDelaySeconds } from './components/changeDelaySeconds';
+import { Tooltip } from 'antd';
 
 export type GlobalShortcutContextType = {
     disableShortcutKeyRef: React.RefObject<boolean>;
@@ -73,7 +76,11 @@ const GlobalShortcutCore = ({ children }: { children: React.ReactNode }) => {
     const disableShortcutKeyRef = useRef(false);
     const [getTrayIconState] = useStateSubscriber(TrayIconStatePublisher, undefined);
 
-    const [getAppSettings] = useStateSubscriber(AppSettingsPublisher, undefined);
+    const [getAppSettings] = useStateSubscriber(
+        AppSettingsPublisher,
+        // useCallback((settings: AppSettingsData) => {}, []),
+        undefined,
+    );
 
     const {
         configs: defaultAppFunctionComponentConfigs,
@@ -92,6 +99,26 @@ const GlobalShortcutCore = ({ children }: { children: React.ReactNode }) => {
                         buttonTitle = <FormattedMessage id="draw.fixedTool" />;
                         buttonIcon = <FixedIcon style={{ fontSize: '1.3em' }} />;
                         buttonOnClick = () => executeScreenshot(ScreenshotType.Fixed);
+                        break;
+                    case AppFunction.ScreenshotDelay:
+                        buttonTitle = (
+                            <Tooltip
+                                title={
+                                    <FormattedMessage id="home.screenshotFunction.screenshotDelay.tip" />
+                                }
+                            >
+                                <div>
+                                    <FormattedMessage
+                                        id="home.screenshotFunction.screenshotDelay"
+                                        values={{
+                                            seconds: <ChangeDelaySeconds />,
+                                        }}
+                                    />
+                                </div>
+                            </Tooltip>
+                        );
+                        buttonIcon = <FieldTimeOutlined />;
+                        buttonOnClick = () => executeScreenshot(ScreenshotType.Delay);
                         break;
                     case AppFunction.ScreenshotOcr:
                         buttonTitle = <FormattedMessage id="draw.ocrDetectTool" />;
