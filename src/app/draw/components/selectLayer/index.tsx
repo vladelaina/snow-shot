@@ -785,6 +785,7 @@ const SelectLayerCore: React.FC<SelectLayerProps> = ({ actionRef }) => {
                 setSelectState(SelectState.Drag);
                 updateDragMode(mousePosition);
                 dragRectRef.current = getSelectRect()!;
+                dragAllSelectRectMousePositionRef.current = undefined;
             }
         },
         [
@@ -891,11 +892,54 @@ const SelectLayerCore: React.FC<SelectLayerProps> = ({ actionRef }) => {
         [onMouseMoveAutoSelectCore],
     );
 
+    const enableLockWidthHeightPicker = useCallback(
+        () =>
+            isHotkeyPressed(
+                getAppSettings()[AppSettingsGroup.DrawToolbarKeyEvent][
+                    KeyEventKey.LockWidthHeightPicker
+                ].hotKey,
+            ),
+        [getAppSettings],
+    );
+    const enableDragAllSelectRect = useCallback(
+        () =>
+            isHotkeyPressed(
+                getAppSettings()[AppSettingsGroup.DrawToolbarKeyEvent][KeyEventKey.DragSelectRect]
+                    .hotKey,
+            ),
+        [getAppSettings],
+    );
+
     const { disableMouseMove, enableMouseMove, isDisableMouseMove } = useMoveCursor();
+
+    /// 启用整体移动选区时，鼠标当时的位置
+    const dragAllSelectRectMousePositionRef = useRef<MousePosition | undefined>(undefined);
     const onMouseMove = useCallback(
         (mousePosition: MousePosition, ignoreAnimation: boolean = false) => {
             if (!enableSelectRef.current) {
                 return;
+            }
+
+            let dragAllSelectRectOffsetMousePosition: MousePosition | undefined;
+            if (
+                (selectStateRef.current === SelectState.Manual ||
+                    selectStateRef.current === SelectState.Drag) &&
+                mouseDownPositionRef.current
+            ) {
+                if (enableDragAllSelectRect()) {
+                    if (!dragAllSelectRectMousePositionRef.current) {
+                        dragAllSelectRectMousePositionRef.current = mousePosition;
+                    }
+
+                    dragAllSelectRectOffsetMousePosition = new MousePosition(
+                        mousePosition.mouseX - dragAllSelectRectMousePositionRef.current.mouseX,
+                        mousePosition.mouseY - dragAllSelectRectMousePositionRef.current.mouseY,
+                    );
+
+                    dragAllSelectRectMousePositionRef.current = mousePosition;
+                } else {
+                    dragAllSelectRectMousePositionRef.current = undefined;
+                }
             }
 
             // 恢复鼠标事件
@@ -912,7 +956,9 @@ const SelectLayerCore: React.FC<SelectLayerProps> = ({ actionRef }) => {
                     // 检测拖动距离是否启用手动选择
                     const maxSide = mouseDownPositionRef.current.getMaxSide(mousePosition);
                     if (maxSide > 6) {
+                        dragRectRef.current = undefined;
                         setSelectState(SelectState.Manual);
+                        dragAllSelectRectMousePositionRef.current = undefined;
                     }
                 }
 
@@ -923,15 +969,18 @@ const SelectLayerCore: React.FC<SelectLayerProps> = ({ actionRef }) => {
                     return;
                 }
 
+                if (dragAllSelectRectOffsetMousePosition) {
+                    mouseDownPositionRef.current.mouseX +=
+                        dragAllSelectRectOffsetMousePosition.mouseX;
+                    mouseDownPositionRef.current.mouseY +=
+                        dragAllSelectRectOffsetMousePosition.mouseY;
+                }
+
                 setSelectRect(
                     limitRect(
                         mouseDownPositionRef.current.toElementRect(
                             mousePosition,
-                            isHotkeyPressed(
-                                getAppSettings()[AppSettingsGroup.DrawToolbarKeyEvent][
-                                    KeyEventKey.LockWidthHeightPicker
-                                ].hotKey,
-                            ),
+                            enableLockWidthHeightPicker(),
                         ),
                         {
                             min_x: 0,
@@ -946,21 +995,33 @@ const SelectLayerCore: React.FC<SelectLayerProps> = ({ actionRef }) => {
             } else if (selectStateRef.current === SelectState.Selected) {
                 updateDragMode(mousePosition);
             } else if (selectStateRef.current === SelectState.Drag) {
-                if (!mouseDownPositionRef.current) {
+                if (
+                    !mouseDownPositionRef.current ||
+                    !dragRectRef.current ||
+                    dragModeRef.current === undefined
+                ) {
                     return;
+                }
+
+                if (dragAllSelectRectOffsetMousePosition) {
+                    dragRectRef.current.min_x += dragAllSelectRectOffsetMousePosition.mouseX;
+                    dragRectRef.current.min_y += dragAllSelectRectOffsetMousePosition.mouseY;
+                    dragRectRef.current.max_x += dragAllSelectRectOffsetMousePosition.mouseX;
+                    dragRectRef.current.max_y += dragAllSelectRectOffsetMousePosition.mouseY;
+
+                    mouseDownPositionRef.current.mouseX +=
+                        dragAllSelectRectOffsetMousePosition.mouseX;
+                    mouseDownPositionRef.current.mouseY +=
+                        dragAllSelectRectOffsetMousePosition.mouseY;
                 }
 
                 setSelectRect(
                     dragRect(
-                        dragModeRef.current!,
-                        dragRectRef.current!,
+                        dragModeRef.current,
+                        dragRectRef.current,
                         mouseDownPositionRef.current,
                         mousePosition,
-                        isHotkeyPressed(
-                            getAppSettings()[AppSettingsGroup.DrawToolbarKeyEvent][
-                                KeyEventKey.LockWidthHeightPicker
-                            ].hotKey,
-                        ),
+                        enableLockWidthHeightPicker(),
                     ),
                     true,
                 );
@@ -968,14 +1029,17 @@ const SelectLayerCore: React.FC<SelectLayerProps> = ({ actionRef }) => {
         },
         [
             enableMouseMove,
+            enableDragAllSelectRect,
             getScreenshotType,
             onMouseMoveAutoSelect,
             setSelectState,
-            getAppSettings,
             setSelectRect,
             updateDragMode,
+            enableLockWidthHeightPicker,
         ],
     );
+    const onMouseMoveRenderCallback = useCallbackRender(onMouseMove);
+
     const onMouseUp = useCallback(() => {
         if (!enableSelectRef.current) {
             return;
@@ -991,6 +1055,7 @@ const SelectLayerCore: React.FC<SelectLayerProps> = ({ actionRef }) => {
         } else if (selectStateRef.current === SelectState.Manual) {
             setSelectState(SelectState.Selected);
             setSelectRect(getSelectRect()!, true, true);
+            dragRectRef.current = undefined;
         } else if (selectStateRef.current === SelectState.Drag) {
             setSelectState(SelectState.Selected);
             setSelectRect(
@@ -1013,7 +1078,6 @@ const SelectLayerCore: React.FC<SelectLayerProps> = ({ actionRef }) => {
         mouseDownPositionRef.current = undefined;
     }, [drawToolbarActionRef, getSelectRect, setSelectRect, setSelectState]);
 
-    const onMouseMoveRenderCallback = useCallbackRender(onMouseMove);
     // 用上一次的鼠标移动事件触发 onMouseMove 来更新一些状态
     const refreshMouseMove = useCallback(
         (ignoreAnimation: boolean = false) => {
