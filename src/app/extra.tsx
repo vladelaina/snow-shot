@@ -5,6 +5,8 @@ export enum AppFunction {
     Screenshot = 'screenshot',
     ScreenshotFixed = 'screenshotFixed',
     ScreenshotOcr = 'screenshotOcr',
+    /** 延迟 x 秒后截图 */
+    ScreenshotDelay = 'screenshotDelay',
     /** 截图当前具有焦点的窗口 */
     ScreenshotFocusedWindow = 'screenshotFocusedWindow',
     /** 截图复制到剪贴板 */
@@ -45,6 +47,10 @@ export type AppFunctionComponentConfig = AppFunctionConfig & {
 export const defaultAppFunctionConfigs: Record<AppFunction, AppFunctionConfig> = {
     [AppFunction.Screenshot]: {
         shortcutKey: 'F1',
+        group: AppFunctionGroup.Screenshot,
+    },
+    [AppFunction.ScreenshotDelay]: {
+        shortcutKey: '',
         group: AppFunctionGroup.Screenshot,
     },
     [AppFunction.ScreenshotFixed]: {

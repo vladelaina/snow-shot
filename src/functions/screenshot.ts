@@ -9,6 +9,7 @@ import { FOCUS_WINDOW_APP_NAME_ENV_VARIABLE } from '@/app/settings/functionSetti
 export enum ScreenshotType {
     Default = 'default',
     Fixed = 'fixed',
+    Delay = 'delay',
     OcrDetect = 'ocr-detect',
     OcrTranslate = 'ocr-translate',
     TopWindow = 'top-window',

@@ -3,6 +3,10 @@ export const home = {
     'home.showMainWindow': '显示主界面',
     'home.screenshotFunction': '截图',
     'home.screenshotFunction.screenshotFocusedWindow': '当前具有焦点的窗口',
+    'home.screenshotFunction.screenshotDelay': '延迟 {seconds} 后执行',
+    'home.screenshotFunction.screenshotDelay.seconds': '{seconds}s',
+    'home.screenshotFunction.screenshotDelay.tip':
+        '延迟截图会在截图完全准备好后显示截图编辑窗口，避免抢占焦点',
     'home.screenshotFunction.screenshotCopy': '复制到剪贴板',
     'home.translationFunction': '翻译',
     'home.chatFunction': 'AI 对话',
