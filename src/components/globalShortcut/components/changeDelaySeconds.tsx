@@ -55,7 +55,7 @@ const ChangeDelaySecondsCore = () => {
             setDelayScreenshotSeconds(
                 Math.max(
                     0,
-                    Math.min(delayScreenshotSecondsRef.current + (event.deltaY > 0 ? 1 : -1), 10),
+                    Math.min(delayScreenshotSecondsRef.current + (event.deltaY > 0 ? -1 : 1), 10),
                 ),
             );
             saveAppSettings();
