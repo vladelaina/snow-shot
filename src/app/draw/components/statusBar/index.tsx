@@ -175,6 +175,7 @@ const StatusBar: React.FC = () => {
             serialNumberDisableArrow: { hotKey: serialNumberDisableArrowHotKey },
             selectPrevRectTool: { hotKey: selectPrevRectToolHotKey },
             lockWidthHeightPicker: { hotKey: lockWidthHeightPickerHotKey },
+            dragSelectRect: { hotKey: dragSelectRectHotKey },
             previousCapture: { hotKey: previousCaptureHotKey },
             nextCapture: { hotKey: nextCaptureHotKey },
         } = getAppSettings()[AppSettingsGroup.DrawToolbarKeyEvent];
@@ -231,6 +232,11 @@ const StatusBar: React.FC = () => {
                     key: 'selectPrevRectTool',
                     label: <FormattedMessage id="draw.selectPrevRectTool" />,
                     children: <KeyLabel hotKey={selectPrevRectToolHotKey} />,
+                },
+                {
+                    key: 'dragSelectRect',
+                    label: <FormattedMessage id="draw.dragSelectRect" />,
+                    children: <KeyLabel hotKey={dragSelectRectHotKey} />,
                 },
                 {
                     key: 'lockWidthHeightPicker',
@@ -334,6 +340,11 @@ const StatusBar: React.FC = () => {
     useStateSubscriber(DrawStatePublisher, updateDescriptionsItemsDebounce);
     useStateSubscriber(ScreenshotTypePublisher, updateDescriptionsItemsDebounce);
 
+    const {
+        monitorRect: { rect: monitorRect },
+        contentScale: [contentScale, , contentScaleRef],
+    } = useMonitorRect();
+
     const onMouseMove = useCallback(
         (mousePosition: MousePosition) => {
             const statusBar = statusBarRef.current;
@@ -341,8 +352,10 @@ const StatusBar: React.FC = () => {
                 return;
             }
 
-            const statusBarMaxX = statusBar.clientWidth + statusBar.offsetLeft;
-            const statusBarMinY = statusBar.offsetTop - statusBar.clientHeight;
+            const statusBarMaxX =
+                statusBar.clientWidth * contentScaleRef.current + statusBar.offsetLeft;
+            const statusBarMinY =
+                statusBar.offsetTop - statusBar.clientHeight * contentScaleRef.current;
 
             if (mousePosition.mouseX < statusBarMaxX && mousePosition.mouseY > statusBarMinY) {
                 setIsHover(true);
@@ -364,7 +377,7 @@ const StatusBar: React.FC = () => {
 
             setIsHover(false);
         },
-        [selectLayerActionRef],
+        [contentScaleRef, selectLayerActionRef],
     );
     const onMouseMoveRender = useCallbackRender(onMouseMove);
 
@@ -383,11 +396,6 @@ const StatusBar: React.FC = () => {
             document.removeEventListener('mousemove', handleMouseMove);
         };
     }, [getCaptureLoading, onMouseMoveRender, selectLayerActionRef]);
-
-    const {
-        monitorRect: { rect: monitorRect },
-        contentScale: [contentScale],
-    } = useMonitorRect();
 
     return (
         <div
