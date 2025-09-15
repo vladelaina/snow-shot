@@ -4,7 +4,6 @@ import {
     AppSettingsGroup,
     AppSettingsPublisher,
 } from '@/app/contextWrap';
-import { CaptureEvent, CaptureEventParams, CaptureEventPublisher } from '@/app/draw/extra';
 import {
     DrawCoreContext,
     DrawState,
