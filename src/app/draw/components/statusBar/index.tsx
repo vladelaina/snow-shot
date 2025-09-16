@@ -460,6 +460,14 @@ const StatusBar: React.FC = () => {
                     user-select: none;
                 }
 
+                {/* 有些用户反馈 OCR 复制时会复制到提示文本，这里再次禁用下 */}
+                :global(.status-bar .ant-descriptions-item-label),
+                :global(.status-bar .descriptions-item-btn-label) {
+                    pointer-events: none !important;
+                    user-select: none !important;
+                }
+
+
                 .status-bar-content {
                     background-color: ${Color(
                         getMaskBackgroundColor(currentTheme === AppSettingsTheme.Dark),
