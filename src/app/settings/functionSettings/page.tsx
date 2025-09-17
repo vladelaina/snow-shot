@@ -50,7 +50,11 @@ import {
 import { FOCUS_WINDOW_APP_NAME_ENV_VARIABLE, TranslationApiType } from './extra';
 import { TestChat } from './components/testChat';
 import { DrawState } from '@/app/fullScreenDraw/components/drawCore/extra';
-import { VideoMaxSize, videoRecordGetMicrophoneDeviceNames } from '@/commands/videoRecord';
+import {
+    GifFormat,
+    VideoMaxSize,
+    videoRecordGetMicrophoneDeviceNames,
+} from '@/commands/videoRecord';
 import { OcrDetectAfterAction } from '@/app/fixedContent/components/ocrResult';
 import { usePlatform } from '@/hooks/usePlatform';
 
@@ -282,6 +286,32 @@ export default function SystemSettings() {
                     id: 'settings.functionSettings.videoRecordSettings.videoMaxSize.p480',
                 }),
                 value: VideoMaxSize.P480,
+            },
+        ];
+    }, [intl]);
+
+    const gifFormatOptions = useMemo(() => {
+        return [
+            {
+                label: intl.formatMessage({
+                    id: 'settings.functionSettings.videoRecordSettings.gifFormat.gif',
+                }),
+
+                value: GifFormat.Gif,
+            },
+            {
+                label: intl.formatMessage({
+                    id: 'settings.functionSettings.videoRecordSettings.gifFormat.apng',
+                }),
+
+                value: GifFormat.Apng,
+            },
+            {
+                label: intl.formatMessage({
+                    id: 'settings.functionSettings.videoRecordSettings.gifFormat.webp',
+                }),
+
+                value: GifFormat.Webp,
             },
         ];
     }, [intl]);
@@ -1239,12 +1269,13 @@ export default function SystemSettings() {
                         </Col>
 
                         <Col span={12}>
-                            <ProFormSwitch
-                                name="enableApngFormat"
+                            <ProFormSelect
+                                name="gifFormat"
                                 layout="horizontal"
                                 label={
-                                    <FormattedMessage id="settings.functionSettings.videoRecordSettings.enableApngFormat" />
+                                    <FormattedMessage id="settings.functionSettings.videoRecordSettings.gifFormat" />
                                 }
+                                options={gifFormatOptions}
                             />
                         </Col>
                     </Row>

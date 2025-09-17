@@ -293,7 +293,7 @@ export default function VideoRecordToolbar() {
 
                 outputFile = await videoRecordStop(
                     convertToGif,
-                    getAppSettings()[AppSettingsGroup.FunctionVideoRecord].enableApngFormat,
+                    getAppSettings()[AppSettingsGroup.FunctionVideoRecord].gifFormat,
                     getAppSettings()[AppSettingsGroup.FunctionVideoRecord].gifFrameRate,
                     gifMaxWidth,
                     gifMaxHeight,
