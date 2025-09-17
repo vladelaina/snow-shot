@@ -285,6 +285,8 @@ export type AppSettingsData = {
         enableBrowserClipboard: boolean;
         /** 尝试使用 Bitmap 格式写入到剪贴板 */
         tryWriteBitmapImageToClipboard: boolean;
+        /** 启用多显示器截图 */
+        enableMultipleMonitor: boolean;
     };
     [AppSettingsGroup.SystemScrollScreenshot]: {
         tryRollback: boolean;
@@ -473,6 +475,8 @@ export const defaultAppSettingsData: AppSettingsData = {
         enableBrowserClipboard: true,
         /** 尝试使用 Bitmap 格式写入到剪贴板 */
         tryWriteBitmapImageToClipboard: true,
+        /** 启用多显示器截图 */
+        enableMultipleMonitor: true,
     },
     [AppSettingsGroup.FunctionTrayIcon]: {
         iconClickAction: TrayIconClickAction.Screenshot,
@@ -1416,6 +1420,11 @@ const ContextWrapCore: React.FC<{ children: React.ReactNode }> = ({ children }) 
                             ? newSettings.tryWriteBitmapImageToClipboard
                             : (prevSettings?.tryWriteBitmapImageToClipboard ??
                               defaultAppSettingsData[group].tryWriteBitmapImageToClipboard),
+                    enableMultipleMonitor:
+                        typeof newSettings?.enableMultipleMonitor === 'boolean'
+                            ? newSettings.enableMultipleMonitor
+                            : (prevSettings?.enableMultipleMonitor ??
+                              defaultAppSettingsData[group].enableMultipleMonitor),
                 };
             } else {
                 return defaultAppSettingsData[group];

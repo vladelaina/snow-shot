@@ -173,7 +173,7 @@ export default function VideoRecordToolbar() {
 
             const appWindow = getCurrentWindow();
 
-            const monitorBounds = await getMonitorsBoundingBox(selectRect);
+            const monitorBounds = await getMonitorsBoundingBox(selectRect, true);
 
             await initWindowRect(appWindow, selectRect, monitorBounds);
             // 初始化两次，防止窗口位置不正确

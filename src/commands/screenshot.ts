@@ -31,8 +31,12 @@ export const captureFocusedWindow = async (
     return result;
 };
 
-export const captureAllMonitors = async (): Promise<ImageBuffer | undefined> => {
-    const result = await invoke<ArrayBuffer>('capture_all_monitors');
+export const captureAllMonitors = async (
+    enableMultipleMonitor: boolean,
+): Promise<ImageBuffer | undefined> => {
+    const result = await invoke<ArrayBuffer>('capture_all_monitors', {
+        enableMultipleMonitor,
+    });
 
     if (result.byteLength === 0) {
         return undefined;

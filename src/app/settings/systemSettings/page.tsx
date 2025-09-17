@@ -323,6 +323,25 @@ export default function SystemSettings() {
                 >
                     <Row gutter={token.margin}>
                         <Col span={12}>
+                            <ProFormSwitch
+                                label={
+                                    <IconLabel
+                                        label={
+                                            <FormattedMessage id="settings.systemSettings.screenshotSettings.enableMultipleMonitor" />
+                                        }
+                                        tooltipTitle={
+                                            <FormattedMessage id="settings.systemSettings.screenshotSettings.enableMultipleMonitor.tip" />
+                                        }
+                                    />
+                                }
+                                name="enableMultipleMonitor"
+                                valuePropName="checked"
+                            />
+                        </Col>
+                    </Row>
+
+                    <Row gutter={token.margin}>
+                        <Col span={12}>
                             <ProFormSelect
                                 label={
                                     <IconLabel

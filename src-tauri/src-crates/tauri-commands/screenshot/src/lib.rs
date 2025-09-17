@@ -37,9 +37,17 @@ pub async fn capture_current_monitor(
     Ok(Response::new(image_buffer))
 }
 
-pub async fn capture_all_monitors(window: tauri::Window) -> Result<Response, String> {
-    let image = snow_shot_app_utils::get_capture_monitor_list(&window.app_handle(), None)?
-        .capture(Some(&window)).await?;
+pub async fn capture_all_monitors(
+    window: tauri::Window,
+    enable_multiple_monitor: bool,
+) -> Result<Response, String> {
+    let image = snow_shot_app_utils::get_capture_monitor_list(
+        &window.app_handle(),
+        None,
+        enable_multiple_monitor,
+    )?
+    .capture(Some(&window))
+    .await?;
 
     let image_buffer =
         snow_shot_app_utils::encode_image(&image, snow_shot_app_utils::ImageEncoder::Png);

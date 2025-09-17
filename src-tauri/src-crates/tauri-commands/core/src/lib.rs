@@ -303,8 +303,10 @@ pub struct MonitorsBoundingBox {
 pub async fn get_monitors_bounding_box(
     app: &tauri::AppHandle,
     region: Option<ElementRect>,
+    enable_multiple_monitor: bool,
 ) -> Result<MonitorsBoundingBox, String> {
-    let monitors = snow_shot_app_utils::get_capture_monitor_list(app, region)?;
+    let monitors =
+        snow_shot_app_utils::get_capture_monitor_list(app, region, enable_multiple_monitor)?;
 
     let monitors_bounding_box = monitors.get_monitors_bounding_box();
 
@@ -632,12 +634,14 @@ pub async fn write_bitmap_image_to_clipboard(
 
         let _clip = clipboard_win::Clipboard::new().unwrap();
 
-        formats::RawData(formats::CF_DIB).write_clipboard(&dib_data).map_err(|e| {
-            format!(
-                "[write_bitmap_image_to_clipboard] Write CF_DIB to clipboard: {}",
-                e
-            )
-        })?;
+        formats::RawData(formats::CF_DIB)
+            .write_clipboard(&dib_data)
+            .map_err(|e| {
+                format!(
+                    "[write_bitmap_image_to_clipboard] Write CF_DIB to clipboard: {}",
+                    e
+                )
+            })?;
 
         drop(_clip);
     }

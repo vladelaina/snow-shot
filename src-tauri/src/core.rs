@@ -74,8 +74,10 @@ pub async fn get_current_monitor_info() -> Result<snow_shot_tauri_commands_core:
 pub async fn get_monitors_bounding_box(
     app: tauri::AppHandle,
     region: Option<ElementRect>,
+    enable_multiple_monitor: bool,
 ) -> Result<MonitorsBoundingBox, String> {
-    snow_shot_tauri_commands_core::get_monitors_bounding_box(&app, region).await
+    snow_shot_tauri_commands_core::get_monitors_bounding_box(&app, region, enable_multiple_monitor)
+        .await
 }
 
 #[command]
