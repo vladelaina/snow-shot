@@ -788,7 +788,7 @@ impl VideoRecordService {
     pub fn stop(
         &mut self,
         convert_to_gif: bool,
-        enable_apng_format: bool,
+        gif_format: &str,
         gif_frame_rate: u32,
         gif_max_width: i32,
         gif_max_height: i32,
@@ -823,7 +823,7 @@ impl VideoRecordService {
         // 如果需要转换为GIF格式
         if convert_to_gif && self.recording_params.as_ref().unwrap().format == VideoFormat::Mp4 {
             final_filename = self.convert_to_gif(
-                enable_apng_format,
+                gif_format,
                 &final_filename,
                 gif_frame_rate,
                 gif_max_width,
@@ -898,7 +898,7 @@ impl VideoRecordService {
 
     fn convert_to_gif(
         &self,
-        enable_apng_format: bool,
+        format: &str,
         mp4_filename: &str,
         gif_frame_rate: u32,
         gif_max_width: i32,
@@ -907,13 +907,21 @@ impl VideoRecordService {
         let params = self.recording_params.as_ref().unwrap();
 
         // 生成输出文件名
-        let output_filename = if enable_apng_format {
+        let output_filename = if format == "apng" {
             format!("{}.png", params.output_file)
+        } else if format == "webp" {
+            format!("{}.webp", params.output_file)
         } else {
             format!("{}.gif", params.output_file)
         };
 
-        let format_name = if enable_apng_format { "APNG" } else { "GIF" };
+        let format_name = if format == "apng" {
+            "APNG"
+        } else if format == "webp" {
+            "WEBP"
+        } else {
+            "GIF"
+        };
         println!(
             "[FFmpeg] Converting MP4 to {}: {} -> {}",
             format_name, mp4_filename, output_filename
@@ -944,7 +952,7 @@ impl VideoRecordService {
         // 构建FFmpeg命令进行MP4到GIF/APNG的转换
         let mut command = self.get_ffmpeg_command();
 
-        if enable_apng_format {
+        if format == "apng" {
             // APNG格式转换
             command
                 .arg("-i")
@@ -954,7 +962,20 @@ impl VideoRecordService {
                 .arg("-f")
                 .arg("apng")
                 .arg("-plays")
-                .arg("0")  // 无限循环
+                .arg("0") // 无限循环
+                .arg("-y")
+                .arg(&output_filename);
+        } else if format == "webp" {
+            // APNG格式转换
+            command
+                .arg("-i")
+                .arg(mp4_filename)
+                .arg("-vf")
+                .arg(format!("fps={},{}", gif_frame_rate, scale_filter))
+                .arg("-f")
+                .arg("webp")
+                .arg("-plays")
+                .arg("0") // 无限循环
                 .arg("-y")
                 .arg(&output_filename);
         } else {
@@ -981,7 +1002,10 @@ impl VideoRecordService {
 
                 // 检查输出文件是否成功生成
                 if std::path::Path::new(&output_filename).exists() {
-                    println!("{} conversion completed successfully: {}", format_name, output_filename);
+                    println!(
+                        "{} conversion completed successfully: {}",
+                        format_name, output_filename
+                    );
 
                     // 删除原始MP4文件
                     if let Err(e) = std::fs::remove_file(mp4_filename) {

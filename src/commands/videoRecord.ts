@@ -13,6 +13,12 @@ export enum VideoMaxSize {
     P480 = '480p',
 }
 
+export enum GifFormat {
+    Gif = 'gif',
+    Apng = 'apng',
+    Webp = 'webp',
+}
+
 export const videoRecordStart = async (
     minX: number,
     minY: number,
@@ -52,14 +58,14 @@ export const videoRecordStart = async (
 
 export const videoRecordStop = async (
     convertToGif: boolean,
-    enableApngFormat: boolean,
+    gifFormat: GifFormat,
     gifFrameRate: number,
     gifMaxWidth: number,
     gifMaxHeight: number,
 ): Promise<string | null | undefined> => {
     const result = await invoke<string | null | undefined>('video_record_stop', {
         convertToGif,
-        enableApngFormat,
+        gifFormat,
         gifFrameRate,
         gifMaxWidth,
         gifMaxHeight,
