@@ -1,6 +1,7 @@
 use base64::prelude::*;
-use std::fs;
+use image::DynamicImage;
 use std::path::PathBuf;
+use tokio::fs;
 use zune_core::bit_depth::BitDepth;
 use zune_core::colorspace::ColorSpace;
 use zune_core::options::EncoderOptions;
@@ -22,7 +23,7 @@ pub async fn save_file(request: tauri::ipc::Request<'_>) -> Result<(), String> {
 
     if let Some(parent_dir) = file_path.parent() {
         if !parent_dir.exists() {
-            if let Err(e) = fs::create_dir_all(parent_dir) {
+            if let Err(e) = fs::create_dir_all(parent_dir).await {
                 return Err(format!(
                     "[save_file] Failed to create directory: {}",
                     e.to_string()
@@ -64,13 +65,22 @@ pub async fn save_file(request: tauri::ipc::Request<'_>) -> Result<(), String> {
             Ok(image) => image,
             Err(_) => return Err(String::from("[save_file] Invalid image")),
         };
-        let image_data = image.to_rgb8();
+        let has_alpha = image.color().has_alpha();
+        let image_data = if has_alpha {
+            DynamicImage::ImageRgba8(image.to_rgba8())
+        } else {
+            DynamicImage::ImageRgb8(image.to_rgb8())
+        };
         let encoder = JxlSimpleEncoder::new(
-            image_data.as_raw(),
+            image_data.as_bytes(),
             EncoderOptions::new(
                 image.width() as usize,
                 image.height() as usize,
-                ColorSpace::RGB,
+                if has_alpha {
+                    ColorSpace::RGBA
+                } else {
+                    ColorSpace::RGB
+                },
                 BitDepth::Eight,
             ),
         );
@@ -78,7 +88,7 @@ pub async fn save_file(request: tauri::ipc::Request<'_>) -> Result<(), String> {
             Ok(encoder_result) => encoder_result,
             Err(_) => return Err(String::from("[save_file] Failed to encode image")),
         };
-        return match fs::write(file_path, encoder_result) {
+        return match fs::write(file_path, encoder_result).await {
             Ok(_) => Ok(()),
             Err(e) => Err(format!(
                 "[save_file] Failed to save image to file: {}",
@@ -87,7 +97,7 @@ pub async fn save_file(request: tauri::ipc::Request<'_>) -> Result<(), String> {
         };
     }
 
-    match fs::write(file_path, file_data) {
+    match fs::write(file_path, file_data).await {
         Ok(_) => Ok(()),
         Err(e) => Err(format!(
             "[save_file] Failed to save image to file: {}",
@@ -112,7 +122,7 @@ pub async fn write_file(request: tauri::ipc::Request<'_>) -> Result<(), String> 
 
     if let Some(parent_dir) = file_path.parent() {
         if !parent_dir.exists() {
-            if let Err(e) = fs::create_dir_all(parent_dir) {
+            if let Err(e) = fs::create_dir_all(parent_dir).await {
                 return Err(format!(
                     "[write_file] Failed to create directory: {}",
                     e.to_string()
@@ -121,7 +131,7 @@ pub async fn write_file(request: tauri::ipc::Request<'_>) -> Result<(), String> 
         }
     }
 
-    match fs::write(file_path, file_data) {
+    match fs::write(file_path, file_data).await {
         Ok(_) => Ok(()),
         Err(e) => Err(format!(
             "[write_file] Failed to save image to file: {}",
@@ -131,7 +141,7 @@ pub async fn write_file(request: tauri::ipc::Request<'_>) -> Result<(), String> 
 }
 
 pub async fn copy_file(from: PathBuf, to: PathBuf) -> Result<(), String> {
-    match fs::copy(from, to) {
+    match fs::copy(from, to).await {
         Ok(_) => Ok(()),
         Err(e) => Err(format!(
             "[copy_file] Failed to copy file: {}",
@@ -141,7 +151,7 @@ pub async fn copy_file(from: PathBuf, to: PathBuf) -> Result<(), String> {
 }
 
 pub async fn remove_file(file_path: PathBuf) -> Result<(), String> {
-    match fs::remove_file(file_path) {
+    match fs::remove_file(file_path).await {
         Ok(_) => Ok(()),
         Err(e) => Err(format!(
             "[remove_file] Failed to remove file: {}",

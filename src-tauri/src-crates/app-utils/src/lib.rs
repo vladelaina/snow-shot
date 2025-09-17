@@ -1,13 +1,13 @@
 use std::ffi::OsStr;
-use std::fs;
 use std::path::PathBuf;
+use tokio::fs;
 
 use device_query::{DeviceQuery, DeviceState, MouseState};
-use image::DynamicImage;
 use image::codecs::avif::AvifEncoder;
 use image::codecs::jpeg::JpegEncoder;
 use image::codecs::png::{CompressionType, FilterType, PngEncoder};
 use image::codecs::webp::WebPEncoder;
+use image::{DynamicImage, GenericImageView};
 use rayon::iter::IntoParallelIterator;
 use rayon::iter::ParallelIterator;
 use snow_shot_app_shared::ElementRect;
@@ -76,7 +76,7 @@ pub async fn save_image_to_file(
     // 确保文件路径的父目录存在
     if let Some(parent_dir) = file_path.parent() {
         if !parent_dir.exists() {
-            match fs::create_dir_all(parent_dir) {
+            match fs::create_dir_all(parent_dir).await {
                 Ok(_) => {
                     log::info!(
                         "[save_image_to_file] Created directory: {}",
@@ -104,13 +104,23 @@ pub async fn save_image_to_file(
     };
 
     if extension == "jxl" {
-        let image_data = image.to_rgb8();
+        let has_alpha = image.color().has_alpha();
+        let (width, height) = image.dimensions();
+        let image_data = if has_alpha {
+            DynamicImage::ImageRgba8(image.to_rgba8())
+        } else {
+            DynamicImage::ImageRgb8(image.to_rgb8())
+        };
         let encoder = JxlSimpleEncoder::new(
-            image_data.as_raw(),
+            image_data.as_bytes(),
             EncoderOptions::new(
-                image.width() as usize,
-                image.height() as usize,
-                ColorSpace::RGB,
+                width as usize,
+                height as usize,
+                if has_alpha {
+                    ColorSpace::RGBA
+                } else {
+                    ColorSpace::RGB
+                },
                 BitDepth::Eight,
             ),
         );
@@ -124,7 +134,7 @@ pub async fn save_image_to_file(
             }
         };
 
-        return match fs::write(file_path.clone(), encoder_result) {
+        return match fs::write(file_path.clone(), encoder_result).await {
             Ok(_) => Ok(()),
             Err(e) => Err(format!(
                 "[save_image_to_file] Failed to save image to file: {} {}",
