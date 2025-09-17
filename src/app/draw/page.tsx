@@ -394,7 +394,10 @@ const DrawPageCore: React.FC<{
         layerContainerRef.current!.style.opacity = '1';
 
         const [captureBoundingBox, mousePosition] = await Promise.all([
-            getMonitorsBoundingBox(),
+            getMonitorsBoundingBox(
+                undefined,
+                getAppSettings()[AppSettingsGroup.SystemScreenshot].enableMultipleMonitor,
+            ),
             getMousePosition().catch((error) => {
                 appError('[DrawPageCore] getMousePosition error', error);
                 message.error(<FormattedMessage id="draw.getMousePositionError" />);
@@ -425,7 +428,7 @@ const DrawPageCore: React.FC<{
                 captureBoundingBoxInfoRef.current!,
             ),
         ]);
-    }, [getScreenshotType, message, showWindow]);
+    }, [getAppSettings, getScreenshotType, message, showWindow]);
 
     const captureAllMonitorsAction = useCallback(
         async (excuteScreenshotType: ScreenshotType) => {
@@ -437,7 +440,9 @@ const DrawPageCore: React.FC<{
                 });
             }
 
-            const result = await captureAllMonitors().catch((error) => {
+            const result = await captureAllMonitors(
+                getAppSettings()[AppSettingsGroup.SystemScreenshot].enableMultipleMonitor,
+            ).catch((error) => {
                 appError('[DrawPageCore] captureAllMonitors error', error);
                 return undefined;
             });

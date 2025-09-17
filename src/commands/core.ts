@@ -113,9 +113,13 @@ export type MonitorBoundingBox = {
     monitor_rect_list: MonitorRect[];
 };
 
-export const getMonitorsBoundingBox = async (region?: ElementRect) => {
+export const getMonitorsBoundingBox = async (
+    region: ElementRect | undefined,
+    enableMultipleMonitor: boolean,
+) => {
     const result = await invoke<MonitorBoundingBox>('get_monitors_bounding_box', {
         region,
+        enableMultipleMonitor,
     });
     return result;
 };

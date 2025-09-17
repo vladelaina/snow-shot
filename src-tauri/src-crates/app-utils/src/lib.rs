@@ -184,14 +184,17 @@ pub fn get_mouse_position(
 pub fn get_capture_monitor_list(
     #[allow(unused_variables)] app: &AppHandle,
     region: Option<ElementRect>,
+    enable_multiple_monitor: bool,
 ) -> Result<MonitorList, String> {
     if let Some(region) = region {
         return Ok(MonitorList::get_by_region(region));
     }
 
+    let support_multiple_monitor;
+
     #[cfg(target_os = "windows")]
     {
-        Ok(MonitorList::all())
+        support_multiple_monitor = true;
     }
 
     #[cfg(target_os = "macos")]
@@ -201,16 +204,22 @@ pub fn get_capture_monitor_list(
 
         // 此时支持跨屏截图，如果 scale_factor 不一致，则需要根据鼠标位置获取单个显示器进行截图
         if all_same_scale {
-            Ok(MonitorList::all())
+            support_multiple_monitor = true;
         } else {
-            let (mouse_x, mouse_y) = get_mouse_position(app)?;
-            Ok(MonitorList::get_by_region(ElementRect {
-                min_x: mouse_x,
-                min_y: mouse_y,
-                max_x: mouse_x + 1,
-                max_y: mouse_y + 1,
-            }))
+            support_multiple_monitor = false;
         }
+    }
+
+    if enable_multiple_monitor && support_multiple_monitor {
+        Ok(MonitorList::all())
+    } else {
+        let (mouse_x, mouse_y) = get_mouse_position(app)?;
+        Ok(MonitorList::get_by_region(ElementRect {
+            min_x: mouse_x,
+            min_y: mouse_y,
+            max_x: mouse_x,
+            max_y: mouse_y,
+        }))
     }
 }
 

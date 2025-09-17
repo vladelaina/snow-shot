@@ -310,6 +310,9 @@ export const settings = {
         '尝试降低复制的图片大小',
     'settings.systemSettings.screenshotSettings.tryWriteBitmapImageToClipboard.tip':
         '截图时，如果图片中所有像素的透明度均为 100%，则尝试舍弃 Alpha 通道复制图片，使用后复制的图片会更小。该选项通常在设置圆角、阴影等样式时失效。',
+    'settings.systemSettings.screenshotSettings.enableMultipleMonitor': '启用多显示器截图',
+    'settings.systemSettings.screenshotSettings.enableMultipleMonitor.tip':
+        '截图将同时截取多个显示器的画面，关闭后可提高性能',
     'settings.systemSettings.screenshotSettings.enableBrowserClipboard.tip':
         '尝试使用浏览器接口快速写入剪贴板内容，如果出现无法复制到剪贴板的问题请禁用该功能',
     'settings.systemSettings.screenshotSettings.historyValidDuration.day': '1 天',
