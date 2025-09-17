@@ -142,6 +142,8 @@ export type AppSettingsData = {
         /** 自定义托盘图标 */
         iconPath: string;
         defaultIcons: TrayIconDefaultIcon;
+        /** 启用托盘 */
+        enableTrayIcon: boolean;
     };
     [AppSettingsGroup.Cache]: {
         menuCollapsed: boolean;
@@ -360,6 +362,7 @@ export const defaultAppSettingsData: AppSettingsData = {
     [AppSettingsGroup.CommonTrayIcon]: {
         iconPath: '',
         defaultIcons: TrayIconDefaultIcon.Default,
+        enableTrayIcon: true,
     },
     [AppSettingsGroup.Cache]: {
         menuCollapsed: false,
@@ -1298,6 +1301,11 @@ const ContextWrapCore: React.FC<{ children: React.ReactNode }> = ({ children }) 
                             ? (newSettings.defaultIcons as TrayIconDefaultIcon)
                             : (prevSettings?.defaultIcons ??
                               defaultAppSettingsData[group].defaultIcons),
+                    enableTrayIcon:
+                        typeof newSettings?.enableTrayIcon === 'boolean'
+                            ? newSettings.enableTrayIcon
+                            : (prevSettings?.enableTrayIcon ??
+                              defaultAppSettingsData[group].enableTrayIcon),
                 };
             } else if (group === AppSettingsGroup.FunctionVideoRecord) {
                 newSettings = newSettings as AppSettingsData[typeof group];

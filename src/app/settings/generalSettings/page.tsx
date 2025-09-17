@@ -690,6 +690,15 @@ export default function GeneralSettings() {
             >
                 <Spin spinning={appSettingsLoading}>
                     <Row gutter={token.margin}>
+                        <Col span={12}>
+                            <ProFormSwitch
+                                name="enableTrayIcon"
+                                label={
+                                    <FormattedMessage id="settings.commonSettings.trayIconSettings.enableTrayIcon" />
+                                }
+                            />
+                        </Col>
+
                         <Col span={24}>
                             <ProFormRadio.Group
                                 name="defaultIcons"

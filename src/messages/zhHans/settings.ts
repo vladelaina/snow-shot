@@ -208,6 +208,7 @@ export const settings = {
     'settings.systemSettings.scrollScreenshotSettings.imageFeatureDescriptionLength.tip':
         '如果是 8 则以特征点为中心选取 8x8 的区域进行比较',
     'settings.commonSettings.trayIconSettings': '托盘',
+    'settings.commonSettings.trayIconSettings.enableTrayIcon': '启用托盘',
     'settings.commonSettings.trayIconSettings.defaultIcons': '默认图标',
     'settings.commonSettings.trayIconSettings.defaultIcons.default': '默认',
     'settings.commonSettings.trayIconSettings.defaultIcons.light': '浅色',
