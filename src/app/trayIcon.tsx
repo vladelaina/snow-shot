@@ -89,6 +89,7 @@ const TrayIconLoaderComponent = () => {
     const [defaultIcon, setDefaultIcon] = useState<TrayIconDefaultIcon>(
         TrayIconDefaultIcon.Default,
     );
+    const [enableTrayIcon, setEnableTrayIcon] = useState(false);
     const [getAppSettings] = useStateSubscriber(
         AppSettingsPublisher,
         useCallback(
@@ -105,6 +106,7 @@ const TrayIconLoaderComponent = () => {
 
                 setIconPath(settings[AppSettingsGroup.CommonTrayIcon].iconPath);
                 setDefaultIcon(settings[AppSettingsGroup.CommonTrayIcon].defaultIcons);
+                setEnableTrayIcon(settings[AppSettingsGroup.CommonTrayIcon].enableTrayIcon);
                 setDelayScreenshotSeconds(settings[AppSettingsGroup.Cache].delayScreenshotSeconds);
             },
             [setShortcutKeys, shortcutKeysRef, setIconPath, setDefaultIcon],
@@ -112,23 +114,28 @@ const TrayIconLoaderComponent = () => {
     );
 
     const closeTrayIcon = useCallback(async () => {
-        if (trayIcon) {
-            await trayIcon.close();
-            trayIcon = undefined;
-        }
-
         try {
+            if (trayIcon) {
+                await trayIcon.close();
+                trayIcon = undefined;
+            }
+
             const trayIcon2 = await TrayIcon.getById(trayIconId);
             if (trayIcon2) {
                 await trayIcon2.close();
             }
         } catch (error) {
-            appError(`[closeTrayIcon] error`, error);
+            console.warn(`[closeTrayIcon] error`, error);
         }
     }, []);
 
     const initTrayIcon = useCallback(async () => {
         if (!shortcutKeys) {
+            return;
+        }
+
+        if (!enableTrayIcon) {
+            closeTrayIcon();
             return;
         }
 
@@ -437,16 +444,17 @@ const TrayIconLoaderComponent = () => {
             message.error(intl.formatMessage({ id: 'home.trayIcon.error' }));
         }
     }, [
-        closeTrayIcon,
-        defaultIcon,
-        disableShortcut,
-        getAppSettings,
-        iconPath,
-        intl,
-        message,
-        setTrayIconState,
         shortcutKeys,
+        enableTrayIcon,
+        intl,
+        disableShortcut,
         delayScreenshotSeconds,
+        closeTrayIcon,
+        iconPath,
+        message,
+        defaultIcon,
+        getAppSettings,
+        setTrayIconState,
     ]);
 
     useEffect(() => {
@@ -459,6 +467,7 @@ const TrayIconLoaderComponent = () => {
         window.addEventListener('beforeunload', handleBeforeUnload);
 
         return () => {
+            handleBeforeUnload();
             window.removeEventListener('beforeunload', handleBeforeUnload);
         };
     }, [closeTrayIcon, initTrayIcon]);
