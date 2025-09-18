@@ -442,6 +442,12 @@ const SelectLayerCore: React.FC<SelectLayerProps> = ({ actionRef }) => {
                 captureBoundingBoxInfo.width,
                 captureBoundingBoxInfo.height,
                 rect,
+                currentActiveMonitorRectRef.current ?? {
+                    min_x: 0,
+                    min_y: 0,
+                    max_x: captureBoundingBoxInfo.width,
+                    max_y: captureBoundingBoxInfo.height,
+                },
                 selectRectRadiusRef.current,
                 selectLayerCanvasContextRef.current!,
                 currentTheme === AppSettingsTheme.Dark,
@@ -453,6 +459,7 @@ const SelectLayerCore: React.FC<SelectLayerProps> = ({ actionRef }) => {
                 enableScanQrcode,
                 enableAuxiliaryLine &&
                     lastMouseMovePositionRef.current &&
+                    currentActiveMonitorRectRef.current &&
                     fullScreenAuxiliaryLineColorRef.current
                     ? {
                           mousePosition: lastMouseMovePositionRef.current,
@@ -463,7 +470,6 @@ const SelectLayerCore: React.FC<SelectLayerProps> = ({ actionRef }) => {
                     monitorCenterAuxiliaryLineColorRef.current &&
                     currentActiveMonitorRectRef.current
                     ? {
-                          activeMonitorRect: currentActiveMonitorRectRef.current,
                           color: monitorCenterAuxiliaryLineColorRef.current,
                       }
                     : undefined,
@@ -504,8 +510,8 @@ const SelectLayerCore: React.FC<SelectLayerProps> = ({ actionRef }) => {
                 {
                     min_x: 0,
                     min_y: 0,
-                    max_x: captureBoundingBoxInfo.rect.max_x,
-                    max_y: captureBoundingBoxInfo.rect.max_y,
+                    max_x: captureBoundingBoxInfo.width,
+                    max_y: captureBoundingBoxInfo.height,
                 },
                 TWEEN.Easing.Quadratic.Out,
                 100,
