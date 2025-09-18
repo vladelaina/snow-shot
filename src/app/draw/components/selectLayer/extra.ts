@@ -80,6 +80,7 @@ export const drawSelectRect = (
     monitorWidth: number,
     monitorHeight: number,
     selectRect: ElementRect,
+    activeMonitorRect: ElementRect,
     radius: number,
     canvasContext: CanvasRenderingContext2D,
     darkMode: boolean,
@@ -95,7 +96,6 @@ export const drawSelectRect = (
         color: string;
     },
     monitorCenterAuxiliaryLine?: {
-        activeMonitorRect: ElementRect;
         color: string;
     },
     selectRectMaskColor?: string,
@@ -163,16 +163,16 @@ export const drawSelectRect = (
 
             canvasContext.beginPath();
             // 绘制垂直线
-            canvasContext.moveTo(mouseX, 0);
-            canvasContext.lineTo(mouseX, monitorHeight);
+            canvasContext.moveTo(mouseX, activeMonitorRect.min_y);
+            canvasContext.lineTo(mouseX, activeMonitorRect.max_y);
             // 绘制水平线
-            canvasContext.moveTo(0, mouseY);
-            canvasContext.lineTo(monitorWidth, mouseY);
+            canvasContext.moveTo(activeMonitorRect.min_x, mouseY);
+            canvasContext.lineTo(activeMonitorRect.max_x, mouseY);
             canvasContext.stroke();
         }
 
         if (monitorCenterAuxiliaryLine) {
-            const { activeMonitorRect, color } = monitorCenterAuxiliaryLine;
+            const { color } = monitorCenterAuxiliaryLine;
             const centerX =
                 activeMonitorRect.min_x +
                 Math.floor((activeMonitorRect.max_x - activeMonitorRect.min_x) / 2);
@@ -184,11 +184,11 @@ export const drawSelectRect = (
 
             canvasContext.beginPath();
             // 绘制垂直线
-            canvasContext.moveTo(centerX, 0);
-            canvasContext.lineTo(centerX, monitorHeight);
+            canvasContext.moveTo(centerX, activeMonitorRect.min_y);
+            canvasContext.lineTo(centerX, activeMonitorRect.max_y);
             // 绘制水平线
-            canvasContext.moveTo(0, centerY);
-            canvasContext.lineTo(monitorWidth, centerY);
+            canvasContext.moveTo(activeMonitorRect.min_x, centerY);
+            canvasContext.lineTo(activeMonitorRect.max_x, centerY);
 
             canvasContext.stroke();
         }
