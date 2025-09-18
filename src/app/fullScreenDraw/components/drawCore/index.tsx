@@ -10,6 +10,7 @@ import {
     ExcalidrawPropsCustomOptions,
     AppState,
     ExcalidrawProps,
+    ToolType,
 } from '@mg-chao/excalidraw/types';
 import '@mg-chao/excalidraw/index.css';
 import { useStateSubscriber } from '@/hooks/useStateSubscriber';
@@ -419,18 +420,31 @@ const DrawCoreComponent: React.FC<{
                                     return;
                                 }
 
+                                const appState = excalidrawAPIRef.current?.getAppState();
+                                if (!appState) {
+                                    return;
+                                }
+
                                 excalidrawAPIRef.current?.updateScene({
                                     appState: {
-                                        ...excalidrawAPIRef.current?.getAppState(),
+                                        ...appState,
                                         ...(value.appState as AppState),
+                                        activeTool: {
+                                            type: args[0].type as ToolType,
+                                            locked: args[0].locked ?? false,
+                                            lastActiveTool: appState.activeTool,
+                                            fromSelection: appState.activeTool.fromSelection,
+                                            customType: null,
+                                        },
                                     },
                                     captureUpdate: 'NEVER',
                                 });
                             });
+                        return;
                     }
-                }, 0);
 
-                excalidrawAPIRef.current?.setActiveTool(...args);
+                    excalidrawAPIRef.current?.setActiveTool(...args);
+                }, 0);
             },
             syncActionResult: (...args) => {
                 excalidrawActionRef.current?.syncActionResult(...args);

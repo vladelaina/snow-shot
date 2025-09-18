@@ -56,17 +56,26 @@ const WatermarkTextInput = () => {
 
 const SubToolEditor: NonNullable<
     NonNullable<ExcalidrawPropsCustomOptions['pickerRenders']>['SubToolEditor']
-> = () => {
+> = ({ appState }) => {
     const { setTool } = useContext(DrawContext);
-    const [drawState, setDrawState] = useState<DrawState | undefined>(undefined);
 
-    useStateSubscriber(
-        DrawStatePublisher,
-        useCallback((drawState: DrawState) => {
-            setDrawState(drawState);
-        }, []),
-    );
     const drawStyleSubTools = useMemo(() => {
+        let drawState: DrawState | undefined = undefined;
+        switch (appState.activeTool.type) {
+            case 'rectangle':
+                drawState = DrawState.Rect;
+                break;
+            case 'diamond':
+                drawState = DrawState.Diamond;
+                break;
+            case 'arrow':
+                drawState = DrawState.Arrow;
+                break;
+            case 'line':
+                drawState = DrawState.Line;
+                break;
+        }
+
         if (drawState === DrawState.Rect || drawState === DrawState.Diamond) {
             return (
                 <Radio.Group value={drawState}>
@@ -122,15 +131,15 @@ const SubToolEditor: NonNullable<
         }
 
         return undefined;
-    }, [drawState, setTool]);
+    }, [appState.activeTool.type, setTool]);
 
     const watermarkSubTools = useMemo(() => {
-        if (drawState !== DrawState.Watermark) {
+        if (appState.activeTool.type !== 'watermark') {
             return undefined;
         }
 
         return <WatermarkTextInput />;
-    }, [drawState]);
+    }, [appState.activeTool.type]);
 
     if (drawStyleSubTools) {
         return (
