@@ -56,7 +56,7 @@ const WatermarkTextInput = () => {
 
 const SubToolEditor: NonNullable<
     NonNullable<ExcalidrawPropsCustomOptions['pickerRenders']>['SubToolEditor']
-> = ({ appState }) => {
+> = ({ appState, targetElements }) => {
     const { setTool } = useContext(DrawContext);
 
     const drawStyleSubTools = useMemo(() => {
@@ -141,7 +141,7 @@ const SubToolEditor: NonNullable<
         return <WatermarkTextInput />;
     }, [appState.activeTool.type]);
 
-    if (drawStyleSubTools) {
+    if (drawStyleSubTools && targetElements.length === 0) {
         return (
             <fieldset>
                 <legend>
@@ -152,7 +152,7 @@ const SubToolEditor: NonNullable<
         );
     }
 
-    if (watermarkSubTools) {
+    if (watermarkSubTools && targetElements.length === 0) {
         return (
             <fieldset>
                 <legend>
